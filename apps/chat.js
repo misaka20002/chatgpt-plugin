@@ -956,12 +956,12 @@ export class chatgpt extends plugin {
         // 添加超时设置
         await redis.pSetEx('CHATGPT:CHAT_QUEUE_TIMEOUT', Config.defaultTimeoutMs, randomId)
         if (confirmOn) {
-          await this.reply('我正在思考如何回复你，请稍等', true, { recallMsg: 8 })
+          await this.reply('派蒙在哦', true, { recallMsg: 8 })
         }
       } else {
         let length = await redis.lLen('CHATGPT:CHAT_QUEUE') - 1
         if (confirmOn) {
-          await this.reply(`我正在思考如何回复你，请稍等，当前队列前方还有${length}个问题`, true, { recallMsg: 8 })
+          await this.reply(`派蒙在哦，当前队列前方还有${length}个问题`, true, { recallMsg: 8 })
         }
         logger.info(`chatgpt队列前方还有${length}个问题。管理员可通过#清空队列来强制清除所有等待的问题。`)
         // 开始排队
@@ -988,7 +988,7 @@ export class chatgpt extends plugin {
       let confirm = await redis.get('CHATGPT:CONFIRM')
       let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
       if (confirmOn) {
-        await this.reply('我正在思考如何回复你，请稍等', true, { recallMsg: 8 })
+        await this.reply('派蒙在哦', true, { recallMsg: 8 })
       }
     }
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -1293,7 +1293,7 @@ export class chatgpt extends plugin {
         // 先把文字回复发出去，避免过久等待合成语音
         if (Config.alsoSendText || ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
-            await this.reply('回复的内容过长，已转为文本模式')
+            await this.reply('派蒙知道哦', false, { recallMsg: 30 } )
           }
           await this.reply(await convertFaces(response, Config.enableRobotAt, e), e.isGroup)
           if (quotemessage.length > 0) {
@@ -1307,7 +1307,7 @@ export class chatgpt extends plugin {
         if (sendable) {
           await this.reply(sendable)
         } else {
-          await this.reply('合成语音发生错误~')
+          await this.reply('派蒙的儿童用手机的麦克风好像坏了，发不出语音QAQ~', false, { recallMsg: 60 })
         }
       } else if (userSetting.usePicture || (Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         // todo use next api of chatgpt to complete incomplete respoonse

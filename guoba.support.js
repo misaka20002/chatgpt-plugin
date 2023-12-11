@@ -813,34 +813,60 @@ export function supportGuoba () {
           }
         },
         {
-          field: 'noiseScale',
-          label: 'noiseScale',
-          bottomHelpMessage: '控制情感变化程度',
+          field: 'vits_emotion',
+          label: 'emotion',
+          bottomHelpMessage: '控制情感：从平静到激动，范围0-9的整数。可用命令：#tts情感等级[0-9]',
+          component: 'InputNumber',
+          componentProps: {
+            min: -1,
+            max: 9
+          }
+        },
+        {
+          field: 'sdp_ratio',
+          label: 'SDP ratio',
+          bottomHelpMessage: '控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0,
             max: 1
+          }
+        },
+        {
+          field: 'noiseScale',
+          label: 'noise',
+          bottomHelpMessage: '控制情感变化程度，范围0.1-2.0',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.1,
+            max: 2
           }
         },
         {
           field: 'noiseScaleW',
           label: 'noiseScaleW',
-          bottomHelpMessage: '控制音素发音长度',
+          bottomHelpMessage: '控制音素发音长度，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
-            min: 0,
-            max: 1
+            min: 0.1,
+            max: 2
           }
         },
         {
           field: 'lengthScale',
           label: 'lengthScale',
-          bottomHelpMessage: '控制整体语速',
+          bottomHelpMessage: '控制整体语速，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
-            min: 0,
+            min: 0.1,
             max: 2
           }
+        },
+        {
+          field: 'exampleAudio',
+          label: 'exampleAudio',
+          bottomHelpMessage: 'exampleAudio设置暂时无法使用。exampleAudio用于推理时指定一个音频作为情感的参考音频',
+          component: 'Input'
         },
         {
           field: 'initiativeChatGroups',

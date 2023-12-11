@@ -366,7 +366,7 @@ ${translateLangLabels}
       await e.reply(sendable)
     } else {
       await e.bot.sendGroupMsg(groupId, sendable)
-      await e.reply('发送成功！')
+      // await e.reply('发送成功！')
     }
   }
 
