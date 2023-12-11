@@ -48,11 +48,15 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
     logger.info('随机角色！这次哪个角色这么幸运会被选到呢……')
     speaker = speakers[randomNum(0, speakers.length)]
   }
+	  
+  // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
   text = text.replace(/\#|(\[..\])/g,'').replace(/派蒒/g,'派蒙').replace(/(\^([0-9])\^(.*|\n$))/g,'').replace(/\n(:|：).*|\n$/g,'').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g,'').substr(0,299);
   //replace: 1.删除[？？] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.截取处理后的前299个字符
-  text = wrapTextByLanguage(text)
+  
   logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
-  let character_voice_language = speaker.substr(-2)
+  // let character_voice_language = speaker.substr(-2)
+  let character_voice_language = "auto"
+	  
   // exampleAudio暂时无法使用
   let exampleAudio = null
   let body = {
@@ -92,6 +96,8 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
     }
   })
   let responseBody = await response.text()
+  let post_times = 0
+	  
   try {
     let json = JSON.parse(responseBody)
     if (Config.debug) {
@@ -104,7 +110,7 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
     let [message, audioInfo] = json?.data
     logger.info(message)
 //重试10次如果message!="Success"
-    for (let post_times = 0; post_times < 9; post_times++) {
+    for (post_times = 0; post_times < 9; post_times++) {
 	    if (message == "Success" || message == "success") break
 
 		  logger.info(`api获取音频失败，正在重试第${post_times+1}次，使用接口${url}`)
@@ -128,7 +134,7 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
 		    [message, audioInfo] = json?.data
 		    logger.info(message)
 		  } catch (err) {
-		    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。正在重试，当前response.status为', response.status)
+		    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。正在重试第${post_times+1}次，当前response.status为', response.status)
 		    throw new Error(responseBody)
 		  }
 
@@ -148,7 +154,7 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
 */
     return audioLink
   } catch (err) {
-    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public', response.status)
+    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。共重试${post_times+1}次，当前response.status为', response.status)
     throw new Error(responseBody)
   }
   }
