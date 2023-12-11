@@ -19,6 +19,11 @@ export class voicechangehelp extends plugin {
 			          reg: '^#tts情感(等级)?(帮助)?',
 			          fnc: 'change_vits_emotion',
 			          permission: 'master'
+			        },
+			        {
+			          reg: '^#tts(语音)?(开启|关闭)转日语$',
+			          fnc: 'set_autoJapanese',
+			          permission: 'master'
 			        }
 			]
 		})
@@ -29,7 +34,8 @@ export class voicechangehelp extends plugin {
 		let msg1 = `小呆毛tts语音替换帮助：\n` +
 			`#chatgpt设置语音角色派蒙_ZH\n` +
 			`#chatgpt设置语音角色可莉_ZH\n` +
-			`#tts情感等级1`
+			`#tts情感等级1\n` +
+			`#tts语音(开启|关闭)转日语\n`
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
 			`云转码API发送数据模式：[文件]\n` +
@@ -85,4 +91,18 @@ async change_vits_emotion (e) {
 		return e.reply('请输入整数0-9喵！', false)
 	}
 }
+
+async set_autoJapanese (e) {
+	const type = e.msg.replace(/^#tts(语音)?(开启|关闭)转日语$/g, '$2')
+	if (type === '开启' || type === '关闭') {
+		Config.autoJapanese = type === '开启' ? true : false
+		return e.reply(`tts语音已${type}转日语！`)
+	} else {
+		return e.reply('喵？')
+	}
+}
+
+
+
+
 }
