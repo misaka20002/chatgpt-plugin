@@ -863,6 +863,21 @@ export function supportGuoba () {
           }
         },
         {
+          field: 'tts_language',
+          label: 'TTS语音使用的语言',
+          bottomHelpMessage: '可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: 'ZH', value: 'ZH' },
+              { label: 'JP', value: 'JP' },
+              { label: 'EN', value: 'EN' },
+              { label: 'mix', value: 'mix' },
+              { label: 'auto', value: 'auto' }
+            ]
+          }
+        },
+        {
           field: 'exampleAudio',
           label: 'exampleAudio',
           bottomHelpMessage: 'exampleAudio设置暂时无法使用。exampleAudio用于推理时指定一个音频作为情感的参考音频',

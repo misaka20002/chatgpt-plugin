@@ -17,7 +17,12 @@ export class voicechangehelp extends plugin {
 				},
 			        {
 			          reg: '^#tts情感(等级)?(帮助)?',
-			          fnc: 'change_vits_emotion',
+			          fnc: 'set_vits_emotion',
+			          permission: 'master'
+			        },
+			        {
+			          reg: '^#tts语言设置(帮助)?',
+			          fnc: 'set_tts_language',
 			          permission: 'master'
 			        },
 			        {
@@ -34,8 +39,9 @@ export class voicechangehelp extends plugin {
 		let msg1 = `小呆毛tts语音替换帮助：\n` +
 			`#chatgpt设置语音角色派蒙_ZH\n` +
 			`#chatgpt设置语音角色可莉_ZH\n` +
-			`#tts情感等级1\n` +
-			`#tts语音(开启|关闭)转日语\n`
+			`#tts情感等级1|#tts情感帮助\n` +
+			`#tts语音(开启|关闭)转日语\n` +
+			`#tts语言设置auto|#tts语言设置帮助`
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
 			`云转码API发送数据模式：[文件]\n` +
@@ -79,7 +85,7 @@ export class voicechangehelp extends plugin {
 	}
 
 
-async change_vits_emotion (e) {
+async set_vits_emotion (e) {
 	let input_vits_emotion = e.msg.replace(/^#tts情感(等级)?(帮助)?/, '')
 	if (!input_vits_emotion) {
       		return e.reply(`输入整数0-9，情感等级由平静到激动。如：\n#tts情感等级1`, false)
@@ -89,6 +95,21 @@ async change_vits_emotion (e) {
 		return e.reply(`tts情感等级已修改为${parseInt(input_vits_emotion)}！`)
 	} else {
 		return e.reply('请输入整数0-9喵！', false)
+	}
+}
+
+async set_tts_language (e) {
+	let input_tts_language = e.msg.replace(/^#tts语言设置(帮助)?/, '')
+	if (!input_tts_language) {
+      		return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文`, false)
+    	}
+	input_tts_language = input_tts_language.toLowerCase()
+	if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts_language)) {
+		if (/^zh$|^jp$|^en$/.test(input_tts_language)) input_tts_language = input_tts_language.toUpperCase()
+		Config.tts_language = input_tts_language
+		return e.reply(`tts语言已设置为${parseInt(input_tts_language)}！`)
+	} else {
+		return e.reply('可选ZH, JP, EN, mix(api暂不支持), auto\n例如#tts语言设置auto', false)
 	}
 }
 

@@ -82,6 +82,7 @@ const defaultConfig = {
   "noiseScale": 0.6,
   "noiseScaleW": 0.8,
   "lengthScale": 1.0,
+  "tts_language": "zh",
   "exampleAudio" : null,
   initiativeChatGroups: [],
   enableDraw: true,
