@@ -131,7 +131,7 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
 		    [message, audioInfo] = json?.data
 		    logger.info(message)
 		  } catch (err) {
-		    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。正在重试第${post_times+1}次，当前response.status为', response.status)
+		    logger.error(`生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。正在重试第${post_times+1}次，当前response.status为`, response.status)
 		  }
 
     }
@@ -150,7 +150,7 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
 */
     return audioLink
   } catch (err) {
-    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。共重试${post_times+1}次，当前response.status为', response.status)
+    logger.error(`生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。共重试${post_times+1}次，当前response.status为`, response.status)
     throw new Error(responseBody)
   }
   }

@@ -48,7 +48,7 @@ export class voicechangehelp extends plugin {
 			`#tts情感等级1|#tts情感帮助\n` +
 			`#tts语音(开启|关闭)转日语\n` +
 			`#tts语言设置auto|#tts语言设置帮助\n` +
-			`#tts查看当前语音设置` +
+			`#tts查看当前语音设置`
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
 			`云转码API发送数据模式：[文件]\n` +
