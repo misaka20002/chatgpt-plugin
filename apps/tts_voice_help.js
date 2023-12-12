@@ -139,11 +139,11 @@ async set_blockWords (e) {
     	} else {
 
 		Config.blockWords = input_tts
-    	let show_msg1 = '输出黑名单已设置为：'
-    	let show_msg2 = `${input_tts}`
-    	let show_msg3 = '可使用#chatgpt查看输出黑名单'
-    	let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'chatgpt输出黑名单');
-    	return e.reply(show_msgx);
+		let show_msg1 = '输出黑名单已设置为：'
+		let show_msg2 = `${input_tts}`
+		let show_msg3 = '可使用#chatgpt查看输出黑名单'
+		let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'chatgpt输出黑名单');
+		return e.reply(show_msgx);
     	}
 }
 
