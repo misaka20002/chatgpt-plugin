@@ -31,12 +31,12 @@ export class voicechangehelp extends plugin {
 			          permission: 'master'
 			        },
 			        {
-			          reg: '^#chatgpt查看输出黑名单$',
-			          fnc: 'show_blockWords',
+			          reg: '^#chatgpt(设置|查看)?输出黑名单(帮助)?',
+			          fnc: 'set_blockWords',
 			          permission: 'master'
 			        },
 			        {
-			          reg: '^#tts(查看)?(当|目)前(语音)?设置$',
+			          reg: '^#tts查看((当|目)前)?(语音)?设置$',
 			          fnc: 'show_tts_voice_help_config',
 			          permission: 'master'
 			        }
@@ -52,7 +52,8 @@ export class voicechangehelp extends plugin {
 			`#tts情感等级1|#tts情感帮助\n` +
 			`#tts语音(开启|关闭)转日语\n` +
 			`#tts语言设置auto|#tts语言设置帮助\n` +
-			`#tts查看当前语音设置` + 
+			`#tts查看当前语音设置\n` + 
+			`#chatgpt查看输出黑名单` + 
 			''
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
@@ -111,18 +112,39 @@ async set_vits_emotion (e) {
 }
 
 async set_tts_language (e) {
-	let input_tts_language = e.msg.replace(/^#tts语言设置(帮助)?/, '')
-	if (!input_tts_language) {
+	let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '')
+	if (!input_tts) {
       		return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文`, false)
     	}
-	input_tts_language = input_tts_language.toLowerCase()
-	if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts_language)) {
-		if (/^zh$|^jp$|^en$/.test(input_tts_language)) input_tts_language = input_tts_language.toUpperCase()
-		Config.tts_language = input_tts_language
-		return e.reply(`tts语言已设置为${input_tts_language}！`)
+	input_tts = input_tts.toLowerCase()
+	if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
+		if (/^zh$|^jp$|^en$/.test(input_tts)) input_tts = input_tts.toUpperCase()
+		Config.tts_language = input_tts
+		return e.reply(`tts语言已设置为${input_tts}！`)
 	} else {
 		return e.reply('可选ZH, JP, EN, mix(api暂不支持), auto\n例如#tts语言设置auto', false)
 	}
+}
+
+
+async set_blockWords (e) {
+	let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输出黑名单(帮助)?/, '')
+	if (!input_tts) {
+		let show_msg1 = 'chatgpt当前输出黑名单：'
+		let show_msg2 = `${Config.blockWords}`
+		let show_msg3 = '检查输出结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开。如：\n#chatgpt设置输出黑名单屏蔽词1,屏蔽词b'
+		let show_msg4 = '#chatgpt设置输出黑名单是bing,this is bing,是 bing,これはBing,これは Bing'
+		let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4], 'chatgpt输出黑名单帮助');
+		return e.reply(show_msgx, false);
+    	} else {
+
+		Config.blockWords = input_tts
+    	let show_msg1 = '输出黑名单已设置为：'
+    	let show_msg2 = `${input_tts}`
+    	let show_msg3 = '可使用#chatgpt查看输出黑名单'
+    	let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'chatgpt输出黑名单');
+    	return e.reply(show_msgx);
+    	}
 }
 
 async set_autoJapanese (e) {
@@ -142,14 +164,6 @@ async show_tts_voice_help_config (e) {
 	
 	let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
 	return e.reply(show_tts_voice_help_config_msg2_msgx);
-}
-
-async show_blockWords (e) {
-	let show_msg1 = 'chatgpt输出黑名单：'
-	let show_msg2 = `${Config.blockWords}`
-	
-	let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2], 'chatgpt输出黑名单');
-	return e.reply(show_msgx);
 }
 
 
