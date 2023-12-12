@@ -33,7 +33,7 @@ function randomNum (minNum, maxNum) {
   }
 }
 
-export async function generateVitsAudio (text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = parseFloat(Config.vits_emotion), sdp_ratio = parseFloat(Config.sdp_ratio)) {
+export async function generateVitsAudio (text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = parseFloat(Config.vits_emotion), sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language ) {
   if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
   {
 	  let character_voice_language = speaker.substr(-2)
@@ -54,15 +54,13 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
   //replace: 1.删除[？？] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.截取处理后的前299个字符
   
   logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
-  // let character_voice_language = speaker.substr(-2)
-  let character_voice_language = "auto"
 	  
   // exampleAudio暂时无法使用
   let exampleAudio = null
   let body = {
     data: [
       text, speaker, vits_emotion, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-      character_voice_language, exampleAudio
+      tts_language, exampleAudio
     ],
   fn_index: 2
   }
