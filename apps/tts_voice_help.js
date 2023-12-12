@@ -42,13 +42,13 @@ export class voicechangehelp extends plugin {
 
 	async voicechangehelp(e) {
 		let msg1 = `小呆毛tts语音替换帮助：\n` +
-			`每个独立对话可单独设置:\n` +
 			`#chatgpt设置语音角色派蒙_ZH\n` +
 			`#chatgpt设置语音角色可莉_ZH\n` +
 			`#tts情感等级1|#tts情感帮助\n` +
 			`#tts语音(开启|关闭)转日语\n` +
 			`#tts语言设置auto|#tts语言设置帮助\n` +
-			`#tts查看当前语音设置`
+			`#tts查看当前语音设置` + 
+			''
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
 			`云转码API发送数据模式：[文件]\n` +
@@ -114,7 +114,7 @@ async set_tts_language (e) {
 	if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts_language)) {
 		if (/^zh$|^jp$|^en$/.test(input_tts_language)) input_tts_language = input_tts_language.toUpperCase()
 		Config.tts_language = input_tts_language
-		return e.reply(`tts语言已设置为${parseInt(input_tts_language)}！`)
+		return e.reply(`tts语言已设置为${input_tts_language}！`)
 	} else {
 		return e.reply('可选ZH, JP, EN, mix(api暂不支持), auto\n例如#tts语言设置auto', false)
 	}
@@ -132,11 +132,16 @@ async set_autoJapanese (e) {
 
 /** 发送当前设置 */
 async show_tts_voice_help_config (e) {
-
-
-	let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-	let show_tts_voice_help_config_msg2 = `  默认角色：${Config.defaultTTSRole}\n  发音语言：${config.tts_language}\n  vits_emotion：${config.vits_emotion}\n  noiseScale：${config.noiseScale}\n  noiseScaleW：${config.noiseScaleW}\n  lengthScale：${config.lengthScale}\n  sdp_ratio：${config.sdp_ratio}`
+	let defaultTTSRole = Config.defaultTTSRole
+	let tts_language = config.tts_language
+	let vits_emotion = config.vits_emotion
+	let noiseScale = config.noiseScale
+	let noiseScaleW = config.noiseScaleW
+	let lengthScale = config.lengthScale
+	let sdp_ratio = config.sdp_ratio
 	
+	let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
+	let show_tts_voice_help_config_msg2 = `  默认角色：${defaultTTSRole}\n  发音语言：${tts_language}\n  vits_emotion：${vits_emotion}\n  noiseScale：${noiseScale}\n  noiseScaleW：${noiseScaleW}\n  lengthScale：${lengthScale}\n  sdp_ratio：${sdp_ratio}`	
 	let show_tts_voice_help_config_msg2_msgx = await makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
 	return e.reply(show_tts_voice_help_config_msg2_msgx);
 }
