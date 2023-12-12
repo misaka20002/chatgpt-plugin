@@ -129,13 +129,11 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
 		    }
 		    if (response.status > 299) {
 		      logger.info(json)
-		      throw new Error(JSON.stringify(json))
 		    }
 		    [message, audioInfo] = json?.data
 		    logger.info(message)
 		  } catch (err) {
 		    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。正在重试第${post_times+1}次，当前response.status为', response.status)
-		    throw new Error(responseBody)
 		  }
 
     }
