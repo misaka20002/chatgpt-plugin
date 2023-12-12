@@ -131,17 +131,9 @@ async set_autoJapanese (e) {
 }
 
 /** 发送当前设置 */
-async show_tts_voice_help_config (e) {
-	let defaultTTSRole = Config.defaultTTSRole
-	let tts_language = config.tts_language
-	let vits_emotion = config.vits_emotion
-	let noiseScale = config.noiseScale
-	let noiseScaleW = config.noiseScaleW
-	let lengthScale = config.lengthScale
-	let sdp_ratio = config.sdp_ratio
-	
+async show_tts_voice_help_config (e) {	
 	let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-	let show_tts_voice_help_config_msg2 = `  默认角色：${defaultTTSRole}\n  发音语言：${tts_language}\n  vits_emotion：${vits_emotion}\n  noiseScale：${noiseScale}\n  noiseScaleW：${noiseScaleW}\n  lengthScale：${lengthScale}\n  sdp_ratio：${sdp_ratio}`	
+	let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}`
 	let show_tts_voice_help_config_msg2_msgx = await makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
 	return e.reply(show_tts_voice_help_config_msg2_msgx);
 }
