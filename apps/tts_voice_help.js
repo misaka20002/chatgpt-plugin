@@ -30,7 +30,7 @@ export class voicechangehelp extends plugin {
 			          fnc: 'set_autoJapanese',
 			          permission: 'master'
 			        },
-					{
+			        {
 			          reg: '^#chatgpt查看输出黑名单$',
 			          fnc: 'show_blockWords',
 			          permission: 'master'
