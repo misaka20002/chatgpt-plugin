@@ -34,7 +34,7 @@ export class voicechangehelp extends plugin {
 			          reg: '^#tts(查看)?(当|目)前(语音)?设置$',
 			          fnc: 'show_tts_voice_help_config',
 			          permission: 'master'
-			        },
+			        }
 			]
 		})
 	}
