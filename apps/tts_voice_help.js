@@ -30,6 +30,11 @@ export class voicechangehelp extends plugin {
 			          fnc: 'set_autoJapanese',
 			          permission: 'master'
 			        },
+					{
+			          reg: '^#chatgpt查看输出黑名单$',
+			          fnc: 'show_blockWords',
+			          permission: 'master'
+			        },
 			        {
 			          reg: '^#tts(查看)?(当|目)前(语音)?设置$',
 			          fnc: 'show_tts_voice_help_config',
@@ -137,6 +142,14 @@ async show_tts_voice_help_config (e) {
 	
 	let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
 	return e.reply(show_tts_voice_help_config_msg2_msgx);
+}
+
+async show_blockWords (e) {
+	let show_msg1 = 'chatgpt输出黑名单：'
+	let show_msg2 = `${Config.blockWords}`
+	
+	let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2], 'chatgpt输出黑名单');
+	return e.reply(show_msgx);
 }
 
 
