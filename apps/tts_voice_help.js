@@ -128,9 +128,10 @@ async set_vits_emotion (e) {
 	let input_tts = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '').trim()
 	if (!input_tts) {
 		let msg1 = `tts情感设置帮助：`
+		let msg_show = `tts语音当前情感：${Config.vits_emotion}`
 		let msg2 = `输入整数，如：\n#tts情感设置1`
 		let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g,"")
-		let msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3], `tts情感设置帮助`);
+		let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg2, msg3], `tts情感设置帮助`);
 		return e.reply(msgx, false)
     }
 	if (input_tts === '上锁开启' || input_tts === '上锁关闭') {
@@ -160,7 +161,7 @@ async set_vits_emotion (e) {
 async set_tts_language (e) {
 	let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
 	if (!input_tts) {
-      		return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文`, false)
+      		return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)`, false)
     	}
 	input_tts = input_tts.toLowerCase()
 	if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
