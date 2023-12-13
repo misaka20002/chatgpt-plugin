@@ -11,18 +11,12 @@ export class voicechangehelp extends plugin {
 			event: 'message',
 			priority: 999,
 			rule: [{
-				reg: `^#tts(语音)?(替换)?帮助$`,
-				permission: 'master',
-				fnc: `voicechangehelp`
-				},
+			        reg: `^#tts(语音)?(替换)?帮助$`,
+			        fnc: 'voicechangehelp'
+			        },
 			        {
 			          reg: '^#tts情感(设置)?(帮助)?',
 			          fnc: 'set_vits_emotion',
-			        },
-			        {
-			          reg: '^#tts情感设置上锁(开启|关闭)$',
-			          fnc: 'set_vits_emotion_locker',
-			          permission: 'master'
 			        },
 			        {
 			          reg: '^#tts语言设置(帮助)?',
@@ -68,40 +62,17 @@ export class voicechangehelp extends plugin {
 			`https://v2.genshinvoice.top\n` +
 			`云转码API发送数据模式：[文件]\n` +
 			`感谢genshinvoice.top提供的api支持！`
-		let speakertip1 = "可选列表：\n"
-		let speakertip2 = ""
-		let speakertip3 = ""
-		for (let i = 0; i < speakers.length; i++) {
-			if (i <= (speakers.length / 3)) {
-				speakertip1 += speakers[i]
-				if (i % 2 == 0) {
-					speakertip1 += "　　"
-				}
-				else {
-					speakertip1 += "\n"
-				}
-			}
-			if (i <= ((speakers.length * 2) / 3) && i > (speakers.length / 3)) {
-				speakertip2 += speakers[i]
-				if (i % 2 == 0) {
-					speakertip2 += "　　"
-				}
-				else {
-					speakertip2 += "\n"
-				}
-			}
-			if (i > ((speakers.length * 2) / 3)) {
-				speakertip3 += speakers[i]
-				if (i % 2 == 0) {
-					speakertip3 += "　　"
-				}
-				else {
-					speakertip3 += "\n"
-				}
-			}
 
+		let msg1_isn_master = `小呆毛tts语音替换帮助：\n` +
+			`#tts可选人物列表\n` +
+			`#tts情感设置1\n` +
+			`(tts情感共有100种可选择，请发送#tts情感帮助)` +
+			''
+		if (e.isMaster) {
+			let msgx = await common.makeForwardMsg(e, [msg1, msg2], `tts语音帮助-m`)
+		} else {
+			let msgx = await common.makeForwardMsg(e, [msg1_isn_master], `tts语音帮助`)
 		}
-		let msgx = await common.makeForwardMsg(e, [msg1, msg2, speakertip1, speakertip2, speakertip3], `tts语音替换帮助`);
 		e.reply(msgx);
 		return true;
 	}
@@ -151,31 +122,36 @@ export class voicechangehelp extends plugin {
 	}
 
 
-/* ^#tts情感(设置)?(帮助)? */
+/* ^#tts情感(设置)?(帮助)?  #tts情感设置上锁(开启|关闭) */
 async set_vits_emotion (e) {
-	let input_vits_emotion = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '').trim()
-	if (!input_vits_emotion) {
+	let input_tts = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '').trim()
+	if (!input_tts) {
 		let msg1 = `tts情感设置帮助：`
 		let msg2 = `输入整数，如：\n#tts情感设置1`
 		let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g,"")
 		let msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3], `tts情感设置帮助`);
 		return e.reply(msgx, false)
-    	}
-	if (Config.vits_emotion_locker) {
-		return e.reply('tts情感设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+    }
+	if (input_tts === '上锁开启' || input_tts === '上锁关闭') {
+		if (!e.isMaster) return e.reply('只有主人可以使用#tts情感设置上锁开启|关闭')
+		Config.vits_emotion_locker = input_tts === '上锁开启' ? true : false
+		return e.reply(`#tts情感设置已${input_tts}！`)
 	}
-
-	if (RegExp("^([1-9]|[1-9]\\d|100)$").test(input_vits_emotion)) {
-		let input_vits_map = vits_emotion_map[input_vits_emotion-1].replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'')
+	
+	if (RegExp("^([1-9]|[1-9]\\d|100)$").test(input_tts)) {
+		if (!e.isMaster && Config.vits_emotion_locker) {
+			return e.reply('tts情感设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+		}
+		let input_vits_map = vits_emotion_map[input_tts-1].replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'')
 /* 	.replace()
 	'1: Happy (开心)',
 	'2: Sad (伤心)',
 	'3: Excited (兴奋)',
 	... */
 		Config.vits_emotion = input_vits_map
-		return e.reply(`tts情感已修改为${input_vits_emotion}：${input_vits_map}！`)
+		return e.reply(`tts情感已修改为${input_tts}：${input_vits_map}！`)
 	} else {
-		return e.reply('请输入整数1-100喵\n#tts情感设置帮助', false)
+		return e.reply('喵?请输入#tts情感设置帮助', false)
 	}
 }
 
@@ -222,17 +198,6 @@ async set_autoJapanese (e) {
 	if (type === '开启' || type === '关闭') {
 		Config.autoJapanese = type === '开启' ? true : false
 		return e.reply(`tts语音已${type}转日语！`)
-	} else {
-		return e.reply('喵？')
-	}
-}
-
-/* '^#tts情感设置上锁(开启|关闭)$' */
-async set_vits_emotion_locker (e) {
-	const type = e.msg.replace(/^#tts情感设置上锁(开启|关闭)$/g, '$1')
-	if (type === '开启' || type === '关闭') {
-		Config.vits_emotion_locker = type === '开启' ? true : false
-		return e.reply(`#tts情感设置上锁已${type}！`)
 	} else {
 		return e.reply('喵？')
 	}
