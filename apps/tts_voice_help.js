@@ -68,10 +68,11 @@ export class voicechangehelp extends plugin {
 			`#tts情感设置1\n` +
 			`(tts情感共有100种可选择，请发送#tts情感帮助)` +
 			''
+		let msgx
 		if (e.isMaster) {
-			let msgx = await common.makeForwardMsg(e, [msg1, msg2], `tts语音帮助-m`)
+			msgx = await common.makeForwardMsg(e, [msg1, msg2], `tts语音帮助-m`)
 		} else {
-			let msgx = await common.makeForwardMsg(e, [msg1_isn_master], `tts语音帮助`)
+			msgx = await common.makeForwardMsg(e, [msg1_isn_master], `tts语音帮助`)
 		}
 		e.reply(msgx);
 		return true;
