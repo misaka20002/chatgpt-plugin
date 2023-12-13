@@ -54,10 +54,10 @@ export class voicechangehelp extends plugin {
 		let msg1 = `小呆毛tts语音替换帮助：\n` +
 			`#tts可选人物列表\n` +
 			`#tts情感设置1|#tts情感帮助\n` +
-			`#tts语音开启|关闭转日语\n` +
+			`#tts语音(开启|关闭)转日语\n` +
 			`#tts语言设置auto|#tts语言设置帮助\n` +
 			`#tts查看当前语音设置\n` + 
-			`#chatgpt查看|设置输出黑名单` + 
+			`#chatgpt(查看|设置)输出黑名单` + 
 			''
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
