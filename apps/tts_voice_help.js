@@ -18,6 +18,10 @@ export class voicechangehelp extends plugin {
 			        {
 			          reg: '^#tts情感(设置)?(帮助)?',
 			          fnc: 'set_vits_emotion',
+			        },
+			        {
+			          reg: '^#tts情感设置上锁(开启|关闭)$',
+			          fnc: 'set_vits_emotion_locker',
 			          permission: 'master'
 			        },
 			        {
@@ -54,6 +58,7 @@ export class voicechangehelp extends plugin {
 		let msg1 = `小呆毛tts语音替换帮助：\n` +
 			`#tts可选人物列表\n` +
 			`#tts情感设置1|#tts情感帮助\n` +
+			`#tts情感设置上锁(开启|关闭)\n` + 
 			`#tts语音(开启|关闭)转日语\n` +
 			`#tts语言设置auto|#tts语言设置帮助\n` +
 			`#tts查看当前语音设置\n` + 
@@ -105,7 +110,7 @@ export class voicechangehelp extends plugin {
 	async tts_show_speakers(e) {
 		let msg1 = `tts可选人物列表：`
 		let msg2 = `（每名用户都可以单独设置）\n` +
-			`#chatgpt设置语音角色派蒙_ZH\n` +
+			`#chatgpt设置全局vits语音角色派蒙_ZH\n` +
 			`#chatgpt设置语音角色可莉_ZH\n`
 		let speakertip1 = "可选列表：\n"
 		let speakertip2 = ""
@@ -148,7 +153,7 @@ export class voicechangehelp extends plugin {
 
 /* ^#tts情感(设置)?(帮助)? */
 async set_vits_emotion (e) {
-	let input_vits_emotion = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '')
+	let input_vits_emotion = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '').trim()
 	if (!input_vits_emotion) {
 		let msg1 = `tts情感设置帮助：`
 		let msg2 = `输入整数，如：\n#tts情感设置1`
@@ -156,6 +161,10 @@ async set_vits_emotion (e) {
 		let msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3], `tts情感设置帮助`);
 		return e.reply(msgx, false)
     	}
+	if (Config.vits_emotion_locker) {
+		return e.reply('tts情感设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+	}
+
 	if (RegExp("^([1-9]|[1-9]\\d|100)$").test(input_vits_emotion)) {
 		let input_vits_map = vits_emotion_map[input_vits_emotion-1].replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'')
 /* 	.replace()
@@ -172,7 +181,7 @@ async set_vits_emotion (e) {
 
 /* ^#tts语言设置(帮助)? */
 async set_tts_language (e) {
-	let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '')
+	let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
 	if (!input_tts) {
       		return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文`, false)
     	}
@@ -188,7 +197,7 @@ async set_tts_language (e) {
 
 /* ^#chatgpt(设置|查看)?输出黑名单(帮助)? */
 async set_blockWords (e) {
-	let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输出黑名单(帮助)?/, '')
+	let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输出黑名单(帮助)?/, '').trim()
 	if (!input_tts) {
 		let show_msg1 = 'chatgpt当前输出黑名单：'
 		let show_msg2 = `${Config.blockWords}`
@@ -218,10 +227,21 @@ async set_autoJapanese (e) {
 	}
 }
 
+/* '^#tts情感设置上锁(开启|关闭)$' */
+async set_vits_emotion_locker (e) {
+	const type = e.msg.replace(/^#tts情感设置上锁(开启|关闭)$/g, '$1')
+	if (type === '开启' || type === '关闭') {
+		Config.vits_emotion_locker = type === '开启' ? true : false
+		return e.reply(`#tts情感设置上锁已${type}！`)
+	} else {
+		return e.reply('喵？')
+	}
+}
+
 /** 发送当前设置 */
 async show_tts_voice_help_config (e) {
 	let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-	let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}`
+	let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}`
 	
 	let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
 	return e.reply(show_tts_voice_help_config_msg2_msgx);

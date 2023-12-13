@@ -78,6 +78,7 @@ const defaultConfig = {
   // https://114514.201666.xyz
   huggingFaceReverseProxy: '',
   "vits_emotion" : "Happy",
+  "vits_emotion_locker" : true,
   "sdp_ratio" : 0.2,
   "noiseScale": 0.6,
   "noiseScaleW": 0.8,

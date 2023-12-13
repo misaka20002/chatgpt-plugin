@@ -822,6 +822,12 @@ export function supportGuoba () {
           }
         },
         {
+          field: 'vits_emotion_locker',
+          label: 'vits_emotion_locker',
+          bottomHelpMessage: '锁上不给除主人之外的其他人通过#tts情感设置 修改情感参数',
+          component: 'Switch'
+        },
+        {
           field: 'sdp_ratio',
           label: 'SDP ratio',
           bottomHelpMessage: '控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
