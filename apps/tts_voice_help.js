@@ -1,7 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
-import { speakers } from '../utils/tts.js'
+import { speakers, vits_emotion_map } from '../utils/tts.js'
 
 export class voicechangehelp extends plugin {
 	constructor() {
@@ -16,7 +16,7 @@ export class voicechangehelp extends plugin {
 				fnc: `voicechangehelp`
 				},
 			        {
-			          reg: '^#tts情感(等级)?(帮助)?',
+			          reg: '^#tts情感(设置)?(帮助)?',
 			          fnc: 'set_vits_emotion',
 			          permission: 'master'
 			        },
@@ -36,6 +36,10 @@ export class voicechangehelp extends plugin {
 			          permission: 'master'
 			        },
 			        {
+			          reg: '^#tts(可选)?人物(可选)?列表$',
+			          fnc: 'tts_show_speakers',
+			        },
+			        {
 			          reg: '^#tts查看((当|目)前)?(语音)?设置$',
 			          fnc: 'show_tts_voice_help_config',
 			          permission: 'master'
@@ -45,15 +49,15 @@ export class voicechangehelp extends plugin {
 	}
 
 
+/* ^#tts(语音)?(替换)?帮助$ */
 	async voicechangehelp(e) {
 		let msg1 = `小呆毛tts语音替换帮助：\n` +
-			`#chatgpt设置语音角色派蒙_ZH\n` +
-			`#chatgpt设置语音角色可莉_ZH\n` +
-			`#tts情感等级1|#tts情感帮助\n` +
-			`#tts语音(开启|关闭)转日语\n` +
+			`#tts可选人物列表\n` +
+			`#tts情感设置1|#tts情感帮助\n` +
+			`#tts语音开启|关闭转日语\n` +
 			`#tts语言设置auto|#tts语言设置帮助\n` +
 			`#tts查看当前语音设置\n` + 
-			`#chatgpt查看输出黑名单` + 
+			`#chatgpt查看|设置输出黑名单` + 
 			''
 		let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
 			`https://v2.genshinvoice.top\n` +
@@ -96,21 +100,77 @@ export class voicechangehelp extends plugin {
 		e.reply(msgx);
 		return true;
 	}
+	
+/* ^#tts(可选)?人物(可选)?列表$ */
+	async tts_show_speakers(e) {
+		let msg1 = `tts可选人物列表：`
+		let msg2 = `（每名用户都可以单独设置）\n` +
+			`#chatgpt设置语音角色派蒙_ZH\n` +
+			`#chatgpt设置语音角色可莉_ZH\n`
+		let speakertip1 = "可选列表：\n"
+		let speakertip2 = ""
+		let speakertip3 = ""
+		for (let i = 0; i < speakers.length; i++) {
+			if (i <= (speakers.length / 3)) {
+				speakertip1 += speakers[i]
+				if (i % 2 == 0) {
+					speakertip1 += "　　"
+				}
+				else {
+					speakertip1 += "\n"
+				}
+			}
+			if (i <= ((speakers.length * 2) / 3) && i > (speakers.length / 3)) {
+				speakertip2 += speakers[i]
+				if (i % 2 == 0) {
+					speakertip2 += "　　"
+				}
+				else {
+					speakertip2 += "\n"
+				}
+			}
+			if (i > ((speakers.length * 2) / 3)) {
+				speakertip3 += speakers[i]
+				if (i % 2 == 0) {
+					speakertip3 += "　　"
+				}
+				else {
+					speakertip3 += "\n"
+				}
+			}
+
+		}
+		let msgx = await common.makeForwardMsg(e, [msg1, msg2, speakertip1, speakertip2, speakertip3], `tts可选人物列表`);
+		e.reply(msgx);
+		return true;
+	}
 
 
+/* ^#tts情感(设置)?(帮助)? */
 async set_vits_emotion (e) {
-	let input_vits_emotion = e.msg.replace(/^#tts情感(等级)?(帮助)?/, '')
+	let input_vits_emotion = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '')
 	if (!input_vits_emotion) {
-      		return e.reply(`输入整数0-9，情感等级由平静到激动。如：\n#tts情感等级1`, false)
+		let msg1 = `tts情感设置帮助：`
+		let msg2 = `输入整数，如：\n#tts情感设置1`
+		let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g,"")
+		let msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3], `tts情感设置帮助`);
+		return e.reply(msgx, false)
     	}
-	if (/^[0-9]$/.test(input_vits_emotion)) {
-		Config.vits_emotion = input_vits_emotion
-		return e.reply(`tts情感等级已修改为${parseInt(input_vits_emotion)}！`)
+	if (RegExp("^([1-9]|[1-9]\\d|100)$").test(input_vits_emotion)) {
+		let input_vits_map = vits_emotion_map[input_vits_emotion-1].replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'')
+/* 	.replace()
+	'1: Happy (开心)',
+	'2: Sad (伤心)',
+	'3: Excited (兴奋)',
+	... */
+		Config.vits_emotion = input_vits_map
+		return e.reply(`tts情感已修改为${input_vits_emotion}：${input_vits_map}！`)
 	} else {
-		return e.reply('请输入整数0-9喵！', false)
+		return e.reply('请输入整数1-100喵\n#tts情感设置帮助', false)
 	}
 }
 
+/* ^#tts语言设置(帮助)? */
 async set_tts_language (e) {
 	let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '')
 	if (!input_tts) {
@@ -126,7 +186,7 @@ async set_tts_language (e) {
 	}
 }
 
-
+/* ^#chatgpt(设置|查看)?输出黑名单(帮助)? */
 async set_blockWords (e) {
 	let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输出黑名单(帮助)?/, '')
 	if (!input_tts) {
@@ -147,6 +207,7 @@ async set_blockWords (e) {
     	}
 }
 
+/* ^#tts(语音)?(开启|关闭)转日语$ */
 async set_autoJapanese (e) {
 	const type = e.msg.replace(/^#tts(语音)?(开启|关闭)转日语$/g, '$2')
 	if (type === '开启' || type === '关闭') {

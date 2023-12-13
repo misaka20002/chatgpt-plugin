@@ -53,7 +53,7 @@
   "sydneyFirstMessageTimeout": 40000,
   "ttsSpace": "",
   "huggingFaceReverseProxy": "",
-  "vits_emotion" : 1,
+  "vits_emotion" : "Happy",
   "sdp_ratio" : 0.2,
   "noiseScale": 0.6,
   "noiseScaleW": 0.8,

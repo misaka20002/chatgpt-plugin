@@ -77,7 +77,7 @@ const defaultConfig = {
   ttsSpace: '',
   // https://114514.201666.xyz
   huggingFaceReverseProxy: '',
-  "vits_emotion" : 1,
+  "vits_emotion" : "Happy",
   "sdp_ratio" : 0.2,
   "noiseScale": 0.6,
   "noiseScaleW": 0.8,

@@ -758,7 +758,7 @@ export class chatgpt extends plugin {
           await redis.set(`CHATGPT:USER:${e.sender.user_id}`, JSON.stringify(userSetting))
           await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 "随机" `)
         } else {
-          await this.reply(`抱歉，"${userSetting.ttsRole}"我还不认识呢`)
+          await this.reply(`抱歉，"${userSetting.ttsRole}"我还不认识呢.可发送:#tts可选人物列表`)
         }
         break
       }

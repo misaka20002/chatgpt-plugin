@@ -1,5 +1,5 @@
 import { Config } from './utils/config.js'
-import { speakers } from './utils/tts.js'
+import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { supportConfigurations as voxRoleList } from './utils/tts/voicevox.js'
 // 支持锅巴
@@ -815,11 +815,10 @@ export function supportGuoba () {
         {
           field: 'vits_emotion',
           label: 'emotion',
-          bottomHelpMessage: '控制情感：从平静到激动，范围0-9的整数。可用命令：#tts情感等级[0-9]',
-          component: 'InputNumber',
+          bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',
+          component: 'Select',
           componentProps: {
-            min: -1,
-            max: 9
+            options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'') } })
           }
         },
         {
