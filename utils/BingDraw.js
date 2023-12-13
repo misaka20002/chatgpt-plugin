@@ -119,12 +119,14 @@ export default class BingDrawClient {
           .filter(link => !link.includes('.svg'))
         imageLinks = [...new Set(imageLinks)]
         const badImages = [
+          'https://r.bing.com/rp/in-2zU3AJUdkgFe7ZKv19yPBHVs.png"',
+          'https://r.bing.com/rp/TX9QuO3WzcCJz1uaaSwQAz39Kb0.jpg"',
           'https://r.bing.com/rp/in-2zU3AJUdkgFe7ZKv19yPBHVs.png',
           'https://r.bing.com/rp/TX9QuO3WzcCJz1uaaSwQAz39Kb0.jpg'
         ]
         for (let imageLink of imageLinks) {
           if (badImages.indexOf(imageLink) > -1) {
-            await e.reply('❌绘图失败：Bad images', true)
+            await e.reply('❌绘图失败：绘图完成但被屏蔽，请调整提示词。', true)
             logger.error(rText)
           }
         }
