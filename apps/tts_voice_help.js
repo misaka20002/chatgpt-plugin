@@ -64,9 +64,12 @@ export class voicechangehelp extends plugin {
 			`感谢genshinvoice.top提供的api支持！`
 
 		let msg1_isn_master = `小呆毛tts语音替换帮助：\n` +
+			`#chatgpt设置语音角色派蒙_ZH\n` +
+			`#chatgpt设置语音角色可莉_ZH\n` +
 			`#tts可选人物列表\n` +
 			`#tts情感设置1\n` +
-			`(tts情感共有100种可选择，请发送#tts情感帮助)` +
+			`#tts情感设置帮助\n` +
+			`（共100种情感）` +
 			''
 		let msgx
 		if (e.isMaster) {
