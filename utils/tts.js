@@ -90,7 +90,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
           }
         */
 
-        let post_times = 0
+        let post_times = 1
         /*第一次try*/
         logger.info(`正在使用接口${url}`)
         let response = await newFetch(url, {
@@ -126,8 +126,53 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             return audioLink
         } catch (err) {
             logger.error(`生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。第一次，当前response.status为`, response.status)
-            throw new Error(responseBody)
+            /*throw new Error(responseBody)*/
         }
+        /*尝试重试try*/
+        for (; post_times < 5; post_times++) {
+            // 等待1000ms
+            setTimeout("logger.info(`api获取音频失败，正在重试第${post_times+1}次，使用接口${url}`)", 2000);
+            try {
+                logger.info(`正在第${post_times + 1}次使用接口${url}`)
+                response = await newFetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(body),
+                    headers: {
+                        'content-type': 'application/json'
+                    }
+                })
+                responseBody = await response.text()
+                try {
+                    let json = JSON.parse(responseBody)
+                    if (Config.debug) {
+                        logger.info(json)
+                    }
+                    if (response.status > 299) {
+                        logger.info(json)
+                        throw new Error(JSON.stringify(json))
+                    }
+                    let [message, audioInfo] = json?.data
+                    logger.info(message)
+                    let audioLink = `${space}/file=${audioInfo.name}`
+
+                    /* 真的需要反代的话这一行需要修改
+                        if (Config.huggingFaceReverseProxy) {
+                          if (Config.debug) {
+                            logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
+                          }
+                          let spaceHost = _.trimStart(space, 'https://')
+                          audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
+                        }
+                    */
+                    return audioLink
+                } catch (err) {
+                    logger.error(`生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public。当前为第${post_times + 1}次，当前response.status为`, response.status)
+                }
+            } catch (err) {
+                logger.error(`For循环中发生错误，请检查是否配置了正确的api，且仓库是否开放为public。当前为第${post_times + 1}次，当前response.status为`, response.status)
+            }
+        }
+        throw new Error(responseBody)
     }
 }
 
