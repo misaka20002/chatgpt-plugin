@@ -194,6 +194,7 @@ export function convertSpeaker(speaker) {
         case '刻晴': return '刻晴_ZH'
         case '珊瑚宫心海': return '珊瑚宫心海_ZH'
         case '迪卢克': return '迪卢克_ZH'
+        case '希格雯': return '希格雯_ZH'
     }
 
     return speaker
