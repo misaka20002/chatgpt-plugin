@@ -34,6 +34,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#chatgpt(设置|查看)?输入黑名单(帮助)?',
+                fnc: 'set_promptBlockWords',
+                permission: 'master'
+            },
+            {
                 reg: '^#tts(可选)?人物(可选)?列表$',
                 fnc: 'tts_show_speakers',
             },
@@ -56,7 +61,8 @@ export class voicechangehelp extends plugin {
             `#tts语音(开启|关闭)转日语\n` +
             `#tts语言设置auto|#tts语言设置帮助\n` +
             `#tts查看当前语音设置\n` +
-            `#chatgpt(查看|设置)输出黑名单` +
+            `#chatgpt(查看|设置)输出黑名单\n` +
+            `#chatgpt(查看|设置)输入黑名单` +
             ''
         let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
             `https://v2.genshinvoice.top\n` +
@@ -193,6 +199,27 @@ export class voicechangehelp extends plugin {
             let show_msg2 = `${input_array}`
             let show_msg3 = '可使用#chatgpt查看输出黑名单'
             let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'chatgpt输出黑名单');
+            return e.reply(show_msgx);
+        }
+    }
+
+    /* ^#chatgpt(设置|查看)?输入黑名单(帮助)? */
+    async set_promptBlockWords(e) {
+        let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输入黑名单(帮助)?/, '').trim()
+        if (!input_tts) {
+            let show_msg1 = 'chatgpt当前输入黑名单：'
+            let show_msg2 = `${Config.promptBlockWords}`
+            let show_msg3 = '检查输入结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开。如：\n#chatgpt设置输入黑名单屏蔽词1,屏蔽词b'
+            let show_msg4 = '#chatgpt设置输入黑名单屏蔽词1屏蔽词b'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4], 'chatgpt输入黑名单帮助');
+            return e.reply(show_msgx, false);
+        } else {
+            let input_array = input_tts.split(",");
+            Config.promptBlockWords = input_array
+            let show_msg1 = '输入黑名单已设置为：'
+            let show_msg2 = `${input_array}`
+            let show_msg3 = '可使用#chatgpt查看输入黑名单'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'chatgpt输入黑名单');
             return e.reply(show_msgx);
         }
     }

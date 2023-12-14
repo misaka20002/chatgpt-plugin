@@ -834,6 +834,10 @@ export function supportGuoba () {
           }
         },
         {
+            label: 'VITS语音设置，可用命令#tts语音帮助',
+            component: 'Divider'
+        },
+        {
           field: 'vits_emotion',
           label: 'emotion',
           bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',
