@@ -209,7 +209,7 @@ export class voicechangehelp extends plugin {
         if (!input_tts) {
             let show_msg1 = 'chatgpt当前输入黑名单：'
             let show_msg2 = `${Config.promptBlockWords}`
-            let show_msg3 = '检查输入结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开。如：\n#chatgpt设置输入黑名单屏蔽词1,屏蔽词b'
+            let show_msg3 = '检查对话输入中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开。如：\n#chatgpt设置输入黑名单屏蔽词1,屏蔽词b'
             let show_msg4 = '#chatgpt设置输入黑名单屏蔽词1屏蔽词b'
             let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4], 'chatgpt输入黑名单帮助');
             return e.reply(show_msgx, false);
