@@ -7,4 +7,3 @@ server/static/live2dw/*
 prompts/*
 !prompts/.gitkeep
 node_modules/
-/.vs
