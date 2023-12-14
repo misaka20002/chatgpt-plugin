@@ -210,6 +210,7 @@ export async function generateVitsAudio (text, speaker = '随机', language = '�
     }
     if (response.status > 299) {
       logger.info(json)
+      throw new Error(JSON.stringify(json))
     }
     let [message, audioInfo] = json?.data
     logger.info(message)
