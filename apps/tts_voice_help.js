@@ -199,7 +199,7 @@ export class voicechangehelp extends plugin {
             let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4, show_msg4_1], 'chatgpt输出黑名单帮助');
             return e.reply(show_msgx, false);
         } else if (input_tts === '为空' || input_tts === '为空值') {
-            Config.blockWords = ''
+            Config.blockWords = ['']
             let show_msg1 = '输出黑名单已设置为空值'
             let show_msg3 = '可使用#chatgpt查看输出黑名单'
             let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'chatgpt输出黑名单');
@@ -227,7 +227,7 @@ export class voicechangehelp extends plugin {
             let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4, show_msg4_1], 'chatgpt输入黑名单帮助');
             return e.reply(show_msgx, false);
         } else if (input_tts === '为空' || input_tts === '为空值') {
-            Config.promptBlockWords = ''
+            Config.promptBlockWords = ['']
             let show_msg1 = '输入黑名单已设置为空值'
             let show_msg3 = '可使用#chatgpt查看输入黑名单'
             let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'chatgpt输入黑名单');
