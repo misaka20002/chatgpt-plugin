@@ -113,7 +113,19 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             }
             let [message, audioInfo] = json?.data
             logger.info(message)
-            let audioLink = `${space}/file=${audioInfo.path}`
+
+            /*这api怎么天天换参数呢*/
+            let audioLink
+            if (audioInfo.name) {
+                audioLink = `${space}/file=${audioInfo.name}`
+            } else if (audioInfo.path) {
+                audioLink = `${space}/file=${audioInfo.path}`
+            } else {
+                throw new Error(responseBody)
+            }
+            /*也可以这么写
+            let audioLink = audioInfo.name ? `/file=${audioInfo.name}` : `/file=${audioInfo.path}`*/
+            /*let audioLink = `${space}/file=${audioInfo.path}`*/
 
             /* 真的需要反代的话这一行需要修改
                 if (Config.huggingFaceReverseProxy) {
@@ -154,7 +166,17 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     }
                     let [message, audioInfo] = json?.data
                     logger.info(message)
-                    let audioLink = `${space}/file=${audioInfo.path}`
+
+                    /*这api怎么天天换参数呢*/
+                    let audioLink
+                    if (audioInfo.name) {
+                        audioLink = `${space}/file=${audioInfo.name}`
+                    } else if (audioInfo.path) {
+                        audioLink = `${space}/file=${audioInfo.path}`
+                    } else {
+                        throw new Error(responseBody)
+                    }
+                    /*let audioLink = `${space}/file=${audioInfo.path}`*/
 
                     /* 真的需要反代的话这一行需要修改
                         if (Config.huggingFaceReverseProxy) {
