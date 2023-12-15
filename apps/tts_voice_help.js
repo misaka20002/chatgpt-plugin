@@ -56,7 +56,7 @@ export class voicechangehelp extends plugin {
     async voicechangehelp(e) {
         let msg1 = `小呆毛tts语音替换帮助：\n` +
             `#tts可选人物列表\n` +
-            `#tts情感设置1|#tts情感帮助\n` +
+            `#tts情感帮助\n` +
             `#tts情感设置上锁(开启|关闭)\n` +
             `#tts语音(开启|关闭)转日语\n` +
             `#tts语言设置auto|#tts语言设置帮助\n` +
@@ -138,18 +138,23 @@ export class voicechangehelp extends plugin {
         if (!input_tts) {
             let msg1 = `tts情感设置帮助：`
             let msg_show = `tts语音当前情感：${Config.vits_emotion}`
+            let msg1_1 = `#tts情感设置为空值`
             let msg2 = `输入整数，如：\n#tts情感设置1`
             let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g, "")
-            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg2, msg3], `tts情感设置帮助`);
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1, msg2, msg3], `tts情感设置帮助`);
             return e.reply(msgx, false)
         }
         if (input_tts === '上锁开启' || input_tts === '上锁关闭') {
             if (!e.isMaster) return e.reply('只有主人可以使用#tts情感设置上锁开启|关闭')
             Config.vits_emotion_locker = input_tts === '上锁开启' ? true : false
             return e.reply(`#tts情感设置已${input_tts}！`)
-        }
-
-        if (RegExp("^([1-9]|[1-9]\\d|100)$").test(input_tts)) {
+        } else if (input_tts === '为空' || input_tts === '为空值') {
+            if (!e.isMaster && Config.vits_emotion_locker) {
+                return e.reply('tts情感设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+            }
+            Config.vits_emotion = ''
+            return e.reply(`tts情感已修改为空值！`)
+        } else if (RegExp("^([1-9]|[1-9]\\d|100)$").test(input_tts)) {
             if (!e.isMaster && Config.vits_emotion_locker) {
                 return e.reply('tts情感设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
             }
@@ -190,8 +195,15 @@ export class voicechangehelp extends plugin {
             let show_msg2 = `${Config.blockWords}`
             let show_msg3 = '检查输出结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开。如：\n#chatgpt设置输出黑名单屏蔽词1,屏蔽词b'
             let show_msg4 = '#chatgpt设置输出黑名单是bing,this is bing,是 bing,これはBing,これは Bing'
-            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4], 'chatgpt输出黑名单帮助');
+            let show_msg4_1 = '#chatgpt设置输出黑名单为空值'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4, show_msg4_1], 'chatgpt输出黑名单帮助');
             return e.reply(show_msgx, false);
+        } else if (input_tts === '为空' || input_tts === '为空值') {
+            Config.blockWords = ''
+            let show_msg1 = '输出黑名单已设置为空值'
+            let show_msg3 = '可使用#chatgpt查看输出黑名单'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'chatgpt输出黑名单');
+            return e.reply(show_msgx);
         } else {
             let input_array = input_tts.split(",");
             Config.blockWords = input_array
@@ -211,8 +223,15 @@ export class voicechangehelp extends plugin {
             let show_msg2 = `${Config.promptBlockWords}`
             let show_msg3 = '检查对话输入中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开。如：\n#chatgpt设置输入黑名单屏蔽词1,屏蔽词b'
             let show_msg4 = '#chatgpt设置输入黑名单屏蔽词1屏蔽词b'
-            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4], 'chatgpt输入黑名单帮助');
+            let show_msg4_1 = '#chatgpt设置输入黑名单为空值'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4, show_msg4_1], 'chatgpt输入黑名单帮助');
             return e.reply(show_msgx, false);
+        } else if (input_tts === '为空' || input_tts === '为空值') {
+            Config.promptBlockWords = ''
+            let show_msg1 = '输入黑名单已设置为空值'
+            let show_msg3 = '可使用#chatgpt查看输入黑名单'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'chatgpt输入黑名单');
+            return e.reply(show_msgx);
         } else {
             let input_array = input_tts.split(",");
             Config.promptBlockWords = input_array
