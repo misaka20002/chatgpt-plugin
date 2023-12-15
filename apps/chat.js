@@ -1364,7 +1364,7 @@ export class chatgpt extends plugin {
         if (sendable) {
           await this.reply(sendable)
         } else {
-          await this.reply('派蒙的儿童用手机的麦克风好像坏了，发不出语音QAQ~', false, { recallMsg: 60 })
+          await this.reply('派蒙的儿童用手机的麦克风好像坏了，发不出语音QAQ~', false, { recallMsg: 30 })
         }
       } else if (userSetting.usePicture || (Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         // todo use next api of chatgpt to complete incomplete respoonse
