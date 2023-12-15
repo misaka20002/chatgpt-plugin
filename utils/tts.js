@@ -115,6 +115,16 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             logger.info(message)
 
             /*这api怎么天天换参数呢*/
+            /*循环遍历audioInfo对象找到下载地址*/
+            let audioLink
+            for (let read_audioInfo in audioInfo) {
+                if (/\/.*\/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                    audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                    break
+                }
+            }
+            if (!audioLink) throw new Error(responseBody)
+            /*也可以这么写1
             let audioLink
             if (audioInfo.name) {
                 audioLink = `${space}/file=${audioInfo.name}`
@@ -122,10 +132,11 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 audioLink = `${space}/file=${audioInfo.path}`
             } else {
                 throw new Error(responseBody)
-            }
-            /*也可以这么写
+            }*/
+            /*也可以这么写2
             let audioLink = audioInfo.name ? `/file=${audioInfo.name}` : `/file=${audioInfo.path}`*/
-            /*let audioLink = `${space}/file=${audioInfo.path}`*/
+            /*原版
+            let audioLink = `${space}/file=${audioInfo.path}`*/
 
             /* 真的需要反代的话这一行需要修改
                 if (Config.huggingFaceReverseProxy) {
@@ -169,13 +180,13 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
                     /*这api怎么天天换参数呢*/
                     let audioLink
-                    if (audioInfo.name) {
-                        audioLink = `${space}/file=${audioInfo.name}`
-                    } else if (audioInfo.path) {
-                        audioLink = `${space}/file=${audioInfo.path}`
-                    } else {
-                        throw new Error(responseBody)
+                    for (let read_audioInfo in audioInfo) {
+                        if (/\/.*\/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                            audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                            break
+                        }
                     }
+                    if (!audioLink) throw new Error(responseBody)
                     /*let audioLink = `${space}/file=${audioInfo.path}`*/
 
                     /* 真的需要反代的话这一行需要修改
