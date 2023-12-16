@@ -24,6 +24,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#ttslength(Scale)?设置(帮助)?',
+                fnc: 'set_lengthScale',
+                permission: 'master'
+            },
+            {
                 reg: '^#tts(语音)?(开启|关闭)转日语$',
                 fnc: 'set_autoJapanese',
                 permission: 'master'
@@ -60,6 +65,7 @@ export class voicechangehelp extends plugin {
             `#tts情感设置上锁(开启|关闭)\n` +
             `#tts语音(开启|关闭)转日语\n` +
             `#tts语言设置auto|#tts语言设置帮助\n` +
+            `#ttslength帮助\n` +
             `#tts查看当前语音设置\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
@@ -175,7 +181,7 @@ export class voicechangehelp extends plugin {
     async set_tts_language(e) {
         let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
         if (!input_tts) {
-            return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)`, false)
+            return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
         }
         input_tts = input_tts.toLowerCase()
         if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
@@ -184,6 +190,21 @@ export class voicechangehelp extends plugin {
             return e.reply(`tts语言已设置为${input_tts}！`)
         } else {
             return e.reply('可选ZH, JP, EN, mix(api暂不支持), auto\n例如#tts语言设置auto', false)
+        }
+    }
+
+    /* '^#ttslength(Scale)?设置(帮助)?' */
+    async set_lengthScale(e) {
+        let input_tts = e.msg.replace(/^#ttslength(Scale)?设置(帮助)?/, '').trim()
+        if (!input_tts) {
+            return e.reply(`控制整体语速，范围0.1-2.0，越小语速越快。\n例如#ttslength设置1`, false)
+        }
+        input_tts = parseFloat(input_tts).toFixed(1)
+        if (input_tts > 0 && input_tts <= 2) {
+            Config.lengthScale = input_tts
+            return e.reply(`tts的lengthScale已设置为${input_tts}！`)
+        } else {
+            return e.reply('输入范围0.1-2.0哦。\n例如#ttslength设置1', false)
         }
     }
 

@@ -123,18 +123,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     break
                 }
             }
-            if (!audioLink) throw new Error(responseBody)
-            /*也可以这么写1
-            let audioLink
-            if (audioInfo.name) {
-                audioLink = `${space}/file=${audioInfo.name}`
-            } else if (audioInfo.path) {
-                audioLink = `${space}/file=${audioInfo.path}`
-            } else {
+            if (!audioLink) {
+                logger.error(responseBody)
                 throw new Error(responseBody)
-            }*/
-            /*也可以这么写2
-            let audioLink = audioInfo.name ? `/file=${audioInfo.name}` : `/file=${audioInfo.path}`*/
+            }
             /*原版
             let audioLink = `${space}/file=${audioInfo.path}`*/
 
