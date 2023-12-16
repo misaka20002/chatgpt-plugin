@@ -847,7 +847,7 @@ export function supportGuoba () {
           }
         },
         {
-            field: 'style_text ',
+            field: 'style_text',
             label: 'tts风格文本',
             bottomHelpMessage: '声音风格模仿：生成与此文本朗读相同的情感和声音。',
             component: 'Input'
