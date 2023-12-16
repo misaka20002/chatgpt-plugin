@@ -34,6 +34,14 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#tts(设置|查看)?风格文本(帮助)?',
+                fnc: 'set_style_text',
+            },
+            {
+                reg: '^#tts(设置|查看)?风格权重(帮助)?',
+                fnc: 'set_style_text_weights',
+            },
+            {
                 reg: '^#chatgpt(设置|查看)?输出黑名单(帮助)?',
                 fnc: 'set_blockWords',
                 permission: 'master'
@@ -60,13 +68,15 @@ export class voicechangehelp extends plugin {
     /* ^#tts(语音)?(替换)?帮助$ */
     async voicechangehelp(e) {
         let msg1 = `小呆毛tts语音替换帮助：\n` +
+            `#tts查看当前语音设置\n` +
             `#tts可选人物列表\n` +
             `#tts情感帮助\n` +
             `#tts情感设置上锁(开启|关闭)\n` +
             `#tts语音(开启|关闭)转日语\n` +
             `#tts语言设置auto|#tts语言设置帮助\n` +
-            `#ttslength帮助\n` +
-            `#tts查看当前语音设置\n` +
+            `#ttslength设置帮助\n` +
+            `#tts(查看|设置)风格文本\n` +
+            `#tts(查看|设置)风格权重\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
@@ -81,7 +91,9 @@ export class voicechangehelp extends plugin {
             `#tts可选人物列表\n` +
             `#tts情感设置1\n` +
             `#tts情感设置帮助\n` +
-            `（共100种情感）` +
+            `（共100种情感）\n` +
+            `#tts(查看|设置)风格文本\n` +
+            `#tts(查看|设置)风格权重` +
             ''
         let msgx
         if (e.isMaster) {
@@ -208,6 +220,61 @@ export class voicechangehelp extends plugin {
         }
     }
 
+    /* ^#tts(设置|查看)?风格权重(帮助)? */
+    async set_style_text_weights(e) {
+        let input_tts = e.msg.replace(/^#tts(设置|查看)?风格权重(帮助)?/, '').trim()
+        if (!input_tts) {
+            let show_msg1 = 'tts当前风格权重：'
+            let show_msg2 = `${Config.style_text_weights}`
+            let show_msg3 = '原始文本和风格文本的bert混合比率，0表示仅原始文本，1表示仅风格文本，范围0.0-1.0，默认0.7'
+            let show_msg4_1 = '#tts设置风格权重0.7'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4_1], 'tts风格文本帮助');
+            return e.reply(show_msgx, false);
+        }
+        input_tts = parseFloat(input_tts).toFixed(1)
+        if (input_tts >= 0 && input_tts <= 1) {
+            if (!e.isMaster && Config.vits_emotion_locker) {
+                return e.reply('tts设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+            }
+            Config.style_text_weights = input_tts
+            return e.reply(`tts风格权重已设置为${input_tts}！`)
+        } else {
+            return e.reply('输入范围0.0-1.0哦。\n例如#tts设置风格权重0.7', false)
+        }
+    }
+
+    /* ^#tts(设置|查看)?风格文本(帮助)? */
+    async set_style_text(e) {
+        let input_tts = e.msg.replace(/^#tts(设置|查看)?风格文本(帮助)?/, '').trim()
+        if (!input_tts) {
+            let show_msg1 = 'tts当前风格文本：'
+            let show_msg2 = `${Config.style_text}`
+            let show_msg3 = '声音风格模仿：生成与此文本朗读相同的情感和声音。如：\n#tts设置风格文本进不去！'
+            let show_msg4_1 = '#tts设置风格文本为空值'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4_1], 'tts风格文本帮助');
+            return e.reply(show_msgx, false);
+        } else if (input_tts === '为空' || input_tts === '为空值') {
+            if (!e.isMaster && Config.vits_emotion_locker) {
+                return e.reply('tts设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+            }
+            Config.style_text = ""
+            let show_msg1 = '风格文本已设置为空值'
+            let show_msg3 = '可使用#tts查看风格文本'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'tts风格文本');
+            return e.reply(show_msgx);
+        } else {
+            if (!e.isMaster && Config.vits_emotion_locker) {
+                return e.reply('tts设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
+            }
+            Config.style_text = input_tts
+            let show_msg1 = '风格文本已设置为：'
+            let show_msg2 = `${input_tts}`
+            let show_msg3 = '可使用#tts查看风格文本'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'tts风格文本');
+            return e.reply(show_msgx);
+        }
+    }
+
     /* ^#chatgpt(设置|查看)?输出黑名单(帮助)? */
     async set_blockWords(e) {
         let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输出黑名单(帮助)?/, '').trim()
@@ -277,7 +344,7 @@ export class voicechangehelp extends plugin {
     /** 发送当前设置 */
     async show_tts_voice_help_config(e) {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}`
+        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}`
 
         let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
         return e.reply(show_tts_voice_help_config_msg2_msgx);

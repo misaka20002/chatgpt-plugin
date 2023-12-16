@@ -865,7 +865,7 @@ export function supportGuoba () {
         {
           field: 'vits_emotion_locker',
           label: 'vits_emotion_locker',
-          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置 #tts情感设置',
+          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置 #tts设置风格文本',
           component: 'Switch'
         },
         {
