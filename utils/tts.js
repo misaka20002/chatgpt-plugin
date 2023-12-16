@@ -37,7 +37,7 @@ function randomNum(minNum, maxNum) {
     }
 }
 
-export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language) {
+export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights)) {
     if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
     {
         let character_voice_language = speaker.substring(speaker.length - 2);
@@ -65,7 +65,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let body = {
             data: [
                 text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                tts_language, exampleAudio, vits_emotion, "Text prompt"
+                tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
             ],
             event_data: null,
             fn_index: 0

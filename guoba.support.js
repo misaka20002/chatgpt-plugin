@@ -847,9 +847,25 @@ export function supportGuoba () {
           }
         },
         {
+            field: 'style_text ',
+            label: 'tts风格文本',
+            bottomHelpMessage: '声音风格模仿：生成与此文本朗读相同的情感和声音。',
+            component: 'Input'
+        },
+        {
+            field: 'style_text_weights',
+            label: 'tts风格文本权重',
+            bottomHelpMessage: '原始文本和风格文本的bert混合比率，0表示仅原始文本，1表示仅风格文本，范围0.0-1.0',
+            component: 'InputNumber',
+            componentProps: {
+                min: 0,
+                max: 1
+            }
+        },
+        {
           field: 'vits_emotion_locker',
           label: 'vits_emotion_locker',
-          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置',
+          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置 #tts情感设置',
           component: 'Switch'
         },
         {
