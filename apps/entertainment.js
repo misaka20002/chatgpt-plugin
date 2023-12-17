@@ -361,8 +361,7 @@ ${translateLangLabels}
     if (Config.defaultUseTTS) {
         //let audio = await generateVitsAudio(message, Config.defaultTTSRole)
         //sendable = segment.record(audio)
-        let emotion, emotionDegree
-        sendable = await generateAudio(e, message, emotion, emotionDegree)
+        sendable = await generateAudio(e, message)
     }
     if (!groupId) {
       await e.reply(sendable)
