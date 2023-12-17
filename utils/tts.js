@@ -72,6 +72,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
         let space = Config.ttsSpace
 
+        //校正为 https://v2.genshinvoice.top
         if (space.endsWith('/run/predict')) {
             let trimmedSpace = space.substring(0, space.length - 12)
             logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
@@ -114,6 +115,22 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             let [message, audioInfo] = json?.data
             logger.info(message)
 
+            /* 本api responseBody 参考:
+                {
+                    "data": [
+                        "Success",
+                        {
+                            "name": "/tmp/gradio/530b4995ce71b56987e7141032f60c9f8db1ac18/audio.wav",
+                            "data": null,
+                            "is_file": true,
+                            "orig_name": "audio.wav"
+                        }
+                    ],
+                    "is_generating": false,
+                    "duration": 0.26611995697021484,
+                    "average_duration": 0.6881923574796864
+                }
+            */
             /*这api怎么天天换参数呢*/
             /*循环遍历audioInfo对象找到下载地址*/
             let audioLink
