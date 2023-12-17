@@ -29,7 +29,7 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
-                reg: '^#tts(语音)?(开启|关闭)转日语$',
+                reg: '^#tts(语音)?(开启|关闭)转日语(帮助)?$',
                 fnc: 'set_autoJapanese',
                 permission: 'master'
             },
@@ -70,17 +70,17 @@ export class voicechangehelp extends plugin {
         let msg1 = `小呆毛tts语音替换帮助：\n` +
             `#tts查看当前语音设置\n` +
             `#tts可选人物列表\n` +
+            `#tts转日语帮助\n` +
+            `#tts语言设置帮助\n` +
+            `#ttslength设置帮助\n` +
             `#tts情感帮助\n` +
             `#tts情感设置上锁(开启|关闭)\n` +
-            `#tts语音(开启|关闭)转日语\n` +
-            `#tts语言设置auto|#tts语言设置帮助\n` +
-            `#ttslength设置帮助\n` +
             `#tts(查看|设置)风格文本\n` +
             `#tts(查看|设置)风格权重\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
-        let msg2 = `设置：\n在ChatGPT-Plugin的锅巴插件里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
+        let msg2 = `设置：\n在ChatGPT-Plugin的锅巴设置里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
             `https://v2.genshinvoice.top\n` +
             `云转码API发送数据模式：[文件]\n` +
             `感谢genshinvoice.top提供的api支持！`
@@ -193,7 +193,7 @@ export class voicechangehelp extends plugin {
     async set_tts_language(e) {
         let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
         if (!input_tts) {
-            return e.reply(`可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
+            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和派蒙说话派蒙可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
         }
         input_tts = input_tts.toLowerCase()
         if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
@@ -332,12 +332,12 @@ export class voicechangehelp extends plugin {
 
     /* ^#tts(语音)?(开启|关闭)转日语$ */
     async set_autoJapanese(e) {
-        const type = e.msg.replace(/^#tts(语音)?(开启|关闭)转日语$/g, '$2')
+        const type = e.msg.replace(/^#tts(语音)?(开启|关闭)转日语(帮助)?$/g, '$2')
         if (type === '开启' || type === '关闭') {
             Config.autoJapanese = type === '开启' ? true : false
             return e.reply(`tts语音已${type}转日语！`)
         } else {
-            return e.reply('喵？')
+            return e.reply('喵？可以选择把文本翻译成日语再发音哦\n#tts(开启|关闭)转日语')
         }
     }
 
