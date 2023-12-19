@@ -776,7 +776,7 @@ export function supportGuoba () {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai后查看api地址',
+          bottomHelpMessage: '大力感谢genshinvoice.top提供的api支持——请填入https://v2.genshinvoice.top',
           component: 'Input'
         },
         {
@@ -823,7 +823,7 @@ export function supportGuoba () {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: '默认发送数据链接，如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          bottomHelpMessage: '语音传回是数据链接还是文件：如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
           component: 'Select',
           componentProps: {
             options: [

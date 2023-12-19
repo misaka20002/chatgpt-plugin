@@ -29,7 +29,7 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
-                reg: '^#tts(语音)?转日语(帮助)?(开启|关闭)$',
+                reg: '^#tts(语音)?转日语(帮助)?',
                 fnc: 'set_autoJapanese',
                 permission: 'master'
             },
@@ -70,8 +70,8 @@ export class voicechangehelp extends plugin {
         let msg1 = `小呆毛tts语音替换帮助：\n` +
             `#tts查看当前语音设置\n` +
             `#tts可选人物列表\n` +
-            `#tts转日语帮助\n` +
             `#tts语言设置帮助\n` +
+            `#tts语音转日语帮助\n` +
             `#ttslength设置帮助\n` +
             `#tts情感帮助\n` +
             `#tts情感设置上锁(开启|关闭)\n` +
@@ -80,10 +80,10 @@ export class voicechangehelp extends plugin {
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
-        let msg2 = `设置：\n在ChatGPT-Plugin的锅巴设置里：\nvits-uma-genshin-honkai语音转换API地址：\n` +
+        let msg2 = `必要设置：\nChatGPT-Plugin 锅巴设置：\nvits-uma-genshin-honkai语音转换API地址：\n` +
             `https://v2.genshinvoice.top\n` +
-            `云转码API发送数据模式：[文件]\n` +
-            `感谢genshinvoice.top提供的api支持！`
+            `云转码API发送数据模式：[文件]`
+        let msg3 = '感谢genshinvoice.top提供的api支持！'
 
         let msg1_isn_master = `小呆毛tts语音替换帮助：\n` +
             `#chatgpt设置语音角色派蒙_ZH\n` +
@@ -93,11 +93,12 @@ export class voicechangehelp extends plugin {
             `#tts情感设置帮助\n` +
             `（共100种情感）\n` +
             `#tts(查看|设置)风格文本\n` +
-            `#tts(查看|设置)风格权重` +
+            `#tts(查看|设置)风格权重\n` +
+            `#chatgpt语音模式` +
             ''
         let msgx
         if (e.isMaster) {
-            msgx = await common.makeForwardMsg(e, [msg1, msg2], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [msg1_isn_master], `tts语音帮助`)
         }
@@ -110,7 +111,7 @@ export class voicechangehelp extends plugin {
         let msg1 = `tts可选人物列表：`
         let msg2 = `（每名用户都可以单独设置）\n` +
             `#chatgpt设置全局vits语音角色派蒙_ZH\n` +
-            `#chatgpt设置语音角色可莉_ZH\n`
+            `#chatgpt设置语音角色可莉_ZH`
         let speakertip1 = "可选列表：\n"
         let speakertip2 = ""
         let speakertip3 = ""
@@ -330,12 +331,18 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#tts(语音)?(开启|关闭)转日语$ */
+    /* ^#tts(语音)?转日语(帮助)? */
     async set_autoJapanese(e) {
-        const type = e.msg.replace(/^#tts(语音)?转日语(帮助)?(开启|关闭)$/g, '$3')
-        if (type === '开启' || type === '关闭') {
-            Config.autoJapanese = type === '开启' ? true : false
-            return e.reply(`tts语音已${type}转日语！`)
+        let input_tts = e.msg.replace(/^#tts(语音)?转日语(帮助)?/, '').trim()
+        if (!input_tts) {
+            let msg1 = `可以选择把文本翻译成日语再发音哦`
+            let msg_show = `tts语音转日语当前设置：${Config.autoJapanese}`
+            let msg1_1 = `#tts语音转日语(开启|关闭)`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts语音转日语帮助`);
+            return e.reply(msgx, false)
+        }
+        if (input_tts === '开启' || input_tts === '关闭') {
+            Config.autoJapanese = input_tts === '开启' ? true : false
         } else {
             return e.reply('喵？可以选择把文本翻译成日语再发音哦\n#tts转日语(开启|关闭)')
         }
@@ -344,7 +351,7 @@ export class voicechangehelp extends plugin {
     /** 发送当前设置 */
     async show_tts_voice_help_config(e) {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}`
+        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}`
 
         let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
         return e.reply(show_tts_voice_help_config_msg2_msgx);
