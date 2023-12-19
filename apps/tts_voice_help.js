@@ -194,7 +194,7 @@ export class voicechangehelp extends plugin {
     async set_tts_language(e) {
         let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
         if (!input_tts) {
-            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和派蒙说话派蒙可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
+            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和人家说话人家可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
         }
         input_tts = input_tts.toLowerCase()
         if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
