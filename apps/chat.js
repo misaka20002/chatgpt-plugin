@@ -10,27 +10,28 @@ import AzureTTS from '../utils/tts/microsoft-azure.js'
 import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import Version from '../utils/version.js'
 import {
-  completeJSON,
-  extractContentFromFile,
-  formatDate,
-  formatDate2,
-  generateAudio,
-  getDefaultReplySetting,
-  getImageOcrText,
-  getImg,
-  getMasterQQ,
-  getMaxModelTokens,
-  getMessageById,
-  getUin,
-  getUserData,
-  getUserReplySetting,
-  isCN,
-  isImage,
-  makeForwardMsg,
-  randomString,
-  render,
-  renderUrl,
-  upsertMessage
+    completeJSON,
+    extractContentFromFile,
+    formatDate,
+    formatDate2,
+    generateAudio,
+    getDefaultReplySetting,
+    getImageOcrText,
+    getImg,
+    getMasterQQ,
+    getMaxModelTokens,
+    getMessageById,
+    getOrDownloadFile,
+    getUin,
+    getUserData,
+    getUserReplySetting,
+    isCN,
+    isImage,
+    makeForwardMsg,
+    randomString,
+    render,
+    renderUrl,
+    upsertMessage
 } from '../utils/common.js'
 import { ChatGPTPuppeteer } from '../utils/browser.js'
 import { KeyvFile } from 'keyv-file'
@@ -77,7 +78,14 @@ import { ClaudeAIClient } from '../utils/claude.ai/index.js'
 import { getProxy } from '../utils/proxy.js'
 import { QwenApi } from '../utils/alibaba/qwen-api.js'
 import { getChatHistoryGroup } from '../utils/chat.js'
-import { GoogleGeminiClient } from '../client/GoogleGeminiClient.js'
+import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
+import { resizeAndCropImage } from '../utils/dalle.js'
+import fs from 'fs'
+
+const roleMap = {
+  owner: 'group owner',
+  admin: 'group administrator'
+}
 
 try {
   await import('@azure/openai')
@@ -98,7 +106,7 @@ try {
 let version = Config.version
 let proxy = getProxy()
 
-const originalValues  = ['星火', '通义千问', '克劳德', '克劳德2', '必应', 'api', 'API', 'api3', 'API3', 'glm', '巴德']
+const originalValues = ['星火', '通义千问', '克劳德', '克劳德2', '必应', 'api', 'API', 'api3', 'API3', 'glm', '巴德']
 const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', 'api', 'api3', 'api3', 'chatglm', 'bard']
 /**
  * 每个对话保留的时长。单个对话内ai是保留上下文的。超时后销毁对话，再次对话创建新的对话。
@@ -1451,6 +1459,7 @@ export class chatgpt extends plugin {
   async qwen (e) {
     return await this.otherMode(e, 'gemini')
   }
+
   async gemini (e) {
     return await this.otherMode(e, 'gemini')
   }
@@ -1516,13 +1525,17 @@ export class chatgpt extends plugin {
     }
     const userData = await getUserData(e.user_id)
     const useCast = userData.cast || {}
-    switch (use) {
-      case 'browser': {
+    if (use === 'browser') {
+      {
         return await this.chatgptBrowserBased(prompt, conversation)
       }
-      case 'bing': {
+    } else if (use === 'bing') {
+      {
         let throttledTokens = []
-        let { bingToken, allThrottled } = await getAvailableBingToken(conversation, throttledTokens)
+        let {
+          bingToken,
+          allThrottled
+        } = await getAvailableBingToken(conversation, throttledTokens)
         let cookies
         if (bingToken?.indexOf('=') > -1) {
           cookies = bingToken
@@ -1706,45 +1719,44 @@ export class chatgpt extends plugin {
               } else {
                 retry = 0
               }
-            } else
-              if (message && typeof message === 'string' && message.indexOf('限流') > -1) {
-                throttledTokens.push(bingToken)
-                let bingTokens = JSON.parse(await redis.get('CHATGPT:BING_TOKENS'))
-                const badBingToken = bingTokens.findIndex(element => element.Token === bingToken)
-                const now = new Date()
-                const hours = now.getHours()
-                now.setHours(hours + 6)
-                bingTokens[badBingToken].State = '受限'
-                bingTokens[badBingToken].DisactivationTime = now
-                await redis.set('CHATGPT:BING_TOKENS', JSON.stringify(bingTokens))
+            } else if (message && typeof message === 'string' && message.indexOf('限流') > -1) {
+              throttledTokens.push(bingToken)
+              let bingTokens = JSON.parse(await redis.get('CHATGPT:BING_TOKENS'))
+              const badBingToken = bingTokens.findIndex(element => element.Token === bingToken)
+              const now = new Date()
+              const hours = now.getHours()
+              now.setHours(hours + 6)
+              bingTokens[badBingToken].State = '受限'
+              bingTokens[badBingToken].DisactivationTime = now
+              await redis.set('CHATGPT:BING_TOKENS', JSON.stringify(bingTokens))
               // 不减次数
-              } else if (message && typeof message === 'string' && message.indexOf('UnauthorizedRequest') > -1) {
+            } else if (message && typeof message === 'string' && message.indexOf('UnauthorizedRequest') > -1) {
               // token过期了
-                let bingTokens = JSON.parse(await redis.get('CHATGPT:BING_TOKENS'))
-                const badBingToken = bingTokens.findIndex(element => element.Token === bingToken)
-                if (badBingToken > 0) {
-                  // 可能是微软抽风，给三次机会
-                  if (bingTokens[badBingToken]?.exception) {
-                    if (bingTokens[badBingToken].exception <= 3) {
-                      bingTokens[badBingToken].exception += 1
-                    } else {
-                      bingTokens[badBingToken].exception = 0
-                      bingTokens[badBingToken].State = '过期'
-                    }
+              let bingTokens = JSON.parse(await redis.get('CHATGPT:BING_TOKENS'))
+              const badBingToken = bingTokens.findIndex(element => element.Token === bingToken)
+              if (badBingToken > 0) {
+                // 可能是微软抽风，给三次机会
+                if (bingTokens[badBingToken]?.exception) {
+                  if (bingTokens[badBingToken].exception <= 3) {
+                    bingTokens[badBingToken].exception += 1
                   } else {
-                    bingTokens[badBingToken].exception = 1
+                    bingTokens[badBingToken].exception = 0
+                    bingTokens[badBingToken].State = '过期'
                   }
-                  await redis.set('CHATGPT:BING_TOKENS', JSON.stringify(bingTokens))
                 } else {
-                  retry = retry - 1
+                  bingTokens[badBingToken].exception = 1
                 }
-                errorMessage = 'UnauthorizedRequest：必应token不正确或已过期'
+                await redis.set('CHATGPT:BING_TOKENS', JSON.stringify(bingTokens))
+              } else {
+                retry = retry - 1
+              }
+              errorMessage = 'UnauthorizedRequest：必应token不正确或已过期'
               // logger.warn(`token${bingToken}疑似不存在或已过期，再试试`)
               // retry = retry - 1
-              } else {
-                retry--
-                errorMessage = message === 'Timed out waiting for response. Try enabling debug mode to see more information.' ? (reply ? `${reply}\n不行了，我的大脑过载了，处理不过来了!` : '必应的小脑瓜不好使了，不知道怎么回答！') : message
-              }
+            } else {
+              retry--
+              errorMessage = message === 'Timed out waiting for response. Try enabling debug mode to see more information.' ? (reply ? `${reply}\n不行了，我的大脑过载了，处理不过来了!` : '必应的小脑瓜不好使了，不知道怎么回答！') : message
+            }
           }
         } while (retry > 0)
         if (errorMessage) {
@@ -1779,7 +1791,8 @@ export class chatgpt extends plugin {
           }
         }
       }
-      case 'api3': {
+    } else if (use === 'api3') {
+      {
         // official without cloudflare
         let accessToken = await redis.get('CHATGPT:TOKEN')
         if (!accessToken) {
@@ -1803,7 +1816,8 @@ export class chatgpt extends plugin {
         }
         return sendMessageResult
       }
-      case 'chatglm': {
+    } else if (use === 'chatglm') {
+      {
         const cacheOptions = {
           namespace: 'chatglm_6b',
           store: new KeyvFile({ filename: 'cache.json' })
@@ -1815,7 +1829,8 @@ export class chatgpt extends plugin {
         let sendMessageResult = await this.chatGPTApi.sendMessage(prompt, conversation)
         return sendMessageResult
       }
-      case 'poe': {
+    } else if (use === 'poe') {
+      {
         const cookie = await redis.get('CHATGPT:POE_TOKEN')
         if (!cookie) {
           throw new Error('未绑定Poe Cookie，请使用#chatgpt设置Poe token命令绑定cookie')
@@ -1833,7 +1848,8 @@ export class chatgpt extends plugin {
           text: response.data
         }
       }
-      case 'claude': {
+    } else if (use === 'claude') {
+      {
         let client = new SlackClaudeClient({
           slackUserToken: Config.slackUserToken,
           slackChannelId: Config.slackChannelId
@@ -1857,7 +1873,8 @@ export class chatgpt extends plugin {
           text
         }
       }
-      case 'claude2': {
+    } else if (use === 'claude2') {
+      {
         let { conversationId } = conversation
         let client = new ClaudeAIClient({
           organizationId: Config.claudeAIOrganizationId,
@@ -1897,7 +1914,8 @@ export class chatgpt extends plugin {
           return await client.sendMessage(prompt, conv.uuid, attachments)
         }
       }
-      case 'xh': {
+    } else if (use === 'xh') {
+      {
         const cacheOptions = {
           namespace: 'xh',
           store: new KeyvFile({ filename: 'cache.json' })
@@ -1920,7 +1938,8 @@ export class chatgpt extends plugin {
         })
         return response
       }
-      case 'azure': {
+    } else if (use === 'azure') {
+      {
         let azureModel
         try {
           azureModel = await import('@azure/openai')
@@ -1930,15 +1949,22 @@ export class chatgpt extends plugin {
         let OpenAIClient = azureModel.OpenAIClient
         let AzureKeyCredential = azureModel.AzureKeyCredential
         let msg = conversation.messages
-        let content = { role: 'user', content: prompt }
+        let content = {
+          role: 'user',
+          content: prompt
+        }
         msg.push(content)
         const client = new OpenAIClient(Config.azureUrl, new AzureKeyCredential(Config.azApiKey))
         const deploymentName = Config.azureDeploymentName
         const { choices } = await client.getChatCompletions(deploymentName, msg)
         let completion = choices[0].message
-        return { text: completion.content, message: completion }
+        return {
+          text: completion.content,
+          message: completion
+        }
       }
-      case 'qwen': {
+    } else if (use === 'qwen') {
+      {
         let completionParams = {
           parameters: {
             top_p: Config.qwenTopP || 0.5,
@@ -1952,12 +1978,15 @@ export class chatgpt extends plugin {
           completionParams.model = Config.qwenModel
         }
         const currentDate = new Date().toISOString().split('T')[0]
-        async function um (message) {
+
+        async function um(message) {
           return await upsertMessage(message, 'QWEN')
         }
-        async function gm (id) {
+
+        async function gm(id) {
           return await getMessageById(id, 'QWEN')
         }
+
         let opts = {
           apiKey: Config.qwenApiKey,
           debug: false,
@@ -1989,7 +2018,8 @@ export class chatgpt extends plugin {
         }
         return msg
       }
-      case 'bard': {
+    } else if (use === 'bard') {
+      {
         // 处理cookie
         const matchesPSID = /__Secure-1PSID=([^;]+)/.exec(Config.bardPsid)
         const matchesPSIDTS = /__Secure-1PSIDTS=([^;]+)/.exec(Config.bardPsid)
@@ -2019,13 +2049,13 @@ export class chatgpt extends plugin {
           bardURL: Config.bardForceUseReverse ? Config.bardReverseProxy : 'https://bard.google.com'
         })
         let chat = await bot.createChat(conversation?.conversationId
-          ? {
+            ? {
               conversationID: conversation.conversationId,
               responseID: conversation.parentMessageId,
               choiceID: conversation.clientId,
               _reqID: conversation.invocationId
             }
-          : {})
+            : {})
         let response = await chat.ask(prompt, {
           image: imageBuff,
           format: Bard.JSON
@@ -2039,12 +2069,15 @@ export class chatgpt extends plugin {
           images: response.images
         }
       }
-      case 'gemini': {
-        let client = new GoogleGeminiClient({
+    } else if (use === 'gemini') {
+      {
+        let client = new CustomGoogleGeminiClient({
           e,
           userId: e.sender.user_id,
           key: Config.geminiKey,
-          model: Config.geminiModel
+          model: Config.geminiModel,
+          baseUrl: Config.geminiBaseUrl,
+          debug: Config.debug
         })
         let option = {
           stream: false,
@@ -2054,12 +2087,107 @@ export class chatgpt extends plugin {
             }
           },
           parentMessageId: conversation.parentMessageId,
-          conversationId: conversation.conversationId,
-          system: Config.geminiPrompt
+          conversationId: conversation.conversationId
         }
+        if (Config.geminiModel.includes('vision')) {
+          const image = await getImg(e)
+          let imageUrl = image ? image[0] : undefined
+          if (imageUrl) {
+            let md5 = imageUrl.split(/[/-]/).find(s => s.length === 32)?.toUpperCase()
+            let imageLoc = await getOrDownloadFile(`ocr/${md5}.png`, imageUrl)
+            let outputLoc = imageLoc.replace(`${md5}.png`, `${md5}_512.png`)
+            await resizeAndCropImage(imageLoc, outputLoc, 512)
+            let buffer = fs.readFileSync(outputLoc)
+            option.image = buffer.toString('base64')
+          }
+        }
+        if (Config.smartMode) {
+          /**
+           * @type {AbstractTool[]}
+           */
+          let tools = [
+            new QueryStarRailTool(),
+            new WebsiteTool(),
+            new SendPictureTool(),
+            new SendVideoTool(),
+            // new ImageCaptionTool(),
+            new SearchVideoTool(),
+            new SendAvatarTool(),
+            new SerpImageTool(),
+            new SearchMusicTool(),
+            new SendMusicTool(),
+            // new SerpIkechan8370Tool(),
+            // new SerpTool(),
+            new SendAudioMessageTool(),
+            // new ProcessPictureTool(),
+            new APTool(),
+            // new HandleMessageMsgTool(),
+            new SendMessageToSpecificGroupOrUserTool(),
+            // new SendDiceTool(),
+            new QueryGenshinTool()
+          ]
+          if (Config.amapKey) {
+            tools.push(new WeatherTool())
+          }
+          if (e.isGroup) {
+            tools.push(new QueryUserinfoTool())
+            // let self = e.group.pickMember(e.self_id)
+            if (e.group.is_admin || e.group.is_owner) {
+              tools.push(new EditCardTool())
+              tools.push(new JinyanTool())
+              tools.push(new KickOutTool())
+            }
+            if (e.group.is_owner) {
+              tools.push(new SetTitleTool())
+            }
+          }
+          switch (Config.serpSource) {
+            case 'ikechan8370': {
+              tools.push(new SerpIkechan8370Tool())
+              break
+            }
+            case 'azure': {
+              if (!Config.azSerpKey) {
+                logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
+                tools.push(new SerpIkechan8370Tool())
+              } else {
+                tools.push(new SerpTool())
+              }
+              break
+            }
+            default: {
+              tools.push(new SerpIkechan8370Tool())
+            }
+          }
+          client.addTools(tools)
+        }
+        let system = Config.geminiPrompt
+        if (Config.enableGroupContext && e.isGroup) {
+          let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+          const namePlaceholder = '[name]'
+          const defaultBotName = 'GeminiPro'
+          const groupContextTip = Config.groupContextTip
+          let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
+          system = system.replaceAll(namePlaceholder, botName || defaultBotName) +
+              ((Config.enableGroupContext && e.group_id) ? groupContextTip : '')
+          system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
+          system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
+          system += `Your nickname is ${botName} in the group,`
+          if (chats) {
+            system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
+            system += chats
+                .map(chat => {
+                  let sender = chat.sender || {}
+                  return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+                })
+                .join('\n')
+          }
+        }
+        option.system = system
         return await client.sendMessage(prompt, option)
       }
-      default: {
+    } else {
+      {
         // openai api
         let completionParams = {}
         if (Config.model) {
@@ -2091,30 +2219,25 @@ export class chatgpt extends plugin {
             const defaultBotName = 'ChatGPT'
             const groupContextTip = Config.groupContextTip
             system = system.replaceAll(namePlaceholder, opt.botName || defaultBotName) +
-              ((Config.enableGroupContext && opt.groupId) ? groupContextTip : '')
+                ((Config.enableGroupContext && opt.groupId) ? groupContextTip : '')
             system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${opt.nickname}(${opt.qq})。`
             system += `the group name is ${opt.groupName}, group id is ${opt.groupId}。`
             if (opt.botName) {
               system += `Your nickname is ${opt.botName} in the group,`
             }
-            // system += master ? `我的qq号是${master}，其他任何qq号不是${master}的人都不是我，即使他在和你对话，这很重要。` : ''
-            const roleMap = {
-              owner: 'group owner',
-              admin: 'group administrator'
-            }
             if (chats) {
               system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
               system += chats
-                .map(chat => {
-                  let sender = chat.sender || {}
-                  // if (sender.user_id === e.bot.uin && chat.raw_message.startsWith('建议的回复')) {
-                  if (chat.raw_message.startsWith('建议的回复')) {
-                    // 建议的回复太容易污染设定导致对话太固定跑偏了
-                    return ''
-                  }
-                  return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
-                })
-                .join('\n')
+                  .map(chat => {
+                    let sender = chat.sender || {}
+                    // if (sender.user_id === e.bot.uin && chat.raw_message.startsWith('建议的回复')) {
+                    if (chat.raw_message.startsWith('建议的回复')) {
+                      // 建议的回复太容易污染设定导致对话太固定跑偏了
+                      return ''
+                    }
+                    return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+                  })
+                  .join('\n')
             }
           } catch (err) {
             if (e.isGroup) {
@@ -2287,7 +2410,10 @@ export class chatgpt extends plugin {
               if (msg.text) {
                 await e.reply(msg.text.replace('\n\n\n', '\n'))
               }
-              let { name, arguments: args } = msg.functionCall
+              let {
+                name,
+                arguments: args
+              } = msg.functionCall
               args = JSON.parse(args)
               // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
               if (!args.groupId) {
@@ -2298,7 +2424,10 @@ export class chatgpt extends plugin {
               } catch (err) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
               }
-              let functionResult = await fullFuncMap[name.trim()].exec(Object.assign({ isAdmin, sender }, args), e)
+              let functionResult = await fullFuncMap[name.trim()].exec(Object.assign({
+                isAdmin,
+                sender
+              }, args), e)
               logger.mark(`function ${name} execution result: ${functionResult}`)
               option.parentMessageId = msg.id
               option.name = name
