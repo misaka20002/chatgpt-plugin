@@ -65,7 +65,7 @@ export class voicechangehelp extends plugin {
     }
 
 
-    /* ^#tts(语音)?(替换)?帮助$ */
+    /** ^#tts(语音)?(替换)?帮助$ */
     async voicechangehelp(e) {
         let msg1 = `小呆毛tts语音替换帮助：\n` +
             `#tts查看当前语音设置\n` +
@@ -80,9 +80,9 @@ export class voicechangehelp extends plugin {
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
-        let msg2 = `必要设置：\nChatGPT-Plugin 锅巴设置：\nvits-uma-genshin-honkai语音转换API地址：\n` +
+        let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://v2.genshinvoice.top\n` +
-            `云转码API发送数据模式：[文件]`
+            `2. 云转码API发送数据模式 选择：[文件]`
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
         let msg1_isn_master = `小呆毛tts语音替换帮助：\n` +
@@ -106,7 +106,7 @@ export class voicechangehelp extends plugin {
         return true;
     }
 
-    /* ^#tts(可选)?人物(可选)?列表$ */
+    /** ^#tts(可选)?人物(可选)?列表$ */
     async tts_show_speakers(e) {
         let msg1 = `tts可选人物列表：`
         let msg2 = `（每名用户都可以单独设置）\n` +
@@ -151,7 +151,7 @@ export class voicechangehelp extends plugin {
     }
 
 
-    /* ^#tts情感(设置)?(帮助)?  #tts情感设置上锁(开启|关闭) */
+    /** ^#tts情感(设置)?(帮助)?  #tts情感设置上锁(开启|关闭) */
     async set_vits_emotion(e) {
         let input_tts = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '').trim()
         if (!input_tts) {
@@ -190,7 +190,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#tts语言设置(帮助)? */
+    /** ^#tts语言设置(帮助)? */
     async set_tts_language(e) {
         let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
         if (!input_tts) {
@@ -206,7 +206,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* '^#ttslength(Scale)?设置(帮助)?' */
+    /** '^#ttslength(Scale)?设置(帮助)?' */
     async set_lengthScale(e) {
         let input_tts = e.msg.replace(/^#ttslength(Scale)?设置(帮助)?/, '').trim()
         if (!input_tts) {
@@ -221,7 +221,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#tts(设置|查看)?风格权重(帮助)? */
+    /** ^#tts(设置|查看)?风格权重(帮助)? */
     async set_style_text_weights(e) {
         let input_tts = e.msg.replace(/^#tts(设置|查看)?风格权重(帮助)?/, '').trim()
         if (!input_tts) {
@@ -244,7 +244,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#tts(设置|查看)?风格文本(帮助)? */
+    /** ^#tts(设置|查看)?风格文本(帮助)? */
     async set_style_text(e) {
         let input_tts = e.msg.replace(/^#tts(设置|查看)?风格文本(帮助)?/, '').trim()
         if (!input_tts) {
@@ -276,7 +276,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#chatgpt(设置|查看)?输出黑名单(帮助)? */
+    /** ^#chatgpt(设置|查看)?输出黑名单(帮助)? */
     async set_blockWords(e) {
         let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输出黑名单(帮助)?/, '').trim()
         if (!input_tts) {
@@ -304,7 +304,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#chatgpt(设置|查看)?输入黑名单(帮助)? */
+    /** ^#chatgpt(设置|查看)?输入黑名单(帮助)? */
     async set_promptBlockWords(e) {
         let input_tts = e.msg.replace(/^#chatgpt(设置|查看)?输入黑名单(帮助)?/, '').trim()
         if (!input_tts) {
@@ -331,7 +331,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /* ^#tts(语音)?转日语(帮助)? */
+    /** ^#tts(语音)?转日语(帮助)? */
     async set_autoJapanese(e) {
         let input_tts = e.msg.replace(/^#tts(语音)?转日语(帮助)?/, '').trim()
         if (!input_tts) {
