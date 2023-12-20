@@ -850,6 +850,12 @@ export function supportGuoba () {
             component: 'Input'
         },
         {
+            field: 'paimon_chuoyichuo_open',
+            label: '开启戳一戳',
+            bottomHelpMessage: '是否开启戳一戳',
+            component: 'Switch'
+        },
+        {
           field: 'vits_emotion',
           label: 'emotion',
           bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',

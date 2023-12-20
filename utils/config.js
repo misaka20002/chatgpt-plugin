@@ -78,6 +78,7 @@ const defaultConfig = {
   // https://114514.201666.xyz
   huggingFaceReverseProxy: '',
   tts_First_person: '派蒙',
+  paimon_chuoyichuo_open: true,
   vits_emotion: 'Happy',
   style_text: '',
   style_text_weights: 0.7,

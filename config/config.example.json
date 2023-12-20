@@ -54,6 +54,7 @@
   "ttsSpace": "https://v2.genshinvoice.top",
   "huggingFaceReverseProxy": "",
   "tts_First_person": "派蒙",
+  "paimon_chuoyichuo_open": true,
   "vits_emotion": "Happy",
   "style_text": "",
   "style_text_weights": 0.7,
