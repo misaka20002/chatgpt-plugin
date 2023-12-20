@@ -1,6 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
+import { getUserReplySetting } from '../utils/common.js'
 import { speakers, vits_emotion_map } from '../utils/tts.js'
 
 export class voicechangehelp extends plugin {
@@ -74,6 +75,9 @@ export class voicechangehelp extends plugin {
     async voicechangehelp(e) {
         let msg1 = `小呆毛tts语音替换帮助：\n` +
             `#tts查看当前语音设置\n` +
+            `#chatgpt查看回复设置\n` +
+            `#chatgpt(图片|语音)模式\n` +
+            `（↑每人独立设置且优先级最高）\n` +
             `#tts可选人物列表\n` +
             `#tts语言设置帮助\n` +
             `#tts语音转日语帮助\n` +
@@ -83,7 +87,6 @@ export class voicechangehelp extends plugin {
             `#tts(查看|设置)风格文本\n` +
             `#tts(查看|设置)风格权重\n` +
             `#chatgpt设置AI第一人称帮助\n` +
-            `#chatgpt查看回复设置\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
@@ -93,22 +96,33 @@ export class voicechangehelp extends plugin {
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
         let msg1_isn_master = `小呆毛tts语音替换帮助：\n` +
+            `#chatgpt查看回复设置\n` +
             `#chatgpt设置语音角色派蒙_ZH\n` +
             `#chatgpt设置语音角色可莉_ZH\n` +
+            `#chatgpt(图片|语音)模式\n` +
+            `（↑每人独立设置且优先级最高）\n` +
             `#tts可选人物列表\n` +
             `#tts情感设置1\n` +
             `#tts情感设置帮助\n` +
             `（共100种情感）\n` +
             `#tts(查看|设置)风格文本\n` +
             `#tts(查看|设置)风格权重\n` +
-            `#chatgpt查看回复设置\n` +
             `#chatgpt语音模式` +
             ''
+        const userSetting = await getUserReplySetting(this.e)
+        let msg4_1 = `${this.e.sender.user_id}的回复设置:
+图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
+语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
+Vits语音角色: ${userSetting.ttsRole}
+Azure语音角色: ${userSetting.ttsRoleAzure}
+VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
+${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
+        msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
         if (e.isMaster) {
-            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg4_1], `tts语音帮助-m`)
         } else {
-            msgx = await common.makeForwardMsg(e, [msg1_isn_master], `tts语音帮助`)
+            msgx = await common.makeForwardMsg(e, [msg1_isn_master, msg4_1], `tts语音帮助`)
         }
         e.reply(msgx);
         return true;
@@ -372,7 +386,17 @@ export class voicechangehelp extends plugin {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
         let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
-        let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
+        const userSetting = await getUserReplySetting(this.e)
+        let msg4_1 = `${this.e.sender.user_id}的回复设置:
+图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
+语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
+Vits语音角色: ${userSetting.ttsRole}
+Azure语音角色: ${userSetting.ttsRoleAzure}
+VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
+${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
+        msg4_1 = msg4_1.replace(/\n\s*$/, '')
+
+        let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2, msg4_1], '小呆毛tts语音当前设置');
         return e.reply(show_tts_voice_help_config_msg2_msgx);
     }
 
