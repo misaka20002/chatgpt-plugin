@@ -123,6 +123,6 @@ export async function generateHello () {
   return res.text */
 
   let text_number = Math.ceil(Math.random() * randomHellowPaimon['length'])
-  return randomHellowPaimon[text_number - 1]
+  return randomHellowPaimon[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
   
 }
