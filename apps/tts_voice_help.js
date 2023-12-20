@@ -83,6 +83,7 @@ export class voicechangehelp extends plugin {
             `#tts(查看|设置)风格文本\n` +
             `#tts(查看|设置)风格权重\n` +
             `#chatgpt设置AI第一人称帮助\n` +
+            `#chatgpt查看回复设置\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
@@ -100,6 +101,7 @@ export class voicechangehelp extends plugin {
             `（共100种情感）\n` +
             `#tts(查看|设置)风格文本\n` +
             `#tts(查看|设置)风格权重\n` +
+            `#chatgpt查看回复设置\n` +
             `#chatgpt语音模式` +
             ''
         let msgx
