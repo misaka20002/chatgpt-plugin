@@ -1,4 +1,4 @@
-//import { Config } from './config.js'
+import { Config } from './config.js'
 //import { ChatGPTAPI } from 'chatgpt'
 //import fetch from 'node-fetch'
 //import { getProxy } from './proxy.js'
