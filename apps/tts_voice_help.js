@@ -34,6 +34,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?',
+                fnc: 'set_assistantLabel',
+                permission: 'master'
+            },
+            {
                 reg: '^#tts(设置|查看)?风格文本(帮助)?',
                 fnc: 'set_style_text',
             },
@@ -77,6 +82,7 @@ export class voicechangehelp extends plugin {
             `#tts情感设置上锁(开启|关闭)\n` +
             `#tts(查看|设置)风格文本\n` +
             `#tts(查看|设置)风格权重\n` +
+            `#chatgpt设置AI第一人称帮助\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
             ''
@@ -194,7 +200,7 @@ export class voicechangehelp extends plugin {
     async set_tts_language(e) {
         let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
         if (!input_tts) {
-            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和派蒙说话派蒙可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
+            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和人家说话人家可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
         }
         input_tts = input_tts.toLowerCase()
         if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
@@ -218,6 +224,17 @@ export class voicechangehelp extends plugin {
             return e.reply(`tts的lengthScale已设置为${input_tts}！`)
         } else {
             return e.reply('输入范围0.1-2.0哦。\n例如#ttslength设置1', false)
+        }
+    }
+
+    /** '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?' */
+    async set_assistantLabel(e) {
+        let input_tts = e.msg.replace(/^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?/, '').trim()
+        if (!input_tts) {
+            return e.reply(`指定某些情况指定回复下AI的第一人称\n例如#chatgpt设置AI第一人称派蒙`, false)
+        } else {
+            Config.tts_First_person = input_tts
+            return e.reply(`AI的第一人称已设置为${input_tts}！`)
         }
     }
 
@@ -351,7 +368,7 @@ export class voicechangehelp extends plugin {
     /** 发送当前设置 */
     async show_tts_voice_help_config(e) {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}`
+        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         let show_tts_voice_help_config_msg2_msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, show_tts_voice_help_config_msg2], '小呆毛tts语音当前设置');
         return e.reply(show_tts_voice_help_config_msg2_msgx);

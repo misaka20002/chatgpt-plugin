@@ -844,6 +844,12 @@ export function supportGuoba () {
             component: 'Divider'
         },
         {
+            field: 'tts_First_person',
+            label: 'AI的第一人称',
+            bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
+            component: 'Input'
+        },
+        {
           field: 'vits_emotion',
           label: 'emotion',
           bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',
