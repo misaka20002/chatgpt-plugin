@@ -395,8 +395,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts删除所有用户回复设置`);
             return e.reply(msgx, false)
         }
-        let blank_obj = {};
-        await redis.set(`CHATGPT:USER`, blank_obj)
+        await redis.del(`CHATGPT:USER`)
         return e.reply('已经删除所有用户回复设置，所有用户将使用默认配置。\n#chatgpt查看回复设置')
     }
 
