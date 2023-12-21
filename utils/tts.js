@@ -53,8 +53,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
 
         // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
-        text = text.replace(/\#|(\[..\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/\[|\]/g, '。').substr(0, 299);
-        //replace: 1.删除[？？] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换gemini中表示动作的[]为'。' 7.截取处理后的前299个字符
+        text = text.replace(/\#|(\[..\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/，，，|，，/g, '').substr(0, 299);
+        //replace: 1.删除[？？] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换↓chat.js处理过的换行文本 7.截取处理后的前299个字符
+        //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')
 
         logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
 

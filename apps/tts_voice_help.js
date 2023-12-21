@@ -40,11 +40,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
-                reg: '^#tts(设置|查看)?风格文本(帮助)?',
+                reg: '^#tts(设置|查看)?融合文本(帮助)?',
                 fnc: 'set_style_text',
             },
             {
-                reg: '^#tts(设置|查看)?风格权重(帮助)?',
+                reg: '^#tts(设置|查看)?融合权重(帮助)?',
                 fnc: 'set_style_text_weights',
             },
             {
@@ -84,8 +84,8 @@ export class voicechangehelp extends plugin {
             `#ttslength设置帮助\n` +
             `#tts情感帮助\n` +
             `#tts情感设置上锁(开启|关闭)\n` +
-            `#tts(查看|设置)风格文本\n` +
-            `#tts(查看|设置)风格权重\n` +
+            `#tts(查看|设置)融合文本\n` +
+            `#tts(查看|设置)融合权重\n` +
             `#chatgpt设置AI第一人称帮助\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单` +
@@ -104,13 +104,11 @@ export class voicechangehelp extends plugin {
             `#tts可选人物列表\n` +
             `#tts情感设置1\n` +
             `#tts情感设置帮助\n` +
-            `（共100种情感）\n` +
-            `#tts(查看|设置)风格文本\n` +
-            `#tts(查看|设置)风格权重\n` +
-            `#chatgpt语音模式` +
+            `#tts(查看|设置)融合文本\n` +
+            `#tts(查看|设置)融合权重` +
             ''
         const userSetting = await getUserReplySetting(this.e)
-        let msg4_1 = `${this.e.sender.user_id}的回复设置:
+        let msg4_1 = `${this.e.sender.user_id}的回复设置（优先级最高）:
 图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
@@ -120,7 +118,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
         if (e.isMaster) {
-            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg4_1], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg4_1], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [msg1_isn_master, msg4_1], `tts语音帮助`)
         }
@@ -180,7 +178,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             let msg1 = `tts情感设置帮助：`
             let msg_show = `tts语音当前情感：${Config.vits_emotion}`
             let msg1_1 = `#tts情感设置为空值`
-            let msg2 = `输入整数，如：\n#tts情感设置1`
+            let msg2 = `目前api仅支持Happy！输入整数，如：\n#tts情感设置1`
             let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g, "")
             let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1, msg2, msg3], `tts情感设置帮助`);
             return e.reply(msgx, false)
@@ -254,15 +252,15 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         }
     }
 
-    /** ^#tts(设置|查看)?风格权重(帮助)? */
+    /** ^#tts(设置|查看)?融合权重(帮助)? */
     async set_style_text_weights(e) {
-        let input_tts = e.msg.replace(/^#tts(设置|查看)?风格权重(帮助)?/, '').trim()
+        let input_tts = e.msg.replace(/^#tts(设置|查看)?融合权重(帮助)?/, '').trim()
         if (!input_tts) {
-            let show_msg1 = 'tts当前风格权重：'
+            let show_msg1 = 'tts当前融合权重：'
             let show_msg2 = `${Config.style_text_weights}`
-            let show_msg3 = '原始文本和风格文本的bert混合比率，0表示仅原始文本，1表示仅风格文本，范围0.0-1.0，默认0.7'
-            let show_msg4_1 = '#tts设置风格权重0.7'
-            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4_1], 'tts风格文本帮助');
+            let show_msg3 = '主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认0.7'
+            let show_msg4_1 = '#tts设置融合权重0.7'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4_1], 'tts融合文本帮助');
             return e.reply(show_msgx, false);
         }
         input_tts = parseFloat(input_tts).toFixed(1)
@@ -271,40 +269,40 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 return e.reply('tts设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
             }
             Config.style_text_weights = input_tts
-            return e.reply(`tts风格权重已设置为${input_tts}！`)
+            return e.reply(`tts融合权重已设置为${input_tts}！`)
         } else {
-            return e.reply('输入范围0.0-1.0哦。\n例如#tts设置风格权重0.7', false)
+            return e.reply('输入范围0.0-1.0哦。\n例如#tts设置融合权重0.7', false)
         }
     }
 
-    /** ^#tts(设置|查看)?风格文本(帮助)? */
+    /** ^#tts(设置|查看)?融合文本(帮助)? */
     async set_style_text(e) {
-        let input_tts = e.msg.replace(/^#tts(设置|查看)?风格文本(帮助)?/, '').trim()
+        let input_tts = e.msg.replace(/^#tts(设置|查看)?融合文本(帮助)?/, '').trim()
         if (!input_tts) {
-            let show_msg1 = 'tts当前风格文本：'
+            let show_msg1 = 'tts当前融合文本：'
             let show_msg2 = `${Config.style_text}`
-            let show_msg3 = '声音风格模仿：生成与此文本朗读相同的情感和声音。如：\n#tts设置风格文本进不去！'
-            let show_msg4_1 = '#tts设置风格文本为空值'
-            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4_1], 'tts风格文本帮助');
+            let show_msg3 = '使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能。'
+            let show_msg4_1 = '#tts设置融合文本为空值'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3, show_msg4_1], 'tts融合文本帮助');
             return e.reply(show_msgx, false);
         } else if (input_tts === '为空' || input_tts === '为空值') {
             if (!e.isMaster && Config.vits_emotion_locker) {
                 return e.reply('tts设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
             }
             Config.style_text = ""
-            let show_msg1 = '风格文本已设置为空值'
-            let show_msg3 = '可使用#tts查看风格文本'
-            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'tts风格文本');
+            let show_msg1 = '融合文本已设置为空值'
+            let show_msg3 = '可使用#tts查看融合文本'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg3], 'tts融合文本');
             return e.reply(show_msgx);
         } else {
             if (!e.isMaster && Config.vits_emotion_locker) {
                 return e.reply('tts设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
             }
             Config.style_text = input_tts
-            let show_msg1 = '风格文本已设置为：'
+            let show_msg1 = '融合文本已设置为：'
             let show_msg2 = `${input_tts}`
-            let show_msg3 = '可使用#tts查看风格文本'
-            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'tts风格文本');
+            let show_msg3 = '可使用#tts查看融合文本'
+            let show_msgx = await common.makeForwardMsg(e, [show_msg1, show_msg2, show_msg3], 'tts融合文本');
             return e.reply(show_msgx);
         }
     }
@@ -384,10 +382,10 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     /** 发送当前设置 */
     async show_tts_voice_help_config(e) {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 风格文本：${Config.style_text}\n 风格权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
+        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         const userSetting = await getUserReplySetting(this.e)
-        let msg4_1 = `${this.e.sender.user_id}的回复设置:
+        let msg4_1 = `${this.e.sender.user_id}的回复设置（优先级最高）:
 图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}

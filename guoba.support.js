@@ -858,7 +858,7 @@ export function supportGuoba () {
         {
           field: 'vits_emotion',
           label: 'emotion',
-          bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',
+          bottomHelpMessage: '目前api仅支持Happy！控制发音情感；可用命令：#tts情感设置帮助',
           component: 'Select',
           componentProps: {
             options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'') } })
@@ -866,14 +866,14 @@ export function supportGuoba () {
         },
         {
             field: 'style_text',
-            label: 'tts风格文本',
-            bottomHelpMessage: '声音风格模仿：生成与此文本朗读相同的情感和声音。',
+            label: 'tts融合文本',
+            bottomHelpMessage: '使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能',
             component: 'Input'
         },
         {
             field: 'style_text_weights',
-            label: 'tts风格文本权重',
-            bottomHelpMessage: '原始文本和风格文本的bert混合比率，0表示仅原始文本，1表示仅风格文本，范围0.0-1.0',
+            label: 'tts融合文本权重',
+            bottomHelpMessage: '主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认为0.7',
             component: 'InputNumber',
             componentProps: {
                 min: 0,
@@ -883,7 +883,7 @@ export function supportGuoba () {
         {
           field: 'vits_emotion_locker',
           label: 'vits_emotion_locker',
-          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置 #tts设置风格文本',
+          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置 #tts设置融合文本',
           component: 'Switch'
         },
         {
