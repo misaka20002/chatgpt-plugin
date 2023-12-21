@@ -40,10 +40,11 @@ function randomNum(minNum, maxNum) {
 export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights)) {
     if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
     {
-        let character_voice_language = speaker.substring(speaker.length - 2);
+/*        let character_voice_language = speaker.substring(speaker.length - 2);
         let textfix = text.replace(/\#|(\[派蒙\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '');
         //replace: 1.删除[派蒙] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji
         let audioLink = `https://genshinvoice.top/api?speaker=${speaker}&text=${textfix}&format=wav&language=${character_voice_language}&length=1&sdp=0.4&noise=0.6&noisew=0.8`
+*/
         return audioLink
     }
     else {
@@ -53,8 +54,13 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
 
         // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
-        text = text.replace(/\#|(\[..\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/，，，|，，/g, '').substr(0, 299);
-        //replace: 1.删除[？？] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换↓chat.js处理过的换行文本 7.截取处理后的前299个字符
+
+
+        /*处理tts语音文本：*/
+        let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
+
+        text = text.replace(/\#|(\[..\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/，，，|，，/g, '').replace(tts_First_person_zh_colon_reg, '').substr(0, 299);
+        //replace: 1.删除[？？] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换↓chat.js处理过的换行文本 7. 替换第一人称+'：'，例如可莉：  n.截取处理后的前299个字符
         //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')
 
         logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
