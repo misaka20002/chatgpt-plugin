@@ -396,6 +396,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             return e.reply(msgx, false)
         }
         let qcs = await redis.keys('CHATGPT:USER:*')
+        let deleted = 0
         for (let i = 0; i < qcs.length; i++) {
             await redis.del(qcs[i])
             // todo clean last message id
@@ -404,7 +405,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             }
             deleted++
         }
-        return e.reply('已经删除所有用户回复设置，所有用户将使用默认配置。\n#chatgpt查看回复设置')
+        return e.reply(`已经删除${deleted}个用户的回复设置，所有用户将使用默认配置。\n#chatgpt查看回复设置`, true)
     }
 
     /** 发送当前设置 */
