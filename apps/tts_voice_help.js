@@ -58,6 +58,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#tts删除所有(chatgpt)?用户回复设置',
+                fnc: 'delete_redis_all_user_config',
+                permission: 'master'
+            },
+            {
                 reg: '^#tts(可选)?人物(可选)?列表$',
                 fnc: 'tts_show_speakers',
             },
@@ -77,6 +82,7 @@ export class voicechangehelp extends plugin {
             `#tts查看当前语音设置\n` +
             `#chatgpt查看回复设置\n` +
             `#chatgpt(图片|语音)模式\n` +
+            `#tts删除所有用户回复设置帮助\n` +
             `（↑每人独立设置且优先级最高）\n` +
             `#tts可选人物列表\n` +
             `#tts语言设置帮助\n` +
@@ -377,6 +383,21 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         } else {
             return e.reply('喵？可以选择把文本翻译成日语再发音哦\n#tts转日语(开启|关闭)')
         }
+    }
+
+    /** ^#tts删除所有(chatgpt)?用户回复设置 */
+    async delete_redis_all_user_config(e) {
+        let input_tts = e.msg.replace(/^#tts删除所有(chatgpt)?用户回复设置/, '').trim()
+        if (input_tts) {
+            let msg1 = `删除所有用户回复设置，所有用户将重新使用默认配置。用户回复设置的优先级高于默认设置，删除后用户可重新设置。`
+            let msg_show = `#chatgpt查看回复设置`
+            let msg1_1 = `请注意你知道你在做什么`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts删除所有用户回复设置`);
+            return e.reply(msgx, false)
+        }
+        let blank_obj = {};
+        await redis.set(`CHATGPT:USER`, blank_obj)
+        return e.reply('已经删除所有用户回复设置，所有用户将使用默认配置。\n#chatgpt查看回复设置')
     }
 
     /** 发送当前设置 */
