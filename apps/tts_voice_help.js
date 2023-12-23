@@ -141,26 +141,26 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         let msg1 = '小呆毛AI绘图指令：\n建议全都加个tag:loli,\n（算力由小呆毛的小pc提供）' +
             ''
         let msg2 = `原神萝莉：
-#绘图<lora:paimon:1>,loli,paimon gi,
-#绘图<lora:Nahida3:1>,
-#绘图<lora:Char-Genshin-Klee-V1:1>,loli,
-#绘图<lora:yaoyao2-000008:1>,loli,
+  #绘图<lora:paimon:1>,loli,paimon gi,
+  #绘图<lora:Nahida3:1>,
+  #绘图<lora:Char-Genshin-Klee-V1:1>,loli,
+  #绘图<lora:yaoyao2-000008:1>,loli,
 萝王的工作：
-#绘图<lora:Ryuuou no Oshigoto!_all:0.7>, hinatsuru ai,
-#绘图<lora:Ryuuou no Oshigoto!_all:0.7> charlotte izoard,
-#绘图<lora:Ryuuou no Oshigoto!_all:0.7> mizukoshi mio,`
+  #绘图<lora:Ryuuou no Oshigoto!_all:0.7>, hinatsuru ai,
+  #绘图<lora:Ryuuou no Oshigoto!_all:0.7> charlotte izoard,
+  #绘图<lora:Ryuuou no Oshigoto!_all:0.7> mizukoshi mio,`
         let msg3 = `和泉纱雾+妖精：
-#绘图<lora:Eromanga_all_resized:0.73> izumi sagiri,
-#绘图<lora:Eromanga_all_resized:0.8> yamada elf,
+  #绘图<lora:Eromanga_all_resized:0.73> izumi sagiri,
+  #绘图<lora:Eromanga_all_resized:0.8> yamada elf,
 真寻酱：
-#绘图<lora:onimai_mahiro:1>,
+  #绘图<lora:onimai_mahiro:1>,
 龙女仆：
-#绘图<lora:SaiKanna:1>,imkanna,`
+  #绘图<lora:SaiKanna:1>,imkanna,`
         let msg4 = `通用：
-#绘图masterpiece,loli,cat tail,
-#绘图masterpiece,loli,2girls,`
+  #绘图masterpiece,loli,cat tail,
+  #绘图masterpiece,loli,2girls,`
         let msg5 = `画师：
-<lora:kantoku_v1:0.9>,`
+  <lora:kantoku_v1:0.9>,`
         let msgx
         if (e.isMaster) {
             msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg4, msg5], `小呆毛AI绘图指令-m`)
