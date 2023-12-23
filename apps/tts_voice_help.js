@@ -140,11 +140,12 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async paimon_paint_help(e) {
         let msg1 = '小呆毛AI绘图指令：\n建议全都加个tag:loli,\n（算力由小呆毛的小pc提供）' +
             ''
-        let msg2 = `原神萝莉：
+        let msg2 = `原铁萝莉：
   #绘图<lora:paimon:1>,loli,paimon gi,
   #绘图<lora:Nahida3:1>,
   #绘图<lora:Char-Genshin-Klee-V1:1>,loli,
   #绘图<lora:yaoyao2-000008:1>,loli,
+  #绘图<lora:Char-Genshin-Furina:1>,furina \(genshin impact\),loli,
 萝王的工作：
   #绘图<lora:Ryuuou no Oshigoto!_all:0.7>, hinatsuru ai,
   #绘图<lora:Ryuuou no Oshigoto!_all:0.7> charlotte izoard,
@@ -154,19 +155,32 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
   #绘图<lora:Eromanga_all_resized:0.8> yamada elf,
 真寻酱：
   #绘图<lora:onimai_mahiro:1>,
-龙女仆：
+龙女仆-康纳：
   #绘图<lora:SaiKanna:1>,imkanna,`
+        let msg3_1 = `点兔：
+  #绘图<lora:Gochuumon_all_resized:0.7>,kafuu chino,
+  #绘图<lora:Gochuumon_all_resized:0.7> natsu megumi,
+  #绘图<lora:Gochuumon_all_resized:0.7> jouga maya,
+碧蓝档案：
+  #绘图<lora:chara-arona-v1:1>,loli,
+  #绘图<lora:takanashiHoshinoV3:1>,loli,
+  #绘图<lora:soraV1>,loli,
+  #绘图<lora:KokonaBA-10:1>,loli,kokona,`
+        let msg3_2 = `公主连结：
+  #绘图<lora:kyouka_v1:1>,loli,
+  #绘图<lora:kokkoro_v1:1>,loli,
+日在校园-桂心：
+  #绘图<lora:KokoroKatsura:0.7>,KokoroKatsura,
+献上爆焰-小米：
+  #绘图<lora:Bakuen_KomekkoV2:0.7>, komekko,child,
+萝莉的时间-凛
+  #绘图<lora:KodomoNoJikan_kokonoe rin:0.7>, kokonoe rin,8k,masterpiece,absurdres,anime,`
         let msg4 = `通用：
   #绘图masterpiece,loli,cat tail,
   #绘图masterpiece,loli,2girls,`
-        let msg5 = `画师：
+        let msg5 = `画师风格：
   <lora:kantoku_v1:0.9>,`
-        let msgx
-        if (e.isMaster) {
-            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg4, msg5], `小呆毛AI绘图指令-m`)
-        } else {
-            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg4, msg5], `小呆毛AI绘图指令`)
-        }
+        let msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg3_1, msg3_2, msg4, msg5], `小呆毛AI绘图指令`)
         e.reply(msgx);
         return true;
     }
