@@ -67,7 +67,7 @@ export class voicechangehelp extends plugin {
                 fnc: 'tts_show_speakers',
             },
             {
-                reg: '^(ai|AI)?(绘|画)图帮助$',
+                reg: '^#(ai|AI)(绘|画)图帮助$',
                 fnc: 'paimon_paint_help',
             },
             {
@@ -136,7 +136,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return true;
     }
 
-    /** ^(ai|AI)?(绘|画)图帮助$ */
+    /** ^#(ai|AI)(绘|画)图帮助$ */
     async paimon_paint_help(e) {
         let msg1 = '小呆毛AI绘图指令：\n建议全都加个tag:loli,\n（算力由小呆毛的小pc提供）' +
             ''
