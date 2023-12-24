@@ -185,6 +185,8 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
   #pt列表
   #lora列表`
         let msg9 = `管理员功能：
+  #ap帮助
+  #ap管理帮助
   #ap设置负面.*
   #ap设置正面.*
   #ap(开启|关闭)简洁模式
