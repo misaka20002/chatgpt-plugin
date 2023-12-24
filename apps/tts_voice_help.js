@@ -67,7 +67,7 @@ export class voicechangehelp extends plugin {
                 fnc: 'tts_show_speakers',
             },
             {
-                reg: '^#(ai|AI)(绘|画)图帮助$',
+                reg: '^#(ai|AI)(绘|画)图帮助',
                 fnc: 'paimon_paint_help',
             },
             {
@@ -136,8 +136,9 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return true;
     }
 
-    /** ^#(ai|AI)(绘|画)图帮助$ */
+    /** ^#(ai|AI)(绘|画)图帮助 */
     async paimon_paint_help(e) {
+        let input_tts = e.msg.replace(/^#(ai|AI)(绘|画)图帮助/, '').trim()
         let msg1 = '小呆毛AI绘图指令：\n建议全都加个tag:loli,\n（算力由小呆毛的小pc提供）' +
             ''
         let msg2 = `原铁萝莉：
@@ -180,7 +181,28 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
   #绘图masterpiece,loli,2girls,`
         let msg5 = `画师风格：
   <lora:kantoku_v1:0.9>,`
-        let msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg3_1, msg3_2, msg4, msg5], `小呆毛AI绘图指令`)
+        let msg6 = `额外指令：
+  #pt列表
+  #lora列表`
+        let msg9 = `管理员功能：
+  #ap设置负面.*
+  #ap设置正面.*
+  #ap(开启|关闭)简洁模式
+  #(ap)?设置使用(sd|db)鉴赏图片
+  #(ap)?设置鉴赏模型.*
+  #(ap)?设置大清晰术算法(1|2)
+  #(ap)?设置二次元的我卡片(开启|关闭)
+  #(ap)?设置违规图片展示方式(1|2|3|4)
+  #ap(不)?屏蔽艾特
+  #?(关闭|开启)匹配Lora
+  #?ap(全局|本群|我的)词云
+  #?(取消|停止)(绘图|咏唱|绘画|绘世|绘制)`
+        let msgx
+        if (e.isMaster && input_tts === 'pro') {
+            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg3_1, msg3_2, msg4, msg5, msg6, msg9], `tts语音帮助-m`)
+        } else {
+            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg3, msg3_1, msg3_2, msg4, msg5, msg6], `tts语音帮助`)
+        }
         e.reply(msgx);
         return true;
     }
