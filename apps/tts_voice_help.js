@@ -391,7 +391,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         if (input_tts) {
             let msg1 = `删除所有用户回复设置，所有用户将重新使用默认配置。用户回复设置的优先级高于默认设置，删除后用户可重新设置。`
             let msg_show = `#chatgpt查看回复设置`
-            let msg1_1 = `请注意你知道你在做什么`
+            let msg1_1 = `请注意你知道你在做什么\n#tts删除所有用户回复设置`
             let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts删除所有用户回复设置`);
             return e.reply(msgx, false)
         }
