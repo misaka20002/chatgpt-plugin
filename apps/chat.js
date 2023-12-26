@@ -216,7 +216,6 @@ export class chatgpt extends plugin {
           fnc: 'chatgpt',
           log: false
         },
-        // TODO 写一个正则表达式，让bot对「第一人称会回复」
         {
           /** 命令正则匹配 */
           reg: reg_chatgpt_for_firstperson_call,
@@ -938,10 +937,13 @@ export class chatgpt extends plugin {
   }
 
   /**
-   * #chatgpt写一个正则表达式，让bot对「第一人称会回复」
+   * bot现在可以对「第一人称开头的句子」回复
    */
-  // TODO 写一个正则表达式，让bot对「第一人称会回复」
-  async chatgpt_for_firstperson_call (e) {
+  async chatgpt_for_firstperson_call(e) {
+    if (!Config.chat_for_First_person) {
+      logger.info('AI回应第一人称呼叫已关闭，不予理会')
+      return false
+    }
     let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
