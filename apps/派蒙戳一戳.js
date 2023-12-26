@@ -5,8 +5,8 @@ import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import { Config } from '../utils/config.js'
 
-let reply_text = 0.9 //文字触发概率
-let reply_img = 0.1 //随机图片触发概率
+let reply_text = 0.8 //文字触发概率
+let reply_img = 0.2 //随机图片触发概率
 let reply_voice = 0.0 //语音触发概率
 let mutepick = 0.0 //禁言触发概率
 
@@ -165,10 +165,10 @@ let voice_list = ["https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/4d
     "https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/f514abfbe4a9358e96038850d6d64742_5784748521077424357.mp3"]
 
 let ciku_ = ["_name_今天已经被戳了_num_次啦，休息一下下好不好",
-            "_name_今天已经被戳了_num_次啦,呜呜，有完没完啦！",
-            "_name_今天已经被戳了_num_次啦,别戳派蒙了！！！",
-            "_name_今天已经被戳了_num_次啦,不准戳派蒙了！",
-            "_name_今天已经被戳了_num_次啦,再戳派蒙就坏掉啦！"
+    "_name_今天已经被戳了_num_次啦,呜呜，有完没完啦！",
+    "_name_今天已经被戳了_num_次啦,别戳派蒙了！！！",
+    "_name_今天已经被戳了_num_次啦,不准戳派蒙了！",
+    "_name_今天已经被戳了_num_次啦,再戳派蒙就坏掉啦！"
 ]
 
 export class chuo extends plugin {
@@ -208,48 +208,64 @@ export class chuo extends plugin {
             }
             if (Math.ceil(Math.random() * 100) <= 30 && count >= 10) {
                 let conf = cfg.getGroup(e.group_id)
-                  e.reply([
+                e.reply([
                     `${ciku_[Math.round(Math.random() * (ciku_length - 1))]}`
-                    .replace("_name_",conf.botAlias[0])
-                    .replace("_num_",count), 
-                  ]);
-                  return true
+                        .replace("_name_", conf.botAlias[0])
+                        .replace("_num_", count),
+                ]);
+                return true
             }
 
-            
+
             let random_type = Math.random()
-            if (random_type < reply_text) {            
+            if (random_type < reply_text) {
                 let text_number = Math.ceil(Math.random() * word_list['length'])
                 await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
-        }
+            }
 
             else if (random_type < (reply_text + reply_img)) {
-                   let mutetype = Math.ceil(Math.random() * 3)
+                let mutetype = Math.ceil(Math.random() * 5)
                 if (mutetype == 1) {
-                let url = `http://www.98qy.com/sjbz/api.php`;
-                let res = await fetch(url).catch((err) => logger.error(err));
-                let msg = [segment.image(res.url)];
+                    let url = `https://www.loliapi.com/acg/`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`你戳的${Config.tts_First_person}有点开心奖励你哦`)
-                await common.sleep(100)
-                await e.reply(msg);
-            }
-           else if (mutetype == 2) {
-                let url = `https://api.dujin.org/pic/yuanshen`;
-                let res = await fetch(url).catch((err) => logger.error(err));
-                let msg = [segment.image(res.url)];
+                    await common.sleep(100)
+                    await e.reply(msg);
+                }
+                else if (mutetype == 2) {
+                    let url = `https://api.dujin.org/pic/yuanshen`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`这是${Config.tts_First_person}今天找到的画片哦`)
-                await common.sleep(100)
-                await e.reply(msg);
-         }
-           else if (mutetype == 3) {
-                let url = `https://api.asxe.vip/random.php`;
-                let res = await fetch(url).catch((err) => logger.error(err));
-                let msg = [segment.image(res.url)];
+                    await common.sleep(100)
+                    await e.reply(msg);
+                }
+                else if (mutetype == 3) {
+                    let url = `https://api.asxe.vip/random.php`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
-                await common.sleep(100)
-                await e.reply(msg);
-    }
-}
+                    await common.sleep(100)
+                    await e.reply(msg);
+                }
+                else if (mutetype == 4) {
+                    let url = `https://t.mwm.moe/mp`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
+                    await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
+                    await common.sleep(100)
+                    await e.reply(msg);
+                }
+                else if (mutetype == 5) {
+                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
+                    await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
+                    await common.sleep(100)
+                    await e.reply(msg);
+                }
+            }
             else if (random_type < (reply_text + reply_img + reply_voice)) {
                 let voice_number = Math.ceil(Math.random() * word_list['length'])
                 let url = voice_list[voice_number - 1]
@@ -261,7 +277,7 @@ export class chuo extends plugin {
                 let botinfo = await Bot.getGroupMemberInfo(e.group_id, Bot.uin)
                 let role = ['owner', 'admin']
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    if((role.includes(botinfo.role) && !role.includes(usrinfo.role)) || (botinfo.role == 'owner' && usrinfo.role == 'admin')){
+                    if ((role.includes(botinfo.role) && !role.includes(usrinfo.role)) || (botinfo.role == 'owner' && usrinfo.role == 'admin')) {
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
@@ -297,24 +313,24 @@ export class chuo extends plugin {
                             await common.sleep(100)
                             await e.group.muteMember(e.operator_id, 120);
 
-                    } 
+                        }
                         else if (role.includes(usrinfo.role)) {
-                        let mutetype = Math.ceil(Math.random() * 3)
-                        if (mutetype == 1) {
-                            e.reply(`呜呜呜你欺负${Config.tts_First_person}`)
-                        }
-                        else if (mutetype == 2) {
-                            e.reply(`主人有坏淫欺负${Config.tts_First_person}`)
-                        }
-                        else if (mutetype == 3) {
-                            e.reply(`气死${Config.tts_First_person}了不要戳了！`)
+                            let mutetype = Math.ceil(Math.random() * 3)
+                            if (mutetype == 1) {
+                                e.reply(`呜呜呜你欺负${Config.tts_First_person}`)
+                            }
+                            else if (mutetype == 2) {
+                                e.reply(`主人有坏淫欺负${Config.tts_First_person}`)
+                            }
+                            else if (mutetype == 3) {
+                                e.reply(`气死${Config.tts_First_person}了不要戳了！`)
+                            }
+
                         }
 
                     }
 
                 }
-
-            }
 
                 else if (cfg.masterQQ.includes(e.operator_id)) {
                     let mutetype = Math.ceil(Math.random() * 2)

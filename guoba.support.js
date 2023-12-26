@@ -850,6 +850,12 @@ export function supportGuoba () {
             component: 'Input'
         },
         {
+            field: 'chat_for_First_person',
+            label: 'AI回应第一人称呼叫',
+            bottomHelpMessage: '例如AI的第一人称是派蒙，则会回复“派蒙，你好”。修改AI的第一人称后该功能重启生效。',
+            component: 'Switch'
+        },
+        {
             field: 'paimon_chuoyichuo_open',
             label: '开启戳一戳',
             bottomHelpMessage: '是否开启戳一戳',

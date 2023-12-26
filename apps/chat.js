@@ -117,6 +117,7 @@ const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', '
  */
 // const CONVERSATION_PRESERVE_TIME = Config.conversationPreserveTime
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
+const reg_chatgpt_for_firstperson_call = new RegExp('^'+Config.tts_First_person);
 const newFetch = (url, options = {}) => {
   const defaultOptions = Config.proxy
     ? {
@@ -213,6 +214,14 @@ export class chatgpt extends plugin {
           reg: toggleMode === 'at' ? '^[^#][sS]*' : '^#chat[^gpt][sS]*',
           /** 执行方法 */
           fnc: 'chatgpt',
+          log: false
+        },
+        // TODO 写一个正则表达式，让bot对「第一人称会回复」
+        {
+          /** 命令正则匹配 */
+          reg: reg_chatgpt_for_firstperson_call,
+          /** 执行方法 */
+          fnc: 'chatgpt_for_firstperson_call',
           log: false
         },
         {
@@ -915,6 +924,26 @@ export class chatgpt extends plugin {
         return false
       }
     }
+    let groupId = e.isGroup ? e.group.group_id : ''
+    if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
+      logger.info('chatgpt闭嘴中，不予理会')
+      return false
+    }
+    // 获取用户配置
+    const userData = await getUserData(e.user_id)
+    const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+    // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
+    prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
+    await this.abstractChat(e, prompt, use)
+  }
+
+  /**
+   * #chatgpt写一个正则表达式，让bot对「第一人称会回复」
+   */
+  // TODO 写一个正则表达式，让bot对「第一人称会回复」
+  async chatgpt_for_firstperson_call (e) {
+    let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
+    let prompt
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
       logger.info('chatgpt闭嘴中，不予理会')
