@@ -943,7 +943,7 @@ export class chatgpt extends plugin {
   // TODO 写一个正则表达式，让bot对「第一人称会回复」
   async chatgpt_for_firstperson_call (e) {
     let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
-    let prompt
+    let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
       logger.info('chatgpt闭嘴中，不予理会')
