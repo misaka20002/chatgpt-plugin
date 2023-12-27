@@ -949,10 +949,6 @@ export class chatgpt extends plugin {
       logger.info('消息以#开头，，不予理会')
       return false
     }
-    if (!(e.atme || e.atBot || (e.at === e.self_id))) {
-      logger.info('at别人了，不予理会')
-      return false
-    }
     if (e.user_id == getUin(e)) {
       logger.info('机器人自己发出来的消息，不予理会')
       return false
