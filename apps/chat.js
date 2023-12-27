@@ -117,7 +117,7 @@ const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', '
  */
 // const CONVERSATION_PRESERVE_TIME = Config.conversationPreserveTime
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
-const reg_chatgpt_for_firstperson_call = new RegExp('^'+Config.tts_First_person);
+const reg_chatgpt_for_firstperson_call = new RegExp('^'+Config.tts_First_person, "g");
 const newFetch = (url, options = {}) => {
   const defaultOptions = Config.proxy
     ? {

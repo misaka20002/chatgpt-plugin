@@ -229,15 +229,15 @@ export class chuo extends plugin {
                     let url = `https://www.loliapi.com/acg/`;
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
-                    await e.reply(`你戳的${Config.tts_First_person}有点开心奖励你哦`)
+                    await e.reply(`戳戳~ ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 2) {
-                    let url = `https://api.dujin.org/pic/yuanshen`;
+                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
-                    await e.reply(`这是${Config.tts_First_person}今天找到的画片哦`)
+                    await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
