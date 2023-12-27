@@ -948,9 +948,6 @@ export class chatgpt extends plugin {
     if (!msg || e.msg?.startsWith('#')) {
       return false
     }
-    if (e.isGroup || e.group_id) {
-      return false
-    }
     if (e.user_id == getUin(e)) return false
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
