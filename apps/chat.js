@@ -117,7 +117,7 @@ const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', '
  */
 // const CONVERSATION_PRESERVE_TIME = Config.conversationPreserveTime
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
-const reg_chatgpt_for_firstperson_call = new RegExp('^'+Config.tts_First_person, "g");
+const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
 const newFetch = (url, options = {}) => {
   const defaultOptions = Config.proxy
     ? {
@@ -945,6 +945,13 @@ export class chatgpt extends plugin {
       return false
     }
     let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
+    if (!msg || e.msg?.startsWith('#')) {
+      return false
+    }
+    if (e.isGroup || e.group_id) {
+      return false
+    }
+    if (e.user_id == getUin(e)) return false
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
