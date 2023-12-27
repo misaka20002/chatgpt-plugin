@@ -946,9 +946,17 @@ export class chatgpt extends plugin {
     }
     let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
     if (!msg || e.msg?.startsWith('#')) {
+      logger.info('消息以#开头，，不予理会')
       return false
     }
-    if (e.user_id == getUin(e)) return false
+    if (!(e.atme || e.atBot || (e.at === e.self_id))) {
+      logger.info('at别人了，不予理会')
+      return false
+    }
+    if (e.user_id == getUin(e)) {
+      logger.info('机器人自己发出来的消息，不予理会')
+      return false
+    }
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
