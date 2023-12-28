@@ -852,7 +852,7 @@ export function supportGuoba () {
         {
             field: 'chat_for_First_person',
             label: 'AI回应第一人称呼叫',
-            bottomHelpMessage: 'AI会回应以其第一人称开头的句子。例如AI的第一人称是派蒙，则会回应“派蒙，你好”。修改AI的第一人称后该功能重启生效。',
+            bottomHelpMessage: 'AI会回应包含其第一人称的句子。修改AI的第一人称后该功能重启生效。',
             component: 'Switch'
         },
         {
