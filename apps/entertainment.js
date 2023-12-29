@@ -5,7 +5,7 @@ import { generateVitsAudio } from '../utils/tts.js'
 import fs from 'fs'
 import { emojiRegex, googleRequestUrl } from '../utils/emoj/index.js'
 import fetch from 'node-fetch'
-import { getImageOcrText, getImg, makeForwardMsg, mkdirs, renderUrl } from '../utils/common.js'
+import { getImageOcrText, getImg, makeForwardMsg, mkdirs, renderUrl, generateAudio } from '../utils/common.js'
 import uploadRecord from '../utils/uploadRecord.js'
 import { makeWordcloud } from '../utils/wordcloud/wordcloud.js'
 import { translate, translateLangSupports } from '../utils/translate.js'
@@ -359,14 +359,15 @@ ${translateLangLabels}
     let sendable = message
     logger.info(`打招呼给群聊${groupId}：` + message)
     if (Config.defaultUseTTS) {
-      let audio = await generateVitsAudio(message, Config.defaultTTSRole)
-      sendable = segment.record(audio)
+        //let audio = await generateVitsAudio(message, Config.defaultTTSRole)
+        //sendable = segment.record(audio)
+        sendable = await generateAudio(e, message)
     }
     if (!groupId) {
       await e.reply(sendable)
     } else {
       await e.bot.sendGroupMsg(groupId, sendable)
-      await e.reply('发送成功！')
+      // await e.reply('发送成功！')
     }
   }
 

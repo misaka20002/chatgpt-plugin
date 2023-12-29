@@ -1,4 +1,17 @@
-![chatgpt-plugin](https://socialify.git.ci/ikechan8370/chatgpt-plugin/image?description=1&font=Jost&forks=1&issues=1&language=1&name=1&owner=1&pulls=1&stargazers=1&theme=Light)
+## 改
+新增 #tts语音替换帮助         →替换语音引擎为Bert-VITS2
+```
+git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
+```
+
+
+
+
+
+
+
+
+<div align=center> <h1>云崽系机器人的智能聊天插件</h1> </div>
 <div align=center>
 
    <img src ="https://img.shields.io/github/issues/ikechan8370/chatgpt-plugin?logo=github"/>
@@ -7,9 +20,6 @@
 <img src ="https://img.shields.io/github/languages/top/ikechan8370/chatgpt-plugin?logo=github"/>
 </div>
 
-
-
-![26224FE397F1E74104C1C007C1A32DDE](https://user-images.githubusercontent.com/21212372/227718994-4d33da74-6886-41d5-afd0-73986b086df0.gif)
 
 
 

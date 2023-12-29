@@ -117,6 +117,7 @@ const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', '
  */
 // const CONVERSATION_PRESERVE_TIME = Config.conversationPreserveTime
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
+const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
 const newFetch = (url, options = {}) => {
   const defaultOptions = Config.proxy
     ? {
@@ -213,6 +214,13 @@ export class chatgpt extends plugin {
           reg: toggleMode === 'at' ? '^[^#][sS]*' : '^#chat[^gpt][sS]*',
           /** 执行方法 */
           fnc: 'chatgpt',
+          log: false
+        },
+        {
+          /** 命令正则匹配 */
+          reg: reg_chatgpt_for_firstperson_call,
+          /** 执行方法 */
+          fnc: 'chatgpt_for_firstperson_call',
           log: false
         },
         {
@@ -800,7 +808,7 @@ export class chatgpt extends plugin {
           await redis.set(`CHATGPT:USER:${e.sender.user_id}`, JSON.stringify(userSetting))
           await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 "随机" `)
         } else {
-          await this.reply(`抱歉，"${userSetting.ttsRole}"我还不认识呢`)
+          await this.reply(`抱歉，"${userSetting.ttsRole}"我还不认识呢.可发送:#tts可选人物列表`)
         }
         break
       }
@@ -928,6 +936,37 @@ export class chatgpt extends plugin {
     await this.abstractChat(e, prompt, use)
   }
 
+  /**
+   * bot现在可以对「第一人称开头的句子」回复
+   */
+  async chatgpt_for_firstperson_call(e) {
+    if (!Config.chat_for_First_person) {
+      logger.info('AI回应第一人称呼叫已关闭，不予理会')
+      return false
+    }
+    let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
+    if (!msg || e.msg?.startsWith('#')) {
+      logger.info('消息以#开头，，不予理会')
+      return false
+    }
+    if (e.user_id == getUin(e)) {
+      logger.info('机器人自己发出来的消息，不予理会')
+      return false
+    }
+    let prompt = msg.trim()
+    let groupId = e.isGroup ? e.group.group_id : ''
+    if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
+      logger.info('chatgpt闭嘴中，不予理会')
+      return false
+    }
+    // 获取用户配置
+    const userData = await getUserData(e.user_id)
+    const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+    // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
+    prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
+    await this.abstractChat(e, prompt, use)
+  }
+
   async abstractChat (e, prompt, use) {
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
@@ -1017,12 +1056,12 @@ export class chatgpt extends plugin {
         // 添加超时设置
         await redis.pSetEx('CHATGPT:CHAT_QUEUE_TIMEOUT', Config.defaultTimeoutMs, randomId)
         if (confirmOn) {
-          await this.reply('我正在思考如何回复你，请稍等', true, { recallMsg: 8 })
+          await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: 8 })
         }
       } else {
         let length = await redis.lLen('CHATGPT:CHAT_QUEUE') - 1
         if (confirmOn) {
-          await this.reply(`我正在思考如何回复你，请稍等，当前队列前方还有${length}个问题`, true, { recallMsg: 8 })
+          await this.reply(`${Config.tts_First_person}在哦，当前队列前方还有${length}个问题`, true, { recallMsg: 8 })
         }
         logger.info(`chatgpt队列前方还有${length}个问题。管理员可通过#清空队列来强制清除所有等待的问题。`)
         // 开始排队
@@ -1049,7 +1088,7 @@ export class chatgpt extends plugin {
       let confirm = await redis.get('CHATGPT:CONFIRM')
       let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
       if (confirmOn) {
-        await this.reply('我正在思考如何回复你，请稍等', true, { recallMsg: 8 })
+        await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: 8 })
       }
     }
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -1286,7 +1325,7 @@ export class chatgpt extends plugin {
       // 检索是否有屏蔽词
       const blockWord = Config.blockWords.find(word => response.toLowerCase().includes(word.toLowerCase()))
       if (blockWord) {
-        await this.reply('返回内容存在敏感词，我不想回答你', true)
+        await this.reply(`返回内容存在敏感词，因为你甚至都不愿意叫人家一声“${Config.tts_First_person}”QAQ。多次触发建议#结束对话`, true)
         return false
       }
       // 处理中断的代码区域
@@ -1358,7 +1397,7 @@ export class chatgpt extends plugin {
         // 先把文字回复发出去，避免过久等待合成语音
         if (Config.alsoSendText || ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
-            await this.reply('回复的内容过长，已转为文本模式')
+            await this.reply(`${Config.tts_First_person}知道哦`, false, { recallMsg: 30 } )
           }
           await this.reply(await convertFaces(response, Config.enableRobotAt, e), e.isGroup)
           if (quotemessage.length > 0) {
@@ -1372,7 +1411,7 @@ export class chatgpt extends plugin {
         if (sendable) {
           await this.reply(sendable)
         } else {
-          await this.reply('合成语音发生错误~')
+          await this.reply(`${Config.tts_First_person}的儿童用手机的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: 30 })
         }
       } else if (userSetting.usePicture || (Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         // todo use next api of chatgpt to complete incomplete respoonse

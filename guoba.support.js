@@ -1,5 +1,5 @@
 import { Config } from './utils/config.js'
-import { speakers } from './utils/tts.js'
+import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { supportConfigurations as voxRoleList } from './utils/tts/voicevox.js'
 // 支持锅巴
@@ -772,7 +772,7 @@ export function supportGuoba () {
         {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
-          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代',
+          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com',
           component: 'Input'
         },
         {
@@ -788,7 +788,7 @@ export function supportGuoba () {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai后查看api地址',
+          bottomHelpMessage: '大力感谢genshinvoice.top提供的api支持——请填入https://v2.genshinvoice.top',
           component: 'Input'
         },
         {
@@ -835,7 +835,7 @@ export function supportGuoba () {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: '默认发送数据链接，如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          bottomHelpMessage: '语音传回是数据链接还是文件：如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
           component: 'Select',
           componentProps: {
             options: [
@@ -846,34 +846,118 @@ export function supportGuoba () {
           }
         },
         {
-          field: 'noiseScale',
-          label: 'noiseScale',
-          bottomHelpMessage: '控制情感变化程度',
+            label: 'VITS语音设置，可用命令#tts语音帮助',
+            component: 'Divider'
+        },
+        {
+            field: 'tts_First_person',
+            label: 'AI的第一人称',
+            bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
+            component: 'Input'
+        },
+        {
+            field: 'chat_for_First_person',
+            label: 'AI回应第一人称呼叫',
+            bottomHelpMessage: 'AI会回应包含其第一人称的句子。修改AI的第一人称后该功能重启生效。',
+            component: 'Switch'
+        },
+        {
+            field: 'paimon_chuoyichuo_open',
+            label: '开启戳一戳',
+            bottomHelpMessage: '是否开启戳一戳',
+            component: 'Switch'
+        },
+        {
+          field: 'vits_emotion',
+          label: 'emotion',
+          bottomHelpMessage: '目前api仅支持Happy！控制发音情感；可用命令：#tts情感设置帮助',
+          component: 'Select',
+          componentProps: {
+            options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'') } })
+          }
+        },
+        {
+            field: 'style_text',
+            label: 'tts融合文本',
+            bottomHelpMessage: '使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能',
+            component: 'Input'
+        },
+        {
+            field: 'style_text_weights',
+            label: 'tts融合文本权重',
+            bottomHelpMessage: '主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认为0.7',
+            component: 'InputNumber',
+            componentProps: {
+                min: 0,
+                max: 1
+            }
+        },
+        {
+          field: 'vits_emotion_locker',
+          label: 'vits_emotion_locker',
+          bottomHelpMessage: '锁上后，不给除主人之外的其他人使用#tts情感设置 #tts设置融合文本',
+          component: 'Switch'
+        },
+        {
+          field: 'sdp_ratio',
+          label: 'SDP ratio',
+          bottomHelpMessage: '控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0,
             max: 1
+          }
+        },
+        {
+          field: 'noiseScale',
+          label: 'noise',
+          bottomHelpMessage: '控制情感变化程度，范围0.1-2.0',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.1,
+            max: 2
           }
         },
         {
           field: 'noiseScaleW',
           label: 'noiseScaleW',
-          bottomHelpMessage: '控制音素发音长度',
+          bottomHelpMessage: '控制音素发音长度，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
-            min: 0,
-            max: 1
+            min: 0.1,
+            max: 2
           }
         },
         {
           field: 'lengthScale',
           label: 'lengthScale',
-          bottomHelpMessage: '控制整体语速',
+          bottomHelpMessage: '控制整体语速，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
-            min: 0,
+            min: 0.1,
             max: 2
           }
+        },
+        {
+          field: 'tts_language',
+          label: 'TTS语音使用的语言',
+          bottomHelpMessage: '可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: 'ZH', value: 'ZH' },
+              { label: 'JP', value: 'JP' },
+              { label: 'EN', value: 'EN' },
+              { label: 'mix', value: 'mix' },
+              { label: 'auto', value: 'auto' }
+            ]
+          }
+        },
+        {
+          field: 'exampleAudio',
+          label: 'exampleAudio',
+          bottomHelpMessage: 'exampleAudio设置暂时无法使用。exampleAudio用于推理时指定一个音频作为情感的参考音频',
+          component: 'Input'
         },
         {
           field: 'initiativeChatGroups',

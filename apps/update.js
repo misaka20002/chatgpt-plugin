@@ -148,7 +148,7 @@ export class Update extends plugin {
 
     let end = ''
     end =
-      '更多详细信息，请前往github查看\nhttps://github.com/ikechan8370/chatgpt-plugin'
+      '更多详细信息，请前往git查看'
 
     log = await this.makeForwardMsg(`chatgpt-plugin更新日志，共${line}条`, log, end)
 

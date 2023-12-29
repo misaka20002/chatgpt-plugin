@@ -48,6 +48,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "eslint": "^8.55.0",
     "ts-node": "^10.9.1",
     "ts-node-register": "^1.0.0"
   },

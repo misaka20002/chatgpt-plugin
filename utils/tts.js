@@ -5,248 +5,247 @@ import { wrapTextByLanguage } from './common.js'
 import { getProxy } from './proxy.js'
 let proxy = getProxy()
 
+export const speakers = ['派蒙_ZH', '纳西妲_ZH', '凯亚_ZH', '阿贝多_ZH', '温迪_ZH', '枫原万叶_ZH', '钟离_ZH', '荒泷一斗_ZH', '八重神子_ZH', '艾尔海森_ZH', '提纳里_ZH', '迪希雅_ZH', '卡维_ZH', '宵宫_ZH', '那维莱特_ZH', '莱依拉_ZH', '赛诺_ZH', '莫娜_ZH', '诺艾尔_ZH', '托马_ZH', '凝光_ZH', '林尼_ZH', '北斗_ZH', '柯莱_ZH', '神里绫华_ZH', '可莉_ZH', '芭芭拉_ZH', '雷电将军_ZH', '娜维娅_ZH', '芙宁娜_ZH', '珊瑚宫心海_ZH', '鹿野院平藏_ZH', '迪奥娜_ZH', '琴_ZH', '五郎_ZH', '班尼特_ZH', '达达利亚_ZH', '安柏_ZH', '莱欧斯利_ZH', '夜兰_ZH', '妮露_ZH', '辛焱_ZH', '丽莎_ZH', '珐露珊_ZH', '魈_ZH', '香菱_ZH', '迪卢克_ZH', '砂糖_ZH', '烟绯_ZH', '早柚_ZH', '云堇_ZH', '刻晴_ZH', '重云_ZH', '优菈_ZH', '胡桃_ZH', '流浪者_ZH', '久岐忍_ZH', '神里绫人_ZH', '甘雨_ZH', '戴因斯雷布_ZH', '菲谢尔_ZH', '白术_ZH', '行秋_ZH', '九条裟罗_ZH', '夏洛蒂_ZH', '雷泽_ZH', '申鹤_ZH', '荧_ZH', '空_ZH', '迪娜泽黛_ZH', '凯瑟琳_ZH', '多莉_ZH', '坎蒂丝_ZH', '琳妮特_ZH', '萍姥姥_ZH', '罗莎莉亚_ZH', '埃德_ZH', '爱贝尔_ZH', '伊迪娅_ZH', '留云借风真君_ZH', '绮良良_ZH', '七七_ZH', '式大将_ZH', '瑶瑶_ZH', '奥兹_ZH', '菲米尼_ZH', '米卡_ZH', '哲平_ZH', '大肉丸_ZH', '托克_ZH', '蒂玛乌斯_ZH', '昆钧_ZH', '欧菲妮_ZH', '塞琉斯_ZH', '仆人_ZH', '迈勒斯_ZH', '希格雯_ZH', '阿守_ZH', '拉赫曼_ZH', '杜拉夫_ZH', '伊利亚斯_ZH', '阿晃_ZH', '旁白_ZH', '爱德琳_ZH', '埃洛伊_ZH', '德沃沙克_ZH', '玛乔丽_ZH', '塞塔蕾_ZH', '柊千里_ZH', '海芭夏_ZH', '九条镰治_ZH', '阿娜耶_ZH', '笼钓瓶一心_ZH', '回声海螺_ZH', '劳维克_ZH', '元太_ZH', '阿扎尔_ZH', '查尔斯_ZH', '阿洛瓦_ZH', '埃勒曼_ZH', '纳比尔_ZH', '莎拉_ZH', '康纳_ZH', '博来_ZH', '玛塞勒_ZH', '阿祇_ZH', '博士_ZH', '玛格丽特_ZH', '迪尔菲_ZH', '宛烟_ZH', '羽生田千鹤_ZH', '海妮耶_ZH', '旅行者_ZH', '霍夫曼_ZH', '佐西摩斯_ZH', '鹿野奈奈_ZH', '舒伯特_ZH', '天叔_ZH', '艾莉丝_ZH', '龙二_ZH', '莺儿_ZH', '嘉良_ZH', '一心传名刀_ZH', '费迪南德_ZH', '珊瑚_ZH', '言笑_ZH', '久利须_ZH', '嘉玛_ZH', '艾文_ZH', '克洛琳德_ZH', '丹吉尔_ZH', '女士_ZH', '白老先生_ZH', '天目十五_ZH', '老孟_ZH', '巴达维_ZH', '长生_ZH', '吴船长_ZH', '拉齐_ZH', '艾伯特_ZH', '松浦_ZH', '埃泽_ZH', '阿圆_ZH', '莫塞伊思_ZH', '阿拉夫_ZH', '杜吉耶_ZH', '石头_ZH', '百闻_ZH', '波洛_ZH', '斯坦利_ZH', '博易_ZH', '迈蒙_ZH', '掇星攫辰天君_ZH', '毗伽尔_ZH', '芙卡洛斯_ZH', '恶龙_ZH', '恕筠_ZH', '知易_ZH', '克列门特_ZH', '大慈树王_ZH', '西拉杰_ZH', '上杉_ZH', '阿尔卡米_ZH', '纯水精灵_ZH', '常九爷_ZH', '沙扎曼_ZH', '田铁嘴_ZH', '克罗索_ZH', '阿巴图伊_ZH', '悦_ZH', '阿佩普_ZH', '埃尔欣根_ZH', '萨赫哈蒂_ZH', '塔杰·拉德卡尼_ZH', '安西_ZH', '埃舍尔_ZH', '萨齐因_ZH', '派蒙_JP', '纳西妲_JP', '凯亚_JP', '阿贝多_JP', '温迪_JP', '枫原万叶_JP', '钟离_JP', '荒泷一斗_JP', '八重神子_JP', '艾尔海森_JP', '提纳里_JP', '迪希雅_JP', '卡维_JP', '宵宫_JP', '那维莱特_JP', '莱依拉_JP', '赛诺_JP', '莫娜_JP', '诺艾尔_JP', '托马_JP', '凝光_JP', '林尼_JP', '北斗_JP', '柯莱_JP', '神里绫华_JP', '可莉_JP', '芭芭拉_JP', '雷电将军_JP', '娜维娅_JP', '芙宁娜_JP', '珊瑚宫心海_JP', '鹿野院平藏_JP', '迪奥娜_JP', '琴_JP', '五郎_JP', '班尼特_JP', '达达利亚_JP', '安柏_JP', '莱欧斯利_JP', '夜兰_JP', '妮露_JP', '辛焱_JP', '丽莎_JP', '珐露珊_JP', '魈_JP', '香菱_JP', '迪卢克_JP', '砂糖_JP', '烟绯_JP', '早柚_JP', '云堇_JP', '刻晴_JP', '重云_JP', '优菈_JP', '胡桃_JP', '流浪者_JP', '久岐忍_JP', '神里绫人_JP', '甘雨_JP', '戴因斯雷布_JP', '菲谢尔_JP', '白术_JP', '行秋_JP', '九条裟罗_JP', '夏洛蒂_JP', '雷泽_JP', '申鹤_JP', '空_JP', '荧_JP', '迪娜泽黛_JP', '凯瑟琳_JP', '多莉_JP', '坎蒂丝_JP', '琳妮特_JP', '萍姥姥_JP', '罗莎莉亚_JP', '埃德_JP', '爱贝尔_JP', '伊迪娅_JP', '留云借风真君_JP', '绮良良_JP', '七七_JP', '式大将_JP', '瑶瑶_JP', '奥兹_JP', '菲米尼_JP', '米卡_JP', '哲平_JP', '大肉丸_JP', '托克_JP', '蒂玛乌斯_JP', '昆钧_JP', '欧菲妮_JP', '塞琉斯_JP', '仆人_JP', '迈勒斯_JP', '希格雯_JP', '阿守_JP', '拉赫曼_JP', '杜拉夫_JP', '伊利亚斯_JP', '阿晃_JP', '旁白_JP', '爱德琳_JP', '埃洛伊_JP', '德沃沙克_JP', '玛乔丽_JP', '塞塔蕾_JP', '柊千里_JP', '海芭夏_JP', '九条镰治_JP', '阿娜耶_JP', '笼钓瓶一心_JP', '回声海螺_JP', '劳维克_JP', '元太_JP', '阿扎尔_JP', '查尔斯_JP', '阿洛瓦_JP', '埃勒曼_JP', '纳比尔_JP', '莎拉_JP', '康纳_JP', '博来_JP', '玛塞勒_JP', '阿祇_JP', '博士_JP', '迪尔菲_JP', '玛格丽特_JP', '宛烟_JP', '羽生田千鹤_JP', '海妮耶_JP', '霍夫曼_JP', '旅行者_JP', '佐西摩斯_JP', '舒伯特_JP', '鹿野奈奈_JP', '天叔_JP', '龙二_JP', '艾莉丝_JP', '莺儿_JP', '嘉良_JP', '珊瑚_JP', '言笑_JP', '一心传名刀_JP', '费迪南德_JP', '久利须_JP', '嘉玛_JP', '艾文_JP', '克洛琳德_JP', '丹吉尔_JP', '天目十五_JP', '女士_JP', '老孟_JP', '白老先生_JP', '舍利夫_JP', '巴达维_JP', '拉齐_JP', '长生_JP', '吴船长_JP', '艾伯特_JP', '松浦_JP', '埃泽_JP', '阿圆_JP', '阿拉夫_JP', '莫塞伊思_JP', '石头_JP', '百闻_JP', '杜吉耶_JP', '波洛_JP', '掇星攫辰天君_JP', '迈蒙_JP', '博易_JP', '诗筠_JP', '斯坦利_JP', '毗伽尔_JP', '芙卡洛斯_JP', '恶龙_JP', '小仓澪_JP', '恕筠_JP', '知易_JP', '克列门特_JP', '大慈树王_JP', '望雅_JP', '黑田_JP', '卡莉娜_JP', '马姆杜_JP', '科林斯_JP', '上杉_JP', '西拉杰_JP', '菲尔戈黛特_JP', '一平_JP', '纯水精灵_JP', '阿尔卡米_JP', '老戴_JP', '谢赫祖拜尔_JP', '沙扎曼_JP', '田铁嘴_JP', '小野寺_JP', '百识_JP', '克罗索_JP', '莱斯格_JP', '芷巧_JP', '加藤洋平_JP', '阿巴图伊_JP', '埃尔欣根_JP', '斯嘉莉_JP', '阿佩普_JP', '巫女_JP', '卡布斯_JP', '洛伦佐_JP', '萨赫哈蒂_JP', '娜德瓦_JP', '塞德娜_JP', '塔杰·拉德卡尼_JP', '绘星_JP', '泽田_JP', '安西_JP', '拉伊德_JP', '亚卡巴_JP', '有乐斋_JP', '莱昂_JP', '尤苏波夫_JP', '夏妮_JP', '埃舍尔_JP', '萨齐因_JP', '古山_JP', '自称渊上之物_JP', '丹羽_JP', '塞萨尔的日记_JP', '派蒙_EN', '纳西妲_EN', '凯亚_EN', '阿贝多_EN', '温迪_EN', '枫原万叶_EN', '钟离_EN', '荒泷一斗_EN', '八重神子_EN', '艾尔海森_EN', '提纳里_EN', '迪希雅_EN', '卡维_EN', '宵宫_EN', '莱依拉_EN', '那维莱特_EN', '赛诺_EN', '莫娜_EN', '诺艾尔_EN', '托马_EN', '凝光_EN', '林尼_EN', '北斗_EN', '柯莱_EN', '神里绫华_EN', '可莉_EN', '芭芭拉_EN', '雷电将军_EN', '娜维娅_EN', '芙宁娜_EN', '珊瑚宫心海_EN', '鹿野院平藏_EN', '迪奥娜_EN', '五郎_EN', '琴_EN', '班尼特_EN', '达达利亚_EN', '安柏_EN', '莱欧斯利_EN', '夜兰_EN', '妮露_EN', '辛焱_EN', '珐露珊_EN', '丽莎_EN', '魈_EN', '香菱_EN', '迪卢克_EN', '砂糖_EN', '烟绯_EN', '早柚_EN', '云堇_EN', '刻晴_EN', '重云_EN', '优菈_EN', '胡桃_EN', '流浪者_EN', '久岐忍_EN', '神里绫人_EN', '甘雨_EN', '戴因斯雷布_EN', '菲谢尔_EN', '白术_EN', '行秋_EN', '九条裟罗_EN', '夏洛蒂_EN', '雷泽_EN', '申鹤_EN', '荧_EN', '空_EN', '迪娜泽黛_EN', '凯瑟琳_EN', '多莉_EN', '坎蒂丝_EN', '琳妮特_EN', '萍姥姥_EN', '罗莎莉亚_EN', '埃德_EN', '爱贝尔_EN', '伊迪娅_EN', '留云借风真君_EN', '绮良良_EN', '七七_EN', '式大将_EN', '瑶瑶_EN', '奥兹_EN', '菲米尼_EN', '米卡_EN', '哲平_EN', '大肉丸_EN', '托克_EN', '蒂玛乌斯_EN', '昆钧_EN', '欧菲妮_EN', '塞琉斯_EN', '仆人_EN', '迈勒斯_EN', '希格雯_EN', '阿守_EN', '拉赫曼_EN', '杜拉夫_EN', '伊利亚斯_EN', '阿晃_EN', '旁白_EN', '爱德琳_EN', '埃洛伊_EN', '德沃沙克_EN', '玛乔丽_EN', '塞塔蕾_EN', '柊千里_EN', '海芭夏_EN', '九条镰治_EN', '阿娜耶_EN', '笼钓瓶一心_EN', '回声海螺_EN', '劳维克_EN', '元太_EN', '阿扎尔_EN', '查尔斯_EN', '阿洛瓦_EN', '埃勒曼_EN', '纳比尔_EN', '莎拉_EN', '康纳_EN', '博来_EN', '玛塞勒_EN', '阿祇_EN', '博士_EN', '迪尔菲_EN', '宛烟_EN', '玛格丽特_EN', '羽生田千鹤_EN', '海妮耶_EN', '霍夫曼_EN', '旅行者_EN', '佐西摩斯_EN', '鹿野奈奈_EN', '舒伯特_EN', '天叔_EN', '艾莉丝_EN', '龙二_EN', '莺儿_EN', '嘉良_EN', '珊瑚_EN', '费迪南德_EN', '言笑_EN', '一心传名刀_EN', '久利须_EN', '嘉玛_EN', '艾文_EN', '克洛琳德_EN', '丹吉尔_EN', '女士_EN', '天目十五_EN', '老孟_EN', '白老先生_EN', '舍利夫_EN', '巴达维_EN', '拉齐_EN', '长生_EN', '吴船长_EN', '艾伯特_EN', '松浦_EN', '埃泽_EN', '阿圆_EN', '阿拉夫_EN', '莫塞伊思_EN', '石头_EN', '百闻_EN', '杜吉耶_EN', '波洛_EN', '斯坦利_EN', '掇星攫辰天君_EN', '迈蒙_EN', '博易_EN', '诗筠_EN', '毗伽尔_EN', '慧心_EN', '芙卡洛斯_EN', '恶龙_EN', '小仓澪_EN', '恕筠_EN', '知易_EN', '克列门特_EN', '大慈树王_EN', '维多利亚_EN', '黑田_EN', '马姆杜_EN', '科林斯_EN', '上杉_EN', '西拉杰_EN', '宁禄_EN', '纯水精灵_EN', '常九爷_EN', '阿尔卡米_EN', '沙扎曼_EN', '田铁嘴_EN', '加萨尼_EN', '克罗索_EN', '星稀_EN', '莱斯格_EN', '阿巴图伊_EN', '悦_EN', '德田_EN', '埃尔欣根_EN', '阿佩普_EN', '萨赫哈蒂_EN', '洛伦佐_EN', '塔杰·拉德卡尼_EN', '泽田_EN', '安西_EN', '理水叠山真君_EN', '埃舍尔_EN', '萨齐因_EN', '古田_EN', '三月七_ZH', '丹恒_ZH', '希儿_ZH', '娜塔莎_ZH', '希露瓦_ZH', '瓦尔特_ZH', '佩拉_ZH', '布洛妮娅_ZH', '虎克_ZH', '素裳_ZH', '克拉拉_ZH', '符玄_ZH', '白露_ZH', '杰帕德_ZH', '景元_ZH', '藿藿_ZH', '姬子_ZH', '穹_ZH', '星_ZH', '卡芙卡_ZH', '桂乃芬_ZH', '艾丝妲_ZH', '玲可_ZH', '彦卿_ZH', '托帕_ZH', '驭空_ZH', '浮烟_ZH', '停云_ZH', '镜流_ZH', '罗刹_ZH', '卢卡_ZH', '史瓦罗_ZH', '黑塔_ZH', '桑博_ZH', '伦纳德_ZH', '明曦_ZH', '银狼_ZH', '帕姆_ZH', '青雀_ZH', '乔瓦尼_ZH', '公输师傅_ZH', '晴霓_ZH', '螺丝咕姆_ZH', '阿兰_ZH', '奥列格_ZH', '丹枢_ZH', '尾巴_ZH', '寒鸦_ZH', '雪衣_ZH', '可可利亚_ZH', '青镞_ZH', '半夏_ZH', '银枝_ZH', '大毫_ZH', '霄翰_ZH', '信使_ZH', '费斯曼_ZH', '绿芙蓉_ZH', 'dev_成男_ZH', '金人会长_ZH', '维利特_ZH', '维尔德_ZH', '斯科特_ZH', '卡波特_ZH', '刃_ZH', '岩明_ZH', '浣溪_ZH', '三月七_JP', '丹恒_JP', '希儿_JP', '娜塔莎_JP', '希露瓦_JP', '瓦尔特_JP', '佩拉_JP', '布洛妮娅_JP', '虎克_JP', '素裳_JP', '克拉拉_JP', '符玄_JP', '白露_JP', '杰帕德_JP', '景元_JP', '藿藿_JP', '姬子_JP', '卡芙卡_JP', '穹_JP', '星_JP', '桂乃芬_JP', '艾丝妲_JP', '彦卿_JP', '玲可_JP', '托帕_JP', '驭空_JP', '浮烟_JP', '停云_JP', '镜流_JP', '罗刹_JP', '卢卡_JP', '史瓦罗_JP', '黑塔_JP', '桑博_JP', '伦纳德_JP', '明曦_JP', '银狼_JP', '帕姆_JP', '青雀_JP', '乔瓦尼_JP', '公输师傅_JP', '晴霓_JP', '螺丝咕姆_JP', '阿兰_JP', '奥列格_JP', '丹枢_JP', '尾巴_JP', '寒鸦_JP', '雪衣_JP', '可可利亚_JP', '青镞_JP', '半夏_JP', '银枝_JP', '大毫_JP', '霄翰_JP', '信使_JP', '费斯曼_JP', '绿芙蓉_JP', 'dev_成男_JP', '金人会长_JP', '维利特_JP', '维尔德_JP', '斯科特_JP', '刃_JP', '卡波特_JP', '岩明_JP', '浣溪_JP', '净砚_JP', '紫月季_JP', '歌蒂_JP', '奇怪的云骑_JP', '幻胧_JP', '斯薇塔_JP', '隐书_JP', '三月七_EN', '丹恒_EN', '希儿_EN', '娜塔莎_EN', '希露瓦_EN', '瓦尔特_EN', '佩拉_EN', '布洛妮娅_EN', '虎克_EN', '素裳_EN', '克拉拉_EN', '符玄_EN', '白露_EN', '杰帕德_EN', '景元_EN', '藿藿_EN', '姬子_EN', '卡芙卡_EN', '穹_EN', '星_EN', '桂乃芬_EN', '艾丝妲_EN', '彦卿_EN', '玲可_EN', '托帕_EN', '驭空_EN', '浮烟_EN', '停云_EN', '镜流_EN', '罗刹_EN', '卢卡_EN', '史瓦罗_EN', '黑塔_EN', '桑博_EN', '伦纳德_EN', '明曦_EN', '银狼_EN', '帕姆_EN', '青雀_EN', '乔瓦尼_EN', '公输师傅_EN', '晴霓_EN', '螺丝咕姆_EN', '阿兰_EN', '奥列格_EN', '丹枢_EN', '尾巴_EN', '寒鸦_EN', '雪衣_EN', '可可利亚_EN', '青镞_EN', '半夏_EN', '银枝_EN', '大毫_EN', '霄翰_EN', '信使_EN', '费斯曼_EN', '绿芙蓉_EN', 'dev_成男_EN', '金人会长_EN', '维利特_EN', '维尔德_EN', '刃_EN', '卡波特_EN', '岩明_EN', '浣溪_EN', '紫月季_EN', '幻胧_EN', '女声_EN', '陆景和', '莫弈', '左然', '夏彦']
+
+export const vits_emotion_map = ['1: Happy (开心)', '2: Sad (伤心)', '3: Excited (兴奋)', '4: Angry (生气)', '5: Bored (无聊)', '6: Nervous (紧张)', '7: Content (满足)', '8: Frustrated (沮丧)', '9: Worried (担心)', '10: Relaxed (轻松)', '11: Enthusiastic (热情)', '12: Joyful (快乐)', '13: Melancholic (忧郁)', '14: Surprised (惊讶)', '15: Grateful (感激)', '16: Optimistic (乐观)', '17: Anxious (焦虑)', '18: Amused (逗乐)', '19: Embarrassed (尴尬)', '20: Hopeful (希望)', '21: Guilty (内疚)', '22: Restless (不安)', '23: Curious (好奇)', '24: Disappointed (失望)', '25: Thrilled (激动)', '26: Contented (满意)', '27: Impatient (不耐烦)', '28: Lonely (孤独)', '29: Disgusted (厌恶)', '30: Jealous (嫉妒)', '31: Proud (骄傲)', '32: Surprised (惊讶)', '33: Delighted (高兴)', '34: Drained (疲惫)', '35: Ecstatic (狂喜)', '36: Fulfilled (满足)', '37: Giddy (眩晕)', '38: Heartbroken (心碎)', '39: Inspired (受启发)', '40: Irritated (恼怒)', '41: Motivated (有动力)', '42: Overwhelmed (不堪重负)', '43: Peaceful (宁静)', '44: Regretful (后悔)', '45: Sentimental (感伤)', '46: Sympathetic (同情)', '47: Tired (疲倦)', '48: Uncomfortable (不舒服)', '49: Worrisome (令人担忧)', '50: Zealous (热心)', '51: Blissful (极幸福)', '52: Depressed (抑郁)', '53: Elated (兴高采烈)', '54: Grumpy (脾气暴躁)', '55: Hopeless (绝望)', '56: Intrigued (好奇)', '57: Playful (调皮)', '58: Reflective (反思)', '59: Satisfied (满意)', '60: Shy (害羞)', '61: Suspicious (怀疑)', '62: Ambitious (雄心勃勃)', '63: Grieving (悲伤)', '64: Frightened (害怕)', '65: Helpless (无助)', '66: Lively (活力四溢)', '67: Envious (羡慕)', '68: Impressed (印象深刻)', '69: Irrational (不理智)', '70: Longing (渴望)', '71: Restless (不安)', '72: Silly (愚蠢)', '73: Stressed (紧张)', '74: Sensitive (敏感)', '75: Thoughtful (思考)', '76: Unsettled (不稳定)', '77: Weak (脆弱)', '78: Wistful (怀念)', '79: Zealot (狂热)', '80: Thankful (感谢)', '81: Resentful (愤怒)', '82: Pessimistic (悲观)', '83: Ashamed (羞愧)', '84: Irritable (易怒)', '85: Jealous (妒忌)', '86: Numb (麻木)', '87: Resigned (顺从)', '88: Relieved (宽慰)', '89: Sorrowful (悲哀)', '90: Enraged (愤怒)', '91: Awestruck (敬畏)', '92: Gracious (亲切)', '93: Discontent (不满)', '94: Confused (困惑)', '95: Excitable (易激动)', '96: Fulfilled (满足)', '97: Jovial (快活的)', '98: Lethargic (昏昏欲睡)', '99: Regretful (后悔)', '100: Sarcastic (讽刺的)']
+
+const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
+
 const newFetch = (url, options = {}) => {
-  const defaultOptions = Config.proxy
-    ? {
-        agent: proxy(Config.proxy)
-      }
-    : {}
+    const defaultOptions = Config.proxy
+        ? {
+            agent: proxy(Config.proxy)
+        }
+        : {}
 
-  const mergedOptions = {
-    ...defaultOptions,
-    ...options
-  }
+    const mergedOptions = {
+        ...defaultOptions,
+        ...options
+    }
 
-  return fetch(url, mergedOptions)
+    return fetch(url, mergedOptions)
 }
 
-function randomNum (minNum, maxNum) {
-  switch (arguments.length) {
-    case 1:
-      return parseInt(Math.random() * minNum + 1, 10)
-    case 2:
-      return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10)
-    default:
-      return 0
-  }
+function randomNum(minNum, maxNum) {
+    switch (arguments.length) {
+        case 1:
+            return parseInt(Math.random() * minNum + 1, 10)
+        case 2:
+            return parseInt(Math.random() * (maxNum - minNum + 1) + minNum, 10)
+        default:
+            return 0
+    }
 }
 
-/**
- * 生成VitsTTSMode下的wav音频
- * @param text
- * @param speaker
- * @param language
- * @param noiseScale
- * @param noiseScaleW
- * @param lengthScale
- * @returns {Promise<string>}
- */
-export async function generateVitsAudio (text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale)) {
-  if (!speaker || speaker === '随机') {
-    logger.info('随机角色！这次哪个角色这么幸运会被选到呢……')
-    speaker = speakers[randomNum(0, speakers.length)]
-  }
-  text = wrapTextByLanguage(text)
-  logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
-  let body = {
-    data: [
-      text, language, speaker,
-      noiseScale, noiseScaleW, lengthScale
-    ]
-  }
-  let space = Config.ttsSpace
-  if (space.endsWith('/api/generate')) {
-    let trimmedSpace = space.substring(0, space.length - 13)
-    logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
-    space = trimmedSpace
-  }
-  if (space.endsWith('/')) {
-    let trimmedSpace = _.trimEnd(space, '/')
-    logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
-    space = trimmedSpace
-  }
-  let url = `${space}/api/generate`
-  if (Config.huggingFaceReverseProxy) {
-    url = `${Config.huggingFaceReverseProxy}/api/generate?space=${_.trimStart(space, 'https://')}`
-  }
-  logger.info(`正在使用接口${url}`)
-  let response = await newFetch(url, {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: {
-      'content-type': 'application/json'
+export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights)) {
+    if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
+    {
+/*        let character_voice_language = speaker.substring(speaker.length - 2);
+        let textfix = text.replace(/\#|(\[派蒙\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '');
+        //replace: 1.删除[派蒙] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji
+        let audioLink = `https://genshinvoice.top/api?speaker=${speaker}&text=${textfix}&format=wav&language=${character_voice_language}&length=1&sdp=0.4&noise=0.6&noisew=0.8`
+*/
+        return audioLink
     }
-  })
-  let responseBody = await response.text()
-  try {
-    let json = JSON.parse(responseBody)
-    if (Config.debug) {
-      logger.info(json)
-    }
-    if (response.status > 299) {
-      logger.info(json)
-      throw new Error(JSON.stringify(json))
-    }
-    let [message, audioInfo, take] = json?.data
-    logger.info(message, take)
-    let audioLink = `${space}/file=${audioInfo.name}`
-    if (Config.huggingFaceReverseProxy) {
-      if (Config.debug) {
-        logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
-      }
-      let spaceHost = _.trimStart(space, 'https://')
-      audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
-    }
-    return audioLink
-  } catch (err) {
-    logger.error('生成语音api发生错误，请检查是否配置了正确的api，且仓库是否开放为public', response.status)
-    throw new Error(responseBody)
-  }
-}
-export function convertSpeaker (speaker) {
-  switch (speaker) {
-    case '空':
-    case '空哥': return '空（空哥）'
-    case '荧':
-    case '荧妹': return '荧（荧妹）'
-    case '神里绫华':
-    case '龟龟': return '神里绫华（龟龟）'
-    case '菲谢尔':
-    case '皇女': return '菲谢尔（皇女）'
-    case '公子':
-    case '达达利亚': return '达达利亚（公子）'
-    case '诺艾尔':
-    case '女仆': return '诺艾尔（女仆）'
-    case '甘雨':
-    case '椰羊': return '甘雨（椰羊）'
-    case '雷神':
-    case '雷电将军': return '雷电将军（雷神）'
-    case '珊瑚宫心海':
-    case '心海': return '珊瑚宫心海（心海，扣扣米）'
-    case '荒泷一斗':
-    case '一斗': return '荒泷一斗（一斗）'
-    case '神子':
-    case '八重神子': return '八重神子（神子）'
-    case '绫人':
-    case '神里绫人': return '神里绫人（绫人）'
-    case '万叶':
-    case '枫原万叶': return '枫原万叶（万叶）'
-    case '猫猫':
-    case '迪奥娜': return '迪奥娜（猫猫）'
-    case '草神':
-    case '纳西妲': return '纳西妲（草神）'
-  }
+    else {
+        if (!speaker || speaker === '随机') {
+            logger.info('随机角色！这次哪个角色这么幸运会被选到呢……')
+            speaker = speakers[randomNum(0, speakers.length)]
+        }
 
-  return speaker
+        // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
+
+
+        /*处理tts语音文本：*/
+        let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
+
+        text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/，，，|，，/g, '').replace(tts_First_person_zh_colon_reg, '').substr(0, 299);
+        //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换↓chat.js处理过的换行文本 7. 替换第一人称+'：'，例如可莉：  n.截取处理后的前299个字符
+        //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')
+
+        logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
+
+        // exampleAudio暂时无法使用
+        let exampleAudio = null
+
+
+        let body = {
+            data: [
+                text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
+            ],
+            event_data: null,
+            fn_index: 0
+        }
+        let space = Config.ttsSpace
+
+        //校正为 https://v2.genshinvoice.top
+        if (space.endsWith('/run/predict')) {
+            let trimmedSpace = space.substring(0, space.length - 12)
+            logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
+            space = trimmedSpace
+        }
+        if (space.endsWith('/')) {
+            let trimmedSpace = _.trimEnd(space, '/')
+            logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
+            space = trimmedSpace
+        }
+
+        let url = `${space}/run/predict`
+
+        /* 真的需要反代的话这一行需要修改
+          if (Config.huggingFaceReverseProxy) {
+            url = `${Config.huggingFaceReverseProxy}/api/generate?space=${_.trimStart(space, 'https://')}`
+          }
+        */
+
+        let post_times = 1
+        /*第一次try*/
+        logger.info(`正在使用接口${url}`)
+        let response = await newFetch(url, {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers: {
+                'content-type': 'application/json'
+            }
+        })
+        let responseBody = await response.text()
+        try {
+            let json = JSON.parse(responseBody)
+            if (Config.debug) {
+                logger.info(json)
+            }
+            if (response.status > 299) {
+                logger.info(json)
+                throw new Error(JSON.stringify(json))
+            }
+            let [message, audioInfo] = json?.data
+            logger.info(message)
+
+            /* 本api responseBody 参考:
+                {
+                    "data": [
+                        "Success",
+                        {
+                            "name": "/tmp/gradio/530b4995ce71b56987e7141032f60c9f8db1ac18/audio.wav",
+                            "data": null,
+                            "is_file": true,
+                            "orig_name": "audio.wav"
+                        }
+                    ],
+                    "is_generating": false,
+                    "duration": 0.26611995697021484,
+                    "average_duration": 0.6881923574796864
+                }
+            */
+            /*这api怎么天天换参数呢*/
+            /*循环遍历audioInfo对象找到下载地址*/
+            let audioLink
+            for (let read_audioInfo in audioInfo) {
+                if (/\/.*\/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                    audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                    break
+                }
+            }
+            if (!audioLink) {
+                logger.error(responseBody)
+                throw new Error(responseBody)
+            }
+            /*原版
+            let audioLink = `${space}/file=${audioInfo.path}`*/
+
+            /* 真的需要反代的话这一行需要修改
+                if (Config.huggingFaceReverseProxy) {
+                  if (Config.debug) {
+                    logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
+                  }
+                  let spaceHost = _.trimStart(space, 'https://')
+                  audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
+                }
+            */
+            return audioLink
+        } catch (err) {
+            logger.error(`生成语音api发生错误，请检查是否配置了正确的api。第一次。当前语音api status为`, response.status)
+            /*throw new Error(responseBody)*/
+        }
+        /*尝试重试try*/
+        for (; post_times < 5; post_times++) {
+            // 等待1000ms
+            await sleep_zz(1000)
+            try {
+                logger.info(`正在第${post_times + 1}次使用接口${url}`)
+                response = await newFetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(body),
+                    headers: {
+                        'content-type': 'application/json'
+                    }
+                })
+                responseBody = await response.text()
+                try {
+                    let json = JSON.parse(responseBody)
+                    if (Config.debug) {
+                        logger.info(json)
+                    }
+                    if (response.status > 299) {
+                        logger.info(json)
+                        throw new Error(JSON.stringify(json))
+                    }
+                    let [message, audioInfo] = json?.data
+                    logger.info(message)
+
+                    /*这api怎么天天换参数呢*/
+                    let audioLink
+                    for (let read_audioInfo in audioInfo) {
+                        if (/\/.*\/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                            audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                            break
+                        }
+                    }
+                    if (!audioLink) throw new Error(responseBody)
+                    /*let audioLink = `${space}/file=${audioInfo.path}`*/
+
+                    /* 真的需要反代的话这一行需要修改
+                        if (Config.huggingFaceReverseProxy) {
+                          if (Config.debug) {
+                            logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
+                          }
+                          let spaceHost = _.trimStart(space, 'https://')
+                          audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
+                        }
+                    */
+                    return audioLink
+                } catch (err) {
+                    logger.error(`生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times + 1}次。当前语音api status为`, response.status)
+                }
+            } catch (err) {
+                logger.error(`For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times + 1}次。当前语音api status为`, response.status)
+            }
+        }
+        throw new Error(responseBody)
+    }
 }
-export const speakers = ['特别周', '无声铃鹿', '东海帝皇（帝宝，帝王）', '丸善斯基', '富士奇迹',
-  '小栗帽', '黄金船', '伏特加', '大和赤骥', '大树快车', '草上飞', '菱亚马逊',
-  '目白麦昆', '神鹰', '好歌剧', '成田白仁', '鲁道夫象征（皇帝）', '气槽',
-  '爱丽数码', '星云天空', '玉藻十字', '美妙姿势', '琵琶晨光', '摩耶重炮',
-  '曼城茶座', '美浦波旁', '目白赖恩', '菱曙', '雪中美人', '米浴', '艾尼斯风神',
-  '爱丽速子（爱丽快子）', '爱慕织姬', '稻荷一', '胜利奖券', '空中神宫', '荣进闪耀',
-  '真机伶', '川上公主', '黄金城（黄金城市）', '樱花进王', '采珠', '新光风',
-  '东商变革', '超级小海湾', '醒目飞鹰（寄寄子）', '荒漠英雄', '东瀛佐敦',
-  '中山庆典', '成田大进', '西野花', '春丽（乌拉拉）', '青竹回忆', '微光飞驹',
-  '美丽周日', '待兼福来', 'mr cb（cb先生）', '名将怒涛（名将户仁）', '目白多伯',
-  '优秀素质', '帝王光辉', '待兼诗歌剧', '生野狄杜斯', '目白善信', '大拓太阳神',
-  '双涡轮（两立直，两喷射，二锅头，逆喷射）', '里见光钻（萨托诺金刚石）', '北部玄驹',
-  '樱花千代王', '天狼星象征', '目白阿尔丹', '八重无敌', '鹤丸刚志', '目白光明',
-  '成田拜仁（成田路）', '也文摄辉', '小林历奇', '北港火山', '奇锐骏', '苦涩糖霜',
-  '小小蚕茧', '骏川手纲（绿帽恶魔）', '秋川弥生（小小理事长）', '乙名史悦子（乙名记者）',
-  '桐生院葵', '安心泽刺刺美', '樫本理子', '神里绫华（龟龟）', '琴', '空（空哥）',
-  '丽莎', '荧（荧妹）', '芭芭拉', '凯亚', '迪卢克', '雷泽', '安柏', '温迪',
-  '香菱', '北斗', '行秋', '魈', '凝光', '可莉', '钟离', '菲谢尔（皇女）',
-  '班尼特', '达达利亚（公子）', '诺艾尔（女仆）', '七七', '重云', '甘雨（椰羊）',
-  '阿贝多', '迪奥娜（猫猫）', '莫娜', '刻晴', '砂糖', '辛焱', '罗莎莉亚',
-  '胡桃', '枫原万叶（万叶）', '烟绯', '宵宫', '托马', '优菈', '雷电将军（雷神）',
-  '早柚', '珊瑚宫心海（心海，扣扣米）', '五郎', '九条裟罗', '荒泷一斗（一斗）',
-  '埃洛伊', '申鹤', '八重神子（神子）', '神里绫人（绫人）', '夜兰', '久岐忍',
-  '鹿野苑平藏', '提纳里', '柯莱', '多莉', '云堇', '纳西妲（草神）', '深渊使徒',
-  '妮露', '赛诺', '债务处理人', '坎蒂丝', '真弓快车', '秋人', '望族', '艾尔菲',
-  '艾莉丝', '艾伦', '阿洛瓦', '天野', '天目十五', '愚人众-安德烈', '安顺', '安西',
-  '葵', '青木', '荒川幸次', '荒谷', '有泽', '浅川', '麻美', '凝光助手', '阿托',
-  '竺子', '百识', '百闻', '百晓', '白术', '贝雅特丽奇', '丽塔', '失落迷迭',
-  '缭乱星棘', '伊甸', '伏特加女孩', '狂热蓝调', '莉莉娅', '萝莎莉娅', '八重樱',
-  '八重霞', '卡莲', '第六夜想曲', '卡萝尔', '姬子', '极地战刃', '布洛妮娅',
-  '次生银翼', '理之律者%26希儿', '理之律者', '迷城骇兔', '希儿', '魇夜星渊',
-  '黑希儿', '帕朵菲莉丝', '不灭星锚', '天元骑英', '幽兰黛尔', '派蒙bh3',
-  '爱酱', '绯玉丸', '德丽莎', '月下初拥', '朔夜观星', '暮光骑士', '格蕾修',
-  '留云借风真君', '梅比乌斯', '仿犹大', '克莱因', '圣剑幽兰黛尔', '妖精爱莉',
-  '特斯拉zero', '苍玄', '若水', '西琳', '戴因斯雷布', '贝拉', '赤鸢', '镇魂歌',
-  '渡鸦', '人之律者', '爱莉希雅', '天穹游侠', '琪亚娜', '空之律者', '薪炎之律者',
-  '云墨丹心', '符华', '识之律者', '特瓦林', '维尔薇', '芽衣', '雷之律者',
-  '断罪影舞', '阿波尼亚', '榎本', '厄尼斯特', '恶龙', '范二爷', '法拉',
-  '愚人众士兵', '愚人众士兵a', '愚人众士兵b', '愚人众士兵c', '愚人众a', '愚人众b',
-  '飞飞', '菲利克斯', '女性跟随者', '逢岩', '摆渡人', '狂躁的男人', '奥兹',
-  '芙萝拉', '跟随者', '蜜汁生物', '黄麻子', '渊上', '藤木', '深见', '福本',
-  '芙蓉', '古泽', '古田', '古山', '古谷昇', '傅三儿', '高老六', '矿工冒',
-  '元太', '德安公', '茂才公', '杰拉德', '葛罗丽', '金忽律', '公俊', '锅巴',
-  '歌德', '阿豪', '狗三儿', '葛瑞丝', '若心', '阿山婆', '怪鸟', '广竹', '观海',
-  '关宏', '蜜汁卫兵', '守卫1', '傲慢的守卫', '害怕的守卫', '贵安', '盖伊', '阿创',
-  '哈夫丹', '日语阿贝多（野岛健儿）', '日语埃洛伊（高垣彩阳）', '日语安柏（石见舞菜香）',
-  '日语神里绫华（早见沙织）', '日语神里绫人（石田彰）', '日语白术（游佐浩二）',
-  '日语芭芭拉（鬼头明里）', '日语北斗（小清水亚美）', '日语班尼特（逢坂良太）',
-  '日语坎蒂丝（柚木凉香）', '日语重云（齐藤壮马）', '日语柯莱（前川凉子）',
-  '日语赛诺（入野自由）', '日语戴因斯雷布（津田健次郎）', '日语迪卢克（小野贤章）',
-  '日语迪奥娜（井泽诗织）', '日语多莉（金田朋子）', '日语优菈（佐藤利奈）',
-  '日语菲谢尔（内田真礼）', '日语甘雨（上田丽奈）', '日语（畠中祐）',
-  '日语鹿野院平藏（井口祐一）', '日语空（堀江瞬）', '日语荧（悠木碧）',
-  '日语胡桃（高桥李依）', '日语一斗（西川贵教）', '日语凯亚（鸟海浩辅）',
-  '日语万叶（岛崎信长）', '日语刻晴（喜多村英梨）', '日语可莉（久野美咲）',
-  '日语心海（三森铃子）', '日语九条裟罗（濑户麻沙美）', '日语丽莎（田中理惠）',
-  '日语莫娜（小原好美）', '日语纳西妲（田村由加莉）', '日语妮露（金元寿子）',
-  '日语凝光（大原沙耶香）', '日语诺艾尔（高尾奏音）', '日语奥兹（增谷康纪）',
-  '日语派蒙（古贺葵）', '日语琴（斋藤千和）', '日语七七（田村由加莉）', '日语雷电将军（泽城美雪）',
-  '日语雷泽（内山昂辉）', '日语罗莎莉亚（加隈亚衣）', '日语早柚（洲崎绫）', '日语散兵（柿原彻也）',
-  '日语申鹤（川澄绫子）', '日语久岐忍（水桥香织）', '日语女士（庄子裕衣）', '日语砂糖（藤田茜）',
-  '日语达达利亚（木村良平）', '日语托马（森田成一）', '日语提纳里（小林沙苗）', '日语温迪（村濑步）',
-  '日语香菱（小泽亚李）', '日语魈（松冈祯丞）', '日语行秋（皆川纯子）', '日语辛焱（高桥智秋）',
-  '日语八重神子（佐仓绫音）', '日语烟绯（花守由美里）', '日语夜兰（远藤绫）', '日语宵宫（植田佳奈）',
-  '日语云堇（小岩井小鸟）', '日语钟离（前野智昭）', '杰克', '阿吉', '江舟', '鉴秋', '嘉义',
-  '纪芳', '景澄', '经纶', '景明', '晋优', '阿鸠', '酒客', '乔尔', '乔瑟夫', '约顿',
-  '乔伊斯', '居安', '君君', '顺吉', '纯也', '重佐', '大岛纯平', '蒲泽', '勘解由小路健三郎',
-  '枫', '枫原义庆', '荫山', '甲斐田龍馬', '海斗', '惟神晴之介', '鹿野奈奈', '卡琵莉亚',
-  '凯瑟琳', '加藤信悟', '加藤洋平', '胜家', '茅葺一庆', '和昭', '一正', '一道', '桂一',
-  '庆次郎', '阿贤', '健司', '健次郎', '健三郎', '天理', '杀手a', '杀手b', '木南杏奈',
-  '木村', '国王', '木下', '北村', '清惠', '清人', '克列门特', '骑士', '小林', '小春',
-  '康拉德', '大肉丸', '琴美', '宏一', '康介', '幸德', '高善', '梢', '克罗索', '久保',
-  '九条镰治', '久木田', '昆钧', '菊地君', '久利须', '黑田', '黑泽京之介', '响太', '岚姐',
-  '兰溪', '澜阳', '劳伦斯', '乐明', '莱诺', '莲', '良子', '李当', '李丁', '小乐', '灵',
-  '小玲', '琳琅a', '琳琅b', '小彬', '小德', '小楽', '小龙', '小吴', '小吴的记忆', '理正',
-  '阿龙', '卢卡', '洛成', '罗巧', '北风狼', '卢正', '萍姥姥', '前田', '真昼', '麻纪',
-  '真', '愚人众-马克西姆', '女性a', '女性b', '女性a的跟随者', '阿守', '玛格丽特', '真理',
-  '玛乔丽', '玛文', '正胜', '昌信', '将司', '正人', '路爷', '老章', '松田', '松本', '松浦',
-  '松坂', '老孟', '孟丹', '商人随从', '传令兵', '米歇尔', '御舆源一郎', '御舆源次郎', '千岩军教头',
-  '千岩军士兵', '明博', '明俊', '美铃', '美和', '阿幸', '削月筑阳真君', '钱眼儿', '森彦',
-  '元助', '理水叠山真君', '理水疊山真君', '朱老板', '木木', '村上', '村田', '永野',
-  '长野原龙之介', '长濑', '中野志乃', '菜菜子', '楠楠', '成濑', '阿内', '宁禄', '牛志', '信博',
-  '伸夫', '野方', '诺拉', '纪香', '诺曼', '修女', '纯水精灵', '小川', '小仓澪', '冈林',
-  '冈崎绘里香', '冈崎陆斗', '奥拉夫', '老科', '鬼婆婆', '小野寺', '大河原五右卫门', '大久保大介',
-  '大森', '大助', '奥特', '派蒙', '派蒙2', '病人a', '病人b', '巴顿', '派恩', '朋义',
-  '围观群众', '围观群众a', '围观群众b', '围观群众c', '围观群众d', '围观群众e', '铜雀',
-  '阿肥', '兴叔', '老周叔', '公主', '彼得', '乾子', '芊芊', '乾玮', '绮命', '杞平',
-  '秋月', '昆恩', '雷电影', '兰道尔', '雷蒙德', '冒失的帕拉德', '伶一', '玲花', '阿仁',
-  '家臣们', '梨绘', '荣江', '戎世', '浪人', '罗伊斯', '如意', '凉子', '彩香', '酒井',
-  '坂本', '朔次郎', '武士a', '武士b', '武士c', '武士d', '珊瑚', '三田', '莎拉', '笹野',
-  '聪美', '聪', '小百合', '散兵', '害怕的小刘', '舒伯特', '舒茨', '海龙', '世子',
-  '谢尔盖', '家丁', '商华', '沙寅', '阿升', '柴田', '阿茂', '式大将', '清水', '志村勘兵卫',
-  '新之丞', '志织', '石头', '诗羽', '诗筠', '石壮', '翔太', '正二', '周平', '舒杨',
-  '齐格芙丽雅', '女士', '思勤', '六指乔瑟', '愚人众小兵d', '愚人众小兵a', '愚人众小兵b',
-  '愚人众小兵c', '吴老五', '吴老二', '滑头鬼', '言笑', '吴老七', '士兵h', '士兵i',
-  '士兵a', '士兵b', '士兵c', '士兵d', '士兵e', '士兵f', '士兵g', '奏太', '斯坦利',
-  '掇星攫辰天君', '小头', '大武', '陶义隆', '杉本', '苏西', '嫌疑人a', '嫌疑人b', '嫌疑人c',
-  '嫌疑人d', '斯万', '剑客a', '剑客b', '阿二', '忠胜', '忠夫', '阿敬', '孝利', '鹰司进',
-  '高山', '九条孝行', '毅', '竹内', '拓真', '卓也', '太郎丸', '泰勒', '手岛', '哲平',
-  '哲夫', '托克', '大boss', '阿强', '托尔德拉', '旁观者', '天成', '阿大', '蒂玛乌斯',
-  '提米', '户田', '阿三', '一起的人', '德田', '德长', '智树', '利彦', '胖乎乎的旅行者',
-  '藏宝人a', '藏宝人b', '藏宝人c', '藏宝人d', '阿祇', '恒雄', '露子', '话剧团团长',
-  '内村', '上野', '上杉', '老戴', '老高', '老贾', '老墨', '老孙', '天枢星', '老云',
-  '有乐斋', '丑雄', '乌维', '瓦京', '菲尔戈黛特', '维多利亚', '薇尔', '瓦格纳',
-  '阿外', '侍女', '瓦拉', '望雅', '宛烟', '琬玉', '战士a', '战士b', '渡辺', '渡部', '阿伟',
-  '文璟', '文渊', '韦尔纳', '王扳手', '武沛', '晓飞', '辛程', '星火', '星稀', '辛秀',
-  '秀华', '阿旭', '徐刘师', '矢部', '八木', '山上', '阿阳', '颜笑', '康明', '泰久',
-  '安武', '矢田幸喜', '矢田辛喜', '义坚', '莺儿', '盈丰', '宜年', '银杏', '逸轩', '横山',
-  '永贵', '永业', '嘉久', '吉川', '义高', '用高', '阳太', '元蓉', '玥辉', '毓华', '有香',
-  '幸也', '由真', '结菜', '韵宁', '百合', '百合华', '尤苏波夫', '裕子', '悠策', '悠也',
-  '于嫣', '柚子', '老郑', '正茂', '志成', '芷巧', '知易', '支支', '周良', '珠函', '祝明', '祝涛']
+
+export function convertSpeaker(speaker) {
+    switch (speaker) {
+        case '派蒙':
+        case '小派蒙': return '派蒙_ZH'
+        case '纳西妲': return '纳西妲_ZH'
+        case '可莉': return '可莉_ZH'
+        case '早柚': return '早柚_ZH'
+        case '迪奥娜': return '迪奥娜_ZH'
+        case '瑶瑶': return '瑶瑶_ZH'
+        case '七七': return '七七_ZH'
+        case '希格雯': return '希格雯_ZH'
+        case '神里绫华': return '神里绫华_ZH'
+        case '胡桃': return '胡桃_ZH'
+        case '雷电将军': return '雷电将军_ZH'
+        case '芙宁娜': return '芙宁娜_ZH'
+        case '绮良良': return '绮良良_ZH'
+        case '刻晴': return '刻晴_ZH'
+        case '珊瑚宫心海': return '珊瑚宫心海_ZH'
+        case '迪卢克': return '迪卢克_ZH'
+    }
+
+    return speaker
+}

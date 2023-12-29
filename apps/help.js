@@ -100,6 +100,11 @@ let helpData = [
         icon: 'sound',
         title: '#chatgpt语音模式',
         desc: '机器人以语音形式回答'
+      },      
+      {
+        icon: 'chat',
+        title: '#tts语音帮助',
+        desc: '提供更改tts发音设定的功能'
       },
       {
         icon: 'game',
