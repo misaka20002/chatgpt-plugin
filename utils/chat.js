@@ -1,3 +1,4 @@
+
 export async function getChatHistoryGroup (e, num) {
   // if (e.adapter === 'shamrock') {
   //  return await e.group.getChatHistory(0, num, false)
@@ -19,7 +20,7 @@ export async function getChatHistoryGroup (e, num) {
         for (const chat of chats) {
           if (e.adapter === 'shamrock') {
             if (chat.sender?.user_id === 0) {
-              // 奇怪格式的历史消息，过滤掉
+              // 濂囨�牸寮忕殑鍘嗗彶娑堟伅锛岃繃婊ゆ帀
               continue
             }
             let sender = await pickMemberAsync(e, chat.sender.user_id)
