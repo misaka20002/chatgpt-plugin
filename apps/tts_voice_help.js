@@ -94,7 +94,8 @@ export class voicechangehelp extends plugin {
             `#tts(查看|设置)融合权重\n` +
             `#chatgpt设置AI第一人称帮助\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
-            `#chatgpt(查看|设置)输入黑名单` +
+            `#chatgpt(查看|设置)输入黑名单\n` +
+            `#chatgpt必应(开启|关闭)搜索` +
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://v2.genshinvoice.top\n` +
