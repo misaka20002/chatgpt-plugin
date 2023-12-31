@@ -115,7 +115,7 @@ export class voicechangehelp extends plugin {
             `#tts(查看|设置)融合权重` +
             ''
         const userSetting = await getUserReplySetting(this.e)
-        let msg4_1 = `${this.e.sender.user_id}的回复设置（优先级最高）:
+        let msg4_1 = `${this.e.sender.user_id}的回复设置:
 图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
@@ -255,7 +255,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             return e.reply(`指定某些情况指定回复下AI的第一人称\n例如#chatgpt设置AI第一人称派蒙`, false)
         } else {
             Config.tts_First_person = input_tts
-            return e.reply(`AI的第一人称已设置为${input_tts}！`)
+            return e.reply(`AI的第一人称已设置为“${input_tts}”！\n如果需要触发“AI回应第一人称呼叫”请重启。`)
         }
     }
 
@@ -415,7 +415,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         const userSetting = await getUserReplySetting(this.e)
-        let msg4_1 = `${this.e.sender.user_id}的回复设置（优先级最高）:
+        let msg4_1 = `${this.e.sender.user_id}的回复设置:
 图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}

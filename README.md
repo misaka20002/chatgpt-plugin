@@ -1,5 +1,49 @@
-## 改
-新增 #tts语音替换帮助         →替换语音引擎为Bert-VITS2
+## 减少特性，增加bug：
+### 更改：
+- 所有语音替换语音引擎为Bert-VITS2（感谢genshinvoice.top提供的api支持！）
+### 新增：
+- 戳一戳功能，锅巴开启关闭
+  - 受#chatgpt设置AI第一人称 和锅巴控制
+- 随机语音打招呼功能
+  - 受#chatgpt设置AI第一人称 控制
+  - 命令：#chatgpt打招呼[群号]
+  - 推荐使用auto插件实现定时功能：
+    - #定时指令 -c="0 5 0,8,10,12,15,18,20,22 * * ? " -t="#chatgpt打招呼[群号]"
+### 新增命令：
+- #tts帮助
+- #tts语音帮助
+- #tts查看当前语音设置
+- #chatgpt查看回复设置
+- #chatgpt(图片|语音)模式
+- #tts删除所有用户回复设置帮助
+- （↑每人独立设置且优先级最高）
+- #tts可选人物列表
+- #tts语言设置帮助
+- #tts语音转日语帮助
+- #ttslength设置帮助
+- #tts情感帮助
+- #tts情感设置上锁(开启|关闭)
+- #tts(查看|设置)融合文本
+- #tts(查看|设置)融合权重
+- #chatgpt设置AI第一人称帮助
+- #chatgpt(查看|设置)输出黑名单
+- #chatgpt(查看|设置)输入黑名单
+- #chatgpt必应(开启|关闭)搜索
+### 支持修改的语音设置：#tts查看当前语音设置
+ - 默认角色：派蒙_ZH
+ - 发音语言：ZH
+ - tts情感设置上锁：true
+ - vits_emotion：Happy
+ - noiseScale：0.6
+ - noiseScaleW：0.9
+ - lengthScale：0.9
+ - sdp_ratio：0.5
+ - 融合文本：
+ - 融合权重：0.7
+ - 全局语音模式：true
+ - AI第一人称：派蒙
+
+## 安装：
 ```
 git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
 ```
