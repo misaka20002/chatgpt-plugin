@@ -5,9 +5,9 @@ import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import { Config } from '../utils/config.js'
 
-let reply_text = 0.55 //文字触发概率,小数点后5位都可以
+let reply_text = 0.6 //文字触发概率,小数点后5位都可以
 let reply_img = 0.15 //随机图片触发概率
-let reply_voice = 0.15 //语音触发概率
+let reply_voice = 0.1 //语音触发概率
 let mutepick = 0.05 //禁言触发概率
 // 剩下的0.1概率是机器人戳回去
 
