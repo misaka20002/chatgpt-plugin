@@ -8,7 +8,7 @@ import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import { Config } from '../utils/config.js'
-import { getUin } from './common.js'
+import { getUin } from '../utils/common.js'
 let module
 try {
   module = await import('oicq')
