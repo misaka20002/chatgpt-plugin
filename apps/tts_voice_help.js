@@ -255,6 +255,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             return e.reply(`指定某些情况指定回复下AI的第一人称\n例如#chatgpt设置AI第一人称派蒙`, false)
         } else {
             Config.tts_First_person = input_tts
+            Config.chatViewBotName = input_tts
             return e.reply(`AI的第一人称已设置为“${input_tts}”！\n如果需要触发“AI回应第一人称呼叫”请重启。`)
         }
     }
