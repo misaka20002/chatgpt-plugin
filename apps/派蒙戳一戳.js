@@ -1,6 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import querystring from 'querystring'
 import fs from 'fs'
+import crypto from 'crypto'
 import { segment } from 'icqq'
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
@@ -33,8 +34,6 @@ if (module) {
 }
 // import { pcm2slk } from 'node-silk'
 let errors = {}
-/** md5 hash */
-const md5 = (data) => (0, crypto.createHash)('md5').update(data).digest()
 
 
 
@@ -666,3 +665,7 @@ export class chuo extends plugin {
     }
 
 }
+
+
+/** md5 hash */
+const md5 = (data) => (0, crypto.createHash)('md5').update(data).digest()
