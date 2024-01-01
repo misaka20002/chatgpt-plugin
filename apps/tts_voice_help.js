@@ -252,7 +252,12 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async set_assistantLabel(e) {
         let input_tts = e.msg.replace(/^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?/, '').trim()
         if (!input_tts) {
-            return e.reply(`指定某些情况指定回复下AI的第一人称\n例如#chatgpt设置AI第一人称派蒙`, false)
+            let msg1 = `tts第一人称帮助：`
+            let msg_show = `指定某些情况指定回复下AI的第一人称`
+            let msg1_1 = `#chatgpt设置AI第一人称派蒙`
+            let msg2 = `如果需要触发“AI回应第一人称呼叫”，请重启；\n如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1, msg2], `tts第一人称帮助`);
+            return e.reply(msgx, false)
         } else {
             Config.tts_First_person = input_tts
             Config.chatViewBotName = input_tts
