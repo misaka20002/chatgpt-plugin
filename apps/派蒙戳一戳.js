@@ -1,5 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import querystring from 'querystring'
+import fetch from 'node-fetch'
 import fs from 'fs'
 import crypto from 'crypto'
 import { segment } from 'icqq'
@@ -7,6 +8,7 @@ import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import { Config } from '../utils/config.js'
+import { getUin } from './common.js'
 let module
 try {
   module = await import('oicq')
@@ -669,3 +671,14 @@ export class chuo extends plugin {
 
 /** md5 hash */
 const md5 = (data) => (0, crypto.createHash)('md5').update(data).digest()
+
+function int32ip2str (ip) {
+    if (typeof ip === 'string') { return ip }
+    ip = ip & 0xffffffff
+    return [
+      ip & 0xff,
+      (ip & 0xff00) >> 8,
+      (ip & 0xff0000) >> 16,
+      (ip & 0xff000000) >> 24 & 0xff
+    ].join('.')
+  }
