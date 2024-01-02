@@ -450,13 +450,14 @@ export class chuo extends plugin {
                 // 备份原版config
                 let cloudMode_bak = Config.cloudMode
                 // 设置为url模式
-                Config.cloudMode = "voice_url"
+                Config.cloudMode = "url"
                 let ignoreEncode = e.adapter === 'shamrock'
                 let sendable
                 try {
                     sendable = await uploadRecord(voice_url, 'vits-uma-genshin-honkai', ignoreEncode)
                     if (!sendable) {
                         // 如果合成失败，尝试使用ffmpeg合成
+                        // await e.reply('戳一戳语音silk云转码失败惹，改用ffmpeg转码', false, { recallMsg: 8 })
                         sendable = segment.record(voice_url)
                     }
                 } catch (err) {
