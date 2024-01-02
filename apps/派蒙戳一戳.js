@@ -460,7 +460,7 @@ export class chuo extends plugin {
                     sendable = await uploadRecord(voice_url, 'vits-uma-genshin-honkai', ignoreEncode)
                     if (!sendable) {
                         // 如果合成失败，尝试使用ffmpeg合成
-                        // await e.reply('戳一戳语音silk云转码失败惹，改用ffmpeg转码', false, { recallMsg: 8 })
+                        logger.mark('云转码silk进行高清语音生成失败')
                         sendable = segment.record(voice_url)
                     }
                 } catch (err) {
