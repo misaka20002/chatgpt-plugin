@@ -6,9 +6,9 @@ import moment from 'moment'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
 
-let reply_text = 0.6 //文字触发概率,小数点后5位都可以
+let reply_text = 0.0 //文字触发概率,小数点后5位都可以
 let reply_img = 0.15 //随机图片触发概率
-let reply_voice = 0.1 //语音触发概率
+let reply_voice = 0.7 //语音触发概率
 let mutepick = 0.05 //禁言触发概率
 // 剩下的0.1概率是机器人戳回去
 
@@ -321,7 +321,7 @@ let voice_list_klee_cn = ["https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/879
 ]
 
 
-let ciku_ = ["_name_今天已经被戳了_num_次啦，休息一下下好不好",
+let ciku = ["_name_今天已经被戳了_num_次啦，休息一下下好不好",
     "_name_今天已经被戳了_num_次啦,呜呜，有完没完啦！",
     "_name_今天已经被戳了_num_次啦,别戳派蒙了！！！",
     "_name_今天已经被戳了_num_次啦,不准戳派蒙了！",
@@ -365,13 +365,16 @@ export class chuo extends plugin {
             }
             /**count”大于或等于10时30%的概率触发 */
             if (Math.ceil(Math.random() * 100) <= 30 && count >= 10) {
-                let conf = cfg.getGroup(e.group_id)
-                e.reply([
-                    `${ciku_[Math.round(Math.random() * (ciku_length - 1))]}`
-                        .replace("_name_", conf.botAlias[0])
-                        .replace("_num_", count),
-                ]);
-                return true
+                let text_number = Math.ceil(Math.random() * ciku['length'])
+                return await e.reply(ciku[text_number - 1].replace('_name_', Config.tts_First_person).replace("_num_", count))
+                
+                // let conf = cfg.getGroup(e.group_id)
+                // e.reply([
+                //     `${ciku_[Math.round(Math.random() * (ciku_length - 1))]}`
+                //         .replace("_name_", conf.botAlias[0])
+                //         .replace("_num_", count),
+                // ]);
+                // return true
             }
 
 
@@ -450,7 +453,7 @@ export class chuo extends plugin {
                 // 备份原版config
                 let cloudMode_bak = Config.cloudMode
                 // 设置为url模式
-                Config.cloudMode = "url"
+                Config.cloudMode = 'url'
                 let ignoreEncode = e.adapter === 'shamrock'
                 let sendable
                 try {
