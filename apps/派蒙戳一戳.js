@@ -1,45 +1,12 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import querystring from 'querystring'
-import fetch from 'node-fetch'
-import fs from 'fs'
-import crypto from 'crypto'
 import { segment } from 'icqq'
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import { Config } from '../utils/config.js'
-import { getUin } from '../utils/common.js'
-let module
-try {
-  module = await import('oicq')
-} catch (err) {
-  try {
-    module = await import('icqq')
-  } catch (err1) {
-    // 可能是go-cqhttp之类的
-  }
-}
-let pcm2slk, core, Contactable
-if (module) {
-  core = module.core
-  Contactable = module.default
-  try {
-    pcm2slk = (await import('node-silk')).pcm2slk
-  } catch (e) {
-    if (Config.cloudTranscode) {
-      logger.warn('未安装node-silk，将尝试使用云转码服务进行合成')
-    } else {
-      Config.debug && logger.error(e)
-      logger.warn('未安装node-silk，如ffmpeg不支持amr编码请安装node-silk以支持语音模式')
-    }
-  }
-}
-// import { pcm2slk } from 'node-silk'
-let errors = {}
+import uploadRecord from '../utils/uploadRecord.js'
 
-
-
-let reply_text = 0.6 //文字触发概率,精确到小数点后15位
+let reply_text = 0.6 //文字触发概率,小数点后5位都可以
 let reply_img = 0.15 //随机图片触发概率
 let reply_voice = 0.1 //语音触发概率
 let mutepick = 0.05 //禁言触发概率
@@ -461,112 +428,27 @@ export class chuo extends plugin {
             /**返回随机音频 */
             else if (random_type < (reply_text + reply_img + reply_voice)) {
                 let voice_number = Math.ceil(Math.random() * word_list['length'])
-                let recordUrl = voice_list_klee_cn[voice_number - 1]
-                
-                // 使用云silk
+                let url = voice_list_klee_cn[voice_number - 1]
+                // 备份原版config
+                let cloudMode_bak = Config.cloudMode
+                // 设置为url模式
+                Config.cloudMode = "url"
+                let ignoreEncode = e.adapter === 'shamrock'
                 let sendable
-                let result
-                let tmpFile = ''
-                // 上传到云silk服务器
-                const cloudUrl = new URL(Config.cloudTranscode)
-                const resultres = await fetch(`${cloudUrl}audio`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ recordUrl })
-                })
-                let t = await resultres.text()
                 try {
-                    result = JSON.parse(t)
-                } catch (e) {
-                    logger.error(t)
-                    throw e
-                }
-                if (result.error) {
-                    logger.error('云转码API报错：' + result.error)
-                    return false
-                }
-                result.buffer = Buffer.from(result.buffer.data)
-
-                if (!result.buffer) {
-                    return false
-                }
-                let buf = Buffer.from(result.buffer)
-                const hash = md5(buf)
-                const codec = String(buf.slice(0, 7)).includes('SILK') ? 1 : 0
-                const body = core.pb.encode({
-                    1: 3,
-                    2: 3,
-                    5: {
-                        1: Contactable.target,
-                        2: getUin(),
-                        3: 0,
-                        4: hash,
-                        5: buf.length,
-                        6: hash,
-                        7: 5,
-                        8: 9,
-                        9: 4,
-                        11: 0,
-                        10: Bot.apk.version,
-                        12: 1,
-                        13: 1,
-                        14: 0,
-                        15: 1
+                    sendable = await uploadRecord(url, 'vits-uma-genshin-honkai', ignoreEncode)
+                    if (!sendable) {
+                      // 如果合成失败，尝试使用ffmpeg合成
+                      sendable = segment.record(url)
                     }
-                })
-                const payload = await Bot.sendUni('PttStore.GroupPttUp', body)
-                const rsp = core.pb.decode(payload)[5]
-                rsp[2] && (0, errors.drop)(rsp[2], rsp[3])
-                const ip = rsp[5]?.[0] || rsp[5]; const port = rsp[6]?.[0] || rsp[6]
-                const ukey = rsp[7].toHex(); const filekey = rsp[11].toHex()
-                const params = {
-                    ver: 4679,
-                    ukey,
-                    filekey,
-                    filesize: buf.length,
-                    bmd5: hash.toString('hex'),
-                    mType: 'pttDu',
-                    voice_encodec: codec
-                }
-                const url = `http://${int32ip2str(ip)}:${port}/?` + querystring.stringify(params)
-                const headers = {
-                    'User-Agent': `QQ/${Bot.apk.version} CFNetwork/1126`,
-                    'Net-Type': 'Wifi'
-                }
-                await fetch(url, {
-                    method: 'POST', // post请求
-                    headers,
-                    body: buf
-                })
-
-                const fid = rsp[11].toBuffer()
-                const b = core.pb.encode({
-                    1: 4,
-                    2: getUin(),
-                    3: fid,
-                    4: hash,
-                    5: hash.toString('hex') + '.amr',
-                    6: buf.length,
-                    11: 1,
-                    18: fid,
-                    30: Buffer.from([8, 0, 40, 0, 56, 0])
-                })
-                if (tmpFile) {
-                    try {
-                        fs.unlinkSync(tmpFile)
-                    } catch (err) {
-                        logger.warn('fail to delete temp audio file')
-                    }
-                }
-                sendable = {
-                    type: 'record', file: 'protobuf://' + Buffer.from(b).toString('base64')
-                }
-
+                  } catch (err) {
+                    logger.error(err)
+                    sendable = segment.record(url)
+                  }
+                Config.cloudMode = cloudMode_bak
                 if (!sendable) {
-                    // 如果合成失败，尝试使用ffmpeg合成
-                    sendable = segment.record(recordUrl)
+                    await e.reply('silk云转码和ffmpeg都失败惹喵，人家的麦克风坏了', false, { recallMsg: 8 })
+                    return
                 }
                 await e.reply(sendable)
             }
@@ -667,18 +549,3 @@ export class chuo extends plugin {
     }
 
 }
-
-
-/** md5 hash */
-const md5 = (data) => (0, crypto.createHash)('md5').update(data).digest()
-
-function int32ip2str (ip) {
-    if (typeof ip === 'string') { return ip }
-    ip = ip & 0xffffffff
-    return [
-      ip & 0xff,
-      (ip & 0xff00) >> 8,
-      (ip & 0xff0000) >> 16,
-      (ip & 0xff000000) >> 24 & 0xff
-    ].join('.')
-  }
