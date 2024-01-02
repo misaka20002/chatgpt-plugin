@@ -385,41 +385,41 @@ export class chuo extends plugin {
             else if (random_type < (reply_text + reply_img)) {
                 let mutetype = Math.ceil(Math.random() * 5)
                 if (mutetype == 1) {
-                    let voice_url = `https://www.loliapi.com/acg/`;
-                    let res = await fetch(voice_url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.voice_url)];
+                    let url = `https://www.loliapi.com/acg/`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 2) {
-                    let voice_url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
-                    let res = await fetch(voice_url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.voice_url)];
+                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 3) {
-                    let voice_url = `https://api.asxe.vip/random.php`;
-                    let res = await fetch(voice_url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.voice_url)];
+                    let url = `https://api.asxe.vip/random.php`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 4) {
-                    let voice_url = `https://t.mwm.moe/mp`;
-                    let res = await fetch(voice_url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.voice_url)];
+                    let url = `https://t.mwm.moe/mp`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 5) {
-                    let voice_url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
-                    let res = await fetch(voice_url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.voice_url)];
+                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let res = await fetch(url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.url)];
                     await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
                     await common.sleep(100)
                     await e.reply(msg);
