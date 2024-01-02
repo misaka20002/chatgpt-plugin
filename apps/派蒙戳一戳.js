@@ -385,41 +385,41 @@ export class chuo extends plugin {
             else if (random_type < (reply_text + reply_img)) {
                 let mutetype = Math.ceil(Math.random() * 5)
                 if (mutetype == 1) {
-                    let url = `https://www.loliapi.com/acg/`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
+                    let voice_url = `https://www.loliapi.com/acg/`;
+                    let res = await fetch(voice_url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.voice_url)];
                     await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 2) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
+                    let voice_url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let res = await fetch(voice_url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.voice_url)];
                     await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 3) {
-                    let url = `https://api.asxe.vip/random.php`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
+                    let voice_url = `https://api.asxe.vip/random.php`;
+                    let res = await fetch(voice_url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.voice_url)];
                     await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 4) {
-                    let url = `https://t.mwm.moe/mp`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
+                    let voice_url = `https://t.mwm.moe/mp`;
+                    let res = await fetch(voice_url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.voice_url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                     await common.sleep(100)
                     await e.reply(msg);
                 }
                 else if (mutetype == 5) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
+                    let voice_url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let res = await fetch(voice_url).catch((err) => logger.error(err));
+                    let msg = [segment.image(res.voice_url)];
                     await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
                     await common.sleep(100)
                     await e.reply(msg);
@@ -427,24 +427,42 @@ export class chuo extends plugin {
             }
             /**返回随机音频 */
             else if (random_type < (reply_text + reply_img + reply_voice)) {
-                let voice_number = Math.ceil(Math.random() * word_list['length'])
-                let url = voice_list_klee_cn[voice_number - 1]
+                // 匹配发音人物
+                let defaultTTSRole = Config.defaultTTSRole
+                let voice_lists
+                switch (defaultTTSRole) {
+                    case '可莉_ZH':
+                        voice_lists = voice_list_klee_cn
+                        break;
+                    case '纳西妲_ZH':
+                        voice_lists = voice_list_nahida_cn
+                        break;
+                    case '纳西妲_JP':
+                        voice_lists = voice_list_nahida_jp
+                        break;
+                    // 缺省时将返回随机音频替换为返回随机文本
+                    default:
+                        let text_number = Math.ceil(Math.random() * word_list['length'])
+                        return await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+                }
+                let voice_number = Math.ceil(Math.random() * voice_lists['length'])
+                let voice_url = voice_lists[voice_number - 1]
                 // 备份原版config
                 let cloudMode_bak = Config.cloudMode
                 // 设置为url模式
-                Config.cloudMode = "url"
+                Config.cloudMode = "voice_url"
                 let ignoreEncode = e.adapter === 'shamrock'
                 let sendable
                 try {
-                    sendable = await uploadRecord(url, 'vits-uma-genshin-honkai', ignoreEncode)
+                    sendable = await uploadRecord(voice_url, 'vits-uma-genshin-honkai', ignoreEncode)
                     if (!sendable) {
-                      // 如果合成失败，尝试使用ffmpeg合成
-                      sendable = segment.record(url)
+                        // 如果合成失败，尝试使用ffmpeg合成
+                        sendable = segment.record(voice_url)
                     }
-                  } catch (err) {
+                } catch (err) {
                     logger.error(err)
-                    sendable = segment.record(url)
-                  }
+                    sendable = segment.record(voice_url)
+                }
                 Config.cloudMode = cloudMode_bak
                 if (!sendable) {
                     await e.reply('silk云转码和ffmpeg都失败惹喵，人家的麦克风坏了', false, { recallMsg: 8 })
