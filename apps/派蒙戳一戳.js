@@ -484,8 +484,10 @@ export class chuo extends plugin {
                     await redis.set('paimon_pokecount' + e.operator_id, ++usercount, { EX: exTime, });
                 }
             }
-            if (Math.ceil(Math.random() * 100) <= 20 && count >= 10) {
-                e.reply(ciku[text_number - 1].replace('派蒙', Config.tts_First_person).replace("_num_", count))
+            if (Math.ceil(Math.random() * 100) <= 10 && count >= 10) {
+                logger.info('[戳一戳次数生效]')
+                let text_number = Math.ceil(Math.random() * ciku['length'])
+                await e.reply(ciku[text_number - 1].replace('派蒙', Config.tts_First_person).replace("_num_", count))
                 return true;
             }
             //生成0-100的随机数
