@@ -487,7 +487,7 @@ export class chuo extends plugin {
             if (Math.ceil(Math.random() * 100) <= 10 && count >= 10) {
                 logger.info('[戳一戳次数生效]')
                 let text_number = Math.ceil(Math.random() * ciku['length'])
-                await e.reply(ciku[text_number - 1].replace('派蒙', Config.tts_First_person).replace("_num_", count))
+                await e.reply(ciku[text_number - 1].replace(/派蒙/g, Config.tts_First_person).replace("_num_", count))
                 return true;
             }
             //生成0-100的随机数
