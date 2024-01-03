@@ -12,7 +12,7 @@ export class voicechangehelp extends plugin {
             event: 'message',
             priority: 999,
             rule: [{
-                reg: `^#tts(语音)?(替换)?帮助$`,
+                reg: `^#tts(语音)?(替换)?帮助`,
                 fnc: 'voicechangehelp'
             },
             {
@@ -76,46 +76,52 @@ export class voicechangehelp extends plugin {
     }
 
 
-    /** ^#tts(语音)?(替换)?帮助$ */
+    /** ^#tts(语音)?(替换)?帮助 */
     async voicechangehelp(e) {
-        let msg1 = `小呆毛tts语音替换帮助：\n` +
-            `#tts查看当前语音设置\n` +
-            `#chatgpt查看回复设置\n` +
-            `#chatgpt(图片|语音)模式\n` +
-            `#tts删除所有用户回复设置帮助\n` +
-            `（↑每人独立设置且优先级最高）\n` +
+        let input_tts = e.msg.replace(/^#tts(语音)?(替换)?帮助/, '').trim()
+        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
+
+        let msg1 = `tts语音帮助：\n` +
             `#tts可选人物列表\n` +
-            `#tts语言设置帮助\n` +
             `#tts语音转日语帮助\n` +
-            `#ttslength设置帮助\n` +
-            `#tts情感帮助\n` +
-            `#tts情感设置上锁(开启|关闭)\n` +
-            `#tts(查看|设置)融合文本\n` +
-            `#tts(查看|设置)融合权重\n` +
-            `#chatgpt设置AI第一人称帮助\n` +
-            `#chatgpt(查看|设置)输出黑名单\n` +
-            `#chatgpt(查看|设置)输入黑名单\n` +
-            `#chatgpt必应(开启|关闭)搜索` +
+            `#tts语言设置帮助\n` +
+            `（↑发音语言中/日/英/自动切换）` +
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://v2.genshinvoice.top\n` +
             `2. 云转码API发送数据模式 选择：[文件]`
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
-        let msg1_isn_master = `小呆毛tts语音替换帮助：\n` +
-            `#chatgpt查看回复设置\n` +
-            `#chatgpt设置语音角色派蒙_ZH\n` +
-            `#chatgpt设置语音角色可莉_ZH\n` +
-            `#chatgpt(图片|语音)模式\n` +
-            `（↑每人独立设置且优先级最高）\n` +
+        let msg1_isn_master = `tts语音帮助：\n` +
             `#tts可选人物列表\n` +
-            `#tts情感设置1\n` +
-            `#tts情感设置帮助\n` +
+            `#chatgpt设置语音角色派蒙_ZH\n` +
+            `#chatgpt(图片|语音)模式\n` +
+            `（↑每人独立设置且优先级最高）` +
+            `主人请使用#tts帮助pro 获取管理指令` +
+            ''
+
+        let msg_for_master = `Chatgpt管理帮助：\n` +
+            `#tts删除所有用户回复设置帮助\n` +
+            `（↑每人独立设置且优先级最高）\n` +
+            `#chatgpt设置AI第一人称帮助\n` +
+            `#chatgpt(查看|设置)输出黑名单\n` +
+            `#chatgpt(查看|设置)输入黑名单\n` +
+            `#chatgpt必应(开启|关闭)搜索` +
+            ''
+
+        let msg_outdata = `已经用不上的功能：\n` +
+            `#tts查看当前语音设置\n` +
+            `#chatgpt查看回复设置\n` +
+            `#chatgpt(图片|语音)模式\n` +
+            `#ttslength设置帮助\n` +
+            `#tts情感帮助\n` +
+            `#tts情感设置上锁(开启|关闭)\n` +
             `#tts(查看|设置)融合文本\n` +
-            `#tts(查看|设置)融合权重` +
+            `#tts(查看|设置)融合权重\n` +
             ''
         const userSetting = await getUserReplySetting(this.e)
         let msg4_1 = `${this.e.sender.user_id}的回复设置:
+（每人独立设置且优先级最高）
 图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
@@ -124,10 +130,10 @@ VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
 ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
-        if (e.isMaster) {
-            msgx = await common.makeForwardMsg(e, [msg1, msg2, msg4_1], `tts语音帮助-m`)
+        if (e.isMaster && (input_tts == 'pro' || input_tts == 'm')) {
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg2, msg_for_master, msg4_1, msg_outdata], `tts语音帮助-m`)
         } else {
-            msgx = await common.makeForwardMsg(e, [msg1_isn_master, msg4_1], `tts语音帮助`)
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg4_1], `tts语音帮助`)
         }
         e.reply(msgx);
         return true;
@@ -387,6 +393,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         }
         if (input_tts === '开启' || input_tts === '关闭') {
             Config.autoJapanese = input_tts === '开启' ? true : false
+            return e.reply(`tts转日语已设置为${input_tts}！`)
         } else {
             return e.reply('喵？可以选择把文本翻译成日语再发音哦\n#tts转日语(开启|关闭)')
         }
