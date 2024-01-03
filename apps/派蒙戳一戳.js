@@ -12,9 +12,9 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 //在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.6 //文字回复概率
+let reply_text = 0.55 //文字回复概率
 let reply_img = 0.15 //图片回复概率
-let reply_voice = 0.1 //语音回复概率
+let reply_voice = 0.15 //语音回复概率
 let mutepick = 0.05 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
@@ -100,7 +100,7 @@ let word_list = ['怎么了吗？',
     '你带来新的故事吗？派蒙用派蒙亲手做的派蒙烤鱼与你交换',
     '猫咪和狗狗和派蒙你更喜欢哪一个喵？'];
 
-// 纳西妲中文，扒文件改地址： https://bbs.mihoyo.com/ys/obc/content/5111/detail?bbs_presentation_style=no_header 在浏览器F12的网络截取到之后复制全部，用notepad++的crrl+M标记和正则表达式提取，正则表达式： "https:.*mp3",
+// 纳西妲中文，扒文件改地址： https://bbs.mihoyo.com/ys/obc/content/5111/detail?bbs_presentation_style=no_header 在浏览器F12的网络截取到之后复制全部为node.js，用notepad++的crrl+M标记和正则表达式提取，正则表达式（包括,）： "https:.*mp3",
 // 替换戳一戳语音角色在429行
 /**纳西妲中文语音 */
 let voice_list_nahida_cn = ["https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/4d9feb71760c5e8eb5f6c700df12fa0c_6824265537002152805.mp3",
@@ -330,7 +330,81 @@ let voice_list_klee_cn = ["https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/879
     "https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/f0197602e78ac2024bb77faf40f1253d_2120966796001540679.mp3"
 ]
 
-
+/**可莉日语语音 */
+let voice_list_klee_jp = ["https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/c32d88d51241cd35323ebaea64629d61_8312357008820297292.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/5ff8f673dd7bd22c0fdf16aadea82708_7922150725969558599.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/5071c574c695056a7bdf054d8bd8364c_3109300904133737560.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/c89b2f38cb80b0c267de98151f6cd19b_8839219126382193926.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/c961b9e46bdfbf1a2aa93d27b5cf955c_770569639467782721.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/342ea500f2c320ba021d8c0c38cbd705_3034306159881972571.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/a2ad9dbceb6db26b43fae49d95ad483f_9031743279866482184.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/f2af3712b360d403baa0f3e0456e37f1_4842776425191132015.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/e3988a6c9e1158b6600b0cd3b4bd346f_462251623290834381.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/427ee0e130d3b6c76dd705309f613a61_3735406025701634850.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/dc13fe1904b89db5f4cfdf89bccf6b57_4430033957210267849.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/47b50ac34d091ad5bc47dfbfdf539fe9_1271913171098077186.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/42b8d5a22925425686182c221161438f_2060805273477770801.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/ab505e87e4c8553e7d3fbd6481f38568_8015530443664961928.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/127ffbc33a0df62874c1493f1d6c4c5f_3293510774300663082.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/6e0d5f2fa350bee79676ea9ccdd472b1_8654003192986976300.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/335f44f3a493541eb13f5343d6907b94_5293223783758492415.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/c180ba58c01493f59524b45d65794764_6921449727677662650.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/69f20b39d10f12ec5f66e11b8976dc28_5445296473338904416.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/f620310a2f2d3301a1b0fd82e06ce937_8266290288651757502.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/3557870aa4a0135e8f8ae6da18beaa66_7950333882417422396.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/e69d7dbb257e9b24ed0daa1bd0734e19_8498258315570532600.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/ce63c13543fc16968a6daad5c212821e_8029301817388326757.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/5c5be6aacc518e1b6fee94f101f54b10_2407592394393491733.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/69487aafabc0ed14747ecebb616c8ff8_7154271888927019780.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/90d72620adcb2f5981532b9f06a8387d_8972641644831350539.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/612ef1dd04ee24a0f14ee682f75f4c17_3780374894610595239.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/5f94c5553eb166f93913ef0cb5ba2898_3751389255707608512.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/8ef88018ab219aa842dc66584c5684f0_7915188790916715644.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/f16d1ba57ee6f11fe54007588ba61fac_8128982987229420192.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/f2899d3663d616b43a1e920f55996904_7175066193898781892.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/2db1dea7ec588bfd3acf58ec080dd335_8225896888881974739.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/ddeb60f795da56a460f23d123d176b3e_8158009244000702538.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/66dbb7ce8067f7b61510b67ac8b961df_1154350448939859858.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/d8ef2158228161af5f7a43c0ca8f5b7e_1658330905952653719.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/253e875ee45aed386ab6a670615f3e28_7322420122030223165.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/dc0cec10ec1847fa9c4633b0befb7a7f_2308602718748064698.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/fd5134d641972f6655b15b510c0034b0_4867952124917910069.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/1544dfe12dd6e11319af2e43bf8d4717_4572925176157871826.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/10/31/16576950/90e5f411b628ee54788f579404d8bf3d_1668398800942861705.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/10/31/16576950/f20d80552431300c237e8100aaddbb44_5777146996041599302.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/10/31/16576950/2c128f6325d6ba8b143a5abd9c4e6ffe_1222111662389900248.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/3f0983829416b42037b59eb7b8700712_5845034122562304504.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/aba3e92f9abe6c62d28deada729a022f_5451877407085821637.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/70b78afa7b006926b29278ae563ba814_742975168566022601.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/04e41a8023c1f413005b41993f727ab1_1607877740139732452.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/ea882e53b682c3ad12dd57943befb191_832309901759984352.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/a6849d9204b49b08519bc86735432e29_203795779903913065.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/ac5841b312b6797d87580e279fdfef51_1521965175631031811.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/22290e2d8998fe8a7089151b99c1f73c_920389675062354895.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/cef6e66d51885100361cde55fbd7906b_7665932270213526511.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/1fe209f94f50efe7ff39233ebc637246_4002625514940883470.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/48b4293d357c3105a8ed444ecd76b91a_5220187133617685047.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/980d84e28b474b9d45ec9278fe2b191b_2967926078731525835.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/ba0f8b93fac6d0a1d1d9d857af48a77b_7092291632054223415.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/51dd948031a62ae47595215d1dac013e_7259205295736257854.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/d47a57b60f86bd12010bdcfb21986891_721587458383871382.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/7662bb3917530463624375c9906b13aa_4469214081473347052.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/7fa11cee4da33d7d97e120d882ec9c2c_3723031215414350948.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/583b33fb861d384d8aecc880d8b7849d_6473146738418944005.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/779316145661558680c1daf97f2e455c_2285843843955579993.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/10/31/16576950/0666b15bc1c6c0a8e4d550d000d6a72c_1171327585244014119.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/10/31/16576950/6c4bffcc87acd880e6e897587d5030c0_8343957829611442167.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/f03c3e3757cf0e16c52695900721aed7_8662982263319420642.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/416d6a69117b3a469859a334062f84a4_4240507542425223945.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/9eb9aa8dcd030e4f040af17d80a14c9c_4198687886838945530.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/a2f9f59c1c3b7a3cb00aca84ac2c2627_8893585962004993445.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/7556dc2ee85bbe7d0c465db078128f47_8313735442353061567.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/320745dec4481a140c2310b4f5e40f74_2985518240647495728.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/a33492359439a3e22770070d87fa70e0_6191596892365099587.mp3",
+"https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/8797197/50c84043968698d2eff3c157d252e8b8_8533309043989857030.mp3"
+]
+    
+    
 let ciku = [
     "派蒙今天已经被戳了_num_次啦，休息一下好不好",
     "派蒙今天已经被戳了_num_次啦，有完没完！",
@@ -478,6 +552,9 @@ export class chuo extends plugin {
                 switch (defaultTTSRole) {
                     case '可莉_ZH':
                         voice_lists = voice_list_klee_cn
+                        break;
+                    case '可莉_JP':
+                        voice_lists = voice_list_klee_jp
                         break;
                     case '纳西妲_ZH':
                         voice_lists = voice_list_nahida_cn
