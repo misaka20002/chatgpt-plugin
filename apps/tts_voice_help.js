@@ -131,7 +131,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
         if (e.isMaster && (input_tts == 'pro' || input_tts == 'm')) {
-            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg2, msg_for_master, msg4_1, msg_outdata], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg_for_master, msg2, msg4_1, msg_outdata], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg4_1], `tts语音帮助`)
         }
