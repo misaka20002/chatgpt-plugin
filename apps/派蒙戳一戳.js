@@ -3,16 +3,46 @@ import { segment } from 'icqq'
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
+import fetch from 'node-fetch'
+import fs from 'fs'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
+const path = process.cwd()
 
-let reply_text = 0.6 //文字触发概率,小数点后5位都可以
-let reply_img = 0.15 //随机图片触发概率
-let reply_voice = 0.1 //语音触发概率
-let mutepick = 0.05 //禁言触发概率
-// 剩下的0.1概率是机器人戳回去
+//如使用非icqq请在此处填写机器人QQ号
+let BotQQ = ''
 
-//自定义文案
+// 支持信息详见文件最下方
+//在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
+let reply_text = 0.6 //文字回复概率
+let reply_img = 0.15 //图片回复概率
+let reply_voice = 0.1 //语音回复概率
+let mutepick = 0.05 //禁言概率
+let example = 0 //拍一拍表情概率
+//剩下的0.1概率就是反击
+let ttsapichoose = 'api1' //api设置
+let noiseScale = 0.2  //情感控制
+let noiseScaleW = 0.2 //发音时长
+let lengthScale = 1 //语速
+let sdp_ratio = 0.2 //SDP/DP混合比
+let language = 'ZH'
+let api1url = 'https://api.lolimi.cn/API/yyhc/y.php'
+let api2url = 'https://v2.genshinvoice.top/run/predict'
+let uploadRecord = ""
+let speakerapi1 = "纳西妲" //生成角色api1
+let speakerapi2 = "纳西妲_ZH" //生成角色api2
+let text = ""
+let master = "主人"
+let mutetime = 1 //禁言时间设置，单位分钟，如果设置0则为自动递增，如需关闭禁言请修改触发概率为0
+
+//定义图片存放路径 默认是Yunzai-Bot/resources/chuochuo
+const chuo_path = path + '/resources/chuochuo/';
+
+//图片需要从1开始用数字命名并且保存为jpg或者gif格式，存在Yunzai-Bot/resources/chuochuo目录下
+let jpg_number = 80 //输入jpg图片数量
+let gif_number = 3 //输入gif图片数量
+
+//回复文字列表
 let word_list = ['怎么了吗？',
     '派蒙可是会很多东西的哦，快点快点发送#帮助',
     '想知道怎么使用派蒙吗？快点给派蒙发送#帮助',
@@ -321,12 +351,55 @@ let voice_list_klee_cn = ["https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/879
 ]
 
 
-let ciku = ["_name_今天已经被戳了_num_次啦，休息一下下好不好",
-    "_name_今天已经被戳了_num_次啦,呜呜，有完没完啦！",
-    "_name_今天已经被戳了_num_次啦,别戳派蒙了！！！",
-    "_name_今天已经被戳了_num_次啦,不准戳派蒙了！",
-    "_name_今天已经被戳了_num_次啦,再戳派蒙就坏掉啦！"
-]
+let ciku_ = [
+    "派蒙今天已经被戳了_num_次啦，休息一下好不好",
+    "派蒙今天已经被戳了_num_次啦，有完没完！",
+    "派蒙今天已经被戳了_num_次啦，要戳坏掉了！",
+    "派蒙今天已经被戳了_num_次啦，别戳了!!!",
+    "派蒙今天已经被戳了_num_次啦，不准戳了！！！",
+    "派蒙今天已经被戳了_num_次啦，再戳就坏了！",
+];
+
+
+//语音回复文字，不能包含英文，特殊字符和颜文字，生成时间根据文字长度变化，添加文字时请安装我的格式进行添加
+let voice = ['看我超级派蒙旋风！',
+    '被戳晕了……轻一点啦！',
+    '救命啊，有变态>_<！！！',
+    '哼~~~',
+    '你戳谁呢！你戳谁呢！！！           o(´^｀)o',
+    '是不是要本萝莉揍你一顿才开心啊！！！',
+    '唔，这触感有种被兰那罗拿胡萝卜指着的感觉≥﹏≤',
+    '不要再戳了！我真的要被你气死了！！！',
+    '怎么会有你这么无聊的人啊！！！(￢_￢)',
+    '哼，我可是会还手的哦——“所闻遍计！”',
+    '把嘴张开（抬起脚）',
+    '啊……你戳疼我了Ծ‸Ծ',
+    '你干嘛！',
+    '我生气了！砸挖撸多!木大！木大木大！',
+    '你是不是喜欢我？',
+    '朗达哟？',
+    '变态萝莉控！',
+    '要戳坏掉了>_<',
+    '旅行者，你没睡醒吗？一天天就知道戳我',
+    '别戳了！在戳就丢你去喂鱼',
+    '你戳我干嘛,闲得蛋疼吗?',
+    '你刚刚是不是戳我了，你是坏蛋！我要戳回去，哼！！！',
+    '手痒痒,老是喜欢戳人。',
+    '你戳我,我咬你!',
+    '戳来戳去的,真是的... ',
+    '戳我也没用,改变不了你单身的事实。',
+    '戏精,你戳我有完没完?',
+    '戳我干嘛,要不要脸啊你!',
+    '戳人家干嘛,难道我长得很好戳?',
+    '戳完了,满足你的戳癖了吧!',
+    '戳我啊,等会儿我报复,就不止戳一戳那么简单!',
+    '你戳我,是想逗我开心吗?那我很开心噢!',
+    '没事找事,真是的',
+    '拜托,旅行者你能不能消停会?',
+    '行了行了,戳完了没?闹腾完了没?',
+    '你再戳,派蒙要生气了哦',
+    '惹不起,躲得起,您别老戳人家了行不?',
+    '戳我一下,告诉我你有完没完']
 
 export class chuo extends plugin {
     constructor() {
@@ -356,12 +429,13 @@ export class chuo extends plugin {
             let exTime = Math.round(
                 (new Date(time).getTime() - new Date().getTime()) / 1000
             )
+            // 判断redis中是否存在计数器
             if (!count) {
+                // 如果不存在，则设置为1，并设置过期时间
                 await redis.set(`Mz:pokecount:$(e.group_id)`, 1 * 1, { EX: exTime })
             } else {
-                await redis.set(`Mz:pokecount:$(e.group_id)`, ++count, {
-                    EX: exTime,
-                })
+                // 如果存在，则计数器加1，并设置过期时间
+                await redis.set(`Mz:pokecount:$(e.group_id)`, ++count, { EX: exTime })
             }
             /**count”大于或等于10时30%的概率触发 */
             if (Math.ceil(Math.random() * 100) <= 30 && count >= 10) {
