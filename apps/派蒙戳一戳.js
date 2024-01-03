@@ -4,10 +4,8 @@ import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import fetch from 'node-fetch'
-import fs from 'fs'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
-const path = process.cwd()
 
 //如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -20,27 +18,9 @@ let reply_voice = 0.1 //语音回复概率
 let mutepick = 0.05 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
-let ttsapichoose = 'api1' //api设置
-let noiseScale = 0.2  //情感控制
-let noiseScaleW = 0.2 //发音时长
-let lengthScale = 1 //语速
-let sdp_ratio = 0.2 //SDP/DP混合比
-let language = 'ZH'
-let api1url = 'https://api.lolimi.cn/API/yyhc/y.php'
-let api2url = 'https://v2.genshinvoice.top/run/predict'
-let uploadRecord = ""
-let speakerapi1 = "纳西妲" //生成角色api1
-let speakerapi2 = "纳西妲_ZH" //生成角色api2
-let text = ""
+
 let master = "主人"
 let mutetime = 1 //禁言时间设置，单位分钟，如果设置0则为自动递增，如需关闭禁言请修改触发概率为0
-
-//定义图片存放路径 默认是Yunzai-Bot/resources/chuochuo
-const chuo_path = path + '/resources/chuochuo/';
-
-//图片需要从1开始用数字命名并且保存为jpg或者gif格式，存在Yunzai-Bot/resources/chuochuo目录下
-let jpg_number = 80 //输入jpg图片数量
-let gif_number = 3 //输入gif图片数量
 
 //回复文字列表
 let word_list = ['怎么了吗？',
@@ -351,7 +331,7 @@ let voice_list_klee_cn = ["https://uploadstatic.mihoyo.com/ys-obc/2022/05/12/879
 ]
 
 
-let ciku_ = [
+let ciku = [
     "派蒙今天已经被戳了_num_次啦，休息一下好不好",
     "派蒙今天已经被戳了_num_次啦，有完没完！",
     "派蒙今天已经被戳了_num_次啦，要戳坏掉了！",
@@ -361,45 +341,6 @@ let ciku_ = [
 ];
 
 
-//语音回复文字，不能包含英文，特殊字符和颜文字，生成时间根据文字长度变化，添加文字时请安装我的格式进行添加
-let voice = ['看我超级派蒙旋风！',
-    '被戳晕了……轻一点啦！',
-    '救命啊，有变态>_<！！！',
-    '哼~~~',
-    '你戳谁呢！你戳谁呢！！！           o(´^｀)o',
-    '是不是要本萝莉揍你一顿才开心啊！！！',
-    '唔，这触感有种被兰那罗拿胡萝卜指着的感觉≥﹏≤',
-    '不要再戳了！我真的要被你气死了！！！',
-    '怎么会有你这么无聊的人啊！！！(￢_￢)',
-    '哼，我可是会还手的哦——“所闻遍计！”',
-    '把嘴张开（抬起脚）',
-    '啊……你戳疼我了Ծ‸Ծ',
-    '你干嘛！',
-    '我生气了！砸挖撸多!木大！木大木大！',
-    '你是不是喜欢我？',
-    '朗达哟？',
-    '变态萝莉控！',
-    '要戳坏掉了>_<',
-    '旅行者，你没睡醒吗？一天天就知道戳我',
-    '别戳了！在戳就丢你去喂鱼',
-    '你戳我干嘛,闲得蛋疼吗?',
-    '你刚刚是不是戳我了，你是坏蛋！我要戳回去，哼！！！',
-    '手痒痒,老是喜欢戳人。',
-    '你戳我,我咬你!',
-    '戳来戳去的,真是的... ',
-    '戳我也没用,改变不了你单身的事实。',
-    '戏精,你戳我有完没完?',
-    '戳我干嘛,要不要脸啊你!',
-    '戳人家干嘛,难道我长得很好戳?',
-    '戳完了,满足你的戳癖了吧!',
-    '戳我啊,等会儿我报复,就不止戳一戳那么简单!',
-    '你戳我,是想逗我开心吗?那我很开心噢!',
-    '没事找事,真是的',
-    '拜托,旅行者你能不能消停会?',
-    '行了行了,戳完了没?闹腾完了没?',
-    '你再戳,派蒙要生气了哦',
-    '惹不起,躲得起,您别老戳人家了行不?',
-    '戳我一下,告诉我你有完没完']
 
 export class chuo extends plugin {
     constructor() {
@@ -420,46 +361,72 @@ export class chuo extends plugin {
 
     async chuoyichuo(e) {
         if (!Config.paimon_chuoyichuo_open) return false
-        logger.info('[派蒙戳一戳生效]')
-        if (e.target_id == cfg.qq) {
-            let count = await redis.get(`Mz:pokecount:${e.group_id}`)
+        if (cfg.masterQQ.includes(e.target_id)) {
+            logger.info('[戳主人生效]')
+            if (cfg.masterQQ.includes(e.operator_id) || cfg.qq == e.operator_id || BotQQ == e.operator_id) {
+                return;
+            }
+            let mutetype = Math.ceil(Math.random() * 3)
+            switch (mutetype) {
+                case 1:
+                    await e.reply(`呜呜，不要戳${Config.tts_First_person}的${master}惹，有什么都冲${Config.tts_First_person}来吧QAQ`, true)
+                    break;
+                case 2:
+                    await e.reply(`请...请不要不要戳${Config.tts_First_person}的${master}，${Config.tts_First_person}什么都愿意做QAQ`, true)
+                    break;
+                case 3:
+                    await e.reply(`再戳${Config.tts_First_person}的${master}的话，${Config.tts_First_person}...${Config.tts_First_person}就要生气了QAQ！`, true)
+                    break;
+            }
+            await common.sleep(1000);
+            e.group.pokeMember(e.operator_id);
+            return true
+        }
+        if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
+            logger.info('[戳一戳生效]')
+            let count = await redis.get(`paimon_pokecount`);
+            let usercount = mutetime - 1
+            if (mutetime == 0) {
+                usercount = await redis.get('paimon_pokecount' + e.operator_id)
+            }
+
+            // 当前时间
             let time = moment(Date.now())
                 .add(1, "days")
-                .format("YYYY-MM-DD 00:00:00")
+                .format("YYYY-MM-DD 00:00:00");
+            // 到明日零点的剩余秒数
             let exTime = Math.round(
                 (new Date(time).getTime() - new Date().getTime()) / 1000
-            )
-            // 判断redis中是否存在计数器
+            );
             if (!count) {
-                // 如果不存在，则设置为1，并设置过期时间
-                await redis.set(`Mz:pokecount:$(e.group_id)`, 1 * 1, { EX: exTime })
+                await redis.set(`paimon_pokecount`, 1, { EX: exTime });//${e.group_id}
             } else {
-                // 如果存在，则计数器加1，并设置过期时间
-                await redis.set(`Mz:pokecount:$(e.group_id)`, ++count, { EX: exTime })
+                await redis.set(`paimon_pokecount`, ++count, { EX: exTime });
             }
-            /**count”大于或等于10时30%的概率触发 */
-            if (Math.ceil(Math.random() * 100) <= 30 && count >= 10) {
-                let text_number = Math.ceil(Math.random() * ciku['length'])
-                return await e.reply(ciku[text_number - 1].replace('_name_', Config.tts_First_person).replace("_num_", count))
-                
-                // let conf = cfg.getGroup(e.group_id)
-                // e.reply([
-                //     `${ciku_[Math.round(Math.random() * (ciku_length - 1))]}`
-                //         .replace("_name_", conf.botAlias[0])
-                //         .replace("_num_", count),
-                // ]);
-                // return true
+            if (mutetime == 0) {
+                if (!usercount) {
+                    await redis.set('paimon_pokecount' + e.operator_id, 1, { EX: exTime });
+                } else {
+                    await redis.set('paimon_pokecount' + e.operator_id, ++usercount, { EX: exTime, });
+                }
             }
-
-
-            /**返回随机文本 */
+            if (Math.ceil(Math.random() * 100) <= 20 && count >= 10) {
+                e.reply(ciku[text_number - 1].replace('派蒙', Config.tts_First_person).replace("_num_", count))
+                return true;
+            }
+            //生成0-100的随机数
             let random_type = Math.random()
+
+            /**回复随机文字 */
             if (random_type < reply_text) {
+                logger.info('[戳一戳回复随机文字生效]')
                 let text_number = Math.ceil(Math.random() * word_list['length'])
                 await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
             }
-            /**返回随机图片 */
+
+            /**回复随机图片 */
             else if (random_type < (reply_text + reply_img)) {
+                logger.info('[戳一戳回复随机图片生效]')
                 let mutetype = Math.ceil(Math.random() * 5)
                 if (mutetype == 1) {
                     let url = `https://www.loliapi.com/acg/`;
@@ -502,6 +469,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
             }
+
             /**返回随机音频 */
             else if (random_type < (reply_text + reply_img + reply_voice)) {
                 // 匹配发音人物
@@ -549,6 +517,7 @@ export class chuo extends plugin {
             }
             /**禁言 */
             else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
+                logger.info('[戳一戳禁言生效]')
                 let usrinfo = await Bot.getGroupMemberInfo(e.group_id, e.operator_id)
                 let botinfo = await Bot.getGroupMemberInfo(e.group_id, Bot.uin)
                 let role = ['owner', 'admin']
@@ -558,7 +527,7 @@ export class chuo extends plugin {
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 120);
+                            await e.group.muteMember(e.operator_id, 60);
                             await common.sleep(100)
                             await e.reply('哼！')
                         }
@@ -569,25 +538,25 @@ export class chuo extends plugin {
                             await common.sleep(10);
                             await e.reply('戳！！');
                             await common.sleep(10);
-                            await e.reply('派！！');
+                            await e.reply('人！！');
                             await common.sleep(10)
-                            await e.reply('蒙！！')
+                            await e.reply('家！！')
                             await common.sleep(10);
-                            await e.group.muteMember(e.operator_id, 120)
+                            await e.group.muteMember(e.operator_id, 60)
                             await common.sleep(50)
-                            await e.reply('让你面壁思过2分钟，哼😤～')
+                            await e.reply('让你面壁思过1分钟，哼😤～')
                         }
                         else if (mutetype == 3) {
                             await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 120);
+                            await e.group.muteMember(e.operator_id, 60);
                             await common.sleep(100)
                             await e.reply('大变态！')
                         }
                         else if (mutetype == 4) {
                             await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 120);
+                            await e.group.muteMember(e.operator_id, 60);
 
                         }
                         else if (role.includes(usrinfo.role)) {
@@ -623,20 +592,32 @@ export class chuo extends plugin {
                 }
 
             }
-            /**反戳回去 */
-            else {
-                let poke = Math.ceil(Math.random() * 2)
-                if (poke == 1) {
-                    await e.reply(`你刚刚是不是戳${Config.tts_First_person}了?${Config.tts_First_person}要戳回去！`)
-                    await common.sleep(100)
-                    await e.group.pokeMember(e.operator_id)
-                }
-                else if (poke == 2) {
-                    await e.group.pokeMember(e.operator_id)
-                    await common.sleep(100)
-                    await e.reply(`让你戳${Config.tts_First_person}，哼！！！`)
-                }
 
+            //拍一拍表情包
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + example)) {
+                logger.info('[戳一戳拍一拍表情包生效]')
+                await e.reply(await segment.image(`http://ovooa.com/API/face_pat/?QQ=${e.operator_id}`))
+            }
+
+            //反击
+            else {
+                logger.info('[戳一戳反击生效]')
+                let mutetype = Math.round(Math.random() * 3)
+                if (mutetype == 1) {
+                    e.reply(`${Config.tts_First_person}也要戳戳你>_<`)
+                    await common.sleep(1000)
+                    await e.group.pokeMember(e.operator_id)
+                }
+                else if (mutetype == 2) {
+                    e.reply(`你刚刚是不是戳${Config.tts_First_person}了?${Config.tts_First_person}要戳回去！`)
+                    await common.sleep(1000)
+                    await e.group.pokeMember(e.operator_id)
+                }
+                else if (mutetype == 3) {
+                    e.reply(`让你戳${Config.tts_First_person}，哼！！！`)
+                    await common.sleep(1000)
+                    await e.group.pokeMember(e.operator_id)
+                }
             }
 
         }
