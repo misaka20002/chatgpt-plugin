@@ -539,16 +539,21 @@ export class chuo extends plugin {
                 let voice_lists
                 switch (defaultTTSRole) {
                     case '可莉_ZH':
-                        voice_lists = voice_list_klee_cn
+                        // voice_lists = voice_list_klee_cn
+                        // 把中+日两个数组连接起来
+                        voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
                         break;
                     case '可莉_JP':
-                        voice_lists = voice_list_klee_jp
+                        // voice_lists = voice_list_klee_jp
+                        voice_lists = voice_list_klee_jp.concat(voice_list_klee_cn);
                         break;
                     case '纳西妲_ZH':
-                        voice_lists = voice_list_nahida_cn
+                        // voice_lists = voice_list_nahida_cn
+                        voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
                         break;
                     case '纳西妲_JP':
-                        voice_lists = voice_list_nahida_jp
+                        // voice_lists = voice_list_nahida_jp
+                        voice_lists = voice_list_nahida_jp.concat(voice_list_nahida_cn);
                         break;
                     // 缺省时将返回随机音频替换为返回随机文本
                     default:
