@@ -19,9 +19,6 @@ let mutepick = 0.05 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
 
-let master = "主人"
-let mutetime = 1 //禁言时间设置，单位分钟，如果设置0则为自动递增，如需关闭禁言请修改触发概率为0
-
 //回复文字列表
 let word_list = ['怎么了吗？',
     '派蒙可是会很多东西的哦，快点快点发送#帮助',
@@ -443,13 +440,13 @@ export class chuo extends plugin {
             let mutetype = Math.ceil(Math.random() * 3)
             switch (mutetype) {
                 case 1:
-                    await e.reply(`呜呜，不要戳${Config.tts_First_person}的${master}惹，有什么都冲${Config.tts_First_person}来吧QAQ`, true)
+                    await e.reply(`呜呜，有什么开心不开心的都冲${Config.tts_First_person}来吧QAQ`, true)
                     break;
                 case 2:
-                    await e.reply(`请...请不要不要戳${Config.tts_First_person}的${master}，${Config.tts_First_person}什么都愿意做QAQ`, true)
+                    await e.reply(`请戳${Config.tts_First_person}吧，${Config.tts_First_person}...${Config.tts_First_person}什么都愿意做QAQ`, true)
                     break;
                 case 3:
-                    await e.reply(`再戳${Config.tts_First_person}的${master}的话，${Config.tts_First_person}...${Config.tts_First_person}就要生气了QAQ！`, true)
+                    await e.reply(`呜呜呜，${Config.tts_First_person}愿意为你做任何事情`, true)
                     break;
             }
             await common.sleep(1000);
@@ -459,10 +456,6 @@ export class chuo extends plugin {
         if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
             logger.info('[戳一戳生效]')
             let count = await redis.get(`paimon_pokecount`);
-            let usercount = mutetime - 1
-            if (mutetime == 0) {
-                usercount = await redis.get('paimon_pokecount' + e.operator_id)
-            }
 
             // 当前时间
             let time = moment(Date.now())
@@ -476,13 +469,6 @@ export class chuo extends plugin {
                 await redis.set(`paimon_pokecount`, 1, { EX: exTime });//${e.group_id}
             } else {
                 await redis.set(`paimon_pokecount`, ++count, { EX: exTime });
-            }
-            if (mutetime == 0) {
-                if (!usercount) {
-                    await redis.set('paimon_pokecount' + e.operator_id, 1, { EX: exTime });
-                } else {
-                    await redis.set('paimon_pokecount' + e.operator_id, ++usercount, { EX: exTime, });
-                }
             }
             if (Math.ceil(Math.random() * 100) <= 10 && count >= 10) {
                 logger.info('[戳一戳次数生效]')
