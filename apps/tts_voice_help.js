@@ -85,7 +85,7 @@ export class voicechangehelp extends plugin {
             `#tts可选人物列表\n` +
             `#tts语音转日语帮助\n` +
             `#tts语言设置帮助\n` +
-            `（↑发音语言中/日/英/自动切换）` +
+            `（2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://v2.genshinvoice.top\n` +
