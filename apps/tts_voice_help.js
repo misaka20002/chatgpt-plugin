@@ -90,7 +90,7 @@ export class voicechangehelp extends plugin {
             ''
         let msg1_1 = `情感设置：\n` +
             `#tts情感帮助\n` +
-            `#tts情感自动开启\n` +
+            `#tts情感自动(开启|关闭)\n` +
             `#tts情感设置上锁(开启|关闭)\n` +
             `#tts(查看|设置)融合文本\n` +
             `#tts(查看|设置)融合权重` +
@@ -193,11 +193,11 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         if (!input_tts) {
             let msg1 = `tts情感设置帮助：`
             let msg_show = `tts语音当前情感：${Config.vits_emotion}`
-            let msg_auto = `tts语音启动自动情感：${Config.vits_auto_emotion}\n  自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感`
-            let msg1_1 = `#tts情感设置为空值`
+            let msg_auto = `tts语音启动自动情感：${Config.vits_auto_emotion}\n 自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感`
+            let msg1_1 = `若有需要可\n#tts情感设置为空值`
             let msg2 = `输入整数，如：\n#tts情感设置1\n#tts情感自动开启/关闭`
             let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g, "")
-            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg_auto, msg1_1, msg2, msg3], `tts情感设置帮助`);
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg_auto, msg2, msg3, msg1_1], `tts情感设置帮助`);
             return e.reply(msgx, false)
         }
         if (input_tts === '上锁开启' || input_tts === '上锁关闭') {
