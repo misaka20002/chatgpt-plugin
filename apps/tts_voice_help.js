@@ -79,7 +79,7 @@ export class voicechangehelp extends plugin {
     /** ^#tts(语音)?(替换)?帮助 */
     async voicechangehelp(e) {
         let input_tts = e.msg.replace(/^#tts(语音)?(替换)?帮助/, '').trim()
-        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
+        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         let msg1 = `tts语音帮助：\n` +
             `#tts可选人物列表\n` +
@@ -104,7 +104,7 @@ export class voicechangehelp extends plugin {
             `#tts可选人物列表\n` +
             `#chatgpt设置语音角色派蒙_ZH\n` +
             `#chatgpt(图片|语音)模式\n` +
-            `（↑每人独立设置且优先级最高）` +
+            `（↑每人独立设置且优先级最高）\n` +
             `主人请使用#tts帮助pro 获取管理指令` +
             ''
 
@@ -209,7 +209,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 return e.reply('tts情感设置已上锁，请主人使用#tts情感设置上锁开启|关闭')
             }
             Config.vits_auto_emotion = input_tts === '自动开启' ? true : false
-            return e.reply(`#tts情感-自动情感已设置为${vits_auto_emotion}！`)
+            return e.reply(`#tts情感-自动情感已设置为${input_tts === '自动开启' ? true : false}！`)
         }
         else if (input_tts === '为空' || input_tts === '为空值') {
             if (!e.isMaster && Config.vits_emotion_locker) {
@@ -436,7 +436,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     /** 发送当前设置 */
     async show_tts_voice_help_config(e) {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
+        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         const userSetting = await getUserReplySetting(this.e)
         let msg4_1 = `${this.e.sender.user_id}的回复设置:
