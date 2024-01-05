@@ -39,11 +39,11 @@ function randomNum(minNum, maxNum) {
 export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights)) {
     if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
     {
-/*        let character_voice_language = speaker.substring(speaker.length - 2);
-        let textfix = text.replace(/\#|(\[派蒙\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '');
-        //replace: 1.删除[派蒙] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji
-        let audioLink = `https://genshinvoice.top/api?speaker=${speaker}&text=${textfix}&format=wav&language=${character_voice_language}&length=1&sdp=0.4&noise=0.6&noisew=0.8`
-*/
+        /*        let character_voice_language = speaker.substring(speaker.length - 2);
+                let textfix = text.replace(/\#|(\[派蒙\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '');
+                //replace: 1.删除[派蒙] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji
+                let audioLink = `https://genshinvoice.top/api?speaker=${speaker}&text=${textfix}&format=wav&language=${character_voice_language}&length=1&sdp=0.4&noise=0.6&noisew=0.8`
+        */
         return audioLink
     }
     else {
@@ -105,8 +105,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let post_times = 1
         /*第一次try*/
         logger.info(`正在使用接口${url}`)
-        if (Config.debug) {
+        if (Config.vits_auto_emotion) {
             logger.mark(body)
+        } else if (Config.debug) {
+            logger.info(body)
         }
         let response = await newFetch(url, {
             method: 'POST',
@@ -118,8 +120,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let responseBody = await response.text()
         try {
             let json = JSON.parse(responseBody)
-            if (Config.debug) {
+            if (Config.vits_auto_emotion) {
                 logger.mark(json)
+            } else if (Config.debug) {
+                logger.info(json)
             }
             if (response.status > 299) {
                 logger.info(json)
@@ -156,7 +160,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             if (!audioLink) {
                 logger.error(responseBody)
                 throw new Error(responseBody)
-            }
+            } else logger.mark(`成功获取音频地址${audioLink}`)
+
             /*原版
             let audioLink = `${space}/file=${audioInfo.path}`*/
 
@@ -209,6 +214,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         }
                     }
                     if (!audioLink) throw new Error(responseBody)
+                    else logger.mark(`成功获取音频地址${audioLink}`)
+
                     /*let audioLink = `${space}/file=${audioInfo.path}`*/
 
                     /* 真的需要反代的话这一行需要修改

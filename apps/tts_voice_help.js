@@ -134,7 +134,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
         if (e.isMaster && (input_tts == 'pro' || input_tts == 'm')) {
-            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg2, msg4_1], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg_for_master, msg2, msg4_1, msg1_1], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg4_1], `tts语音帮助`)
         }
@@ -191,9 +191,9 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async set_vits_emotion(e) {
         let input_tts = e.msg.replace(/^#tts情感(设置)?(帮助)?/, '').trim()
         if (!input_tts) {
-            let msg1 = `tts情感设置帮助：`
+            let msg1 = `tts情感设置帮助：\n（当前api对大多数情感设置效果都不好，建议只用Happy）`
             let msg_show = `tts语音当前情感：${Config.vits_emotion}`
-            let msg_auto = `tts语音启动自动情感：${Config.vits_auto_emotion}\n 自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感`
+            let msg_auto = `tts语音启动自动情感：${Config.vits_auto_emotion}\n（自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感）`
             let msg1_1 = `若有需要可\n#tts情感设置为空值`
             let msg2 = `输入整数，如：\n#tts情感设置1\n#tts情感自动开启/关闭`
             let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g, "")
