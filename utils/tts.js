@@ -71,6 +71,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // tts情感自动设置
         if (Config.vits_auto_emotion) {
             vits_emotion = get_tts_Emotion(text)
+            logger.mark(`tts使用情感：${vits_emotion}`)
         }
 
         let body = {
@@ -106,9 +107,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let post_times = 1
         /*第一次try*/
         logger.info(`正在使用接口${url}`)
-        if (Config.vits_auto_emotion) {
-            logger.mark(body)
-        } else if (Config.debug) {
+        if (Config.debug) {
             logger.info(body)
         }
         let response = await newFetch(url, {
@@ -121,9 +120,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let responseBody = await response.text()
         try {
             let json = JSON.parse(responseBody)
-            if (Config.vits_auto_emotion) {
-                logger.mark(json)
-            } else if (Config.debug) {
+            if (Config.debug) {
                 logger.info(json)
             }
             if (response.status > 299) {
