@@ -101,6 +101,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let post_times = 1
         /*第一次try*/
         logger.info(`正在使用接口${url}`)
+        if (Config.debug) {
+            logger.mark(body)
+        }
         let response = await newFetch(url, {
             method: 'POST',
             body: JSON.stringify(body),
@@ -112,7 +115,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         try {
             let json = JSON.parse(responseBody)
             if (Config.debug) {
-                logger.info(json)
+                logger.mark(json)
             }
             if (response.status > 299) {
                 logger.info(json)
