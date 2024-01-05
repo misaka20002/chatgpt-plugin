@@ -82,6 +82,7 @@ const defaultConfig = {
   chat_for_First_person: true,
   paimon_chuoyichuo_open: true,
   vits_emotion: 'Happy',
+  vits_auto_emotion: false,
   style_text: '',
   style_text_weights: 0.7,
   vits_emotion_locker: true,

@@ -67,6 +67,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // exampleAudio暂时无法使用
         let exampleAudio = null
 
+        // tts情感自动设置
+        if (Config.vits_auto_emotion) {
+            vits_emotion = get_tts_Emotion(text)
+        }
 
         let body = {
             data: [
@@ -250,4 +254,40 @@ export function convertSpeaker(speaker) {
     }
 
     return speaker
+}
+
+/**输入文本，匹配tts情感中的100种情感(例如派蒙生气地说道)，返回开头大写的情感单词，无匹配则使用[0]Happy，支持中英文。 */
+function get_tts_Emotion(chat_str) {
+    /**提取vits_emotion_map中的括号内的感情词，放在数组emotion_language_map中； */
+    let emotion_language_map
+    if (Config.tts_language == 'EN') {
+        chat_str = chat_str.toLowerCase()
+        const regex_emotion_map = /\b\w+\b\s*\(/g;
+        emotion_language_map = vits_emotion_map.map(item => {
+            const match = item.match(regex_emotion_map);
+            return match ? match[0].replace(/\(|\)|\s/g, '').toLowerCase() : '';
+        });
+    } else {
+        const regex_emotion_map = /\((.*?)\)/g;
+        emotion_language_map = vits_emotion_map.map(item => {
+            const match = item.match(regex_emotion_map);
+            return match ? match[0].replace(/\(|\)/g, '') : '';
+        });
+    }
+
+    /**根据emotion_language_map遍历对话字符串，返回对应的emotion_language_map编号 */
+    let target_num = 0
+    for (let i = 0; i < emotion_language_map.length; i++) {
+        let emotion_targe = emotion_language_map[i]
+
+        const index_emotion = chat_str.indexOf(emotion_targe);
+        if (index_emotion !== -1) {
+            target_num = i;
+            break;
+        }
+    }
+
+    /**根据vits_emotion_map[target_num]返回tts情感值（开头为大写的英文单词） */
+    let auto_vits_emotion = vits_emotion_map[target_num].replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g, '')
+    return auto_vits_emotion
 }

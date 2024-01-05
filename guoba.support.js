@@ -870,11 +870,17 @@ export function supportGuoba () {
         {
           field: 'vits_emotion',
           label: 'emotion',
-          bottomHelpMessage: '目前api仅支持Happy！控制发音情感；可用命令：#tts情感设置帮助',
+          bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',
           component: 'Select',
           componentProps: {
             options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'') } })
           }
+        },
+        {
+          field: 'vits_auto_emotion',
+          label: 'tts语音启动自动情感',
+          bottomHelpMessage: '自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感',
+          component: 'Switch'
         },
         {
             field: 'style_text',
