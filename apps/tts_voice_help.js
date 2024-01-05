@@ -193,7 +193,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         if (!input_tts) {
             let msg1 = `tts情感设置帮助：\n（当前api对大多数情感设置效果都不好，建议只用Happy）`
             let msg_show = `tts语音当前情感：${Config.vits_emotion}`
-            let msg_auto = `tts语音启动自动情感：${Config.vits_auto_emotion}\n（自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感）`
+            let msg_auto = `tts语音启动自动情感：${Config.vits_auto_emotion}\n（自动根据句子中的感情词匹配tts中的100种（经过测试删减为7种）情感，将会覆盖当前tts情感）`
             let msg1_1 = `若有需要可\n#tts情感设置为空值`
             let msg2 = `输入整数，如：\n#tts情感设置1\n#tts情感自动开启/关闭`
             let msg3 = JSON.stringify(vits_emotion_map, null, 2).replace(/\"|,/g, "")
