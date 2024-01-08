@@ -676,7 +676,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 2) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let url = `https://t.mwm.moe/mp`;
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
@@ -692,7 +692,8 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 4) {
-                    let url = `https://t.mwm.moe/mp`;
+                    // let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;   // 这api 寄了
+                    let url = await get_url_from_api_lolicon();
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
@@ -700,7 +701,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 5) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;
+                    let url = await get_url_from_api_lolicon();
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
@@ -874,4 +875,25 @@ export class chuo extends plugin {
 
     }
 
+}
+
+/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持两个tag参数 */
+async function get_url_from_api_lolicon(tag1='loli', tag2='ロリ') {
+    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
+    for (let i = 0; i < 3; i++) {
+        try {
+            const response = await fetch(url)
+            const result = await response.json()
+            if (Array.isArray(result.data) && result.data.length === 0) {
+                logger.info('派蒙戳一戳api_lolicon未获取到图片')
+                throw new Error(result)
+            }
+            let pic_url = result.data[0].urls?.original || result.data[0].urls?.regular || result.data[0].urls?.small
+            if (!pic_url) throw new Error(result)
+            return pic_url
+        } catch (err) {
+            logger.info(err)
+        }
+    }
+    logger.warn(`派蒙戳一戳获取api_lolicon pic_url失败3次`)
 }
