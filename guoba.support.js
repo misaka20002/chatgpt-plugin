@@ -966,6 +966,38 @@ export function supportGuoba () {
           component: 'Input'
         },
         {
+          field: 'tts_slice_is_slice_generation',
+          label: 'tts语音 切片生成',
+          bottomHelpMessage: '使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但会增加生成耗时',
+          component: 'Switch'
+        },
+        {
+          field: 'tts_slice_pause_between_paragraphs_seconds',
+          label: '切片生成 段间停顿时长（秒）',
+          bottomHelpMessage: '作用于切片生成，需要大于句间停顿才有效，范围0-10；推荐0.2秒',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.0,
+            max: 10.0
+          }
+        },
+        {
+          field: 'tts_slice_is_Split_by_sentence',
+          label: '切片生成 按句切分',
+          bottomHelpMessage: '按句切分 在按段落切分的基础上再按句子切分文本',
+          component: 'Switch'
+        },
+        {
+          field: 'tts_slice_pause_between_sentences_seconds',
+          label: '切片生成 句间停顿时长（秒）',
+          bottomHelpMessage: '作用于切片生成，开启按句切分才生效，范围0-10；推荐0.2秒',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.0,
+            max: 10.0
+          }
+        },
+        {
           field: 'initiativeChatGroups',
           label: '主动发起聊天群聊的群号',
           bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key',

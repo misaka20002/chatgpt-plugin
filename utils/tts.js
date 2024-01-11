@@ -37,7 +37,7 @@ function randomNum(minNum, maxNum) {
     }
 }
 
-export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights)) {
+export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)) {
     if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
     {
         /*        let character_voice_language = speaker.substring(speaker.length - 2);
@@ -59,8 +59,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         /*处理tts语音文本：*/
         let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
 
-        text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/，，，|，，/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/リディア/g, 'クレー').replace(/派モン/g, 'パイモン').replace(/（..）/g, '').substr(0, 299);
-        //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换↓chat.js处理过的换行文本 7. 替换第一人称+'：'，例如可莉：; 8. 替换日语翻译中的リディア为クレー; 9. 替换日语翻译中的派モン为パイモン; 10. 替换（小声） ; n.截取处理后的前299个字符
+        text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(/，，，|，，/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/リディア/g, 'クレー').replace(/派モン/g, 'パイモン').replace(/（..）/g, '').replace(/\[|\]/g, '');
+        //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji ; 6.替换↓chat.js处理过的换行文本 7. 替换第一人称+'：'，例如可莉：; 8. 替换日语翻译中的リディア为クレー; 9. 替换日语翻译中的派モン为パイモン; 10. 替换（小声）; 11. 删除半角中括号[]
         //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')  
 
         logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
@@ -74,14 +74,47 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             logger.mark(`tts使用情感：${vits_emotion}`)
         }
 
-        let body = {
-            data: [
-                text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
-            ],
-            event_data: null,
-            fn_index: 0
+        let body
+        if (!tts_slice_is_slice_generation) {
+            body = {
+                data: [
+                    text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                    tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
+                ],
+                event_data: null,
+                fn_index: 0
+            }
+            // 最大300字，截取处理后的前299个字符
+            text = text.substr(0, 299);
+        } else {
+            body = {
+                data: [
+                    text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
+                ],
+                event_data: null,
+                fn_index: 0
+            }
+            // text可超过300字
         }
+        /*         切片生成body参考：
+                [
+                    "text~text~text~",
+                    "派蒙_ZH",
+                    0.2,
+                    0.6,
+                    0.8,
+                    1,
+                    "ZH",
+                    false,  //按句切分
+                    0.6,  //段间停顿
+                    0.2,  //句间停顿
+                    null,
+                    "Happy",
+                    "",
+                    0.7
+                  ] */
+
         let space = Config.ttsSpace
 
         //校正为 https://v2.genshinvoice.top

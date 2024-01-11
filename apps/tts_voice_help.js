@@ -35,6 +35,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#tts(语音)?切片生成(帮助)?',
+                fnc: 'set_tts_slice_is_slice_generation',
+                permission: 'master'
+            },
+            {
                 reg: '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?',
                 fnc: 'set_assistantLabel',
                 permission: 'master'
@@ -79,13 +84,14 @@ export class voicechangehelp extends plugin {
     /** ^#tts(语音)?(替换)?帮助 */
     async voicechangehelp(e) {
         let input_tts = e.msg.replace(/^#tts(语音)?(替换)?帮助/, '').trim()
-        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
+        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 切片生成：${Config.tts_slice_is_slice_generation}\n 段间停顿时长：${Config.tts_slice_pause_between_paragraphs_seconds}\n 按句切分：${Config.tts_slice_is_Split_by_sentence}\n 句间停顿时长：${Config.tts_slice_pause_between_sentences_seconds}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         let msg1 = `tts语音帮助：\n` +
             `#tts可选人物列表\n` +
             `#tts语音转日语帮助\n` +
             `#tts语言设置帮助\n` +
             `#ttslength设置帮助\n` +
+            `#tts语音切片生成帮助\n` +
             `（2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
             ''
         let msg1_1 = `情感设置：\n` +
@@ -133,7 +139,7 @@ VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
 ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
-        if (e.isMaster && (input_tts == 'pro' || input_tts == 'm')) {
+        if (e.isMaster && (input_tts == 'pro' || input_tts == 'm' || input_tts == 'p')) {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg2, msg4_1], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg1_1, msg4_1], `tts语音帮助`)
@@ -410,6 +416,24 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         }
     }
 
+    /** ^#tts(语音)?切片生成(帮助)? */
+    async set_tts_slice_is_slice_generation(e) {
+        let input_tts = e.msg.replace(/^#tts(语音)?切片生成(帮助)?/, '').trim()
+        if (!input_tts) {
+            let msg1 = `使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但会增加生成耗时`
+            let msg_show = `tts语音切片生成当前设置：\n 是否开启：${Config.tts_slice_is_slice_generation}\n 段间停顿时长（秒）：${Config.tts_slice_pause_between_paragraphs_seconds}\n 开启按句切分：${Config.tts_slice_is_Split_by_sentence}\n 句间停顿时长（秒）：${Config.tts_slice_pause_between_sentences_seconds}\n -具体参数请在锅巴设置修改`
+            let msg1_1 = `#tts语音切片生成(开启|关闭)`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts语音切片生成帮助`);
+            return e.reply(msgx, false)
+        }
+        if (input_tts === '开启' || input_tts === '关闭') {
+            Config.tts_slice_is_slice_generation = input_tts === '开启' ? true : false
+            return e.reply(`tts切片生成已设置为${input_tts}！`)
+        } else {
+            return e.reply('喵？请使用#tts语音切片生成帮助')
+        }
+    }
+
     /** ^#tts删除所有(chatgpt)?用户回复设置 */
     async delete_redis_all_user_config(e) {
         let input_tts = e.msg.replace(/^#tts删除所有(chatgpt)?用户回复设置/, '').trim()
@@ -436,7 +460,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     /** 发送当前设置 */
     async show_tts_voice_help_config(e) {
         let show_tts_voice_help_config_msg1 = 'tts语音当前设置：'
-        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
+        let show_tts_voice_help_config_msg2 = ` 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 切片生成：${Config.tts_slice_is_slice_generation}\n 段间停顿时长：${Config.tts_slice_pause_between_paragraphs_seconds}\n 按句切分：${Config.tts_slice_is_Split_by_sentence}\n 句间停顿时长：${Config.tts_slice_pause_between_sentences_seconds}\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         const userSetting = await getUserReplySetting(this.e)
         let msg4_1 = `${this.e.sender.user_id}的回复设置:
