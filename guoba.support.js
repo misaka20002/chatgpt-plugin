@@ -977,7 +977,7 @@ export function supportGuoba () {
           bottomHelpMessage: '作用于切片生成，需要大于句间停顿才有效，范围0-10；推荐0.2秒',
           component: 'InputNumber',
           componentProps: {
-            min: 0.0,
+            min: 0,
             max: 10.0
           }
         },
@@ -990,11 +990,11 @@ export function supportGuoba () {
         {
           field: 'tts_slice_pause_between_sentences_seconds',
           label: '切片生成 句间停顿时长（秒）',
-          bottomHelpMessage: '作用于切片生成，开启按句切分才生效，范围0-10；推荐0.2秒',
+          bottomHelpMessage: '作用于切片生成，开启按句切分才生效，范围0-5；推荐0.2秒',
           component: 'InputNumber',
           componentProps: {
-            min: 0.0,
-            max: 10.0
+            min: 0,
+            max: 5.0
           }
         },
         {
