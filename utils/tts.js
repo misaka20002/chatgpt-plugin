@@ -84,15 +84,16 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 event_data: null,
                 fn_index: 0
             }
-            /* [
+            /* 普通生成body参考：
+            [
                 "text~text~text~",
                 "派蒙_ZH",
                 0.2,
                 0.6,
                 0.8,
                 1,
-                "ZH",
-                null,
+                "ZH",  //tts_language
+                null,  //exampleAudio
                 "Happy",
                 "Text prompt",  //切片生成没有这一行
                 "",
@@ -104,7 +105,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             body = {
                 data: [
                     text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds, exampleAudio, vits_emotion, style_text, style_text_weights
+                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds,
+                    exampleAudio, vits_emotion, style_text, style_text_weights
                 ],
                 event_data: null,
                 fn_index: 0
@@ -117,11 +119,11 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 0.6,
                 0.8,
                 1,
-                "ZH",
+                "ZH",  //tts_language
                 false,  //按句切分
                 0.6,  //段间停顿
                 0.2,  //句间停顿
-                null,
+                null,  //exampleAudio
                 "Happy",
                 "",
                 0.7
@@ -280,6 +282,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 logger.error(`For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times + 1}次。当前语音api status为`, response.status)
             }
         }
+        logger.error(body)
+        logger.error(responseBody)
         throw new Error(responseBody)
     }
 }
