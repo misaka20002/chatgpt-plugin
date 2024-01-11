@@ -101,7 +101,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     0.7
                 ],
                     "event_data": null,
-                        "fn_index": 0,
+                        "fn_index": 0,  //切片生成这个不同
             } */
             // 最大300字，截取处理后的前299个字符
             text = text.substr(0, 299);
@@ -291,8 +291,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             }
         }
         logger.error(body)
-        logger.error(responseBody)
-        throw new Error(responseBody)
+        throw new Error('responseBody:',responseBody)
     }
 }
 
