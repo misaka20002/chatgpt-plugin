@@ -84,36 +84,50 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 event_data: null,
                 fn_index: 0
             }
+            /* [
+                "text~text~text~",
+                "派蒙_ZH",
+                0.2,
+                0.6,
+                0.8,
+                1,
+                "ZH",
+                null,
+                "Happy",
+                "Text prompt",  //切片生成没有这一行
+                "",
+                0.7
+              ] */
             // 最大300字，截取处理后的前299个字符
             text = text.substr(0, 299);
         } else {
             body = {
                 data: [
                     text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
+                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds, exampleAudio, vits_emotion, style_text, style_text_weights
                 ],
                 event_data: null,
                 fn_index: 0
             }
+            /* 切片生成body参考：
+            [
+                "text~text~text~",
+                "派蒙_ZH",
+                0.2,
+                0.6,
+                0.8,
+                1,
+                "ZH",
+                false,  //按句切分
+                0.6,  //段间停顿
+                0.2,  //句间停顿
+                null,
+                "Happy",
+                "",
+                0.7
+            ] */
             // text可超过300字
         }
-        /*         切片生成body参考：
-                [
-                    "text~text~text~",
-                    "派蒙_ZH",
-                    0.2,
-                    0.6,
-                    0.8,
-                    1,
-                    "ZH",
-                    false,  //按句切分
-                    0.6,  //段间停顿
-                    0.2,  //句间停顿
-                    null,
-                    "Happy",
-                    "",
-                    0.7
-                  ] */
 
         let space = Config.ttsSpace
 
