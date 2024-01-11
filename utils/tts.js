@@ -85,20 +85,24 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 fn_index: 0
             }
             /* 普通生成body参考：
-            [
-                "text~text~text~",
-                "派蒙_ZH",
-                0.2,
-                0.6,
-                0.8,
-                1,
-                "ZH",  //tts_language
-                null,  //exampleAudio
-                "Happy",
-                "Text prompt",  //切片生成没有这一行
-                "",
-                0.7
-              ] */
+            {
+                "data": [
+                    "派蒙知道哦",
+                    "派蒙_ZH",
+                    0.2,
+                    0.6,
+                    0.8,
+                    1,
+                    "ZH",  //tts_language
+                    null,  //exampleAudio
+                    "Happy",
+                    "Text prompt",  //切片生成没有这一行
+                    "",
+                    0.7
+                ],
+                    "event_data": null,
+                        "fn_index": 0,
+            } */
             // 最大300字，截取处理后的前299个字符
             text = text.substr(0, 299);
         } else {
@@ -109,25 +113,29 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     exampleAudio, vits_emotion, style_text, style_text_weights
                 ],
                 event_data: null,
-                fn_index: 0
+                fn_index: 2
             }
             /* 切片生成body参考：
-            [
-                "text~text~text~",
-                "派蒙_ZH",
-                0.2,
-                0.6,
-                0.8,
-                1,
-                "ZH",  //tts_language
-                false,  //按句切分
-                0.6,  //段间停顿
-                0.2,  //句间停顿
-                null,  //exampleAudio
-                "Happy",
-                "",
-                0.7
-            ] */
+            {
+                "data": [
+                    "派蒙知道哦",
+                    "派蒙_ZH",
+                    0.2,
+                    0.6,
+                    0.8,
+                    1,
+                    "ZH",  //tts_language
+                    false,  //按句切分
+                    0.6,  //段间停顿
+                    0.2,  //句间停顿
+                    null,  //exampleAudio
+                    "Happy",
+                    "",
+                    0
+                ],
+                    "event_data": null,
+                        "fn_index": 2
+            } */
             // text可超过300字
         }
 
