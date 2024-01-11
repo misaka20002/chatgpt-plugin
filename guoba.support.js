@@ -968,7 +968,7 @@ export function supportGuoba () {
         {
           field: 'tts_slice_is_slice_generation',
           label: 'tts语音 切片生成',
-          bottomHelpMessage: '使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但会增加生成耗时',
+          bottomHelpMessage: '使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但1、会增加生成耗时，2、会导致每一段句子语气不一致，3、增加post失败概率',
           component: 'Switch'
         },
         {
