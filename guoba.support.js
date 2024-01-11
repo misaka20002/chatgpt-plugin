@@ -1080,7 +1080,7 @@ export function supportGuoba () {
         {
           field: 'chatViewWidth',
           label: '图片渲染宽度',
-          bottomHelpMessage: '聊天页面渲染窗口的宽度',
+          bottomHelpMessage: '聊天页面渲染窗口的宽度，默认1280显示不全的话，改为1920',
           component: 'InputNumber'
         },
         {
