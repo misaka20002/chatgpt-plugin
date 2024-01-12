@@ -881,7 +881,7 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 5)
+                let mutetype = Math.ceil(Math.random() * 10)
                 switch (mutetype) {
                     case 1:
                         let message = await generate_msg_Daiyu()
