@@ -925,7 +925,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 4) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=loli`;
+                    let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=loli|ロリ`;
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
