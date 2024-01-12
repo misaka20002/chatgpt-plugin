@@ -1121,9 +1121,9 @@ export class chuo extends plugin {
 
 }
 
-/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持两个tag参数 */
-async function get_url_from_api_lolicon(tag1 = 'loli', tag2 = 'ロリ') {
-    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
+/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持3个tag参数 */
+async function get_url_from_api_lolicon(tag1 = '萝莉', tag2 = 'ロリ', tag3 = 'loli') {
+    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}|${tag2}|${tag3}`;
     for (let i = 0; i < 3; i++) {
         try {
             const response = await fetch(url)
