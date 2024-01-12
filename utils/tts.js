@@ -76,6 +76,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
         let body
         if (!tts_slice_is_slice_generation) {
+            // 最大300字，截取处理后的前299个字符
+            text = text.substr(0, 299);
             body = {
                 data: [
                     text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
@@ -103,9 +105,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     "event_data": null,
                         "fn_index": 0,  //切片生成这个不同
             } */
-            // 最大300字，截取处理后的前299个字符
-            text = text.substr(0, 299);
         } else {
+            // text可超过300字
             body = {
                 data: [
                     text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
@@ -136,7 +137,6 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     "event_data": null,
                         "fn_index": 2
             } */
-            // text可超过300字
         }
 
         let space = Config.ttsSpace
