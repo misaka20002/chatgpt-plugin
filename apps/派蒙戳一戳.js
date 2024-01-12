@@ -6,6 +6,7 @@ import moment from 'moment'
 import fetch from 'node-fetch'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
+import { generate_msg_Daiyu } from '../utils/randomMessage.js'
 
 //如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -60,7 +61,7 @@ let word_list = [
     '讨厌死了，你好烦人啊，派蒙不陪你玩了',
     '不要再戳了！派蒙真的要被你气洗了>_<',
     '不要再戳派蒙了！',
-    '你要是再戳我！！派蒙~派蒙就打你，哼！',
+    '你要是再戳派蒙！！派蒙~派蒙就打你，哼！',
     '哼~派蒙才不是傲娇呢，那是什么不知道鸭',
     '派蒙，派蒙才不会这样子！真正的派蒙从来不是傲娇！傲，傲娇什么 的，都，都是别人杜摆~嗯，一点，一点也没有呢',
     '派蒙……派蒙……才不是傲娇呢',
@@ -79,7 +80,7 @@ let word_list = [
     '你走上了爱派蒙这条不归路。',
     '宝宝是不是又熬夜了，派蒙看你还在线',
     '派蒙把自己送给你好了虽然派蒙很可爱但是派蒙养不起自己了',
-    '派蒙偏偏要无理取闹除非抱抱我',
+    '派蒙偏偏要无理取闹除非抱抱派蒙',
     '要派蒙给你暖被窝吗~诶嘿嘿~',
     '啊...温柔一点...把派蒙戳疼辣..',
     '要戳坏派蒙了！',
@@ -96,10 +97,26 @@ let word_list = [
     '派蒙今天想吃糖霜史莱姆！给派蒙买嘛~',
     '再喜欢派蒙也不能这样戳啦，真的会坏掉的笨蛋!',
     '你带来新的故事吗？派蒙用派蒙亲手做的派蒙烤鱼与你交换',
-    '猫咪和狗狗和派蒙你更喜欢哪一个喵？'
+    '猫咪和狗狗和派蒙你更喜欢哪一个喵？',
+    '谢谢你 在这世界的角落 发现了派蒙',
+    '派蒙派蒙 - ( ゜- ゜)つロ 乾杯~',
+    '把嘴张开（抬起脚）',
+    '啊……你戳疼我了Ծ‸Ծ',
+    '你干嘛！（公鸭嗓）',
+    '再...再戳派蒙的话，派蒙就咬你！',
+    '现在是派蒙学习的时间',
+    '派蒙陪你玩就是了！',
+    '派蒙已经不算是小孩了，一个人也可以战斗！',
+    '虽然派蒙现在还是孩子，不过很快就会长大的，到了那时……那个……',
+    '好想快点长大，长到和主人一样大',
+    '派蒙听说男孩子都是变态……',
+    '派蒙、派蒙要按响防狼魔石了哦！？',
+    '你是小孩子吗？！（生气）',
+    '摸摸派蒙的头吧！ 就一下下啦',
+    '变态！？是、是你啊～你果然是变态！',
 ];
 
-// 纳西妲中文，扒文件改地址： https://bbs.mihoyo.com/ys/obc/content/5111/detail?bbs_presentation_style=no_header 在浏览器F12的网络截取到之后复制全部为node.js，用notepad++的crrl+M标记和正则表达式提取，正则表达式（包括,）： "https:.*(ogg|mp3|wav)",
+// 纳西妲中文，扒文件改地址： https://bbs.mihoyo.com/ys/obc/content/5111/detail?bbs_presentation_style=no_header 在浏览器F12的网络截取到之后复制全部为node.js，用notepad++的crrl+M标记和正则表达式提取，正则表达式（包括,）： "https:\S*(ogg|mp3|wav)",
 // 替换戳一戳语音角色在429行
 /**纳西妲中文语音 */
 let voice_list_nahida_cn = [
@@ -695,6 +712,84 @@ let voice_list_paimon_jp = [
     "https://patchwiki.biligame.com/images/ys/0/0e/swtyr19xnnenr6euuejfjm0pxw1ydgb.mp3"
 ]
 
+/**冰川镜华  来自：https://wiki.biligame.com/pcr/%E9%95%9C%E5%8D%8E 正则表达式匹配：   "https:\S*(ogg|mp3|wav)"         */
+let voice_list_kyoka_jp = [
+    "https://patchwiki.biligame.com/images/pcr/a/a5/1d3owxfxhuq7svo596rhdq4g69uqgo3.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/0e/fsh3rub78e4yqx8yz64phgg59p01g76.mp3",
+    "https://patchwiki.biligame.com/images/pcr/4/41/ne3nf1e1bk675iveyofd4hju4t89hh7.mp3",
+    "https://patchwiki.biligame.com/images/pcr/c/cd/6e01873nl6rgtnsb8hzwhdw76kimpgr.mp3",
+    "https://patchwiki.biligame.com/images/pcr/3/37/mefu14jda2c2gkifexyrlnrqwqmxryl.mp3",
+    "https://patchwiki.biligame.com/images/pcr/4/41/02c6zznozrx1kqj5mwfkw79ttbdbgn9.mp3",
+    "https://patchwiki.biligame.com/images/pcr/9/9d/b7ga92tqkibfispwagh2zk40mngmvwq.mp3",
+    "https://patchwiki.biligame.com/images/pcr/7/73/i98ad9vfi1hdtsx8tw5zu77ml38lyzc.mp3",
+    "https://patchwiki.biligame.com/images/pcr/9/95/jzgbiwissojybwmjdkn156f5nsko9en.mp3",
+    "https://patchwiki.biligame.com/images/pcr/9/9a/cfnm1y73f4x5me1cojdusc5mwewlvk7.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/ea/2xchuf4ji861rpl9x0ovqw6eciwjb4x.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/82/eby2sd1mtm9geixdvjr38w0f2kd0tlo.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/05/nj7i8b28lpji9oheffr241cncnopnh2.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/82/scqirq53fu5druhr9ddzjrdsyawjd9k.mp3",
+    "https://patchwiki.biligame.com/images/pcr/b/b2/9dh762jufylclehivg557rj0opqooit.mp3",
+    "https://patchwiki.biligame.com/images/pcr/d/d2/eb4frsd29ebysh28i50es6sp0f7t0di.mp3",
+    "https://patchwiki.biligame.com/images/pcr/4/46/gcrzdsxaue0nd7f08sbabbqz02uq3do.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/82/l8rk6o5ute4vpygnv0g8vk4wcamqur3.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/ef/q3zih5za72qkl1mhk3wt0zwe8005jqp.mp3",
+    "https://patchwiki.biligame.com/images/pcr/9/94/fh49d31o7w4z1xzejrp2wamq5r5iohm.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/ef/0yr19cf0f0jcr7fm89vx71bpdvbfaoz.mp3",
+    "https://patchwiki.biligame.com/images/pcr/b/b4/iru2ux0h99nzscarf4u0vabr5mdm702.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/87/3azfeialne63dla3bbl3lcd1k3ok92q.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/e2/ekx1gt2pq7l9qv4rgb6tkz4oqd2yl6f.mp3",
+    "https://patchwiki.biligame.com/images/pcr/b/b5/hmcqwtz22681fn0dpo7f3x6y4f1shb6.mp3",
+    "https://patchwiki.biligame.com/images/pcr/7/70/pfeoer09okwejmaan3bn9q7lmu4bu5a.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/60/irssurz0nsg8hrb8i6sxpdxs3r2iwm2.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/89/gs9uoaqe3mbahclhzaixu6daekdgbiy.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/05/e61lumgswa059nc3afbjc8g0g7zwboj.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f1/85ryushk9hbtonsjbf2mbetzqj70u8e.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/ea/85ryushk9hbtonsjbf2mbetzqj70u8e.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/fe/rl5cnmj09cq5llhpao543bhnc538c4i.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f5/rzsnv6rk2qg50klpfwmp94o69rsamhn.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/05/lm32wazfjaefk90vsuece1ob9ecltui.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/09/ov3xdvie8byzp0mg11doyq9zb3zqz62.mp3",
+    "https://patchwiki.biligame.com/images/pcr/9/94/a1ram2fciwu8t5wx5cbgmrxwgq2gbpk.mp3",
+    "https://patchwiki.biligame.com/images/pcr/a/ac/cals9wdt5lmizyt5x0s69n21ghwzfvz.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/0c/5rbhj990cy17ywcjutsqx0r5i7ibyxg.mp3",
+    "https://patchwiki.biligame.com/images/pcr/4/4d/qnr1g6ogj0h0g0muimnudf0mgapmd69.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f1/qkhitco1vpg467rdx76s2zk0on652vj.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f0/6pcbrfzlh4dq8w7gls2ohp2dlr4gqqn.mp3",
+    "https://patchwiki.biligame.com/images/pcr/2/2d/byunsf794qgxmo9tazj6jcszgekf9ig.mp3",
+    "https://patchwiki.biligame.com/images/pcr/1/1e/6o47hlyndixlwqm8df9tcpp0z9i7evm.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/6e/fx1xvb2elisvht99ko8fgpuwjvxtud1.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/60/5o86g9fm84zktpdhgn3eslvgfkwmx3p.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/eb/q2vgxl3xgvndekyi6lw7yeykkyw4o03.mp3",
+    "https://patchwiki.biligame.com/images/pcr/1/18/enmq56ie1tt8canu1f6onevlukcsna4.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/86/d49nib6cyx6j835qhkvy5eh15a09jsn.mp3",
+    "https://patchwiki.biligame.com/images/pcr/c/c2/hbtjjvmr65k4nshsruotgy597yr13d4.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/63/k5kwurwbha6wejhztppkcagk9w9wtw2.mp3",
+    "https://patchwiki.biligame.com/images/pcr/a/a5/58c51bv849m4reqcook11whkiibyt2e.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/05/e61lumgswa059nc3afbjc8g0g7zwboj.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f1/85ryushk9hbtonsjbf2mbetzqj70u8e.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/09/ov3xdvie8byzp0mg11doyq9zb3zqz62.mp3",
+    "https://patchwiki.biligame.com/images/pcr/4/4d/qnr1g6ogj0h0g0muimnudf0mgapmd69.mp3",
+    "https://patchwiki.biligame.com/images/pcr/1/1e/6o47hlyndixlwqm8df9tcpp0z9i7evm.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/eb/q2vgxl3xgvndekyi6lw7yeykkyw4o03.mp3",
+    "https://patchwiki.biligame.com/images/pcr/c/c2/hbtjjvmr65k4nshsruotgy597yr13d4.mp3",
+    "https://patchwiki.biligame.com/images/pcr/e/ea/85ryushk9hbtonsjbf2mbetzqj70u8e.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/fe/rl5cnmj09cq5llhpao543bhnc538c4i.mp3",
+    "https://patchwiki.biligame.com/images/pcr/9/94/a1ram2fciwu8t5wx5cbgmrxwgq2gbpk.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f1/qkhitco1vpg467rdx76s2zk0on652vj.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/6e/fx1xvb2elisvht99ko8fgpuwjvxtud1.mp3",
+    "https://patchwiki.biligame.com/images/pcr/1/18/enmq56ie1tt8canu1f6onevlukcsna4.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/63/k5kwurwbha6wejhztppkcagk9w9wtw2.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/0c/5rbhj990cy17ywcjutsqx0r5i7ibyxg.mp3",
+    "https://patchwiki.biligame.com/images/pcr/2/2d/byunsf794qgxmo9tazj6jcszgekf9ig.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f5/rzsnv6rk2qg50klpfwmp94o69rsamhn.mp3",
+    "https://patchwiki.biligame.com/images/pcr/0/05/lm32wazfjaefk90vsuece1ob9ecltui.mp3",
+    "https://patchwiki.biligame.com/images/pcr/a/ac/cals9wdt5lmizyt5x0s69n21ghwzfvz.mp3",
+    "https://patchwiki.biligame.com/images/pcr/f/f0/6pcbrfzlh4dq8w7gls2ohp2dlr4gqqn.mp3",
+    "https://patchwiki.biligame.com/images/pcr/6/60/5o86g9fm84zktpdhgn3eslvgfkwmx3p.mp3",
+    "https://patchwiki.biligame.com/images/pcr/8/86/d49nib6cyx6j835qhkvy5eh15a09jsn.mp3",
+    "https://patchwiki.biligame.com/images/pcr/a/a5/58c51bv849m4reqcook11whkiibyt2e.mp3"
+]
+
 let ciku = [
     "派蒙今天已经被戳了_num_次啦，休息一下好不好",
     "派蒙今天已经被戳了_num_次啦，有完没完！",
@@ -748,8 +843,9 @@ export class chuo extends plugin {
         }
         if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
             logger.info('[戳一戳生效]')
-            let count = await redis.get(`paimon_pokecount`);
 
+            /**统计每日被戳次数 */
+            let count = await redis.get(`paimon_pokecount`);
             // 当前时间
             let time = moment(Date.now())
                 .add(1, "days")
@@ -769,14 +865,25 @@ export class chuo extends plugin {
                 await e.reply(ciku[text_number - 1].replace(/派蒙/g, Config.tts_First_person).replace("_num_", count))
                 return true;
             }
-            //生成0-100的随机数
+
+
+            //生成0-100%的随机数
             let random_type = Math.random()
 
             /**回复随机文字 */
             if (random_type < reply_text) {
                 logger.info('[戳一戳回复随机文字生效]')
-                let text_number = Math.ceil(Math.random() * word_list['length'])
-                await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+                let mutetype = Math.ceil(Math.random() * 5)
+                switch (mutetype) {
+                    case 1:
+                        let message = await generate_msg_Daiyu()
+                        await e.reply(message)
+                        break;
+                    default:
+                        let text_number = Math.ceil(Math.random() * word_list['length'])
+                        await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+                        break;
+                }
             }
 
             /**回复随机图片 */
