@@ -101,7 +101,7 @@ let word_list = [
     '谢谢你 在这世界的角落 发现了派蒙',
     '派蒙派蒙 - ( ゜- ゜)つロ 乾杯~',
     '把嘴张开（抬起脚）',
-    '啊……你戳疼我了Ծ‸Ծ',
+    '啊……你戳疼派蒙了Ծ‸Ծ',
     '你干嘛！（公鸭嗓）',
     '再...再戳派蒙的话，派蒙就咬你！',
     '现在是派蒙学习的时间',
@@ -915,8 +915,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 4) {
-                    // let url = `https://sex.nyan.xyz/api/v2/img?tag=loli`;   // 这api 寄了
-                    let url = await get_url_from_api_lolicon();
+                    let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=loli`;
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
@@ -1122,4 +1121,37 @@ async function get_url_from_api_lolicon(tag1 = 'loli', tag2 = 'ロリ') {
         }
     }
     logger.warn(`派蒙戳一戳获取api_lolicon pic_url失败3次`)
+}
+
+/**一言 返回文本/错误则返回null*/
+async function get_msg_hitokoto () {
+    let url = 'https://v1.hitokoto.cn/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][一言] 接口请求失败')
+        }
+        res = await res.json()
+        return res.hitokoto
+    } catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**网易云热评 返回文本/错误则返回null */
+async function get_msg_wyyrp () {
+    let url = 'https://api.xingzhige.com/API/NetEase_CloudMusic_hotReview/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][网易云热评] 接口请求失败')
+        }    
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
 }
