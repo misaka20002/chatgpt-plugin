@@ -821,7 +821,9 @@ export class chuo extends plugin {
     async chuoyichuo(e) {
         if (!Config.paimon_chuoyichuo_open) return false
         if (cfg.masterQQ.includes(e.target_id)) {
-            logger.info('[戳主人生效]')
+            if (Config.debug) {
+                logger.mark('[戳一戳戳主人生效]')
+            }
             if (cfg.masterQQ.includes(e.operator_id) || cfg.qq == e.operator_id || BotQQ == e.operator_id) {
                 return;
             }
@@ -841,9 +843,9 @@ export class chuo extends plugin {
             e.group.pokeMember(e.operator_id);
             return true
         }
-        if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
-            logger.info('[戳一戳生效]')
 
+        
+        if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
             /**统计每日被戳次数 */
             let count = await redis.get(`paimon_pokecount`);
             // 当前时间
@@ -860,7 +862,9 @@ export class chuo extends plugin {
                 await redis.set(`paimon_pokecount`, ++count, { EX: exTime });
             }
             if (Math.ceil(Math.random() * 100) <= 10 && count >= 10) {
-                logger.info('[戳一戳次数生效]')
+                if (Config.debug) {
+                    logger.mark('[戳一戳次数生效]')
+                }
                 let text_number = Math.ceil(Math.random() * ciku['length'])
                 await e.reply(ciku[text_number - 1].replace(/派蒙/g, Config.tts_First_person).replace("_num_", count))
                 return true;
@@ -872,7 +876,9 @@ export class chuo extends plugin {
 
             /**回复随机文字 */
             if (random_type < reply_text) {
-                logger.info('[戳一戳回复随机文字生效]')
+                if (Config.debug) {
+                    logger.mark('[戳一戳回复随机文字生效]')
+                }
                 let mutetype = Math.ceil(Math.random() * 5)
                 switch (mutetype) {
                     case 1:
@@ -888,7 +894,9 @@ export class chuo extends plugin {
 
             /**回复随机图片 */
             else if (random_type < (reply_text + reply_img)) {
-                logger.info('[戳一戳回复随机图片生效]')
+                if (Config.debug) {
+                    logger.mark('[戳一戳回复随机图片生效]')
+                }
                 let mutetype = Math.ceil(Math.random() * 5)
                 if (mutetype == 1) {
                     let url = `https://www.loliapi.com/acg/`;
@@ -934,6 +942,9 @@ export class chuo extends plugin {
 
             /**返回随机音频 */
             else if (random_type < (reply_text + reply_img + reply_voice)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳回复随机语音生效]')
+                }
                 // 匹配发音人物
                 let defaultTTSRole = Config.defaultTTSRole
                 let voice_lists
@@ -993,7 +1004,9 @@ export class chuo extends plugin {
             }
             /**禁言 */
             else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
-                logger.info('[戳一戳禁言生效]')
+                if (Config.debug) {
+                    logger.mark('[戳一戳禁言生效]')
+                }
                 let usrinfo = await Bot.getGroupMemberInfo(e.group_id, e.operator_id)
                 let botinfo = await Bot.getGroupMemberInfo(e.group_id, Bot.uin)
                 let role = ['owner', 'admin']
@@ -1071,13 +1084,17 @@ export class chuo extends plugin {
 
             //拍一拍表情包
             else if (random_type < (reply_text + reply_img + reply_voice + mutepick + example)) {
-                logger.info('[戳一戳拍一拍表情包生效]')
+                if (Config.debug) {
+                    logger.mark('[戳一戳拍一拍表情包生效]')
+                }
                 await e.reply(await segment.image(`http://ovooa.com/API/face_pat/?QQ=${e.operator_id}`))
             }
 
             //反击
             else {
-                logger.info('[戳一戳反击生效]')
+                if (Config.debug) {
+                    logger.mark('[戳一戳反击生效]')
+                }
                 let mutetype = Math.round(Math.random() * 3)
                 if (mutetype == 1) {
                     e.reply(`${Config.tts_First_person}也要戳戳你>_<`)

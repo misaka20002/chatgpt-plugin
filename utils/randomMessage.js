@@ -188,6 +188,6 @@ export async function generateHello() {
 
 /**在数组randomHellow_dairu中随机选一个字符串 */
 export async function generate_msg_Daiyu() {
-  let text_number = Math.floor(Math.random() * randomHellow_dairu['length'])
-  return randomHellow_dairu[text_number].replace(/派蒙/g, Config.tts_First_person)
+  let text_number = Math.ceil(Math.random() * randomHellow_dairu['length'])
+  return randomHellow_dairu[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
 }
