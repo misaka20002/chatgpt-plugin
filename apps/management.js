@@ -312,7 +312,7 @@ export class ChatgptManagement extends plugin {
           fnc: 'viewAPIModel'
         },
         {
-          reg: '^#chatgpt(开启|关闭)高清语音$',
+          reg: '^#chatgpt(开启|关闭)本地SILK转码$',
           fnc: 'enableTtsHD',
           permission: 'master'
         },
@@ -1600,9 +1600,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   async enableTtsHD (e) {
     Config.ttsHD = e.msg.indexOf('开启') > -1
     if(Config.ttsHD) {
-        await this.reply('已开启高清语音，电脑端将无法播放语音', true)
+        await this.reply('已开启本地SILK转码，电脑端将无法播放语音', true)
     } else {
-        await this.reply('已关闭高清语音', true)
+        await this.reply('已关闭本地SILK转码', true)
     }
   }
 

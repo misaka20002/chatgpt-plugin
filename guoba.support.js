@@ -999,8 +999,8 @@ export function supportGuoba () {
         },
         {
           field: 'ttsHD',
-          label: '开启高清语音',
-          bottomHelpMessage: '开启高清语音后，电脑端将无法播放语音',
+          label: '开启本地SILK转码',
+          bottomHelpMessage: '开启本地SILK转码后，电脑端将无法播放语音',
           component: 'Switch'
         },
         {

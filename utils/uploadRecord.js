@@ -28,7 +28,7 @@ if (module) {
     pcm2slk = (await import('node-silk')).pcm2slk
   } catch (e) {
     if (Config.ttsHD) {
-      logger.info('已开启高清语音，电脑端将无法播放语音')
+      logger.info('已开启本地SILK转码，电脑端将无法播放语音')
     } else if (Config.cloudTranscode) {
       logger.warn('未安装node-silk，将尝试使用云转码服务进行合成')
     } else {
@@ -59,7 +59,7 @@ async function uploadRecord (recordUrl, ttsMode = 'vits-uma-genshin-honkai', ign
   } else if (pcm2slk) {
     result = await getPttBuffer(recordUrl, Bot.config.ffmpeg_path, true)
   } else if (Config.cloudTranscode) {
-    logger.mark('使用云转码silk进行高清语音生成:"')
+    logger.mark('使用云转码silk进行本地SILK转码生成:"')
     try {
       if (recordType === 'buffer') {
         // save it as a file
