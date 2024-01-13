@@ -92,6 +92,8 @@ export class voicechangehelp extends plugin {
             `#tts语言设置帮助\n` +
             `#ttslength设置帮助\n` +
             `#tts语音切片生成帮助\n` +
+            `#chatgpt(开启|关闭)高清语音\n` +
+            `（本地部署的高清语音silk转码，但电脑无法播放此音频）\n` +
             `（2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
             ''
         let msg1_1 = `情感设置：\n` +

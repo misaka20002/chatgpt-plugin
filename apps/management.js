@@ -312,6 +312,11 @@ export class ChatgptManagement extends plugin {
           fnc: 'viewAPIModel'
         },
         {
+          reg: '^#chatgpt(开启|关闭)高清语音$',
+          fnc: 'enableTtsHD',
+          permission: 'master'
+        },
+        {
           reg: '^#chatgpt设置(API|api)模型$',
           fnc: 'setAPIModel',
           permission: 'master'
@@ -1590,6 +1595,15 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
 
     this.finish('doImportConfig')
+  }
+
+  async enableTtsHD (e) {
+    Config.ttsHD = e.msg.indexOf('开启') > -1
+    if(Config.ttsHD) {
+        await this.reply('已开启高清语音，电脑端将无法播放语音', true)
+    } else {
+        await this.reply('已关闭高清语音', true)
+    }
   }
 
   async switchSmartMode (e) {

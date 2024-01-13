@@ -998,6 +998,12 @@ export function supportGuoba () {
           }
         },
         {
+          field: 'ttsHD',
+          label: '开启高清语音',
+          bottomHelpMessage: '开启高清语音后，电脑端将无法播放语音',
+          component: 'Switch'
+        },
+        {
           field: 'initiativeChatGroups',
           label: '主动发起聊天群聊的群号',
           bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key',
