@@ -236,8 +236,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
         /*尝试重试try*/
         for (; post_times < 5; post_times++) {
-            // 等待1000ms
-            await sleep_zz(1000)
+            // 等待5000ms
+            await sleep_zz(5000)
             try {
                 logger.info(`正在第${post_times + 1}次使用接口${url}`)
                 response = await newFetch(url, {
