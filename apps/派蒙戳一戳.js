@@ -1243,7 +1243,7 @@ async function processImage(imageData) {
       // 返回临时文件的路径，这个路径将作为图像的URL或者路径
       return tempOutputFilePath
     } catch (err) {
-      logger.warn(err)
+      logger.warn('派蒙戳一戳返图使用图片处理错误：',err)
       return imageData
     }
   }
