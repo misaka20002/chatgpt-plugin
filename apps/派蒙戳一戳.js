@@ -844,7 +844,7 @@ export class chuo extends plugin {
             return true
         }
 
-        
+
         if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
             /**统计每日被戳次数 */
             let count = await redis.get(`paimon_pokecount`);
@@ -1050,25 +1050,19 @@ export class chuo extends plugin {
                             await e.group.muteMember(e.operator_id, 60);
 
                         }
-                        else if (role.includes(usrinfo.role)) {
-                            let mutetype = Math.ceil(Math.random() * 3)
-                            if (mutetype == 1) {
-                                e.reply(`呜呜呜你欺负${Config.tts_First_person}`)
-                            }
-                            else if (mutetype == 2) {
-                                e.reply(`主人有坏淫欺负${Config.tts_First_person}`)
-                            }
-                            else if (mutetype == 3) {
-                                e.reply(`气死${Config.tts_First_person}了不要戳了！`)
-                            }
-
+                    } else if (role.includes(usrinfo.role)) {
+                        let mutetype = Math.ceil(Math.random() * 3)
+                        if (mutetype == 1) {
+                            e.reply(`呜呜呜你欺负${Config.tts_First_person}`)
                         }
-
+                        else if (mutetype == 2) {
+                            e.reply(`主人有坏淫欺负${Config.tts_First_person}`)
+                        }
+                        else if (mutetype == 3) {
+                            e.reply(`气死${Config.tts_First_person}了不要戳了！`)
+                        }
                     }
-
-                }
-
-                else if (cfg.masterQQ.includes(e.operator_id)) {
+                } else if (cfg.masterQQ.includes(e.operator_id)) {
                     let mutetype = Math.ceil(Math.random() * 2)
                     if (mutetype == 1) {
                         e.reply(`主人连你也欺负${Config.tts_First_person}，呜呜呜~`)
@@ -1076,12 +1070,10 @@ export class chuo extends plugin {
                     else if (mutetype == 2) {
                         e.reply('主人有什么事吗？喵~')
                     }
-                    else if (mutetype == 3) {
-                        e.reply(`${Config.tts_First_person}，${Config.tts_First_person}才不会这样子！真正的${Config.tts_First_person}从来不是傲娇！傲，傲娇什么的，都，都是别人杜摆~嗯，一点，一点也没有呢！`)
-                    }
-
+                } else {
+                    let text_number = Math.ceil(Math.random() * word_list['length'])
+                    await e.reply((word_list[text_number - 1]+'...如果派蒙有管理员权限就好了QAQ').replace(/派蒙/g, Config.tts_First_person))
                 }
-
             }
 
             //拍一拍表情包
@@ -1143,7 +1135,7 @@ async function get_url_from_api_lolicon(tag1 = '萝莉|loli', tag2 = 'ロリ|lol
 }
 
 /**一言 返回文本/错误则返回null*/
-async function get_msg_hitokoto () {
+async function get_msg_hitokoto() {
     let url = 'https://v1.hitokoto.cn/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
@@ -1159,13 +1151,13 @@ async function get_msg_hitokoto () {
 }
 
 /**网易云热评 返回文本/错误则返回null */
-async function get_msg_wyyrp () {
+async function get_msg_wyyrp() {
     let url = 'https://api.xingzhige.com/API/NetEase_CloudMusic_hotReview/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
             throw new Error('[派蒙戳一戳][网易云热评] 接口请求失败')
-        }    
+        }
         res = await res.json()
         return res.data.content
     }
