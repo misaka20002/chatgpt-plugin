@@ -925,7 +925,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 4) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=loli|ロリ`;
+                    let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
@@ -933,7 +933,7 @@ export class chuo extends plugin {
                     await e.reply(msg);
                 }
                 else if (mutetype == 5) {
-                    let url = await get_url_from_api_lolicon();
+                    let url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                     let res = await fetch(url).catch((err) => logger.error(err));
                     let msg = [segment.image(res.url)];
                     await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
@@ -1121,9 +1121,9 @@ export class chuo extends plugin {
 
 }
 
-/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持3个tag参数 */
-async function get_url_from_api_lolicon(tag1 = '萝莉', tag2 = 'ロリ', tag3 = 'loli') {
-    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}|${tag2}|${tag3}`;
+/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持2个tag参数，tag中支持20个或| */
+async function get_url_from_api_lolicon(tag1 = '萝莉|loli', tag2 = 'ロリ|loli|萝莉') {
+    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
     for (let i = 0; i < 3; i++) {
         try {
             const response = await fetch(url)
