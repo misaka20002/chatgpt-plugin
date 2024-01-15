@@ -55,11 +55,13 @@ async function uploadRecord (recordUrl, ttsMode = 'vits-uma-genshin-honkai', ign
   }
   let result
   if (Config.ttsHD) {
+    logger.mark('使用本地转码silk进行高清语音生成:')
     result = await getPttBuffer(recordUrl, Bot.config.ffmpeg_path, false)
   } else if (pcm2slk) {
+    logger.mark('使用本地pcm2slk转码silk进行高清语音生成:')
     result = await getPttBuffer(recordUrl, Bot.config.ffmpeg_path, true)
   } else if (Config.cloudTranscode) {
-    logger.mark('使用云转码silk进行本地SILK转码生成:"')
+    logger.mark('使用云转码silk进行高清语音生成:')
     try {
       if (recordType === 'buffer') {
         // save it as a file
