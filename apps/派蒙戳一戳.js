@@ -8,12 +8,6 @@ import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
 import { generate_msg_Daiyu } from '../utils/randomMessage.js'
 
-import crypto from 'crypto'
-import path from 'path'
-import fs from 'fs'
-import sharp from 'sharp'
-const cacheImgUrl = `${process.cwd()}/plugins/example`
-
 //如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
 
@@ -933,8 +927,7 @@ export class chuo extends plugin {
                 else if (mutetype == 4) {
                     let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
                     let res = await fetch(url).catch((err) => logger.error(err));
-                    const image = await processImage(res.url)
-                    let msg = [segment.image(image)];
+                    let msg = [segment.image(res.url)];
                     await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                     await common.sleep(100)
                     await e.reply(msg);
@@ -942,8 +935,7 @@ export class chuo extends plugin {
                 else if (mutetype == 5) {
                     let url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                     let res = await fetch(url).catch((err) => logger.error(err));
-                    const image = await processImage(res.url)
-                    let msg = [segment.image(image)];
+                    let msg = [segment.image(res.url)];
                     await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
                     await common.sleep(100)
                     await e.reply(msg);
@@ -1174,77 +1166,3 @@ async function get_msg_wyyrp() {
         return null
     }
 }
-
-
-async function processImage(imageData) {
-    try {
-      // 生成唯一的临时文件名
-      const uniqueFilename = crypto.randomBytes(4).toString('hex')
-      const uniqueOutputFilename = crypto.randomBytes(4).toString('hex')
-  
-      // 保存处理前的图像数据为临时文件
-      const tempInputFilePath = path.join(cacheImgUrl, `${uniqueFilename}`)
-  
-      // 保存处理后的图像数据为临时文件
-      const tempOutputFilePath = path.join(cacheImgUrl, `${uniqueOutputFilename}`)
-  
-      // 将PassThrough流直接保存为临时文件
-      const writeStream = fs.createWriteStream(tempInputFilePath)
-      imageData.pipe(writeStream)
-  
-      await new Promise(
-        (resolve, reject) => {
-          writeStream.on('finish', resolve)
-          writeStream.on('error', reject)
-        }
-      )
-  
-      // 随机选择一个选项
-      const options = ['brightness', 'contrast', 'saturation', 'hue', 'width', 'height']
-      const option = options[Math.floor(Math.random() * options.length)]
-  
-      // 根据选择的选项进行修改
-      switch (option) {
-        case 'brightness':
-          // 修改亮度
-          logger.mark('派蒙戳一戳返图使用图片处理：修改亮度')
-          await sharp(tempInputFilePath).modulate({ brightness: 1 + Math.random() * 0.02 }).toFile(tempOutputFilePath)
-          break
-        case 'contrast':
-          // 修改对比度
-          logger.mark('派蒙戳一戳返图使用图片处理：修改对比度')
-          await sharp(tempInputFilePath).modulate({ contrast: 1 + Math.random() * 0.02 }).toFile(tempOutputFilePath)
-          break
-        case 'saturation':
-          // 修改饱和度
-          logger.mark('派蒙戳一戳返图使用图片处理：修改饱和度')
-          await sharp(tempInputFilePath).modulate({ saturation: 1 + Math.random() * 0.02 }).toFile(tempOutputFilePath)
-          break
-        case 'hue':
-          // 修改色调
-          logger.mark('派蒙戳一戳返图使用图片处理：修改色调')
-          await sharp(tempInputFilePath).modulate({ hue: Math.floor(Math.random() * 3.6) }).toFile(tempOutputFilePath)
-          break
-        case 'width':
-          // 修改宽度
-          logger.mark('派蒙戳一戳返图使用图片处理：修改宽度')
-          const newWidth = (await sharp(tempInputFilePath).metadata()).width - 1 + Math.floor(Math.random() * 2)
-          await sharp(tempInputFilePath).resize(newWidth, null, { withoutEnlargement: true }).toFile(tempOutputFilePath)
-          break
-        case 'height':
-          // 修改高度
-          logger.mark('派蒙戳一戳返图使用图片处理：修改高度')
-          const newHeight = (await sharp(tempInputFilePath).metadata()).height - 1 + Math.floor(Math.random() * 2)
-          await sharp(tempInputFilePath).resize(null, newHeight, { withoutEnlargement: true }).toFile(tempOutputFilePath)
-          break
-      }
-  
-      await fs.promises.unlink(tempInputFilePath)
-      // 返回临时文件的路径，这个路径将作为图像的URL或者路径
-      return tempOutputFilePath
-    } catch (err) {
-      logger.warn('派蒙戳一戳返图使用图片处理错误：',err)
-      return imageData
-    }
-  }
-  
