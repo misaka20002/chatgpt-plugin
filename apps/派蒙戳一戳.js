@@ -13,10 +13,10 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 //在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.55 //文字回复概率
+let reply_text = 0.58 //文字回复概率
 let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
-let mutepick = 0.05 //禁言概率
+let mutepick = 0.02 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
 
@@ -1009,11 +1009,11 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳禁言生效]')
                 }
-                let usrinfo = await Bot.getGroupMemberInfo(e.group_id, e.operator_id)
-                let botinfo = await Bot.getGroupMemberInfo(e.group_id, Bot.uin)
-                let role = ['owner', 'admin']
+                let group = this.Bot.pickGroup(Number(groupId) || String(groupId), true)
+                // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    if ((role.includes(botinfo.role) && !role.includes(usrinfo.role)) || (botinfo.role == 'owner' && usrinfo.role == 'admin')) {
+                    // bot是管理员或群主
+                    if (group.is_admin || group.is_owner) {
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
@@ -1050,7 +1050,8 @@ export class chuo extends plugin {
                             await e.group.muteMember(e.operator_id, 60);
 
                         }
-                    } else if (role.includes(usrinfo.role)) {
+                        // bot不是管理员或群主
+                    } else {
                         let mutetype = Math.ceil(Math.random() * 3)
                         if (mutetype == 1) {
                             e.reply(`呜呜呜你欺负${Config.tts_First_person}`)
@@ -1061,8 +1062,14 @@ export class chuo extends plugin {
                         else if (mutetype == 3) {
                             e.reply(`气死${Config.tts_First_person}了不要戳了！`)
                         }
+                        else if (mutetype == 4) {
+                            let text_number = Math.ceil(Math.random() * word_list['length'])
+                            e.reply((word_list[text_number - 1] + '...呜呜，如果派蒙有管理员权限就禁言你1分钟QAQ').replace(/派蒙/g, Config.tts_First_person))
+                        }
                     }
-                } else if (cfg.masterQQ.includes(e.operator_id)) {
+                }
+                // 如果是主人戳
+                else if (cfg.masterQQ.includes(e.operator_id)) {
                     let mutetype = Math.ceil(Math.random() * 2)
                     if (mutetype == 1) {
                         e.reply(`主人连你也欺负${Config.tts_First_person}，呜呜呜~`)
@@ -1071,8 +1078,7 @@ export class chuo extends plugin {
                         e.reply('主人有什么事吗？喵~')
                     }
                 } else {
-                    let text_number = Math.ceil(Math.random() * word_list['length'])
-                    await e.reply((word_list[text_number - 1]+'...如果派蒙有管理员权限就好了QAQ').replace(/派蒙/g, Config.tts_First_person))
+                    logger.mark('[戳一戳禁言]bot无法判断主人是谁')
                 }
             }
 
