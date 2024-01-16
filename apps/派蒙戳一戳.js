@@ -1023,11 +1023,12 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳禁言生效]')
                 }
-                let group = this.Bot.pickGroup(Number(groupId) || String(groupId), true)
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    // bot是管理员或群主
-                    if (group.is_admin || group.is_owner) {
+                    let group = this.Bot.pickGroup(Number(e.group_id) || String(e.group_id), true)
+                    let Memberinfo = group.pickMember(Number(e.operator_id) || String(e.operator_id)).info
+                    // bot是管理员或群主&&用户不是群主||用户是管理员时bot是群主
+                    if (((group.is_admin || group.is_owner) && (!Memberinfo.role === 'owner')) || (Memberinfo.role === 'admin' && group.is_owner)) {
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
@@ -1064,7 +1065,6 @@ export class chuo extends plugin {
                             await e.group.muteMember(e.operator_id, 60);
 
                         }
-                        // bot不是管理员或群主
                     } else {
                         let mutetype = Math.ceil(Math.random() * 3)
                         if (mutetype == 1) {
