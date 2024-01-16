@@ -1600,7 +1600,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   async enableTtsHD (e) {
     Config.ttsHD = e.msg.indexOf('开启') > -1
     if(Config.ttsHD) {
-        await this.reply('已开启本地SILK转码，NTQQ内核的电脑端和手机端将无法播放语音', true)
+        await this.reply('已开启本地SILK转码，NTQQ内核版本9.0.0-9.0.7将无法播放语音', true)
     } else {
         await this.reply('已关闭本地SILK转码', true)
     }

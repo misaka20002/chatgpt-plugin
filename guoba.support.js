@@ -1000,7 +1000,7 @@ export function supportGuoba () {
         {
           field: 'ttsHD',
           label: '开启本地SILK转码',
-          bottomHelpMessage: '开启本地SILK转码后，NTQQ内核的电脑端和手机端将无法播放语音',
+          bottomHelpMessage: '开启本地SILK转码后，NTQQ内核版本9.0.0-9.0.7将无法播放语音',
           component: 'Switch'
         },
         {
