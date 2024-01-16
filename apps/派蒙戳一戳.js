@@ -893,12 +893,14 @@ export class chuo extends plugin {
                             await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message2}”`)
                             break
                         }
+                        logger.mark('[戳一戳回复随机文字][一言api失效]')
                     case 3:
                         let message3 = await get_msg_pphua()
                         if (message3) {
                             await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
                             break
                         }
+                        logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
                     default:
                         let text_number = Math.ceil(Math.random() * word_list['length'])
                         await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
