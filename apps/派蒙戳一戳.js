@@ -884,9 +884,15 @@ export class chuo extends plugin {
                 let mutetype = Math.ceil(Math.random() * 10)
                 switch (mutetype) {
                     case 1:
-                        let message = await generate_msg_Daiyu()
-                        await e.reply(message)
+                        let message1 = await generate_msg_Daiyu()
+                        await e.reply(message1)
                         break;
+                    case 2:
+                        let message2 = await get_msg_hitokoto()
+                        if (message2) {
+                            await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message2}”`)
+                            break
+                        }
                     default:
                         let text_number = Math.ceil(Math.random() * word_list['length'])
                         await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
@@ -1149,7 +1155,8 @@ async function get_msg_hitokoto() {
             throw new Error('[派蒙戳一戳][一言] 接口请求失败')
         }
         res = await res.json()
-        return res.hitokoto
+        let msg = res.hitokoto + '——' + res.from + (res.from_who == res.from ? '' : (res.from_who ? (' ' + res.from_who) : ''))
+        return msg
     } catch (err) {
         logger.error(err)
         return null
