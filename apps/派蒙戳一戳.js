@@ -13,10 +13,10 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 //在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.58 //文字回复概率
+let reply_text = 0.55 //文字回复概率
 let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
-let mutepick = 0.02 //禁言概率
+let mutepick = 0.05 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
 
