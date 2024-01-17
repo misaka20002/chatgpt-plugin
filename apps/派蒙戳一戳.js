@@ -116,6 +116,77 @@ let word_list = [
     '变态！？是、是你啊～你果然是变态！',
 ];
 
+/**颜文字 */
+let kaomoji_list = [
+    '(˳˘ ɜ˘)˳ ♬♪♫',
+    '（＾3＾♪',
+    '˳/(˘ε ˘)♬♪♫',
+    '♪(´ε｀ )',
+    '♪～(´ε｀ )',
+    'ヽ(´з｀)ﾉ',
+    'ヽ(´・｀)ﾉ',
+    '(๑ › ₃ ू‹)₋₃ ♪',
+    '((; =ﾟ３ﾟ=))～♪',
+    'ヾ(´〇`)ﾉ♪♪♪',
+    'ヽ(o´∀`)ﾉ♪♬',
+    '(ﾉ≧∀≦)ﾉ',
+    '(〜￣△￣)〜',
+    '~(˘▽˘)~',
+    '(｢• ω •)｢',
+    '⁽⁽◝( • ω • )◜⁾⁾',
+    '(￣▽￣)/♫•¨•.¸¸♪',
+    '٩(◕‿◕｡)۶',
+    '⁙ὸ‿ό⁙',
+    '(..＞◡＜..)',
+    '(◕ᴗ◕✿)',
+    '(◕◡◕✿)',
+    '(◔◡◔✿)',
+    '(｡◕‿◕｡✿)',
+    '(◡‿◡✿)',
+    '(◠‿◠✿)',
+    '(◕ܫ◕✿)',
+    '(◕▿◕✿)',
+    '(#ﾟﾛﾟ#)',
+    '=＾• ⋏ •＾=',
+    '（ฅ＾・ﻌ・＾）ฅ',
+    '（＾・ﻌ・＾✿）',
+    '̳ ៱˳_˳៱ ̳ ∫',
+    '∪･ω･∪',
+    '▽･ｪ･▽ﾉ”',
+    '(≧ڡ≦*)',
+    '(๑•́ ω •̀๑)',
+    '(๑•́ω•̀๑)',
+    '(๑ゝω╹๑)',
+    '(⊙﹏⊙✿)',
+    'Σ_(꒪ཀ꒪」∠)_',
+    '(✽´ཫ`✽)',
+    '╭〳 ° ڡ ° 〵─∈',
+    '( ≧Д≦)',
+    '(⊙︿⊙✿)',
+    '(๑◕︵◕๑)',
+    '(｡•́︿•̀｡)',
+    '(⌯˃̶᷄ ﹏ ˂̶᷄⌯)ﾟ',
+    '(◕︿◕✿)',
+    '┏༼ ◉ ╭╮ ◉༽┓',
+    '(๑´╹‸╹`๑)',
+    '(⌯˃̶᷄ ﹏ ˂̶᷄⌯)',
+    '(´°̥̥̥̥̥̥̥̥ω°̥̥̥̥̥̥̥̥｀)',
+    '(━┳━ _ ━┳━)',
+    '(┳Д┳)',
+    '(╥_╥)',
+    '(ᗒᗩᗕ)',
+    '(◞ ‸ ◟ㆀ)',
+    '▄█▀█●',
+    '〜(＞＜)〜',
+    '(((＞＜)))',
+    '〣( ºΔº )〣',
+    '( >﹏<。)',
+    '(ノ ˘_˘)ノ ζ|||ζ ζ|||ζ ζ|||ζ',
+    '(ﾉ≧∀≦)ﾉ ‥…━━━★',
+    '(ﾉ>ω<)ﾉ :｡･::･ﾟ’★,｡･::･ﾟ’☆',
+    '(ノ°∀°)ノ⌒･:.｡. .｡.:･゜ﾟ･*☆',
+];
+
 // 纳西妲中文，扒文件改地址： https://bbs.mihoyo.com/ys/obc/content/5111/detail?bbs_presentation_style=no_header 在浏览器F12的网络截取到之后复制全部为node.js，用notepad++的crrl+M标记和正则表达式提取，正则表达式（包括,）： "https:\S*(ogg|mp3|wav)",
 // 替换戳一戳语音角色在429行
 /**纳西妲中文语音 */
@@ -888,16 +959,20 @@ export class chuo extends plugin {
                         await e.reply(message1)
                         break;
                     case 2:
-                        let message2 = await get_msg_hitokoto()
-                        if (message2) {
-                            await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message2}”`)
+                        let message2_num = Math.ceil(Math.random() * kaomoji_list['length'])
+                        await e.reply(kaomoji_list[message2_num - 1].replace(/派蒙/g, Config.tts_First_person))
+                        break;
+                    case 9:
+                        let message9 = await get_msg_hitokoto()
+                        if (message9) {
+                            await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
                             break
                         }
                         logger.mark('[戳一戳回复随机文字][一言api失效]')
-                    case 3:
-                        let message3 = await get_msg_pphua()
-                        if (message3) {
-                            await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
+                    case 10:
+                        let message10 = await get_msg_pphua()
+                        if (message10) {
+                            await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
                             break
                         }
                         logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
