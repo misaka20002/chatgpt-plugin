@@ -963,7 +963,7 @@ export class chuo extends plugin {
                         await e.reply(kaomoji_list[message2_num - 1].replace(/派蒙/g, Config.tts_First_person))
                         break;
                     case 9:
-                        let message9 = await get_msg_hitokoto()
+                        let message9 = await get_msg_hitokoto(false)
                         if (message9) {
                             await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
                             break
@@ -1229,8 +1229,12 @@ async function get_url_from_api_lolicon(tag1 = '萝莉|loli', tag2 = 'ロリ|lol
     logger.warn(`派蒙戳一戳获取api_lolicon pic_url失败3次`)
 }
 
-/**一言 返回文本/错误则返回null*/
-async function get_msg_hitokoto() {
+/**
+ * @description: 一言api
+ * @param {*} is_return_from_who 是否返回一言作者
+ * @return {*} 返回文本/错误则返回null
+ */
+async function get_msg_hitokoto(is_return_from_who = false) {
     let url = 'https://v1.hitokoto.cn/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
@@ -1238,7 +1242,9 @@ async function get_msg_hitokoto() {
             throw new Error('[派蒙戳一戳][一言] 接口请求失败')
         }
         res = await res.json()
-        let msg = res.hitokoto + '——' + res.from + (res.from_who == res.from ? '' : (res.from_who ? (' ' + res.from_who) : ''))
+        let msg
+        if (is_return_from_who) msg = res.hitokoto + '——' + res.from + (res.from_who == res.from ? '' : (res.from_who ? (' ' + res.from_who) : ''))
+        else msg = res.hitokoto
         return msg
     } catch (err) {
         logger.error(err)
