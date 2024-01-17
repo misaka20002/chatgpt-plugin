@@ -1027,8 +1027,8 @@ export class chuo extends plugin {
                 if (!cfg.masterQQ.includes(e.operator_id)) {
                     let group = this.Bot.pickGroup(Number(e.group_id) || String(e.group_id), true)
                     let Memberinfo = group.pickMember(Number(e.operator_id) || String(e.operator_id)).info
-                    // bot是管理员或群主&&用户不是群主||用户是管理员时bot是群主
-                    if (((group.is_admin || group.is_owner) && (!Memberinfo.role === 'owner')) || (Memberinfo.role === 'admin' && group.is_owner)) {
+                    // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
+                    if (((group.is_admin || group.is_owner) && !(Memberinfo.role === 'owner' || Memberinfo.role === 'admin')) || (Memberinfo.role === 'admin' && group.is_owner)) {
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
