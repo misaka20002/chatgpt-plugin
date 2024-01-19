@@ -1100,10 +1100,10 @@ export class chuo extends plugin {
                 }
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    let group = this.Bot.pickGroup(Number(e.group_id) || String(e.group_id), true)
-                    let Memberinfo = group.pickMember(Number(e.operator_id) || String(e.operator_id)).info
+                    let usrinfo = await Bot.getGroupMemberInfo(e.group_id, e.operator_id)
+                    let botinfo = await Bot.getGroupMemberInfo(e.group_id, Bot.uin)
                     // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
-                    if (((group.is_admin || group.is_owner) && !(Memberinfo.role === 'owner' || Memberinfo.role === 'admin')) || (Memberinfo.role === 'admin' && group.is_owner)) {
+                    if (((botinfo === 'owner' || botinfo === 'admin') && !(usrinfo === 'owner' || usrinfo === 'admin')) || (usrinfo === 'admin' && botinfo === 'owner')) {
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
