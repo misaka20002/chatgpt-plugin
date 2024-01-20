@@ -1143,10 +1143,10 @@ export class chuo extends plugin {
                     } else {
                         let mutetype = Math.ceil(Math.random() * 3)
                         if (mutetype == 1) {
-                            e.reply(`呜呜呜你欺负${Config.tts_First_person}`)
+                            e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
                         }
                         else if (mutetype == 2) {
-                            e.reply(`主人有坏淫欺负${Config.tts_First_person}`)
+                            e.reply(`主人有坏淫欺负${Config.tts_First_person}QAQ`)
                         }
                         else if (mutetype == 3) {
                             e.reply(`气死${Config.tts_First_person}了不要戳了！`)
