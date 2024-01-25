@@ -1100,10 +1100,11 @@ export class chuo extends plugin {
                 }
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    let usrinfo = await Bot.getGroupMemberInfo(e.group_id, e.operator_id)
-                    let botinfo = await Bot.getGroupMemberInfo(e.group_id, Bot.uin)
+                    let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
+                    let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
                     // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
-                    if (((botinfo === 'owner' || botinfo === 'admin') && !(usrinfo === 'owner' || usrinfo === 'admin')) || (usrinfo === 'admin' && botinfo === 'owner')) {
+                    if (((botinfo.role === 'owner' || botinfo.role === 'admin') && !(usrinfo.role === 'owner' || usrinfo.role === 'admin')) || (usrinfo.role === 'admin' && botinfo.role === 'owner')) {
+                        logger.mark('派蒙戳一戳调式：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo为',JSON.stringify(botinfo))
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
@@ -1141,6 +1142,7 @@ export class chuo extends plugin {
 
                         }
                     } else {
+                        logger.mark('派蒙戳一戳调式：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo为',JSON.stringify(botinfo))
                         let mutetype = Math.ceil(Math.random() * 3)
                         if (mutetype == 1) {
                             e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
