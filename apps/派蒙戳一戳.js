@@ -1109,7 +1109,7 @@ export class chuo extends plugin {
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 30);
                             await common.sleep(100)
                             await e.reply('哼！')
                         }
@@ -1124,21 +1124,21 @@ export class chuo extends plugin {
                             await common.sleep(10)
                             await e.reply('家！！')
                             await common.sleep(10);
-                            await e.group.muteMember(e.operator_id, 60)
+                            await e.group.muteMember(e.operator_id, 60);
                             await common.sleep(50)
                             await e.reply('让你面壁思过1分钟，哼😤～')
                         }
                         else if (mutetype == 3) {
                             await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 30);
                             await common.sleep(100)
                             await e.reply('大变态！')
                         }
                         else if (mutetype == 4) {
                             await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 30);
 
                         }
                     } else {
