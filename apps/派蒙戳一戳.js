@@ -1104,7 +1104,9 @@ export class chuo extends plugin {
                     let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
                     // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
                     if (((botinfo.role === 'owner' || botinfo.role === 'admin') && !(usrinfo.role === 'owner' || usrinfo.role === 'admin')) || (usrinfo.role === 'admin' && botinfo.role === 'owner')) {
-                        logger.mark('派蒙戳一戳调式：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo为',JSON.stringify(botinfo))
+                        // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
+                        /* botinfo = { "group_id": __num__, "user_id": __num__, "nickname": "小派蒙", "card": "", "sex": "female", "age": 9, "join_time": 1698625488, "last_sent_time": 1706151598, "level": 1, "role": "owner", "title": "", "title_expire_time": 0, "shutup_time": 0, "update_time": 0 }
+                        usrinfo = { "group_id": __num__, "user_id": __num__, "nickname": "_昵称_", "card": "_群昵称_", "sex": "male", "age": 88, "area": "", "join_time": 1705783666, "last_sent_time": 1706152333, "level": 1, "rank": "潜水", "role": "member", "title": "", "title_expire_time": 4294967295, "shutup_time": 0, "update_time": 1706151633 } ； */
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
@@ -1142,7 +1144,6 @@ export class chuo extends plugin {
 
                         }
                     } else {
-                        logger.mark('派蒙戳一戳调式：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo为',JSON.stringify(botinfo))
                         let mutetype = Math.ceil(Math.random() * 3)
                         if (mutetype == 1) {
                             e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
