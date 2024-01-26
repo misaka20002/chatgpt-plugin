@@ -13,10 +13,10 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 //在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.57 //文字回复概率
+let reply_text = 0.55 //文字回复概率
 let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
-let mutepick = 0.03 //禁言概率
+let mutepick = 0.05 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
 
@@ -1111,7 +1111,7 @@ export class chuo extends plugin {
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 30);
+                            await e.group.muteMember(e.operator_id, 60);
                             await common.sleep(100)
                             await e.reply('哼！')
                         }
@@ -1126,21 +1126,21 @@ export class chuo extends plugin {
                             await common.sleep(10)
                             await e.reply('家！！')
                             await common.sleep(10);
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 120);
                             await common.sleep(50)
-                            await e.reply('让你面壁思过1分钟，哼😤～')
+                            await e.reply('让你面壁思过2分钟，哼😤～')
                         }
                         else if (mutetype == 3) {
                             await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 30);
+                            await e.group.muteMember(e.operator_id, 60);
                             await common.sleep(100)
                             await e.reply('大变态！')
                         }
                         else if (mutetype == 4) {
                             await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 30);
+                            await e.group.muteMember(e.operator_id, 60);
 
                         }
                     } else {
