@@ -13,10 +13,10 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 //在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.55 //文字回复概率
+let reply_text = 0.57 //文字回复概率
 let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
-let mutepick = 0.05 //禁言概率
+let mutepick = 0.03 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
 
@@ -1098,6 +1098,10 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳禁言生效]')
                 }
+                // 计算今日被禁言次数
+                let jinyan_times = await redis.get(`Yz:PaimongChuoYiChuo:JinYanTimes:${e.operator_id}`) || 0;
+                jinyan_times++
+                this.addJinyanTimes(e.operator_id, 1);
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
                     let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
@@ -1111,7 +1115,7 @@ export class chuo extends plugin {
                         if (mutetype == 1) {
                             await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
                             await common.sleep(100)
                             await e.reply('哼！')
                         }
@@ -1126,21 +1130,21 @@ export class chuo extends plugin {
                             await common.sleep(10)
                             await e.reply('家！！')
                             await common.sleep(10);
-                            await e.group.muteMember(e.operator_id, 120);
+                            await e.group.muteMember(e.operator_id, 120 * jinyan_times);
                             await common.sleep(50)
-                            await e.reply('让你面壁思过2分钟，哼😤～')
+                            await e.reply(`让你面壁思过${2 * jinyan_times}分钟，哼😤～`)
                         }
                         else if (mutetype == 3) {
                             await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
                             await common.sleep(100)
                             await e.reply('大变态！')
                         }
                         else if (mutetype == 4) {
                             await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
                             await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60);
+                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
 
                         }
                     } else {
@@ -1207,6 +1211,29 @@ export class chuo extends plugin {
 
         }
 
+    }
+
+
+    /**指定用户禁言次数加num次  
+ * @param qq 用户qq号
+ * @param num 数据库中用户使用记录要增加的次数
+ */
+    async addJinyanTimes(qq, num) {
+        // logger.info(num);
+        // 该用户的使用次数
+        let usageData = await redis.get(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`);
+        // 当前时间
+        let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
+        // 到明日零点的剩余秒数
+        let exTime = Math.round(
+            (new Date(time).getTime() - new Date().getTime()) / 1000
+        );
+        if (!usageData) {
+            await redis.set(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`, num * 1, { EX: exTime });
+        } else {
+            await redis.set(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`, usageData * 1 + num, { EX: exTime });
+        }
+        return true;
     }
 
 }
