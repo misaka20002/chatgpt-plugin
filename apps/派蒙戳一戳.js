@@ -969,13 +969,13 @@ export class chuo extends plugin {
                             break
                         }
                         logger.mark('[戳一戳回复随机文字][一言api失效]')
-                    case 10:
-                        let message10 = await get_msg_pphua()
-                        if (message10) {
-                            await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
-                            break
-                        }
-                        logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
+                    // case 10:
+                    //     let message10 = await get_msg_pphua()
+                    //     if (message10) {
+                    //         await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
+                    //         break
+                    //     }
+                    //     logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
                     default:
                         let text_number = Math.ceil(Math.random() * word_list['length'])
                         await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
