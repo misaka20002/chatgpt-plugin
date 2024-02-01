@@ -962,6 +962,15 @@ export class chuo extends plugin {
                         let message2_num = Math.ceil(Math.random() * kaomoji_list['length'])
                         await e.reply(kaomoji_list[message2_num - 1].replace(/派蒙/g, Config.tts_First_person))
                         break;
+                    // 送随机nai次数1-5次
+                    case 3:
+                        // 要今天使用过绘图的人才能激活这个奖励
+                        if (await redis.get(`Yz:PaimongNai:Usage:${e.user_id}`) || 0) {
+                            let random_nai_time = Math.ceil(Math.random() * 5)
+                            this.addNai3Usage(e.operator_id, 0 - random_nai_time);
+                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你的${random_nai_time}次绘图次数哦~`, false, { recallMsg: 30 })
+                            break;
+                        }
                     case 9:
                         let message9 = await get_msg_hitokoto(false)
                         if (message9) {
@@ -1211,6 +1220,28 @@ export class chuo extends plugin {
 
         }
 
+    }
+
+    /**指定用户使用nai3次数加num次  
+* @param qq 用户qq号
+* @param num 数据库中用户使用记录要增加的次数
+*/
+    async addNai3Usage(qq, num) {
+        // logger.info(num);
+        // 该用户的使用次数
+        let usageData = await redis.get(`Yz:PaimongNai:Usage:${qq}`);
+        // 当前时间
+        let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
+        // 到明日零点的剩余秒数
+        let exTime = Math.round(
+            (new Date(time).getTime() - new Date().getTime()) / 1000
+        );
+        if (!usageData) {
+            await redis.set(`Yz:PaimongNai:Usage:${qq}`, num * 1, { EX: exTime });
+        } else {
+            await redis.set(`Yz:PaimongNai:Usage:${qq}`, usageData * 1 + num, { EX: exTime });
+        }
+        return true;
     }
 
 
