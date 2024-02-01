@@ -968,7 +968,7 @@ export class chuo extends plugin {
                         if (await redis.get(`Yz:PaimongNai:Usage:${e.user_id}`) || 0) {
                             let random_nai_time = Math.ceil(Math.random() * 5)
                             this.addNai3Usage(e.operator_id, 0 - random_nai_time);
-                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 30 })
+                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 115 })
                             break;
                         }
                     case 9:
