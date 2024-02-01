@@ -952,18 +952,22 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 10)
+                let mutetype = Math.ceil(Math.random() * 30)
                 switch (mutetype) {
                     case 1:
+                    case 2:
+                    case 3:
                         let message1 = await generate_msg_Daiyu()
                         await e.reply(message1)
                         break;
-                    case 2:
+                    case 4:
+                    case 5:
+                    case 6:
                         let message2_num = Math.ceil(Math.random() * kaomoji_list['length'])
                         await e.reply(kaomoji_list[message2_num - 1].replace(/派蒙/g, Config.tts_First_person))
                         break;
                     // 送随机nai次数1-5次
-                    case 3:
+                    case 7:
                         // 要今天使用过绘图的人才能激活这个奖励
                         if (await redis.get(`Yz:PaimongNai:Usage:${e.operator_id}`) || 0) {
                             let random_nai_time = Math.ceil(Math.random() * 5)
@@ -971,7 +975,9 @@ export class chuo extends plugin {
                             await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 115 })
                             break;
                         }
+                    case 8:
                     case 9:
+                    case 10:
                         let message9 = await get_msg_hitokoto(false)
                         if (message9) {
                             await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
