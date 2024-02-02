@@ -969,11 +969,11 @@ export class chuo extends plugin {
                     // 送随机nai次数1-5次
                     case 7:
                         // 要今天使用过绘图的人才能激活这个奖励
-                        if (await redis.get(`Yz:PaimongNai:Usage:${e.operator_id}`) || 0) {
+                        if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
                             let random_nai_time = Math.ceil(Math.random() * 6)
                             if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                             if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
-                            this.addNai3Usage(e.operator_id, 0 - random_nai_time);
+                            this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
                             await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 105 })
                             break;
                         }
@@ -1234,20 +1234,17 @@ export class chuo extends plugin {
 * @param qq 用户qq号
 * @param num 数据库中用户使用记录要增加的次数
 */
-    async addNai3Usage(qq, num) {
-        // logger.info(num);
-        // 该用户的使用次数
-        let usageData = await redis.get(`Yz:PaimongNai:Usage:${qq}`);
-        // 当前时间
-        let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
-        // 到明日零点的剩余秒数
-        let exTime = Math.round(
-            (new Date(time).getTime() - new Date().getTime()) / 1000
-        );
-        if (!usageData) {
-            await redis.set(`Yz:PaimongNai:Usage:${qq}`, num * 1, { EX: exTime });
-        } else {
-            await redis.set(`Yz:PaimongNai:Usage:${qq}`, usageData * 1 + num, { EX: exTime });
+    async addNai3UsageLimit_day(qq, num) {
+        // 该用户的当日可用次数
+        let usageLimit_day = await redis.get(`Yz:PaimongNai:usageLimit_day:${qq}`);
+        if (usageLimit_day) {
+            // 当前时间
+            let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
+            // 到明日零点的剩余秒数
+            let exTime = Math.round(
+                (new Date(time).getTime() - new Date().getTime()) / 1000
+            );
+            await redis.set(`Yz:PaimongNai:usageLimit_day:${qq}`, usageLimit_day * 1 + num, { EX: exTime });
         }
         return true;
     }
