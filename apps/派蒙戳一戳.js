@@ -970,9 +970,11 @@ export class chuo extends plugin {
                     case 7:
                         // 要今天使用过绘图的人才能激活这个奖励
                         if (await redis.get(`Yz:PaimongNai:Usage:${e.operator_id}`) || 0) {
-                            let random_nai_time = Math.ceil(Math.random() * 5)
+                            let random_nai_time = Math.ceil(Math.random() * 6)
+                            if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
+                            if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
                             this.addNai3Usage(e.operator_id, 0 - random_nai_time);
-                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 115 })
+                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 105 })
                             break;
                         }
                     case 8:
