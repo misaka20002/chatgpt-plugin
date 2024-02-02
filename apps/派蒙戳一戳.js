@@ -952,14 +952,14 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 30)
+                let mutetype = Math.ceil(Math.random() * 20)
                 switch (mutetype) {
                     case 1:
                     case 2:
-                    case 3:
                         let message1 = await generate_msg_Daiyu()
                         await e.reply(message1)
                         break;
+                    case 3:
                     case 4:
                     case 5:
                     case 6:
