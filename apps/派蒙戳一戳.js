@@ -938,7 +938,7 @@ export class chuo extends plugin {
             if (paimon_chou_cd > 0) {
                 let currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
                 let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
-                if (lastTime && !e.isMaster) {
+                if (lastTime && !cfg.masterQQ.includes(e.operator_id)) {
                     let seconds = moment(currentTime).diff(moment(lastTime), "seconds");
                     if ((paimon_chou_cd - seconds) <= 0) {
                         await redis.del(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
