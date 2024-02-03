@@ -41,7 +41,14 @@ if (module) {
 // import { pcm2slk } from 'node-silk'
 let errors = {}
 
-async function uploadRecord (recordUrl, ttsMode = 'vits-uma-genshin-honkai', ignoreEncode = false) {
+async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', ignoreEncode = false) {
+  // 派蒙戳一戳强制使用recordType = 'url'，不管是否Config.cloudMode === 'file'
+  let fromPaimonChuo = false
+  if (ttsMode === 'fromPaimonChuo') {
+    ttsMode = 'vits-uma-genshin-honkai'
+    fromPaimonChuo = true
+  }
+  // 派蒙戳一戳强制使用url - END
   let recordType = 'url'
   let tmpFile = ''
   if (ttsMode === 'azure') {
@@ -70,7 +77,7 @@ async function uploadRecord (recordUrl, ttsMode = 'vits-uma-genshin-honkai', ign
         recordType = 'file'
         recordUrl = tmpFile
       }
-      if (recordType === 'file' || Config.cloudMode === 'file') {
+      if ((recordType === 'file' || Config.cloudMode === 'file') && !fromPaimonChuo) {
         if (!recordUrl) {
           logger.error('云转码错误：recordUrl 异常')
           return false

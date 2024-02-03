@@ -1108,14 +1108,10 @@ export class chuo extends plugin {
                 }
                 let voice_number = Math.ceil(Math.random() * voice_lists['length'])
                 let voice_url = voice_lists[voice_number - 1]
-                // 备份原版config
-                let cloudMode_bak = Config.cloudMode
-                // 设置为url模式
-                Config.cloudMode = 'url'
                 let ignoreEncode = e.adapter === 'shamrock'
                 let sendable
                 try {
-                    sendable = await uploadRecord(voice_url, 'vits-uma-genshin-honkai', ignoreEncode)
+                    sendable = await uploadRecord(voice_url, 'fromPaimonChuo', ignoreEncode)
                     if (!sendable) {
                         // 如果合成失败，尝试使用ffmpeg合成
                         sendable = segment.record(voice_url)
@@ -1124,7 +1120,6 @@ export class chuo extends plugin {
                     logger.error(err)
                     sendable = segment.record(voice_url)
                 }
-                Config.cloudMode = cloudMode_bak
                 if (!sendable) {
                     await e.reply('silk云转码和ffmpeg都失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
                     return
