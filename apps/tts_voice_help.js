@@ -300,16 +300,14 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         const match = e.msg.trim().match(/^#派蒙戳一戳设置CD([0-9]\d*)/)
         if (!match || !Number(match[1])) {
             let msg1 = `#派蒙戳一戳设置CD[num]`
-            let msg_show = `戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD`
+            let msg_show = `当前戳一戳响应CD为${Config.paimon_chou_cd}s，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD`
             let msg1_1 = `#派蒙戳一戳设置CD20`
             let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `#派蒙戳一戳设置CD`);
             return e.reply(msgx, false)
         }
         else {
-            if (Number(match[1])) {
-                Config.paimon_chou_cd = parseInt(match[1]);
-                return e.reply(`派蒙戳一戳CD已设置为“${parseInt(match[1])}”！`)
-            }
+            Config.paimon_chou_cd = parseInt(match[1]);
+            return e.reply(`派蒙戳一戳CD已设置为“${parseInt(match[1])}”！`)
         }
     }
 
