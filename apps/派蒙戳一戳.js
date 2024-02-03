@@ -952,7 +952,7 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 20)
+                let mutetype = Math.ceil(Math.random() * 25)
                 switch (mutetype) {
                     case 1:
                     case 2:
@@ -974,7 +974,7 @@ export class chuo extends plugin {
                             if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                             if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
                             this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
-                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 105 })
+                            e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 55 })
                             break;
                         }
                     case 8:
