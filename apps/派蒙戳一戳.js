@@ -891,26 +891,6 @@ export class chuo extends plugin {
 
     async chuoyichuo(e) {
         if (!Config.paimon_chuoyichuo_open) return false
-        // 戳一戳响应CD
-        let paimon_chou_cd = Config.paimon_chou_cd
-        if (paimon_chou_cd > 0) {
-            let currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
-            let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
-            if (lastTime && !e.isMaster) {
-                let seconds = moment(currentTime).diff(moment(lastTime), "seconds");
-                if ((paimon_chou_cd - seconds) <= 0) {
-                    await redis.del(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
-                    // return await e.reply(`派蒙戳一戳数据库错误，已尝试修复，请重试`, false, { recallMsg: 30 });
-                    return
-                }
-                return
-            }
-            else {
-                // 写入cd
-                currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
-                redis.set(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`, currentTime, { EX: paimon_chou_cd });
-            }
-        }
 
         if (cfg.masterQQ.includes(e.target_id)) {
             if (Config.debug) {
@@ -936,7 +916,6 @@ export class chuo extends plugin {
             return true
         }
 
-
         if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
             /**统计每日被戳次数 */
             let count = await redis.get(`paimon_pokecount`);
@@ -952,6 +931,27 @@ export class chuo extends plugin {
                 await redis.set(`paimon_pokecount`, 1, { EX: exTime });//${e.group_id}
             } else {
                 await redis.set(`paimon_pokecount`, ++count, { EX: exTime });
+            }
+
+            // 戳一戳响应CD
+            let paimon_chou_cd = Config.paimon_chou_cd
+            if (paimon_chou_cd > 0) {
+                let currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+                let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
+                if (lastTime && !e.isMaster) {
+                    let seconds = moment(currentTime).diff(moment(lastTime), "seconds");
+                    if ((paimon_chou_cd - seconds) <= 0) {
+                        await redis.del(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
+                        // return await e.reply(`派蒙戳一戳数据库错误，已尝试修复，请重试`, false, { recallMsg: 30 });
+                        return
+                    }
+                    return
+                }
+                else {
+                    // 写入cd
+                    currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+                    redis.set(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`, currentTime, { EX: paimon_chou_cd });
+                }
             }
 
             /**戳一戳次数生效 */
