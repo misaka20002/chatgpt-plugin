@@ -68,6 +68,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#派蒙戳一戳设置CD',
+                fnc: 'chuo_set_paimon_chou_cd',
+                permission: 'master'
+            },
+            {
                 reg: '^#tts(可选)?人物(可选)?列表$',
                 fnc: 'tts_show_speakers',
             },
@@ -116,6 +121,7 @@ export class voicechangehelp extends plugin {
             ''
 
         let msg_for_master = `Chatgpt管理帮助：\n` +
+            `#派蒙戳一戳设置CD\n` +
             `#tts删除所有用户回复设置帮助\n` +
             `（↑每人独立设置且优先级最高）\n` +
             `#chatgpt设置AI第一人称帮助\n` +
@@ -286,6 +292,24 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             Config.tts_First_person = input_tts
             Config.chatViewBotName = input_tts
             return e.reply(`AI的第一人称已设置为“${input_tts}”！\n如果需要触发“AI回应第一人称呼叫”请重启。`)
+        }
+    }
+
+    /** ^#派蒙戳一戳设置CD */
+    async chuo_set_paimon_chou_cd(e) {
+        const match = e.msg.trim().match(/^#派蒙戳一戳设置CD([0-9]\d*)/)
+        if (!match || !Number(match[1])) {
+            let msg1 = `#派蒙戳一戳设置CD[num]`
+            let msg_show = `戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD`
+            let msg1_1 = `#派蒙戳一戳设置CD20`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `#派蒙戳一戳设置CD`);
+            return e.reply(msgx, false)
+        }
+        else {
+            if (Number(match[1])) {
+                Config.paimon_chou_cd = parseInt(match[1]);
+                return e.reply(`派蒙戳一戳CD已设置为“${parseInt(match[1])}”！`)
+            }
         }
     }
 

@@ -82,6 +82,7 @@ const defaultConfig = {
   tts_First_person: '派蒙',
   chat_for_First_person: true,
   paimon_chuoyichuo_open: true,
+  paimon_chou_cd: 20,
   vits_emotion: 'Happy',
   vits_auto_emotion: false,
   style_text: '',

@@ -884,6 +884,12 @@ export function supportGuoba () {
             component: 'Switch'
         },
         {
+            field: 'paimon_chou_cd',
+            label: '戳一戳响应CD',
+            bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
+            component: 'InputNumber'
+        },
+        {
           field: 'vits_emotion',
           label: 'emotion',
           bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',

@@ -891,6 +891,27 @@ export class chuo extends plugin {
 
     async chuoyichuo(e) {
         if (!Config.paimon_chuoyichuo_open) return false
+        // 戳一戳响应CD
+        let paimon_chou_cd = Config.paimon_chou_cd
+        if (paimon_chou_cd > 0) {
+            let currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+            let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
+            if (lastTime && !e.isMaster) {
+                let seconds = moment(currentTime).diff(moment(lastTime), "seconds");
+                if ((paimon_chou_cd - seconds) <= 0) {
+                    await redis.del(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
+                    // return await e.reply(`派蒙戳一戳数据库错误，已尝试修复，请重试`, false, { recallMsg: 30 });
+                    return
+                }
+                return
+            }
+            else {
+                // 写入cd
+                currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+                redis.set(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`, currentTime, { EX: paimon_chou_cd });
+            }
+        }
+
         if (cfg.masterQQ.includes(e.target_id)) {
             if (Config.debug) {
                 logger.mark('[戳一戳戳主人生效]')
@@ -952,7 +973,7 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 25)
+                let mutetype = Math.ceil(Math.random() * 20)
                 switch (mutetype) {
                     case 1:
                     case 2:
