@@ -1058,35 +1058,35 @@ export class chuo extends plugin {
                 switch (mutetype) {
                     case 1:
                         url = `https://www.loliapi.com/acg/`;
-                        msg = [segment.image(url)];
+                        msg = [await segment.image(url)];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 2:
                         url = `https://t.mwm.moe/mp`;
-                        msg = [segment.image(url)];
+                        msg = [await segment.image(url)];
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 3:
                         url = `https://api.asxe.vip/random.php`;
-                        msg = [segment.image(url)];
+                        msg = [await segment.image(url)];
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 4:
                         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
-                        msg = [segment.image(url)];
+                        msg = [await segment.image(url)];
                         await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 5:
                         url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                        msg = [segment.image(url)];
+                        msg = [await segment.image(url)];
                         await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
                         await common.sleep(100)
                         await e.reply(msg);
@@ -1253,11 +1253,7 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
-                let url = sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory);
-                if (url) {
-                    msg = [segment.image(url)];
-                    await e.reply(msg);
-                }
+                await e.reply(await segment.image(sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory)))
             }
 
             //触发每日英语
@@ -1529,13 +1525,11 @@ async function send_msg_DailyEnglish(e) {
 
         if (res.data) {
             e.reply(`来和${Config.tts_First_person}一起学英语吧>_<\n${res.data.en}`);
-            await common.sleep(500);
             // 图片            
             let pic_url = res.data.image
-            let pic_res = await fetch(pic_url).catch((err) => logger.error(err));
-            let pic_msg = [segment.image(pic_res.url)];
+            let pic_msg = [await segment.image(pic_url)];
             await e.reply(pic_msg);
-            await common.sleep(500);
+            await common.sleep(100);
             // 音频
             let voice_url = res.data.tts
             await e.reply(await chuo_silk_voice(voice_url, e))
