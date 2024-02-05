@@ -15,14 +15,16 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 //在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.57 //文字回复概率
+let reply_text = 0.35 //文字回复概率
 let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
 let mutepick = 0.03 //禁言概率
-let example = 0 //拍一拍表情概率
-//剩下的0.1概率就是反击
+let paimonChuoMeme = 0.05 //随机meme表情
+let randowLocalPic = 0.15 //随机本地图片
+let DailyEnglish = 0.02 //每日英语
+//剩下的0.10概率就是反击
 
-// 如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹。如果不需要也不会错误
+// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹。如果不需要就把概率改为0
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}resources/PaimonChuoYiChouPictures`
 
 //回复文字列表
@@ -980,7 +982,7 @@ export class chuo extends plugin {
                 }
                 let mutetype = Math.ceil(Math.random() * 20)
                 switch (mutetype) {
-                    case 1:
+                    // case 1:
                     case 2:
                         let message1 = await generate_msg_Daiyu()
                         await e.reply(message1)
@@ -1003,22 +1005,42 @@ export class chuo extends plugin {
                             await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 55 })
                             break;
                         }
-                    case 8:
+                    // case 8:
                     case 9:
-                    case 10:
                         let message9 = await get_msg_hitokoto(false)
                         if (message9) {
                             await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
                             break
                         }
                         logger.mark('[戳一戳回复随机文字][一言api失效]')
-                    // case 10:
-                    //     let message10 = await get_msg_pphua()
-                    //     if (message10) {
-                    //         await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
-                    //         break
-                    //     }
-                    //     logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
+                    case 10:
+                        let message10 = await get_msg_pphua()
+                        if (message10) {
+                            await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
+                            break
+                        }
+                        logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
+                    case 11:
+                        let message11 = await get_msg_mingyanjingju()
+                        if (message11) {
+                            await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message11}”`)
+                            break
+                        }
+                        logger.mark('[戳一戳回复随机文字][随机名言警句api失效]')
+                    case 12:
+                        let message12 = await get_msg_gushici()
+                        if (message12) {
+                            await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message12}”`)
+                            break
+                        }
+                        logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
+                    case 13:
+                        let message13 = await get_msg_KFC()
+                        if (message13) {
+                            await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
+                            break
+                        }
+                        logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
                     default:
                         let text_number = Math.ceil(Math.random() * word_list['length'])
                         await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
@@ -1031,17 +1053,10 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 6)
+                let mutetype = Math.ceil(Math.random() * 5)
                 let url, res, msg
                 switch (mutetype) {
                     case 1:
-                        url = sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory);
-                        if (url) {
-                            msg = [segment.image(url)];
-                            await e.reply(msg);
-                            break;
-                        }
-                    case 2:
                         url = `https://www.loliapi.com/acg/`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [segment.image(res.url)];
@@ -1049,7 +1064,7 @@ export class chuo extends plugin {
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
-                    case 3:
+                    case 2:
                         url = `https://t.mwm.moe/mp`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [segment.image(res.url)];
@@ -1057,7 +1072,7 @@ export class chuo extends plugin {
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
-                    case 4:
+                    case 3:
                         url = `https://api.asxe.vip/random.php`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [segment.image(res.url)];
@@ -1065,7 +1080,7 @@ export class chuo extends plugin {
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
-                    case 5:
+                    case 4:
                         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [segment.image(res.url)];
@@ -1073,7 +1088,7 @@ export class chuo extends plugin {
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
-                    case 6:
+                    case 5:
                         url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [segment.image(res.url)];
@@ -1123,23 +1138,7 @@ export class chuo extends plugin {
                 }
                 let voice_number = Math.ceil(Math.random() * voice_lists['length'])
                 let voice_url = voice_lists[voice_number - 1]
-                let ignoreEncode = e.adapter === 'shamrock'
-                let sendable
-                try {
-                    sendable = await uploadRecord(voice_url, 'fromPaimonChuo', ignoreEncode)
-                    if (!sendable) {
-                        // 如果合成失败，尝试使用ffmpeg合成
-                        sendable = segment.record(voice_url)
-                    }
-                } catch (err) {
-                    logger.error(err)
-                    sendable = segment.record(voice_url)
-                }
-                if (!sendable) {
-                    await e.reply('silk云转码和ffmpeg都失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
-                    return
-                }
-                await e.reply(sendable)
+                await e.reply(await chuo_silk_voice(voice_url, e))
             }
             /**禁言 */
             else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
@@ -1226,12 +1225,52 @@ export class chuo extends plugin {
                 }
             }
 
-            //拍一拍表情包
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + example)) {
+            //随机meme表情包api
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme)) {
                 if (Config.debug) {
-                    logger.mark('[戳一戳拍一拍表情包生效]')
+                    logger.mark('[戳一戳随机表情包生效]')
                 }
-                await e.reply(await segment.image(`http://ovooa.com/API/face_pat/?QQ=${e.operator_id}`))
+                let mutetype = Math.ceil(Math.random() * 6)
+                switch (mutetype) {
+                    case 1:
+                        await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
+                        break;
+                    case 2:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
+                        break;
+                    case 3:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
+                        break;
+                    case 4:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
+                        break;
+                    case 5:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
+                        break;
+                    case 6:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
+                        break;
+                }
+            }
+
+            //随机本地图片
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳随机本地图片生效]')
+                }
+                let url = sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory);
+                if (url) {
+                    msg = [segment.image(url)];
+                    await e.reply(msg);
+                }
+            }
+
+            //触发每日英语
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic + DailyEnglish)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳每日英语生效]')
+                }
+                send_msg_DailyEnglish(e);
             }
 
             //反击
@@ -1383,6 +1422,58 @@ async function get_msg_pphua() {
     }
 }
 
+/**随机名言警句 返回文本/错误则返回null */
+async function get_msg_mingyanjingju() {
+    let url = 'https://oiapi.net/API/Saying'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机名言警句] 接口请求失败')
+        }
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**随机古诗词 返回文本/错误则返回null */
+async function get_msg_gushici() {
+    let url = 'https://oiapi.net/API/Sentences'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机古诗词] 接口请求失败')
+        }
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+
+/**随机疯狂星期四 返回文本/错误则返回null */
+async function get_msg_KFC() {
+    let url = 'https://oiapi.net/API/KFC/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机疯狂星期四] 接口请求失败')
+        }
+        res = await res.json()
+        return res.message
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
 /**
  * @description: 随机返回文件夹里面的1张图片的地址
  * @param {*} 文件夹路径
@@ -1425,4 +1516,65 @@ function getAllFiles(folderPath) {
     } catch (err) {
         return null;
     }
+}
+
+/**
+ * @description: 每日英语 直接回复 传递e
+ * @param {*} e
+ * @return {*}
+ */
+async function send_msg_DailyEnglish(e) {
+    let url = 'https://oiapi.net/API/Daily'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][每日英语] 接口请求失败')
+        }
+        res = await res.json()
+
+        if (res.data) {
+            e.reply(`来和${Config.tts_First_person}一起学英语吧>_<\n${res.data.en}`);
+            await common.sleep(500);
+            // 图片            
+            let pic_url = res.data.image
+            let pic_res = await fetch(pic_url).catch((err) => logger.error(err));
+            let pic_msg = [segment.image(pic_res.url)];
+            await e.reply(pic_msg);
+            await common.sleep(500);
+            // 音频
+            let voice_url = res.data.tts
+            await e.reply(await chuo_silk_voice(voice_url, e))
+        }
+        return true
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**
+ * @description: 使用插件内置的silk服务发送音频
+ * @param {*} tts_url
+ * @param {*} e
+ * @return {*} sendable - e.reply(await silk_tts(tts_url))
+ */
+async function chuo_silk_voice(tts_url, e) {
+    let ignoreEncode = e.adapter === 'shamrock'
+    let sendable
+    try {
+        sendable = await uploadRecord(tts_url, 'fromPaimonChuo', ignoreEncode)
+        if (!sendable) {
+            // 如果合成失败，尝试使用ffmpeg合成
+            sendable = segment.record(tts_url)
+        }
+    } catch (err) {
+        logger.error(err)
+        sendable = segment.record(tts_url)
+    }
+    if (!sendable) {
+        await e.reply('silk云转码和ffmpeg都失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
+        return
+    }
+    return sendable
 }
