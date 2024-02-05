@@ -7,6 +7,8 @@ import fetch from 'node-fetch'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
 import { generate_msg_Daiyu } from '../utils/randomMessage.js'
+import fs from 'fs'
+import path from 'path'
 
 //如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -19,6 +21,9 @@ let reply_voice = 0.15 //语音回复概率
 let mutepick = 0.03 //禁言概率
 let example = 0 //拍一拍表情概率
 //剩下的0.1概率就是反击
+
+// 如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹。如果不需要也不会错误
+const paimonChuoYiChouPicturesDirectory = `${process.cwd()}resources/PaimonChuoYiChouPictures`
 
 //回复文字列表
 let word_list = [
@@ -1026,46 +1031,56 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 5)
-                if (mutetype == 1) {
-                    let url = `https://www.loliapi.com/acg/`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
-                    await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
-                    await common.sleep(100)
-                    await e.reply(msg);
-                }
-                else if (mutetype == 2) {
-                    let url = `https://t.mwm.moe/mp`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
-                    await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
-                    await common.sleep(100)
-                    await e.reply(msg);
-                }
-                else if (mutetype == 3) {
-                    let url = `https://api.asxe.vip/random.php`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
-                    await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
-                    await common.sleep(100)
-                    await e.reply(msg);
-                }
-                else if (mutetype == 4) {
-                    let url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
-                    await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
-                    await common.sleep(100)
-                    await e.reply(msg);
-                }
-                else if (mutetype == 5) {
-                    let url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                    let res = await fetch(url).catch((err) => logger.error(err));
-                    let msg = [segment.image(res.url)];
-                    await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
-                    await common.sleep(100)
-                    await e.reply(msg);
+                let mutetype = Math.ceil(Math.random() * 6)
+                let url, res, msg
+                switch (mutetype) {
+                    case 1:
+                        url = sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory);
+                        if (url) {
+                            msg = [segment.image(url)];
+                            await e.reply(msg);
+                            break;
+                        }
+                    case 2:
+                        url = `https://www.loliapi.com/acg/`;
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
+                        await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 3:
+                        url = `https://t.mwm.moe/mp`;
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
+                        await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 4:
+                        url = `https://api.asxe.vip/random.php`;
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
+                        await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 5:
+                        url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
+                        await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 6:
+                        url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
+                        await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
                 }
             }
 
@@ -1365,5 +1380,47 @@ async function get_msg_pphua() {
     catch (err) {
         logger.error(err)
         return null
+    }
+}
+
+/**
+ * @description: 随机返回文件夹里面的1张图片的地址
+ * @param {*} 文件夹路径
+ * @return {*} 返回/\.gif$|\.jpg$|\.jpge$|\.png$/，若无则返回undefined
+ */
+function sendRandomPictureInFolder(folderPath) {
+    logger.mark('[戳一戳] 随机返回文件夹里面的1张图片的地址')
+    try {
+        const files = getAllFiles(folderPath);
+        // 随机选择一张图片
+        const randomIndex = Math.floor(Math.random() * files.length);
+        let picPath = files[randomIndex];
+        for (let i = 0; i < 10; i++)
+            if (picPath.match(/\.gif$|\.jpg$|\.jpge$|\.png$/))
+                return picPath;
+    } catch (err) {
+        return null;
+    }
+}
+// 递归获取文件夹和子文件夹中的所有文件
+function getAllFiles(folderPath) {
+    try {
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath);
+        }
+        let files = [];
+        if (fs.statSync(folderPath).isDirectory()) {
+            const subFolders = fs.readdirSync(folderPath);
+            for (const subFolder of subFolders) {
+                const subFolderPath = path.join(folderPath, subFolder);
+                const subFolderFiles = getAllFiles(subFolderPath);
+                files.push(...subFolderFiles);
+            }
+        } else {
+            files.push(folderPath);
+        }
+        return files;
+    } catch (err) {
+        return null;
     }
 }
