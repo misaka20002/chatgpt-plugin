@@ -1054,44 +1054,39 @@ export class chuo extends plugin {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
                 let mutetype = Math.ceil(Math.random() * 5)
-                let url, res, msg
+                let url, msg
                 switch (mutetype) {
                     case 1:
                         url = `https://www.loliapi.com/acg/`;
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [segment.image(res.url)];
+                        msg = [segment.image(url)];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 2:
                         url = `https://t.mwm.moe/mp`;
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [segment.image(res.url)];
+                        msg = [segment.image(url)];
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 3:
                         url = `https://api.asxe.vip/random.php`;
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [segment.image(res.url)];
+                        msg = [segment.image(url)];
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 4:
                         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [segment.image(res.url)];
+                        msg = [segment.image(url)];
                         await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 5:
                         url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [segment.image(res.url)];
+                        msg = [segment.image(url)];
                         await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
                         await common.sleep(100)
                         await e.reply(msg);
