@@ -1386,18 +1386,20 @@ async function get_msg_pphua() {
 /**
  * @description: 随机返回文件夹里面的1张图片的地址
  * @param {*} 文件夹路径
- * @return {*} 返回/\.gif$|\.jpg$|\.jpge$|\.png$/，若无则返回undefined
+ * @return {*} 返回/\.gif$|\.jpg$|\.jpge$|\.png$/，若无则返回null
  */
 function sendRandomPictureInFolder(folderPath) {
     logger.mark('[戳一戳] 随机返回文件夹里面的1张图片的地址')
     try {
         const files = getAllFiles(folderPath);
         // 随机选择一张图片
-        const randomIndex = Math.floor(Math.random() * files.length);
-        let picPath = files[randomIndex];
-        for (let i = 0; i < 10; i++)
+        for (let i = 0; i < 20; i++) {
+            const randomIndex = Math.floor(Math.random() * files.length);
+            let picPath = files[randomIndex];
             if (picPath.match(/\.gif$|\.jpg$|\.jpge$|\.png$/))
                 return picPath;
+            else return null;
+        }
     } catch (err) {
         return null;
     }
