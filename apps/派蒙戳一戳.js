@@ -20,11 +20,11 @@ let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
 let mutepick = 0.03 //禁言概率
 let paimonChuoMeme = 0.05 //随机meme表情
-let randowLocalPic = 0.15 //随机本地图片
-let DailyEnglish = 0.02 //每日英语
+let randowLocalPic = 0.16 //随机本地图片
+let DailyEnglish = 0.01 //每日英语
 //剩下的0.10概率就是反击
 
-// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹。如果不需要就把概率改为0
+// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
 
 //回复文字列表
@@ -1042,8 +1042,7 @@ export class chuo extends plugin {
                         }
                         logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
                     default:
-                        let text_number = Math.ceil(Math.random() * word_list['length'])
-                        await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+                        this.send_paimon_msg(e);
                         break;
                 }
             }
@@ -1128,8 +1127,8 @@ export class chuo extends plugin {
                         break;
                     // 缺省时将返回随机音频替换为返回随机文本
                     default:
-                        let text_number = Math.ceil(Math.random() * word_list['length'])
-                        return await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+                        this.send_paimon_msg(e);
+                        return
                 }
                 let voice_number = Math.ceil(Math.random() * voice_lists['length'])
                 let voice_url = voice_lists[voice_number - 1]
@@ -1190,7 +1189,7 @@ export class chuo extends plugin {
 
                         }
                     } else {
-                        let mutetype = Math.ceil(Math.random() * 3)
+                        let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
                             e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
                         }
@@ -1253,7 +1252,12 @@ export class chuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
-                await e.reply(await segment.image(sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory)))
+                let pic_url = sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory)
+                if (pic_url) await e.reply(await segment.image(pic_url))
+                else {
+                    this.send_paimon_msg(e);
+                    return
+                }
             }
 
             //触发每日英语
@@ -1289,6 +1293,12 @@ export class chuo extends plugin {
 
         }
 
+    }
+
+    /** 随机回复文字列表 */
+    async send_paimon_msg(e) {
+        let text_number = Math.ceil(Math.random() * word_list['length'])
+        await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
     }
 
     /**指定用户使用nai3次数加num次  
