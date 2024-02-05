@@ -1525,14 +1525,11 @@ async function send_msg_DailyEnglish(e) {
 
         if (res.data) {
             e.reply(`来和${Config.tts_First_person}一起学英语吧>_<\n${res.data.en}`);
-            // 图片            
-            let pic_url = res.data.image
-            let pic_msg = [await segment.image(pic_url)];
-            await e.reply(pic_msg);
+            // 图片
+            await e.reply(await segment.image(res.data.image))
             await common.sleep(100);
             // 音频
-            let voice_url = res.data.tts
-            await e.reply(await chuo_silk_voice(voice_url, e))
+            await e.reply(await chuo_silk_voice(res.data.tts, e))
         }
         return true
     }
