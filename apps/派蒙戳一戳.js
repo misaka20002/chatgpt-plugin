@@ -25,7 +25,7 @@ let DailyEnglish = 0.02 //每日英语
 //剩下的0.10概率就是反击
 
 // 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹。如果不需要就把概率改为0
-const paimonChuoYiChouPicturesDirectory = `${process.cwd()}resources/PaimonChuoYiChouPictures`
+const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
 
 //回复文字列表
 let word_list = [
