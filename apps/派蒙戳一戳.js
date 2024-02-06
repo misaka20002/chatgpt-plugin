@@ -702,6 +702,7 @@ function getAllFiles(folderPath) {
 
 /**初始化 删除旧的文件索引 */
 async function init() {
+    logger.mark(`[派蒙戳一戳初始化]`)
     await redis.del(`Yz:PaimongChuoLocalPicIndex`);
 }
 
