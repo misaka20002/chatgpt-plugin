@@ -656,8 +656,13 @@ async function sendRandomPictureInFolder(folderPath) {
         if (!files) {
             logger.mark(`派蒙戳一戳开始索引文件夹：${paimonChuoYiChouPicturesDirectory}`)
             files = getAllFiles(folderPath);
+            // 把数组files转化为字符串
+            files = files.join('\n');
             // 写入索引
             redis.set(`Yz:PaimongChuoLocalPicIndex`, files, { EX: 1800 });
+        } else {
+            // 把字符串files转为数组
+            files = files.split('\n');
         }
         // 随机选择一张图片
         for (let i = 0; i < 20; i++) {
