@@ -891,6 +891,12 @@ export function supportGuoba () {
             component: 'InputNumber'
         },
         {
+            field: 'paimon_chou_IsSendLocalpic',
+            label: '戳一戳发送本地图片（重启生效）',
+            bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/resources/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
+            component: 'Switch'
+        },
+        {
           field: 'vits_emotion',
           label: 'emotion',
           bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',

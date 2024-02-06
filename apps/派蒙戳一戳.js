@@ -10,25 +10,741 @@ import { generate_msg_Daiyu } from '../utils/randomMessage.js'
 import fs from 'fs'
 import path from 'path'
 
-//如使用非icqq请在此处填写机器人QQ号
+// 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
 
 // 支持信息详见文件最下方
-//在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.35 //文字回复概率
+// 在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
+let reply_text = 0.355 //文字回复概率
 let reply_img = 0.15 //图片回复概率
 let reply_voice = 0.15 //语音回复概率
 let mutepick = 0.03 //禁言概率
 let paimonChuoMeme = 0.05 //随机meme表情
 let randowLocalPic = 0.16 //随机本地图片
-let DailyEnglish = 0.01 //每日英语
-//剩下的0.10概率就是反击
+let dailyEnglish = 0.005 //每日英语
+// 剩下的0.10概率就是反击
 
-// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。
+// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
+if (!Config.paimon_chou_IsSendLocalpic) {
+    reply_text += randowLocalPic
+    randowLocalPic = 0
+}
 
-//回复文字列表
-let word_list = [
+export class chuo extends plugin {
+    constructor() {
+        super({
+            name: '派蒙戳一戳',
+            dsc: '戳一戳机器人触发效果',
+            event: 'notice.group.poke',
+            priority: 1000,
+            rule: [
+                {
+                    fnc: 'chuoyichuo'
+                }
+            ]
+        }
+        )
+        init()
+    }
+
+
+    async chuoyichuo(e) {
+        if (!Config.paimon_chuoyichuo_open) return false
+
+        if (cfg.masterQQ.includes(e.target_id)) {
+            if (Config.debug) {
+                logger.mark('[戳一戳戳主人生效]')
+            }
+            if (cfg.masterQQ.includes(e.operator_id) || cfg.qq == e.operator_id || BotQQ == e.operator_id) {
+                return;
+            }
+            let mutetype = Math.ceil(Math.random() * 3)
+            switch (mutetype) {
+                case 1:
+                    await e.reply(`呜呜，有什么开心不开心的都冲${Config.tts_First_person}来吧QAQ`, true)
+                    break;
+                case 2:
+                    await e.reply(`请戳${Config.tts_First_person}吧，${Config.tts_First_person}...${Config.tts_First_person}什么都愿意做QAQ`, true)
+                    break;
+                case 3:
+                    await e.reply(`呜呜呜，${Config.tts_First_person}愿意为你做任何事情`, true)
+                    break;
+            }
+            await common.sleep(1000);
+            e.group.pokeMember(e.operator_id);
+            return true
+        }
+
+        if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
+            /**统计每日被戳次数 */
+            let count = await redis.get(`paimon_pokecount`);
+            // 当前时间
+            let time = moment(Date.now())
+                .add(1, "days")
+                .format("YYYY-MM-DD 00:00:00");
+            // 到明日零点的剩余秒数
+            let exTime = Math.round(
+                (new Date(time).getTime() - new Date().getTime()) / 1000
+            );
+            if (!count) {
+                await redis.set(`paimon_pokecount`, 1, { EX: exTime });//${e.group_id}
+            } else {
+                await redis.set(`paimon_pokecount`, ++count, { EX: exTime });
+            }
+
+            // 戳一戳响应CD
+            let paimon_chou_cd = Config.paimon_chou_cd
+            if (paimon_chou_cd > 0) {
+                let currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+                let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
+                if (lastTime && !cfg.masterQQ.includes(e.operator_id)) {
+                    let seconds = moment(currentTime).diff(moment(lastTime), "seconds");
+                    if ((paimon_chou_cd - seconds) <= 0) {
+                        await redis.del(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
+                        // return await e.reply(`派蒙戳一戳数据库错误，已尝试修复，请重试`, false, { recallMsg: 30 });
+                        return
+                    }
+                    return
+                }
+                else {
+                    // 写入cd
+                    currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+                    redis.set(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`, currentTime, { EX: paimon_chou_cd });
+                }
+            }
+
+            /**戳一戳次数生效 */
+            if (Math.ceil(Math.random() * 100) <= 10 && count >= 10) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳次数生效]')
+                }
+                let text_number = Math.ceil(Math.random() * ciku['length'])
+                await e.reply(ciku[text_number - 1].replace(/派蒙/g, Config.tts_First_person).replace("_num_", count))
+                return true;
+            }
+
+
+            //生成0-100%的随机数
+            let random_type = Math.random()
+
+            /**回复随机文字 */
+            if (random_type < reply_text) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳回复随机文字生效]')
+                }
+                this.send_randow_text_msg(e)
+            }
+
+            /**回复随机图片 */
+            else if (random_type < (reply_text + reply_img)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳回复随机图片生效]')
+                }
+                let mutetype = Math.ceil(Math.random() * 5)
+                let url, msg
+                switch (mutetype) {
+                    case 1:
+                        url = `https://www.loliapi.com/acg/`;
+                        msg = [await segment.image(url)];
+                        await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 2:
+                        url = `https://t.mwm.moe/mp`;
+                        msg = [await segment.image(url)];
+                        await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 3:
+                        url = `https://api.asxe.vip/random.php`;
+                        msg = [await segment.image(url)];
+                        await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 4:
+                        url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
+                        msg = [await segment.image(url)];
+                        await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                    case 5:
+                        url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
+                        msg = [await segment.image(url)];
+                        await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
+                        await common.sleep(100)
+                        await e.reply(msg);
+                        break;
+                }
+            }
+
+            /**返回随机音频 */
+            else if (random_type < (reply_text + reply_img + reply_voice)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳回复随机语音生效]')
+                }
+                // 匹配发音人物
+                let defaultTTSRole = Config.defaultTTSRole
+                let voice_lists
+                switch (defaultTTSRole) {
+                    case '可莉_ZH':
+                        // voice_lists = voice_list_klee_cn
+                        voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
+                        break;
+                    case '可莉_JP':
+                        // voice_lists = voice_list_klee_jp
+                        voice_lists = voice_list_klee_jp.concat(voice_list_klee_cn);
+                        break;
+                    case '纳西妲_ZH':
+                        // voice_lists = voice_list_nahida_cn
+                        voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
+                        break;
+                    case '纳西妲_JP':
+                        // voice_lists = voice_list_nahida_jp
+                        voice_lists = voice_list_nahida_jp.concat(voice_list_nahida_cn);
+                        break;
+                    case '派蒙_ZH':
+                    case '白露_ZH':
+                        voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn);
+                        break;
+                    case '派蒙_JP':
+                        voice_lists = voice_list_paimon_jp;
+                        break;
+                    // 缺省时将返回随机音频替换为返回随机文本
+                    default:
+                        this.send_randow_text_msg(e);
+                        return
+                }
+                let voice_number = Math.ceil(Math.random() * voice_lists['length'])
+                let voice_url = voice_lists[voice_number - 1]
+                await e.reply(await chuo_silk_voice(voice_url, e))
+            }
+            /**禁言 */
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳禁言生效]')
+                }
+                // 计算今日被禁言次数
+                let jinyan_times = await redis.get(`Yz:PaimongChuoYiChuo:JinYanTimes:${e.operator_id}`) || 0;
+                jinyan_times++
+                this.addJinyanTimes(e.operator_id, 1);
+                // 如果不是主人戳
+                if (!cfg.masterQQ.includes(e.operator_id)) {
+                    let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
+                    let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
+                    // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
+                    if (((botinfo.role === 'owner' || botinfo.role === 'admin') && !(usrinfo.role === 'owner' || usrinfo.role === 'admin')) || (usrinfo.role === 'admin' && botinfo.role === 'owner')) {
+                        // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
+                        /* botinfo = { "group_id": __num__, "user_id": __num__, "nickname": "小派蒙", "card": "", "sex": "female", "age": 9, "join_time": 1698625488, "last_sent_time": 1706151598, "level": 1, "role": "owner", "title": "", "title_expire_time": 0, "shutup_time": 0, "update_time": 0 }
+                        usrinfo = { "group_id": __num__, "user_id": __num__, "nickname": "_昵称_", "card": "_群昵称_", "sex": "male", "age": 88, "area": "", "join_time": 1705783666, "last_sent_time": 1706152333, "level": 1, "rank": "潜水", "role": "member", "title": "", "title_expire_time": 4294967295, "shutup_time": 0, "update_time": 1706151633 } ； */
+                        let mutetype = Math.ceil(Math.random() * 4)
+                        if (mutetype == 1) {
+                            await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
+                            await common.sleep(100)
+                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
+                            await common.sleep(100)
+                            await e.reply('哼！')
+                        }
+                        else if (mutetype == 2) {
+                            await e.reply('不！！')
+                            await common.sleep(10);
+                            await e.reply('准！！')
+                            await common.sleep(10);
+                            await e.reply('戳！！');
+                            await common.sleep(10);
+                            await e.reply('人！！');
+                            await common.sleep(10)
+                            await e.reply('家！！')
+                            await common.sleep(10);
+                            await e.group.muteMember(e.operator_id, 120 * jinyan_times);
+                            await common.sleep(50)
+                            await e.reply(`让你面壁思过${2 * jinyan_times}分钟，哼😤～`)
+                        }
+                        else if (mutetype == 3) {
+                            await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
+                            await common.sleep(100)
+                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
+                            await common.sleep(100)
+                            await e.reply('大变态！')
+                        }
+                        else if (mutetype == 4) {
+                            await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
+                            await common.sleep(100)
+                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
+
+                        }
+                    } else {
+                        let mutetype = Math.ceil(Math.random() * 4)
+                        if (mutetype == 1) {
+                            e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
+                        }
+                        else if (mutetype == 2) {
+                            e.reply(`主人有坏淫欺负${Config.tts_First_person}QAQ`)
+                        }
+                        else if (mutetype == 3) {
+                            e.reply(`气死${Config.tts_First_person}了不要戳了！`)
+                        }
+                        else if (mutetype == 4) {
+                            let text_number = Math.ceil(Math.random() * paimon_word_list['length'])
+                            e.reply((paimon_word_list[text_number - 1] + '...呜呜，如果派蒙有管理员权限就禁言你1分钟QAQ').replace(/派蒙/g, Config.tts_First_person))
+                        }
+                    }
+                }
+                // 如果是主人戳
+                else if (cfg.masterQQ.includes(e.operator_id)) {
+                    let mutetype = Math.ceil(Math.random() * 2)
+                    if (mutetype == 1) {
+                        e.reply(`主人连你也欺负${Config.tts_First_person}，呜呜呜~`)
+                    }
+                    else if (mutetype == 2) {
+                        e.reply('主人有什么事吗？喵~')
+                    }
+                } else {
+                    logger.mark('[戳一戳禁言]bot无法判断主人是谁')
+                }
+            }
+
+            //随机meme表情包api
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳随机表情包生效]')
+                }
+                let mutetype = Math.ceil(Math.random() * 6)
+                switch (mutetype) {
+                    case 1:
+                        await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
+                        break;
+                    case 2:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
+                        break;
+                    case 3:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
+                        break;
+                    case 4:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
+                        break;
+                    case 5:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
+                        break;
+                    case 6:
+                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
+                        break;
+                }
+            }
+
+            //随机本地图片
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳随机本地图片生效]')
+                }
+                let pic_url = await sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory)
+                if (pic_url) await e.reply(await segment.image(pic_url))
+                else {
+                    this.send_randow_text_msg(e);
+                    return
+                }
+            }
+
+            //触发每日英语
+            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic + dailyEnglish)) {
+                if (Config.debug) {
+                    logger.mark('[戳一戳每日英语生效]')
+                }
+                send_msg_DailyEnglish(e);
+            }
+
+            //反击
+            else {
+                if (Config.debug) {
+                    logger.mark('[戳一戳反击生效]')
+                }
+                let mutetype = Math.round(Math.random() * 3)
+                if (mutetype == 1) {
+                    e.reply(`${Config.tts_First_person}也要戳戳你>_<`)
+                    await common.sleep(1000)
+                    await e.group.pokeMember(e.operator_id)
+                }
+                else if (mutetype == 2) {
+                    e.reply(`你刚刚是不是戳${Config.tts_First_person}了?${Config.tts_First_person}要戳回去！`)
+                    await common.sleep(1000)
+                    await e.group.pokeMember(e.operator_id)
+                }
+                else if (mutetype == 3) {
+                    e.reply(`让你戳${Config.tts_First_person}，哼！！！`)
+                    await common.sleep(1000)
+                    await e.group.pokeMember(e.operator_id)
+                }
+            }
+
+        }
+
+    }
+
+    /** 随机回复预设派蒙文案 */
+    async send_paimon_msg(e) {
+        let text_number = Math.ceil(Math.random() * paimon_word_list['length'])
+        await e.reply(paimon_word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+    }
+
+    /** 随机回复文案 */
+    async send_randow_text_msg(e) {
+        let mutetype = Math.ceil(Math.random() * 13)
+        switch (mutetype) {
+            // case 1:
+            case 2:
+                let message2 = await generate_msg_Daiyu()
+                await e.reply(message2)
+                break;
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+                let message6_num = Math.ceil(Math.random() * kaomoji_list['length'])
+                await e.reply(kaomoji_list[message6_num - 1].replace(/派蒙/g, Config.tts_First_person))
+                break;
+            // 送随机nai次数1-5次
+            case 7:
+                // 要今天使用过绘图的人才能激活这个奖励
+                if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
+                    let random_nai_time = Math.ceil(Math.random() * 6)
+                    if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
+                    if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
+                    this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
+                    await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 55 })
+                    break;
+                }
+            // case 8:
+            case 9:
+                let message9 = await get_msg_hitokoto(false)
+                if (message9) {
+                    await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
+                    break
+                }
+                logger.mark('[戳一戳回复随机文字][一言api失效]')
+            case 10:
+                let message10 = await get_msg_pphua()
+                if (message10) {
+                    await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
+                    break
+                }
+                logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
+            case 11:
+                let message11 = await get_msg_mingyanjingju()
+                if (message11) {
+                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message11}”`)
+                    break
+                }
+                logger.mark('[戳一戳回复随机文字][随机名言警句api失效]')
+            case 12:
+                let message12 = await get_msg_gushici()
+                if (message12) {
+                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message12}”`)
+                    break
+                }
+                logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
+            case 13:
+                let message13 = await get_msg_KFC()
+                let today = new Date();                
+                if (message13 && today.getDay() === 4) {
+                    await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
+                    break
+                }
+                logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
+            default:
+                this.send_paimon_msg(e);
+                break;
+        }
+    }
+
+    /**指定用户使用nai3次数加num次  
+* @param qq 用户qq号
+* @param num 数据库中用户使用记录要增加的次数
+*/
+    async addNai3UsageLimit_day(qq, num) {
+        // 该用户的当日可用次数
+        let usageLimit_day = await redis.get(`Yz:PaimongNai:usageLimit_day:${qq}`);
+        if (usageLimit_day) {
+            // 当前时间
+            let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
+            // 到明日零点的剩余秒数
+            let exTime = Math.round(
+                (new Date(time).getTime() - new Date().getTime()) / 1000
+            );
+            await redis.set(`Yz:PaimongNai:usageLimit_day:${qq}`, usageLimit_day * 1 + num, { EX: exTime });
+        }
+        return true;
+    }
+
+
+    /**指定用户禁言次数加num次  
+ * @param qq 用户qq号
+ * @param num 数据库中用户使用记录要增加的次数
+ */
+    async addJinyanTimes(qq, num) {
+        // logger.info(num);
+        // 该用户的使用次数
+        let usageData = await redis.get(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`);
+        // 当前时间
+        let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
+        // 到明日零点的剩余秒数
+        let exTime = Math.round(
+            (new Date(time).getTime() - new Date().getTime()) / 1000
+        );
+        if (!usageData) {
+            await redis.set(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`, num * 1, { EX: exTime });
+        } else {
+            await redis.set(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`, usageData * 1 + num, { EX: exTime });
+        }
+        return true;
+    }
+
+}
+
+/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持2个tag参数，tag中支持20个或| */
+async function get_url_from_api_lolicon(tag1 = '萝莉|loli', tag2 = 'ロリ|loli|萝莉') {
+    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
+    for (let i = 0; i < 3; i++) {
+        try {
+            const response = await fetch(url)
+            const result = await response.json()
+            if (Array.isArray(result.data) && result.data.length === 0) {
+                logger.info('派蒙戳一戳api_lolicon未获取到图片')
+                throw new Error(result)
+            }
+            let pic_url = result.data[0].urls?.original || result.data[0].urls?.regular || result.data[0].urls?.small
+            if (!pic_url) throw new Error(result)
+            return pic_url
+        } catch (err) {
+            logger.info(err)
+        }
+    }
+    logger.warn(`派蒙戳一戳获取api_lolicon pic_url失败3次`)
+}
+
+/**
+ * @description: 一言api
+ * @param {*} is_return_from_who 是否返回一言作者
+ * @return {*} 返回文本/错误则返回null
+ */
+async function get_msg_hitokoto(is_return_from_who = false) {
+    let url = 'https://v1.hitokoto.cn/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][一言] 接口请求失败')
+        }
+        res = await res.json()
+        let msg
+        if (is_return_from_who) msg = res.hitokoto + '——' + res.from + (res.from_who == res.from ? '' : (res.from_who ? (' ' + res.from_who) : ''))
+        else msg = res.hitokoto
+        return msg
+    } catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**网易云热评 返回文本/错误则返回null */
+async function get_msg_wyyrp() {
+    let url = 'https://api.xingzhige.com/API/NetEase_CloudMusic_hotReview/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][网易云热评] 接口请求失败')
+        }
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**随机皮皮话 返回文本/错误则返回null */
+async function get_msg_pphua() {
+    let url = 'https://api.haah.net/api/free/wenan-pp?key=sDSdBlcAD1YvgtkWuijyE4AhTw'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机皮皮话] 接口请求失败')
+        }
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**随机名言警句 返回文本/错误则返回null */
+async function get_msg_mingyanjingju() {
+    let url = 'https://oiapi.net/API/Saying'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机名言警句] 接口请求失败')
+        }
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**随机古诗词 返回文本/错误则返回null */
+async function get_msg_gushici() {
+    let url = 'https://oiapi.net/API/Sentences'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机古诗词] 接口请求失败')
+        }
+        res = await res.json()
+        return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+
+/**随机疯狂星期四 返回文本/错误则返回null */
+async function get_msg_KFC() {
+    let url = 'https://oiapi.net/API/KFC/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机疯狂星期四] 接口请求失败')
+        }
+        res = await res.json()
+        return res.message
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**
+ * @description: 随机返回文件夹里面的1张图片的地址
+ * @param {*} 文件夹路径
+ * @return {*} 返回/\.gif$|\.jpg$|\.jpge$|\.png$/，若无则返回null
+ */
+async function sendRandomPictureInFolder(folderPath) {
+    try {
+        let files = await redis.get(`Yz:PaimongChuoLocalPicIndex`);
+        if (!files) {
+            files = getAllFiles(folderPath);
+            // 写入索引
+            redis.set(`Yz:PaimongChuoLocalPicIndex`, files, { EX: 1800 });
+        }
+        // 随机选择一张图片
+        for (let i = 0; i < 20; i++) {
+            const randomIndex = Math.floor(Math.random() * files.length);
+            let picPath = files[randomIndex];
+            if (picPath.match(/\.gif$|\.jpg$|\.jpge$|\.png$/))
+                return picPath;
+            else return null;
+        }
+    } catch (err) {
+        return null;
+    }
+}
+// 递归获取文件夹和子文件夹中的所有文件
+function getAllFiles(folderPath) {
+    try {
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath);
+        }
+        let files = [];
+        if (fs.statSync(folderPath).isDirectory()) {
+            const subFolders = fs.readdirSync(folderPath);
+            for (const subFolder of subFolders) {
+                const subFolderPath = path.join(folderPath, subFolder);
+                const subFolderFiles = getAllFiles(subFolderPath);
+                files.push(...subFolderFiles);
+            }
+        } else {
+            files.push(folderPath);
+        }
+        return files;
+    } catch (err) {
+        return null;
+    }
+}
+
+/**初始化 删除旧的文件索引 */
+async function init() {
+    await redis.del(`Yz:PaimongChuoLocalPicIndex`);
+}
+
+/**
+ * @description: 每日英语 直接回复 传递e
+ * @param {*} e
+ * @return {*}
+ */
+async function send_msg_DailyEnglish(e) {
+    let url = 'https://oiapi.net/API/Daily'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][每日英语] 接口请求失败')
+        }
+        res = await res.json()
+
+        if (res.data) {
+            e.reply(`来和${Config.tts_First_person}一起学英语吧>_<\n${res.data.en}`);
+            // 图片
+            await e.reply(await segment.image(res.data.image))
+            await common.sleep(100);
+            // 音频
+            await e.reply(await chuo_silk_voice(res.data.tts, e))
+        }
+        return true
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**
+ * @description: 使用插件内置的silk服务发送音频
+ * @param {*} tts_url
+ * @param {*} e
+ * @return {*} sendable - e.reply(await silk_tts(tts_url))
+ */
+async function chuo_silk_voice(tts_url, e) {
+    let ignoreEncode = e.adapter === 'shamrock'
+    let sendable
+    try {
+        sendable = await uploadRecord(tts_url, 'fromPaimonChuo', ignoreEncode)
+        if (!sendable) {
+            // 如果合成失败，尝试使用ffmpeg合成
+            sendable = segment.record(tts_url)
+        }
+    } catch (err) {
+        logger.error(err)
+        sendable = segment.record(tts_url)
+    }
+    if (!sendable) {
+        await e.reply('silk云转码和ffmpeg都失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
+        return
+    }
+    return sendable
+}
+
+/**回复文字列表 */
+let paimon_word_list = [
     '怎么了吗？',
     '派蒙可是会很多东西的哦，快点快点发送#帮助',
     '想知道怎么使用派蒙吗？快点给派蒙发送#帮助',
@@ -868,6 +1584,7 @@ let voice_list_kyoka_jp = [
     "https://patchwiki.biligame.com/images/pcr/a/a5/58c51bv849m4reqcook11whkiibyt2e.mp3"
 ]
 
+/**被戳次数文本 */
 let ciku = [
     "派蒙今天已经被戳了_num_次啦，休息一下好不好",
     "派蒙今天已经被戳了_num_次啦，有完没完！",
@@ -877,700 +1594,3 @@ let ciku = [
     "派蒙今天已经被戳了_num_次啦，再戳就坏了！",
 ];
 
-
-
-export class chuo extends plugin {
-    constructor() {
-        super({
-            name: '派蒙戳一戳',
-            dsc: '戳一戳机器人触发效果',
-            event: 'notice.group.poke',
-            priority: 1000,
-            rule: [
-                {
-                    fnc: 'chuoyichuo'
-                }
-            ]
-        }
-        )
-    }
-
-
-    async chuoyichuo(e) {
-        if (!Config.paimon_chuoyichuo_open) return false
-
-        if (cfg.masterQQ.includes(e.target_id)) {
-            if (Config.debug) {
-                logger.mark('[戳一戳戳主人生效]')
-            }
-            if (cfg.masterQQ.includes(e.operator_id) || cfg.qq == e.operator_id || BotQQ == e.operator_id) {
-                return;
-            }
-            let mutetype = Math.ceil(Math.random() * 3)
-            switch (mutetype) {
-                case 1:
-                    await e.reply(`呜呜，有什么开心不开心的都冲${Config.tts_First_person}来吧QAQ`, true)
-                    break;
-                case 2:
-                    await e.reply(`请戳${Config.tts_First_person}吧，${Config.tts_First_person}...${Config.tts_First_person}什么都愿意做QAQ`, true)
-                    break;
-                case 3:
-                    await e.reply(`呜呜呜，${Config.tts_First_person}愿意为你做任何事情`, true)
-                    break;
-            }
-            await common.sleep(1000);
-            e.group.pokeMember(e.operator_id);
-            return true
-        }
-
-        if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
-            /**统计每日被戳次数 */
-            let count = await redis.get(`paimon_pokecount`);
-            // 当前时间
-            let time = moment(Date.now())
-                .add(1, "days")
-                .format("YYYY-MM-DD 00:00:00");
-            // 到明日零点的剩余秒数
-            let exTime = Math.round(
-                (new Date(time).getTime() - new Date().getTime()) / 1000
-            );
-            if (!count) {
-                await redis.set(`paimon_pokecount`, 1, { EX: exTime });//${e.group_id}
-            } else {
-                await redis.set(`paimon_pokecount`, ++count, { EX: exTime });
-            }
-
-            // 戳一戳响应CD
-            let paimon_chou_cd = Config.paimon_chou_cd
-            if (paimon_chou_cd > 0) {
-                let currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
-                let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
-                if (lastTime && !cfg.masterQQ.includes(e.operator_id)) {
-                    let seconds = moment(currentTime).diff(moment(lastTime), "seconds");
-                    if ((paimon_chou_cd - seconds) <= 0) {
-                        await redis.del(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
-                        // return await e.reply(`派蒙戳一戳数据库错误，已尝试修复，请重试`, false, { recallMsg: 30 });
-                        return
-                    }
-                    return
-                }
-                else {
-                    // 写入cd
-                    currentTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
-                    redis.set(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`, currentTime, { EX: paimon_chou_cd });
-                }
-            }
-
-            /**戳一戳次数生效 */
-            if (Math.ceil(Math.random() * 100) <= 10 && count >= 10) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳次数生效]')
-                }
-                let text_number = Math.ceil(Math.random() * ciku['length'])
-                await e.reply(ciku[text_number - 1].replace(/派蒙/g, Config.tts_First_person).replace("_num_", count))
-                return true;
-            }
-
-
-            //生成0-100%的随机数
-            let random_type = Math.random()
-
-            /**回复随机文字 */
-            if (random_type < reply_text) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳回复随机文字生效]')
-                }
-                let mutetype = Math.ceil(Math.random() * 20)
-                switch (mutetype) {
-                    // case 1:
-                    case 2:
-                        let message1 = await generate_msg_Daiyu()
-                        await e.reply(message1)
-                        break;
-                    case 3:
-                    case 4:
-                    case 5:
-                    case 6:
-                        let message2_num = Math.ceil(Math.random() * kaomoji_list['length'])
-                        await e.reply(kaomoji_list[message2_num - 1].replace(/派蒙/g, Config.tts_First_person))
-                        break;
-                    // 送随机nai次数1-5次
-                    case 7:
-                        // 要今天使用过绘图的人才能激活这个奖励
-                        if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
-                            let random_nai_time = Math.ceil(Math.random() * 6)
-                            if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
-                            if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
-                            this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
-                            await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 55 })
-                            break;
-                        }
-                    // case 8:
-                    case 9:
-                        let message9 = await get_msg_hitokoto(false)
-                        if (message9) {
-                            await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
-                            break
-                        }
-                        logger.mark('[戳一戳回复随机文字][一言api失效]')
-                    case 10:
-                        let message10 = await get_msg_pphua()
-                        if (message10) {
-                            await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
-                            break
-                        }
-                        logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
-                    case 11:
-                        let message11 = await get_msg_mingyanjingju()
-                        if (message11) {
-                            await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message11}”`)
-                            break
-                        }
-                        logger.mark('[戳一戳回复随机文字][随机名言警句api失效]')
-                    case 12:
-                        let message12 = await get_msg_gushici()
-                        if (message12) {
-                            await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message12}”`)
-                            break
-                        }
-                        logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
-                    case 13:
-                        let message13 = await get_msg_KFC()
-                        if (message13) {
-                            await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
-                            break
-                        }
-                        logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
-                    default:
-                        this.send_paimon_msg(e);
-                        break;
-                }
-            }
-
-            /**回复随机图片 */
-            else if (random_type < (reply_text + reply_img)) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳回复随机图片生效]')
-                }
-                let mutetype = Math.ceil(Math.random() * 5)
-                let url, msg
-                switch (mutetype) {
-                    case 1:
-                        url = `https://www.loliapi.com/acg/`;
-                        msg = [await segment.image(url)];
-                        await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
-                        await common.sleep(100)
-                        await e.reply(msg);
-                        break;
-                    case 2:
-                        url = `https://t.mwm.moe/mp`;
-                        msg = [await segment.image(url)];
-                        await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
-                        await common.sleep(100)
-                        await e.reply(msg);
-                        break;
-                    case 3:
-                        url = `https://api.asxe.vip/random.php`;
-                        msg = [await segment.image(url)];
-                        await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
-                        await common.sleep(100)
-                        await e.reply(msg);
-                        break;
-                    case 4:
-                        url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
-                        msg = [await segment.image(url)];
-                        await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
-                        await common.sleep(100)
-                        await e.reply(msg);
-                        break;
-                    case 5:
-                        url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                        msg = [await segment.image(url)];
-                        await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
-                        await common.sleep(100)
-                        await e.reply(msg);
-                        break;
-                }
-            }
-
-            /**返回随机音频 */
-            else if (random_type < (reply_text + reply_img + reply_voice)) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳回复随机语音生效]')
-                }
-                // 匹配发音人物
-                let defaultTTSRole = Config.defaultTTSRole
-                let voice_lists
-                switch (defaultTTSRole) {
-                    case '可莉_ZH':
-                        // voice_lists = voice_list_klee_cn
-                        voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
-                        break;
-                    case '可莉_JP':
-                        // voice_lists = voice_list_klee_jp
-                        voice_lists = voice_list_klee_jp.concat(voice_list_klee_cn);
-                        break;
-                    case '纳西妲_ZH':
-                        // voice_lists = voice_list_nahida_cn
-                        voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
-                        break;
-                    case '纳西妲_JP':
-                        // voice_lists = voice_list_nahida_jp
-                        voice_lists = voice_list_nahida_jp.concat(voice_list_nahida_cn);
-                        break;
-                    case '派蒙_ZH':
-                    case '白露_ZH':
-                        voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn);
-                        break;
-                    case '派蒙_JP':
-                        voice_lists = voice_list_paimon_jp;
-                        break;
-                    // 缺省时将返回随机音频替换为返回随机文本
-                    default:
-                        this.send_paimon_msg(e);
-                        return
-                }
-                let voice_number = Math.ceil(Math.random() * voice_lists['length'])
-                let voice_url = voice_lists[voice_number - 1]
-                await e.reply(await chuo_silk_voice(voice_url, e))
-            }
-            /**禁言 */
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳禁言生效]')
-                }
-                // 计算今日被禁言次数
-                let jinyan_times = await redis.get(`Yz:PaimongChuoYiChuo:JinYanTimes:${e.operator_id}`) || 0;
-                jinyan_times++
-                this.addJinyanTimes(e.operator_id, 1);
-                // 如果不是主人戳
-                if (!cfg.masterQQ.includes(e.operator_id)) {
-                    let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
-                    let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
-                    // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
-                    if (((botinfo.role === 'owner' || botinfo.role === 'admin') && !(usrinfo.role === 'owner' || usrinfo.role === 'admin')) || (usrinfo.role === 'admin' && botinfo.role === 'owner')) {
-                        // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
-                        /* botinfo = { "group_id": __num__, "user_id": __num__, "nickname": "小派蒙", "card": "", "sex": "female", "age": 9, "join_time": 1698625488, "last_sent_time": 1706151598, "level": 1, "role": "owner", "title": "", "title_expire_time": 0, "shutup_time": 0, "update_time": 0 }
-                        usrinfo = { "group_id": __num__, "user_id": __num__, "nickname": "_昵称_", "card": "_群昵称_", "sex": "male", "age": 88, "area": "", "join_time": 1705783666, "last_sent_time": 1706152333, "level": 1, "rank": "潜水", "role": "member", "title": "", "title_expire_time": 4294967295, "shutup_time": 0, "update_time": 1706151633 } ； */
-                        let mutetype = Math.ceil(Math.random() * 4)
-                        if (mutetype == 1) {
-                            await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
-                            await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
-                            await common.sleep(100)
-                            await e.reply('哼！')
-                        }
-                        else if (mutetype == 2) {
-                            await e.reply('不！！')
-                            await common.sleep(10);
-                            await e.reply('准！！')
-                            await common.sleep(10);
-                            await e.reply('戳！！');
-                            await common.sleep(10);
-                            await e.reply('人！！');
-                            await common.sleep(10)
-                            await e.reply('家！！')
-                            await common.sleep(10);
-                            await e.group.muteMember(e.operator_id, 120 * jinyan_times);
-                            await common.sleep(50)
-                            await e.reply(`让你面壁思过${2 * jinyan_times}分钟，哼😤～`)
-                        }
-                        else if (mutetype == 3) {
-                            await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
-                            await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
-                            await common.sleep(100)
-                            await e.reply('大变态！')
-                        }
-                        else if (mutetype == 4) {
-                            await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
-                            await common.sleep(100)
-                            await e.group.muteMember(e.operator_id, 60 * jinyan_times);
-
-                        }
-                    } else {
-                        let mutetype = Math.ceil(Math.random() * 4)
-                        if (mutetype == 1) {
-                            e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
-                        }
-                        else if (mutetype == 2) {
-                            e.reply(`主人有坏淫欺负${Config.tts_First_person}QAQ`)
-                        }
-                        else if (mutetype == 3) {
-                            e.reply(`气死${Config.tts_First_person}了不要戳了！`)
-                        }
-                        else if (mutetype == 4) {
-                            let text_number = Math.ceil(Math.random() * word_list['length'])
-                            e.reply((word_list[text_number - 1] + '...呜呜，如果派蒙有管理员权限就禁言你1分钟QAQ').replace(/派蒙/g, Config.tts_First_person))
-                        }
-                    }
-                }
-                // 如果是主人戳
-                else if (cfg.masterQQ.includes(e.operator_id)) {
-                    let mutetype = Math.ceil(Math.random() * 2)
-                    if (mutetype == 1) {
-                        e.reply(`主人连你也欺负${Config.tts_First_person}，呜呜呜~`)
-                    }
-                    else if (mutetype == 2) {
-                        e.reply('主人有什么事吗？喵~')
-                    }
-                } else {
-                    logger.mark('[戳一戳禁言]bot无法判断主人是谁')
-                }
-            }
-
-            //随机meme表情包api
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme)) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳随机表情包生效]')
-                }
-                let mutetype = Math.ceil(Math.random() * 6)
-                switch (mutetype) {
-                    case 1:
-                        await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
-                        break;
-                    case 2:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
-                        break;
-                    case 3:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
-                        break;
-                    case 4:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
-                        break;
-                    case 5:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
-                        break;
-                    case 6:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
-                        break;
-                }
-            }
-
-            //随机本地图片
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic)) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳随机本地图片生效]')
-                }
-                let pic_url = sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory)
-                if (pic_url) await e.reply(await segment.image(pic_url))
-                else {
-                    this.send_paimon_msg(e);
-                    return
-                }
-            }
-
-            //触发每日英语
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic + DailyEnglish)) {
-                if (Config.debug) {
-                    logger.mark('[戳一戳每日英语生效]')
-                }
-                send_msg_DailyEnglish(e);
-            }
-
-            //反击
-            else {
-                if (Config.debug) {
-                    logger.mark('[戳一戳反击生效]')
-                }
-                let mutetype = Math.round(Math.random() * 3)
-                if (mutetype == 1) {
-                    e.reply(`${Config.tts_First_person}也要戳戳你>_<`)
-                    await common.sleep(1000)
-                    await e.group.pokeMember(e.operator_id)
-                }
-                else if (mutetype == 2) {
-                    e.reply(`你刚刚是不是戳${Config.tts_First_person}了?${Config.tts_First_person}要戳回去！`)
-                    await common.sleep(1000)
-                    await e.group.pokeMember(e.operator_id)
-                }
-                else if (mutetype == 3) {
-                    e.reply(`让你戳${Config.tts_First_person}，哼！！！`)
-                    await common.sleep(1000)
-                    await e.group.pokeMember(e.operator_id)
-                }
-            }
-
-        }
-
-    }
-
-    /** 随机回复文字列表 */
-    async send_paimon_msg(e) {
-        let text_number = Math.ceil(Math.random() * word_list['length'])
-        await e.reply(word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
-    }
-
-    /**指定用户使用nai3次数加num次  
-* @param qq 用户qq号
-* @param num 数据库中用户使用记录要增加的次数
-*/
-    async addNai3UsageLimit_day(qq, num) {
-        // 该用户的当日可用次数
-        let usageLimit_day = await redis.get(`Yz:PaimongNai:usageLimit_day:${qq}`);
-        if (usageLimit_day) {
-            // 当前时间
-            let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
-            // 到明日零点的剩余秒数
-            let exTime = Math.round(
-                (new Date(time).getTime() - new Date().getTime()) / 1000
-            );
-            await redis.set(`Yz:PaimongNai:usageLimit_day:${qq}`, usageLimit_day * 1 + num, { EX: exTime });
-        }
-        return true;
-    }
-
-
-    /**指定用户禁言次数加num次  
- * @param qq 用户qq号
- * @param num 数据库中用户使用记录要增加的次数
- */
-    async addJinyanTimes(qq, num) {
-        // logger.info(num);
-        // 该用户的使用次数
-        let usageData = await redis.get(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`);
-        // 当前时间
-        let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
-        // 到明日零点的剩余秒数
-        let exTime = Math.round(
-            (new Date(time).getTime() - new Date().getTime()) / 1000
-        );
-        if (!usageData) {
-            await redis.set(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`, num * 1, { EX: exTime });
-        } else {
-            await redis.set(`Yz:PaimongChuoYiChuo:JinYanTimes:${qq}`, usageData * 1 + num, { EX: exTime });
-        }
-        return true;
-    }
-
-}
-
-/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持2个tag参数，tag中支持20个或| */
-async function get_url_from_api_lolicon(tag1 = '萝莉|loli', tag2 = 'ロリ|loli|萝莉') {
-    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
-    for (let i = 0; i < 3; i++) {
-        try {
-            const response = await fetch(url)
-            const result = await response.json()
-            if (Array.isArray(result.data) && result.data.length === 0) {
-                logger.info('派蒙戳一戳api_lolicon未获取到图片')
-                throw new Error(result)
-            }
-            let pic_url = result.data[0].urls?.original || result.data[0].urls?.regular || result.data[0].urls?.small
-            if (!pic_url) throw new Error(result)
-            return pic_url
-        } catch (err) {
-            logger.info(err)
-        }
-    }
-    logger.warn(`派蒙戳一戳获取api_lolicon pic_url失败3次`)
-}
-
-/**
- * @description: 一言api
- * @param {*} is_return_from_who 是否返回一言作者
- * @return {*} 返回文本/错误则返回null
- */
-async function get_msg_hitokoto(is_return_from_who = false) {
-    let url = 'https://v1.hitokoto.cn/'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][一言] 接口请求失败')
-        }
-        res = await res.json()
-        let msg
-        if (is_return_from_who) msg = res.hitokoto + '——' + res.from + (res.from_who == res.from ? '' : (res.from_who ? (' ' + res.from_who) : ''))
-        else msg = res.hitokoto
-        return msg
-    } catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**网易云热评 返回文本/错误则返回null */
-async function get_msg_wyyrp() {
-    let url = 'https://api.xingzhige.com/API/NetEase_CloudMusic_hotReview/'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][网易云热评] 接口请求失败')
-        }
-        res = await res.json()
-        return res.data.content
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**随机皮皮话 返回文本/错误则返回null */
-async function get_msg_pphua() {
-    let url = 'https://api.haah.net/api/free/wenan-pp?key=sDSdBlcAD1YvgtkWuijyE4AhTw'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][随机皮皮话] 接口请求失败')
-        }
-        res = await res.json()
-        return res.data.content
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**随机名言警句 返回文本/错误则返回null */
-async function get_msg_mingyanjingju() {
-    let url = 'https://oiapi.net/API/Saying'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][随机名言警句] 接口请求失败')
-        }
-        res = await res.json()
-        return res.data.content
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**随机古诗词 返回文本/错误则返回null */
-async function get_msg_gushici() {
-    let url = 'https://oiapi.net/API/Sentences'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][随机古诗词] 接口请求失败')
-        }
-        res = await res.json()
-        return res.data.content
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-
-/**随机疯狂星期四 返回文本/错误则返回null */
-async function get_msg_KFC() {
-    let url = 'https://oiapi.net/API/KFC/'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][随机疯狂星期四] 接口请求失败')
-        }
-        res = await res.json()
-        return res.message
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**
- * @description: 随机返回文件夹里面的1张图片的地址
- * @param {*} 文件夹路径
- * @return {*} 返回/\.gif$|\.jpg$|\.jpge$|\.png$/，若无则返回null
- */
-function sendRandomPictureInFolder(folderPath) {
-    logger.mark('[戳一戳] 随机返回文件夹里面的1张图片的地址')
-    try {
-        const files = getAllFiles(folderPath);
-        // 随机选择一张图片
-        for (let i = 0; i < 20; i++) {
-            const randomIndex = Math.floor(Math.random() * files.length);
-            let picPath = files[randomIndex];
-            if (picPath.match(/\.gif$|\.jpg$|\.jpge$|\.png$/))
-                return picPath;
-            else return null;
-        }
-    } catch (err) {
-        return null;
-    }
-}
-// 递归获取文件夹和子文件夹中的所有文件
-function getAllFiles(folderPath) {
-    try {
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath);
-        }
-        let files = [];
-        if (fs.statSync(folderPath).isDirectory()) {
-            const subFolders = fs.readdirSync(folderPath);
-            for (const subFolder of subFolders) {
-                const subFolderPath = path.join(folderPath, subFolder);
-                const subFolderFiles = getAllFiles(subFolderPath);
-                files.push(...subFolderFiles);
-            }
-        } else {
-            files.push(folderPath);
-        }
-        return files;
-    } catch (err) {
-        return null;
-    }
-}
-
-/**
- * @description: 每日英语 直接回复 传递e
- * @param {*} e
- * @return {*}
- */
-async function send_msg_DailyEnglish(e) {
-    let url = 'https://oiapi.net/API/Daily'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][每日英语] 接口请求失败')
-        }
-        res = await res.json()
-
-        if (res.data) {
-            e.reply(`来和${Config.tts_First_person}一起学英语吧>_<\n${res.data.en}`);
-            // 图片
-            await e.reply(await segment.image(res.data.image))
-            await common.sleep(100);
-            // 音频
-            await e.reply(await chuo_silk_voice(res.data.tts, e))
-        }
-        return true
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**
- * @description: 使用插件内置的silk服务发送音频
- * @param {*} tts_url
- * @param {*} e
- * @return {*} sendable - e.reply(await silk_tts(tts_url))
- */
-async function chuo_silk_voice(tts_url, e) {
-    let ignoreEncode = e.adapter === 'shamrock'
-    let sendable
-    try {
-        sendable = await uploadRecord(tts_url, 'fromPaimonChuo', ignoreEncode)
-        if (!sendable) {
-            // 如果合成失败，尝试使用ffmpeg合成
-            sendable = segment.record(tts_url)
-        }
-    } catch (err) {
-        logger.error(err)
-        sendable = segment.record(tts_url)
-    }
-    if (!sendable) {
-        await e.reply('silk云转码和ffmpeg都失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
-        return
-    }
-    return sendable
-}
