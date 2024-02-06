@@ -24,7 +24,7 @@ let randowLocalPic = 0.16 //随机本地图片
 let dailyEnglish = 0.005 //每日英语
 // 剩下的0.10概率就是反击
 
-// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
+// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持一层子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
 if (!Config.paimon_chou_IsSendLocalpic) {
     reply_text += randowLocalPic
@@ -142,31 +142,42 @@ export class chuo extends plugin {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
                 let mutetype = Math.ceil(Math.random() * 5)
-                let url, msg
+                let url, msg, res
                 switch (mutetype) {
                     case 1:
                         url = `https://www.loliapi.com/acg/`;
-                        msg = [await segment.image(url)];
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 2:
                         url = `https://t.mwm.moe/mp`;
-                        msg = [await segment.image(url)];
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 3:
                         url = `https://api.asxe.vip/random.php`;
-                        msg = [await segment.image(url)];
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 4:
-                        url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=vtb|fgo|pcr|AzurLane|Genshin%20Impact|原神|BlueArchive|ブルーアーカイブ`;
+                        let mutetype4 = Math.ceil(Math.random() * 2)
+                        switch (mutetype4) {
+                            case 1:
+                                url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=BlueArchive`;
+                                break;
+                            case 2:
+                                url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=原神`;
+                                break;
+                        }
                         msg = [await segment.image(url)];
                         await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                         await common.sleep(100)
@@ -448,7 +459,7 @@ export class chuo extends plugin {
                 logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
             case 13:
                 let message13 = await get_msg_KFC()
-                let today = new Date();                
+                let today = new Date();
                 if (message13 && today.getDay() === 4) {
                     await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
                     break
@@ -653,14 +664,15 @@ async function sendRandomPictureInFolder(folderPath) {
             let picPath = files[randomIndex];
             if (picPath.match(/\.gif$|\.jpg$|\.jpge$|\.png$/))
                 return picPath;
-            else return null;
         }
+        return null;
     } catch (err) {
         return null;
     }
 }
 // 递归获取文件夹和子文件夹中的所有文件
 function getAllFiles(folderPath) {
+    logger.mark(`派蒙戳一戳开始索引文件夹：${paimonChuoYiChouPicturesDirectory}`)
     try {
         if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath);
