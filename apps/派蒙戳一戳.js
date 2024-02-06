@@ -30,6 +30,8 @@ if (!Config.paimon_chou_IsSendLocalpic) {
     reply_text += randowLocalPic
     randowLocalPic = 0
 }
+logger.info(`[派蒙戳一戳初始化]`)
+redis.del(`Yz:PaimongChuoLocalPicIndex`);
 
 export class chuo extends plugin {
     constructor() {
@@ -45,7 +47,7 @@ export class chuo extends plugin {
             ]
         }
         )
-        init()
+        // init()  // 写在这里的函数每次戳一戳都会触发
     }
 
 
@@ -698,12 +700,6 @@ function getAllFiles(folderPath) {
     } catch (err) {
         return null;
     }
-}
-
-/**初始化 删除旧的文件索引 */
-async function init() {
-    logger.mark(`[派蒙戳一戳初始化]`)
-    await redis.del(`Yz:PaimongChuoLocalPicIndex`);
 }
 
 /**
