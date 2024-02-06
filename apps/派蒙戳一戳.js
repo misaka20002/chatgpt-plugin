@@ -247,8 +247,8 @@ export class chuo extends plugin {
                 if (!cfg.masterQQ.includes(e.operator_id)) {
                     let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
                     let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
-                    // bot是管理员或群主&&用户不是管理员或群主||用户是管理员时bot是群主
-                    if (((botinfo.role === 'owner' || botinfo.role === 'admin') && !(usrinfo.role === 'owner' || usrinfo.role === 'admin')) || (usrinfo.role === 'admin' && botinfo.role === 'owner')) {
+                    // bot是群主||bot是管理员时用户不是群主或管理员
+                    if (botinfo.role === 'owner' || (botinfo.role === 'admin' && (usrinfo.role !== 'owner' || usrinfo.role !== 'admin'))) {
                         // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
                         /* botinfo = { "group_id": __num__, "user_id": __num__, "nickname": "小派蒙", "card": "", "sex": "female", "age": 9, "join_time": 1698625488, "last_sent_time": 1706151598, "level": 1, "role": "owner", "title": "", "title_expire_time": 0, "shutup_time": 0, "update_time": 0 }
                         usrinfo = { "group_id": __num__, "user_id": __num__, "nickname": "_昵称_", "card": "_群昵称_", "sex": "male", "age": 88, "area": "", "join_time": 1705783666, "last_sent_time": 1706152333, "level": 1, "rank": "潜水", "role": "member", "title": "", "title_expire_time": 4294967295, "shutup_time": 0, "update_time": 1706151633 } ； */
@@ -652,17 +652,18 @@ async function get_msg_KFC() {
  */
 async function sendRandomPictureInFolder(folderPath) {
     try {
-        let files = await redis.get(`Yz:PaimongChuoLocalPicIndex`);
-        if (!files) {
+        let filesStr = await redis.get(`Yz:PaimongChuoLocalPicIndex`);
+        let files
+        if (!filesStr) {
             logger.mark(`派蒙戳一戳开始索引文件夹：${paimonChuoYiChouPicturesDirectory}`)
             files = getAllFiles(folderPath);
             // 把数组files转化为字符串
-            files = files.join('\n');
+            filesStr = files.join('\n');
             // 写入索引
-            redis.set(`Yz:PaimongChuoLocalPicIndex`, files, { EX: 1800 });
+            redis.set(`Yz:PaimongChuoLocalPicIndex`, filesStr, { EX: 1800 });
         } else {
             // 把字符串files转为数组
-            files = files.split('\n');
+            files = filesStr.split('\n');
         }
         // 随机选择一张图片
         for (let i = 0; i < 20; i++) {
