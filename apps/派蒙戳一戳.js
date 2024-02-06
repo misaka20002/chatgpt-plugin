@@ -24,7 +24,7 @@ let randowLocalPic = 0.16 //随机本地图片
 let dailyEnglish = 0.005 //每日英语
 // 剩下的0.10概率就是反击
 
-// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持一层子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
+// 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
 if (!Config.paimon_chou_IsSendLocalpic) {
     reply_text += randowLocalPic
@@ -654,6 +654,7 @@ async function sendRandomPictureInFolder(folderPath) {
     try {
         let files = await redis.get(`Yz:PaimongChuoLocalPicIndex`);
         if (!files) {
+            logger.mark(`派蒙戳一戳开始索引文件夹：${paimonChuoYiChouPicturesDirectory}`)
             files = getAllFiles(folderPath);
             // 写入索引
             redis.set(`Yz:PaimongChuoLocalPicIndex`, files, { EX: 1800 });
@@ -670,9 +671,8 @@ async function sendRandomPictureInFolder(folderPath) {
         return null;
     }
 }
-// 递归获取文件夹和子文件夹中的所有文件
+/**递归函数 递归获取文件夹和子文件夹中的所有文件*/
 function getAllFiles(folderPath) {
-    logger.mark(`派蒙戳一戳开始索引文件夹：${paimonChuoYiChouPicturesDirectory}`)
     try {
         if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath);
