@@ -30,7 +30,7 @@ if (!Config.paimon_chou_IsSendLocalpic) {
     reply_text += randowLocalPic
     randowLocalPic = 0
 }
-logger.info(`[派蒙戳一戳初始化]`)
+// logger.info(`[派蒙戳一戳初始化]`) // 启动时可显示
 redis.del(`Yz:PaimongChuoLocalPicIndex`);
 
 export class chuo extends plugin {
