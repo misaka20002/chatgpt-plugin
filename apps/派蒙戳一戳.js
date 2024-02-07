@@ -16,12 +16,12 @@ let BotQQ = ''
 
 // 支持信息详见文件最下方
 // 在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.355 //文字回复概率
-let reply_img = 0.15 //图片回复概率
-let reply_voice = 0.15 //语音回复概率
+let reply_text = 0.455 //文字回复概率
+let reply_img = 0.12 //图片回复概率
+let reply_voice = 0.12 //语音回复概率
 let mutepick = 0.03 //禁言概率
 let paimonChuoMeme = 0.05 //随机meme表情
-let randowLocalPic = 0.16 //随机本地图片
+let randowLocalPic = 0.12 //随机本地图片
 let dailyEnglish = 0.005 //每日英语
 // 剩下的0.10概率就是反击
 
@@ -405,13 +405,13 @@ export class PaimonChuo extends plugin {
     async send_paimon_msg(e) {
         let text_number = Math.ceil(Math.random() * paimon_word_list['length'])
         let message0 = paimon_word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
-        chuo_text_generateAndSendAudio(message0, e);
+        // chuo_text_generateAndSendAudio(message0, e);
         await e.reply(message0)
     }
 
     /** 随机回复文案 */
     async send_randow_text_msg(e) {
-        let mutetype = Math.ceil(Math.random() * 10)
+        let mutetype = Math.ceil(Math.random() * 12)
         switch (mutetype) {
             case 1:
                 let message1 = await generate_msg_Daiyu()
