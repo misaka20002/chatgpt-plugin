@@ -671,7 +671,7 @@ async function sendRandomPictureInFolder(folderPath) {
         for (let i = 0; i < 20; i++) {
             const randomIndex = Math.floor(Math.random() * files.length);
             let picPath = files[randomIndex];
-            if (picPath.match(/\.gif$|\.jpg$|\.jpge$|\.png$/))
+            if (picPath.match(/\.gif$|\.jpg$|\.jpeg$|\.png$/))
                 return picPath;
         }
         return null;
