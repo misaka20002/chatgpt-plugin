@@ -407,61 +407,58 @@ export class PaimonChuo extends plugin {
 
     /** 随机回复文案 */
     async send_randow_text_msg(e) {
-        let mutetype = Math.ceil(Math.random() * 13)
+        let mutetype = Math.ceil(Math.random() * 10)
         switch (mutetype) {
-            // case 1:
-            case 2:
+            case 1:
                 let message2 = await generate_msg_Daiyu()
                 await e.reply(message2)
                 break;
-            case 3:
-            case 4:
-            case 5:
-            case 6:
+            case 2:
                 let message6_num = Math.ceil(Math.random() * kaomoji_list['length'])
                 await e.reply(kaomoji_list[message6_num - 1].replace(/派蒙/g, Config.tts_First_person))
                 break;
-            // 送随机nai次数1-5次
-            case 7:
+            case 3:
                 // 要今天使用过绘图的人才能激活这个奖励
                 if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
-                    let random_nai_time = Math.ceil(Math.random() * 6)
+                    let random_nai_time = Math.ceil(Math.random() * 4)
+                    if (random_nai_time == 4) random_nai_time = Math.ceil(Math.random() * 6)
                     if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                     if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
                     this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
                     await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 55 })
                     break;
                 }
-            // case 8:
-            case 9:
+            case 4:
+            case 5:
+            case 6:
                 let message9 = await get_msg_hitokoto(false)
                 if (message9) {
                     await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][一言api失效]')
-            case 10:
+            case 7:
                 let message10 = await get_msg_pphua()
                 if (message10) {
                     await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
-            case 11:
+            case 8:
                 let message11 = await get_msg_mingyanjingju()
                 if (message11) {
                     await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message11}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机名言警句api失效]')
-            case 12:
+            case 9:
                 let message12 = await get_msg_gushici()
                 if (message12) {
                     await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message12}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
-            case 13:
+            case 10:
                 let message13 = await get_msg_KFC()
                 let today = new Date();
                 if (message13 && today.getDay() === 4) {
