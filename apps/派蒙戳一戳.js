@@ -33,7 +33,7 @@ if (!Config.paimon_chou_IsSendLocalpic) {
 // logger.info(`[派蒙戳一戳初始化]`) // 启动时可显示
 redis.del(`Yz:PaimongChuoLocalPicIndex`);
 
-export class chuo extends plugin {
+export class PaimonChuo extends plugin {
     constructor() {
         super({
             name: '派蒙戳一戳',
@@ -180,14 +180,16 @@ export class chuo extends plugin {
                                 url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=原神`;
                                 break;
                         }
-                        msg = [await segment.image(url)];
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
                         await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 5:
                         url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                        msg = [await segment.image(url)];
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [segment.image(res.url)];
                         await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`)
                         await common.sleep(100)
                         await e.reply(msg);
