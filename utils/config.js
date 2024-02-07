@@ -84,6 +84,7 @@ const defaultConfig = {
   paimon_chuoyichuo_open: true,
   paimon_chou_cd: 20,
   paimon_chou_IsSendLocalpic: true,
+  paimon_chou_text_generateAndSendAudio: true,
   vits_emotion: 'Happy',
   vits_auto_emotion: false,
   style_text: '',

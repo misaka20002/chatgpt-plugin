@@ -7,6 +7,7 @@ import fetch from 'node-fetch'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
 import { generate_msg_Daiyu } from '../utils/randomMessage.js'
+import { generateAudio } from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -403,7 +404,9 @@ export class PaimonChuo extends plugin {
     /** 随机回复预设派蒙文案 */
     async send_paimon_msg(e) {
         let text_number = Math.ceil(Math.random() * paimon_word_list['length'])
-        await e.reply(paimon_word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person))
+        let message0 = paimon_word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
+        chuo_text_generateAndSendAudio(message0, e);
+        await e.reply(message0)
     }
 
     /** 随机回复文案 */
@@ -411,48 +414,54 @@ export class PaimonChuo extends plugin {
         let mutetype = Math.ceil(Math.random() * 10)
         switch (mutetype) {
             case 1:
-                let message2 = await generate_msg_Daiyu()
-                await e.reply(message2)
+                let message1 = await generate_msg_Daiyu()
+                chuo_text_generateAndSendAudio(message1, e);
+                await e.reply(message1)
                 break;
             case 2:
-                let message6_num = Math.ceil(Math.random() * kaomoji_list['length'])
-                await e.reply(kaomoji_list[message6_num - 1].replace(/派蒙/g, Config.tts_First_person))
+                let message2 = Math.ceil(Math.random() * kaomoji_list['length'])
+                await e.reply(kaomoji_list[message2 - 1].replace(/派蒙/g, Config.tts_First_person))
                 break;
             case 3:
-                let message13 = await get_msg_KFC()
+                let message3 = await get_msg_KFC()
                 let today = new Date();
-                if (message13 && today.getDay() === 4) {
-                    await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
+                if (message3 && today.getDay() === 4) {
+                    chuo_text_generateAndSendAudio(message3, e);
+                    await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
             // case 4:
             // case 5:
             case 6:
-                let message9 = await get_msg_hitokoto(false)
-                if (message9) {
-                    await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
+                let message6 = await get_msg_hitokoto(false)
+                if (message6) {
+                    chuo_text_generateAndSendAudio(message6, e);
+                    await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message6}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][一言api失效]')
             case 7:
-                let message10 = await get_msg_pphua()
-                if (message10) {
-                    await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message10}”`)
+                let message7 = await get_msg_pphua()
+                if (message7) {
+                    chuo_text_generateAndSendAudio(message7, e);
+                    await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message7}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
             case 8:
-                let message11 = await get_msg_mingyanjingju()
-                if (message11) {
-                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message11}”`)
+                let message8 = await get_msg_mingyanjingju()
+                if (message8) {
+                    chuo_text_generateAndSendAudio(message8, e);
+                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message8}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机名言警句api失效]')
             case 9:
-                let message12 = await get_msg_gushici()
-                if (message12) {
-                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message12}”`)
+                let message9 = await get_msg_gushici()
+                if (message9) {
+                    chuo_text_generateAndSendAudio(message9, e);
+                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
@@ -757,6 +766,20 @@ async function chuo_silk_voice(tts_url, e) {
     }
     return sendable
 }
+
+/**
+ * @description: 文本转tts语音并发送
+ * @param {*} message
+ * @param {*} e
+ * @return {*}
+ */
+async function chuo_text_generateAndSendAudio(message, e) {
+    if (!Config.paimon_chou_text_generateAndSendAudio) return
+    let sendable
+    if (Config.defaultUseTTS) sendable = await generateAudio(e, message)
+    if (sendable) await e.reply(sendable)
+}
+
 
 /**回复文字列表 */
 let paimon_word_list = [
