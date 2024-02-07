@@ -30,8 +30,9 @@ if (!Config.paimon_chou_IsSendLocalpic) {
     reply_text += randowLocalPic
     randowLocalPic = 0
 }
-// logger.info(`[派蒙戳一戳初始化]`) // 启动时可显示
+// 初始化
 redis.del(`Yz:PaimongChuoLocalPicIndex`);
+if (!fs.existsSync(paimonChuoYiChouPicturesDirectory)) fs.mkdirSync(paimonChuoYiChouPicturesDirectory);
 
 export class PaimonChuo extends plugin {
     constructor() {
@@ -418,18 +419,15 @@ export class PaimonChuo extends plugin {
                 await e.reply(kaomoji_list[message6_num - 1].replace(/派蒙/g, Config.tts_First_person))
                 break;
             case 3:
-                // 要今天使用过绘图的人才能激活这个奖励
-                if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
-                    let random_nai_time = Math.ceil(Math.random() * 4)
-                    if (random_nai_time == 4) random_nai_time = Math.ceil(Math.random() * 6)
-                    if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
-                    if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
-                    this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
-                    await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘图次数哦~`, false, { recallMsg: 55 })
-                    break;
+                let message13 = await get_msg_KFC()
+                let today = new Date();
+                if (message13 && today.getDay() === 4) {
+                    await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
+                    break
                 }
-            case 4:
-            case 5:
+                logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
+            // case 4:
+            // case 5:
             case 6:
                 let message9 = await get_msg_hitokoto(false)
                 if (message9) {
@@ -459,13 +457,16 @@ export class PaimonChuo extends plugin {
                 }
                 logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
             case 10:
-                let message13 = await get_msg_KFC()
-                let today = new Date();
-                if (message13 && today.getDay() === 4) {
-                    await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message13}”`)
-                    break
+                // 要今天使用过绘图的人才能激活这个奖励
+                if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
+                    let random_nai_time = Math.ceil(Math.random() * 4)
+                    if (random_nai_time == 4) random_nai_time = Math.ceil(Math.random() * 6)
+                    if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
+                    if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
+                    this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
+                    await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘画次数哦~`, false, { recallMsg: 55 })
+                    break;
                 }
-                logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
             default:
                 this.send_paimon_msg(e);
                 break;

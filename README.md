@@ -1,6 +1,6 @@
 ## 减少特性，增加bug：
 ### 更改：
-- 所有语音替换语音引擎为Bert-VITS2（感谢genshinvoice.top提供的api支持！）
+- vit2语音模型替换语音引擎为Bert-VITS2模型（感谢genshinvoice.top提供的api支持！）
 ### 新增：
 - 戳一戳功能，锅巴开启关闭
   - 受#chatgpt设置AI第一人称 和锅巴控制
