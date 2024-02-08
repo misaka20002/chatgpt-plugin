@@ -430,7 +430,9 @@ export class PaimonChuo extends plugin {
                     await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
                     break
                 }
-                logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
+                if (!message3) logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
+                this.send_paimon_msg(e);
+                break;
             // case 4:
             // case 5:
             case 6:
