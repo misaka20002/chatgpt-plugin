@@ -423,18 +423,20 @@ export class PaimonChuo extends plugin {
                 await e.reply(kaomoji_list[message2 - 1].replace(/派蒙/g, Config.tts_First_person))
                 break;
             case 3:
-                let message3 = await get_msg_KFC()
+            case 4:
+            case 5:
                 let today = new Date();
-                if (message3 && today.getDay() === 4) {
-                    chuo_text_generateAndSendAudio(message3, e);
-                    await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
-                    break
+                if (today.getDay() === 4) {
+                    let message3 = await get_msg_KFC()
+                    if (message3) {
+                        chuo_text_generateAndSendAudio(message3, e);
+                        await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
+                        break
+                    }
+                    logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
                 }
-                if (!message3) logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
                 this.send_paimon_msg(e);
                 break;
-            // case 4:
-            // case 5:
             case 6:
                 let message6 = await get_msg_hitokoto(false)
                 if (message6) {
