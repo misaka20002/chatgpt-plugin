@@ -114,6 +114,7 @@ const randomHellowPaimon = [
   '当你重新踏上旅途之后，一定要记得旅途本身的意义。提瓦特的飞鸟、诗歌和城邦，女皇、愚人和怪物……都是你旅途的一部分。终点并不意味着一切，在抵达终点之前，用你的眼睛，多多观察这个世界吧。',
   '我们都还没来得及说再见，所以，派蒙不会把它当做离别。',
   '诶嘿是什么意思啊！！哼！！',
+  '给我再盛满满一碗，多来几只虾，谢谢！',
 ]
 
 const randomHellow_dairu = [
@@ -171,6 +172,7 @@ const randomHellow_dairu = [
   return fetch(url, mergedOptions)
 } */
 
+/**派蒙语录 */
 export async function generateHello() {
   /*   let question = Config.helloPrompt || '写一段话让大家来找我聊天。类似于“有人找我聊天吗？"这种风格，轻松随意一点控制在20个字以内'
     let api = new ChatGPTAPI({
@@ -183,7 +185,6 @@ export async function generateHello() {
 
   let text_number = Math.ceil(Math.random() * randomHellowPaimon['length'])
   return randomHellowPaimon[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
-
 }
 
 /**在数组randomHellow_dairu中随机选一个字符串 */

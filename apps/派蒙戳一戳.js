@@ -6,7 +6,7 @@ import moment from 'moment'
 import fetch from 'node-fetch'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
-import { generate_msg_Daiyu } from '../utils/randomMessage.js'
+import { generate_msg_Daiyu, generateHello } from '../utils/randomMessage.js'
 import { generateAudio } from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
@@ -204,41 +204,52 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机语音生效]')
                 }
-                // 匹配发音人物
-                let defaultTTSRole = Config.defaultTTSRole
-                let voice_lists
-                switch (defaultTTSRole) {
-                    case '可莉_ZH':
-                        // voice_lists = voice_list_klee_cn
-                        voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
+                let mutetype = 1
+                if (Config.paimon_chou_text_generateAndSendAudio) mutetype = Math.ceil(Math.random() * 2)
+                switch (mutetype) {
+                    case 1:
+                        // 匹配发音人物
+                        let defaultTTSRole = Config.defaultTTSRole
+                        let voice_lists
+                        switch (defaultTTSRole) {
+                            case '可莉_ZH':
+                                // voice_lists = voice_list_klee_cn
+                                voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
+                                break;
+                            case '可莉_JP':
+                                // voice_lists = voice_list_klee_jp
+                                voice_lists = voice_list_klee_jp.concat(voice_list_klee_cn);
+                                break;
+                            case '纳西妲_ZH':
+                                // voice_lists = voice_list_nahida_cn
+                                voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
+                                break;
+                            case '纳西妲_JP':
+                                // voice_lists = voice_list_nahida_jp
+                                voice_lists = voice_list_nahida_jp.concat(voice_list_nahida_cn);
+                                break;
+                            case '派蒙_ZH':
+                            case '白露_ZH':
+                                voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn);
+                                break;
+                            case '派蒙_JP':
+                                voice_lists = voice_list_paimon_jp;
+                                break;
+                            // 缺省时将返回随机音频替换为返回随机文本
+                            default:
+                                this.send_randow_text_msg(e);
+                                return
+                        }
+                        let voice_number = Math.ceil(Math.random() * voice_lists['length'])
+                        let voice_url = voice_lists[voice_number - 1]
+                        await e.reply(await chuo_silk_voice(voice_url, e))
                         break;
-                    case '可莉_JP':
-                        // voice_lists = voice_list_klee_jp
-                        voice_lists = voice_list_klee_jp.concat(voice_list_klee_cn);
+                    case 2:
+                        let message2 = await generateHello()
+                        chuo_text_generateAndSendAudio(message2, e);
+                        await e.reply(message2)
                         break;
-                    case '纳西妲_ZH':
-                        // voice_lists = voice_list_nahida_cn
-                        voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
-                        break;
-                    case '纳西妲_JP':
-                        // voice_lists = voice_list_nahida_jp
-                        voice_lists = voice_list_nahida_jp.concat(voice_list_nahida_cn);
-                        break;
-                    case '派蒙_ZH':
-                    case '白露_ZH':
-                        voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn);
-                        break;
-                    case '派蒙_JP':
-                        voice_lists = voice_list_paimon_jp;
-                        break;
-                    // 缺省时将返回随机音频替换为返回随机文本
-                    default:
-                        this.send_randow_text_msg(e);
-                        return
                 }
-                let voice_number = Math.ceil(Math.random() * voice_lists['length'])
-                let voice_url = voice_lists[voice_number - 1]
-                await e.reply(await chuo_silk_voice(voice_url, e))
             }
             /**禁言 */
             else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
@@ -469,6 +480,8 @@ export class PaimonChuo extends plugin {
                     break
                 }
                 logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
+                this.send_paimon_msg(e);
+                break;
             case 10:
                 // 要今天使用过绘图的人才能激活这个奖励
                 if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
