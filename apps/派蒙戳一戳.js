@@ -486,7 +486,7 @@ export class PaimonChuo extends plugin {
                 // 要今天使用过绘图的人才能激活这个奖励
                 if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
                     let random_nai_time = Math.ceil(Math.random() * 4)
-                    if (random_nai_time == 4) random_nai_time = Math.ceil(Math.random() * 6)
+                    if (random_nai_time == 1 || random_nai_time == 4) random_nai_time = Math.ceil(Math.random() * 6)
                     if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                     if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
                     this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
