@@ -247,7 +247,7 @@ export class PaimonChuo extends plugin {
                     case 2:
                         let message2 = await generateHello()
                         chuo_text_generateAndSendAudio(message2, e);
-                        await e.reply(message2)
+                        // await e.reply(message2)
                         break;
                 }
             }
