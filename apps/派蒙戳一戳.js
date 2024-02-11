@@ -490,7 +490,7 @@ export class PaimonChuo extends plugin {
                     if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                     if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
                     this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
-                    await e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘画次数哦~`, false, { recallMsg: 55 })
+                    e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘画次数哦~`, false, { recallMsg: 55 })
                     break;
                 }
             default:
