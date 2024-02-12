@@ -516,6 +516,8 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         e = await parseSourceImg(e)
         if (e.img) {
             const imgResponse = await fetch(e.img[0])
+            //获取文件的后缀
+
             if (imgResponse.ok) {
                 let imgSize = (imgResponse.headers.get('size') / 1024 / 1024).toFixed(2)
                 if (imgSize > 1024 * 1024 * 50) {
@@ -524,7 +526,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 }
                 const imageUrl = await reNameAndSavePic(imgResponse, e.img[0], paimonChuoYiChouSavePicDirectory)
                 if (imageUrl) e.reply(`派蒙戳一戳图片已保存`, true)
-                else e.reply(`派蒙戳一戳图片保存失败`, true)
+                else e.reply(`派蒙戳一戳图片保存失败,请确认图片后缀为gif/jpg/jpeg/png`, true)
                 return true
             }
             else return e.reply('图片下载失败了呢QAQ', true)
@@ -572,7 +574,9 @@ async function reNameAndSavePic(response, url, directory) {
     try {
         // 计算URL的哈希值并将其作为文件名
         const hash = crypto.createHash('sha256').update(url).digest('hex')
-        const filename = hash + path.extname(url)
+        // 获取文件后缀
+        const match_ext = response.headers.get('content-type').match(/\.gif$|\.jpg$|\.jpeg$|\.png$/);
+        const filename = hash + path.extname(url) + match_ext[0]
         const localPath = path.join(directory, filename)
 
         // 检查文件是否已经存在
