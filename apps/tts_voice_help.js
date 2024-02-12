@@ -575,8 +575,8 @@ async function reNameAndSavePic(response, url, directory) {
         // 计算URL的哈希值并将其作为文件名
         const hash = crypto.createHash('sha256').update(url).digest('hex')
         // 获取文件后缀
-        const match_ext = response.headers.get('content-type').match(/\.gif$|\.jpg$|\.jpeg$|\.png$/);
-        const filename = hash + path.extname(url) + match_ext[0]
+        const match_ext = response.headers.get('content-type').match(/gif$|jpg$|jpeg$|png$/)
+        const filename = hash + path.extname(url) + '.' + match_ext[0]
         const localPath = path.join(directory, filename)
 
         // 检查文件是否已经存在
