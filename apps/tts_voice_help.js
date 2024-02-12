@@ -3,6 +3,12 @@ import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
 import { getUserReplySetting } from '../utils/common.js'
 import { speakers, vits_emotion_map } from '../utils/tts.js'
+import crypto from 'crypto'
+import path from 'path'
+import fs from 'fs'
+import fetch from 'node-fetch'
+
+const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 
 export class voicechangehelp extends plugin {
     constructor() {
@@ -73,6 +79,11 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
+                reg: '^#派蒙戳(一戳)?保存(图片|表情)$',
+                fnc: 'paimon_chuo_save_img',
+                permission: 'master'
+            },
+            {
                 reg: '^#tts(可选)?人物(可选)?列表$',
                 fnc: 'tts_show_speakers',
             },
@@ -127,7 +138,8 @@ export class voicechangehelp extends plugin {
             `#chatgpt设置AI第一人称帮助\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
             `#chatgpt(查看|设置)输入黑名单\n` +
-            `#chatgpt必应(开启|关闭)搜索` +
+            `#chatgpt必应(开启|关闭)搜索\n` +
+            `#派蒙戳一戳保存表情` +
             ''
 
         let msg_outdata = `已经用不上的功能：\n` +
@@ -499,7 +511,78 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return e.reply(show_tts_voice_help_config_msg2_msgx);
     }
 
+    /**^#派蒙戳(一戳)?保存(图片|表情)$ */
+    async paimon_chuo_save_img(e) {
+        e = await parseSourceImg(e)
+        if (e.img) {
+            const imgResponse = await fetch(e.img[0])
+            if (imgResponse.ok) {
+                let imgSize = (imgResponse.headers.get('size') / 1024 / 1024).toFixed(2)
+                if (imgSize > 1024 * 1024 * 50) {
+                    this.e.reply(`这图片超过50MB了，还是不要保存了吧QAQ`, true)
+                    return false
+                }
+                const imageUrl = await reNameAndSavePic(imgResponse, e.img[0], paimonChuoYiChouSavePicDirectory)
+                if (imageUrl) e.reply(`派蒙戳一戳图片已保存`, true)
+                else e.reply(`派蒙戳一戳图片保存失败`, true)
+                return true
+            }
+            else return e.reply('图片下载失败了呢QAQ', true)
+        } else {
+            return e.reply('请将图片一起发送或引用图片', true)
+        }
+    }
 
 
+}
 
+
+/**
+ * @description: 处理消息中的图片：当消息引用了图片，则将对应图片放入e.img ，优先级==> e.source.img > e.img
+ * @param {*} e
+ * @return {*}处理过后的e
+ */
+async function parseSourceImg(e) {
+    if (e.source) {
+        let reply;
+        if (e.isGroup) {
+            reply = (await e.group.getChatHistory(e.source.seq, 1)).pop()?.message;
+        } else {
+            reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
+        }
+        if (reply) {
+            for (const val of reply) {
+                if (val.type == "image") {
+                    e.img = [val.url];
+                    break;
+                }
+                if (val.type == "file") {
+                    e.reply("不支持消息中的文件，请以图片发送", true);
+                    return;
+                }
+            }
+        }
+    }
+    return e;
+}
+
+
+/** 下载好的图片重命名并存档在directory */
+async function reNameAndSavePic(response, url, directory) {
+    try {
+        // 计算URL的哈希值并将其作为文件名
+        const hash = crypto.createHash('sha256').update(url).digest('hex')
+        const filename = hash + path.extname(url)
+        const localPath = path.join(directory, filename)
+
+        // 检查文件是否已经存在
+        if (fs.existsSync(localPath)) return localPath
+
+        const imageData = await response.arrayBuffer()
+        fs.writeFileSync(localPath, Buffer.from(imageData))
+        return localPath
+    } catch (err) {
+        logger.error(err)
+        return null
+    }
 }

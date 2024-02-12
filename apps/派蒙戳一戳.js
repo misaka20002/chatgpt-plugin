@@ -27,6 +27,7 @@ let dailyEnglish = 0.005 //每日英语
 
 // 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
+const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 if (!Config.paimon_chou_IsSendLocalpic) {
     reply_text += randowLocalPic
     randowLocalPic = 0
@@ -34,6 +35,7 @@ if (!Config.paimon_chou_IsSendLocalpic) {
 // 初始化
 redis.del(`Yz:PaimongChuoLocalPicIndex`);
 if (!fs.existsSync(paimonChuoYiChouPicturesDirectory)) fs.mkdirSync(paimonChuoYiChouPicturesDirectory);
+if (!fs.existsSync(paimonChuoYiChouSavePicDirectory)) fs.mkdirSync(paimonChuoYiChouSavePicDirectory);
 
 export class PaimonChuo extends plugin {
     constructor() {
