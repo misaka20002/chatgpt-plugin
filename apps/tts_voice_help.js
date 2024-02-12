@@ -79,7 +79,7 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
-                reg: '^#派蒙戳(一戳)?保存(图片|表情)$',
+                reg: '^#派蒙戳(一戳)?(保存|添加)(图片|表情)$',
                 fnc: 'paimon_chuo_save_img',
                 permission: 'master'
             },
@@ -511,7 +511,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return e.reply(show_tts_voice_help_config_msg2_msgx);
     }
 
-    /**^#派蒙戳(一戳)?保存(图片|表情)$ */
+    /**^#派蒙戳(一戳)?(保存|添加)(图片|表情)$ */
     async paimon_chuo_save_img(e) {
         e = await parseSourceImg(e)
         if (e.img) {
