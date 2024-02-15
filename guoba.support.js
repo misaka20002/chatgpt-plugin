@@ -914,7 +914,7 @@ export function supportGuoba () {
         {
           field: 'vits_auto_emotion',
           label: 'tts语音启动自动情感',
-          bottomHelpMessage: '自动根据句子中的感情词匹配tts中的100种（经过测试删减为6种）情感，将会覆盖当前tts情感',
+          bottomHelpMessage: '自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感',
           component: 'Switch'
         },
         {
