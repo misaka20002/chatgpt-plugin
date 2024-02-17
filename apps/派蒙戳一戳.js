@@ -6,7 +6,11 @@ import moment from 'moment'
 import fetch from 'node-fetch'
 import { Config } from '../utils/config.js'
 import uploadRecord from '../utils/uploadRecord.js'
-import { generate_msg_Daiyu, generateHello } from '../utils/randomMessage.js'
+import {
+    generate_msg_Daiyu,
+    generateHello,
+    generate_msg_randomHellow_TuWeiLoveSpeech
+} from '../utils/randomMessage.js'
 import { generateAudio } from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
@@ -436,6 +440,9 @@ export class PaimonChuo extends plugin {
                 await e.reply(kaomoji_list[message2 - 1].replace(/派蒙/g, Config.tts_First_person))
                 break;
             case 3:
+                let message3 = await generate_msg_randomHellow_TuWeiLoveSpeech()
+                await e.reply(message3)
+                break;
             case 4:
             case 5:
                 let today = new Date();
