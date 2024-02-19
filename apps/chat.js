@@ -683,7 +683,7 @@ export class chatgpt extends plugin {
         break
       }
     }
-    await this.reply(`结束了${deleted}个用户的对话。`, true)
+    await this.reply(`结束了${deleted}个用户的对话。`, false)
   }
 
   async deleteConversation (e) {
