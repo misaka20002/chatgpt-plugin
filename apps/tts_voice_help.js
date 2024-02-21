@@ -120,7 +120,7 @@ export class voicechangehelp extends plugin {
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://v2.genshinvoice.top\n` +
-            `2. 云转码API发送数据模式 选择：[文件]`
+            `2. 云转码API发送数据模式 选择：[文件]/[url]都可以`
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
         let msg1_isn_master = `tts语音帮助：\n` +
@@ -159,7 +159,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
         if (e.isMaster && (input_tts == 'pro' || input_tts == 'm' || input_tts == 'p')) {
-            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg2, msg4_1], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg4_1], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg1_1, msg4_1], `tts语音帮助`)
         }

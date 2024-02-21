@@ -453,7 +453,7 @@ export function supportGuoba () {
         {
           field: 'sydneyReverseProxy',
           label: '必应反代',
-          bottomHelpMessage: '用于创建对话（默认不用于正式对话）。目前国内ip和部分境外IDC IP由于微软限制创建对话，如果有bing.com的反代可以填在此处，或者使用proxy',
+          bottomHelpMessage: '用于创建对话（默认不用于正式对话）。目前国内ip和部分境外IDC IP由于微软限制创建对话，如果有bing.com的反代可以填在此处，或者使用proxy。默认为https://666102.201666.xyz',
           component: 'Input'
         },
         {
@@ -852,7 +852,7 @@ export function supportGuoba () {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: '语音传回是数据链接还是文件：如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          bottomHelpMessage: '语音传回是数据链接还是文件：genshinvoice.top选择url;如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
           component: 'Select',
           componentProps: {
             options: [
