@@ -381,7 +381,7 @@ ${translateLangLabels}
         continue
       }
       let groupId = parseInt(element)
-      let bots = this.e ? [this.e.bot] : getBots()
+      let bots = this.e ? [this.e.bot] : Bot ? Bot : getBots()
       for (let bot of bots) {
         if (bot.gl?.get(groupId)) {
           // 打招呼概率
