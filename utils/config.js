@@ -122,7 +122,7 @@ const defaultConfig = {
   serverPort: 3321,
   serverHost: '',
   viewHost: '',
-  chatViewWidth: 1280,
+  chatViewWidth: 768,
   chatViewBotName: '',
   live2d: false,
   live2dModel: '/live2d/Murasame/Murasame.model3.json',
