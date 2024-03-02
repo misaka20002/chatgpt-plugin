@@ -69,7 +69,7 @@ export class voicechangehelp extends plugin {
                 permission: 'master'
             },
             {
-                reg: '^#tts删除所有(chatgpt)?用户回复设置',
+                reg: '^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置',
                 fnc: 'delete_redis_all_user_config',
                 permission: 'master'
             },
@@ -133,7 +133,7 @@ export class voicechangehelp extends plugin {
 
         let msg_for_master = `Chatgpt管理帮助：\n` +
             `#派蒙戳一戳设置CD\n` +
-            `#tts删除所有用户回复设置帮助\n` +
+            `#tts重置所有用户单独设置帮助\n` +
             `（↑每人独立设置且优先级最高）\n` +
             `#chatgpt设置AI第一人称帮助\n` +
             `#chatgpt(查看|设置)输出黑名单\n` +
@@ -469,14 +469,13 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         }
     }
 
-    /** ^#tts删除所有(chatgpt)?用户回复设置 */
+    /** ^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置 */
     async delete_redis_all_user_config(e) {
-        let input_tts = e.msg.replace(/^#tts删除所有(chatgpt)?用户回复设置/, '').trim()
+        let input_tts = e.msg.replace(/^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置/, '').trim()
         if (input_tts) {
-            let msg1 = `删除所有用户回复设置，所有用户将重新使用默认配置。用户回复设置的优先级高于默认设置，删除后用户可重新设置。`
-            let msg_show = `#chatgpt查看回复设置`
-            let msg1_1 = `请注意你知道你在做什么\n#tts删除所有用户回复设置`
-            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts删除所有用户回复设置`);
+            let msg1 = `重置所有用户单独回复设置，所有用户将重新使用默认配置。用户单独回复设置的优先级高于默认设置，删除后用户可重新设置。\n 查看单独设置：#chatgpt查看回复设置`
+            let msg1_1 = `#tts重置所有用户单独设置`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg1_1], `tts重置所有用户单独设置`);
             return e.reply(msgx, false)
         }
         let qcs = await redis.keys('CHATGPT:USER:*')
@@ -489,7 +488,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             }
             deleted++
         }
-        return e.reply(`已经删除${deleted}个用户的回复设置，所有用户将使用默认配置。\n#chatgpt查看回复设置`, true)
+        return e.reply(`已经重置${deleted}个用户的单独回复设置，所有用户将使用默认配置。\n#chatgpt查看回复设置`, true)
     }
 
     /** 发送当前设置 */
