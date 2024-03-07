@@ -499,12 +499,6 @@ export class PaimonChuo extends plugin {
                     if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                     if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
                     this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
-                    if (random_nai_time > 0 && random_nai_time < 7) await e.reply(await segment.dice(random_nai_time))
-                    else {
-                        await e.reply(await segment.dice(6))
-                        await e.reply(await segment.dice(random_nai_time - 6))
-                    }
-                    await common.sleep(1000);
                     e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘画次数哦~`, false, { recallMsg: 55 })
                     break;
                 }
