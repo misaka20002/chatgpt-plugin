@@ -75,6 +75,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
 
         let body
+        // API更新了，目前只支持切片生成
+        tts_slice_is_slice_generation = ture
         if (!tts_slice_is_slice_generation) {
             // 最大300字，截取处理后的前299个字符
             text = text.substr(0, 299);
@@ -114,7 +116,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     exampleAudio, vits_emotion, style_text, style_text_weights
                 ],
                 event_data: null,
-                fn_index: 2
+                fn_index: 0
             }
             /* 切片生成body参考：
             {
@@ -132,10 +134,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     null,  //exampleAudio
                     "Happy",
                     "",
-                    0
+                    0.7
                 ],
                     "event_data": null,
-                        "fn_index": 2
+                        "fn_index": 0
             } */
         }
 

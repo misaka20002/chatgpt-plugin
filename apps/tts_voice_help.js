@@ -455,7 +455,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async set_tts_slice_is_slice_generation(e) {
         let input_tts = e.msg.replace(/^#tts(语音)?切片生成(帮助)?/, '').trim()
         if (!input_tts) {
-            let msg1 = `使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但1、会增加生成耗时，2、会导致每一段句子语气不一致，3、增加post失败概率`
+            let msg1 = `使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但1、会增加生成耗时，2、会导致每一段句子语气不一致，3、增加post失败概率\n（2024年3月7日 API更新了，目前只支持切片生成，请保持该选项开启）`
             let msg_show = `tts语音切片生成当前设置：\n 是否开启：${Config.tts_slice_is_slice_generation}\n 段间停顿时长（秒）：${Config.tts_slice_pause_between_paragraphs_seconds}\n 开启按句切分：${Config.tts_slice_is_Split_by_sentence}\n 句间停顿时长（秒）：${Config.tts_slice_pause_between_sentences_seconds}\n -具体参数请在锅巴设置修改`
             let msg1_1 = `#tts语音切片生成(开启|关闭)`
             let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `tts语音切片生成帮助`);
