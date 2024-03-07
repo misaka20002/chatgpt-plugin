@@ -75,8 +75,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
 
         let body
-        // API更新了，目前只支持切片生成
-        tts_slice_is_slice_generation = ture
+        // API更新了，目前只支持切片生成----------------
+        tts_slice_is_slice_generation = ture        
         if (!tts_slice_is_slice_generation) {
             // 最大300字，截取处理后的前299个字符
             text = text.substr(0, 299);
