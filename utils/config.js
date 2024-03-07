@@ -97,7 +97,7 @@ const defaultConfig = {
   lengthScale: 1.0,
   tts_language: 'zh',
   tts_slice_is_slice_generation: true,
-  tts_slice_is_Split_by_sentence: true,
+  tts_slice_is_Split_by_sentence: false,
   tts_slice_pause_between_paragraphs_seconds: 0.2,
   tts_slice_pause_between_sentences_seconds: 0.2,
   exampleAudio: null,
