@@ -103,20 +103,20 @@ export class voicechangehelp extends plugin {
         let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 切片生成：${Config.tts_slice_is_slice_generation}\n 段间停顿时长：${Config.tts_slice_pause_between_paragraphs_seconds} 秒\n 按句切分：${Config.tts_slice_is_Split_by_sentence}\n 句间停顿时长：${Config.tts_slice_pause_between_sentences_seconds} 秒\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
 
         let msg1 = `tts语音帮助：\n` +
-            `#tts可选人物列表\n` +
-            `#tts语音转日语帮助\n` +
-            `#tts语言设置帮助\n` +
-            `#ttslength设置帮助\n` +
-            `#tts语音切片生成帮助\n` +
-            `#chatgpt(开启|关闭)本地SILK转码\n` +
-            `（2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
+            ` #tts可选人物列表\n` +
+            ` #tts语音转日语帮助\n` +
+            ` #tts语言设置帮助\n` +
+            ` #ttslength设置帮助\n` +
+            ` #tts语音切片生成帮助\n` +
+            ` #chatgpt(开启|关闭)本地SILK转码\n` +
+            ` （2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
             ''
         let msg1_1 = `情感设置：\n` +
-            `#tts情感帮助\n` +
-            `#tts情感自动(开启|关闭)\n` +
-            `#tts情感设置上锁(开启|关闭)\n` +
-            `#tts(查看|设置)融合文本\n` +
-            `#tts(查看|设置)融合权重` +
+            ` #tts情感帮助\n` +
+            ` #tts情感自动(开启|关闭)\n` +
+            ` #tts情感设置上锁(开启|关闭)\n` +
+            ` #tts(查看|设置)融合文本\n` +
+            ` #tts(查看|设置)融合权重` +
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://v2.genshinvoice.top\n` +
@@ -124,22 +124,28 @@ export class voicechangehelp extends plugin {
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
         let msg1_isn_master = `tts语音帮助：\n` +
-            `#tts可选人物列表\n` +
-            `#chatgpt设置语音角色派蒙_ZH\n` +
-            `#chatgpt(图片|语音)模式\n` +
-            `（↑每人独立设置且优先级最高）\n` +
-            `主人请使用#tts帮助pro 获取管理指令` +
+            ` #tts可选人物列表\n` +
+            ` #chatgpt设置语音角色派蒙_ZH\n` +
+            ` #chatgpt(图片|语音)模式\n` +
+            ` （↑每人独立设置且优先级最高）\n` +
+            ` 主人请使用#tts帮助pro 获取管理指令` +
             ''
 
         let msg_for_master = `Chatgpt管理帮助：\n` +
-            `#派蒙戳一戳设置CD\n` +
-            `#tts重置所有用户单独设置帮助\n` +
-            `（↑每人独立设置且优先级最高）\n` +
-            `#chatgpt设置AI第一人称帮助\n` +
-            `#chatgpt(查看|设置)输出黑名单\n` +
-            `#chatgpt(查看|设置)输入黑名单\n` +
-            `#chatgpt必应(开启|关闭)搜索\n` +
-            `#派蒙戳一戳保存表情` +
+            ` #派蒙戳一戳设置CD\n` +
+            ` #tts重置所有用户单独设置帮助\n` +
+            ` （↑每人独立设置且优先级最高）\n` +
+            ` #chatgpt设置AI第一人称帮助\n` +
+            ` #chatgpt(查看|设置)输出黑名单\n` +
+            ` #chatgpt(查看|设置)输入黑名单\n` +
+            ` #派蒙戳一戳保存表情` +
+            ''
+
+        let msg_for_master2 = `Chatgpt管理杂项：\n` +
+            ` #chatgpt必应(开启|关闭)搜索\n` +
+            ` #chatgpt设置翻译来源(openai|gemini|星火|通义千问|xh|qwen)\n` +
+            ` #chatgpt工具箱\n` +
+            ` #chatgpt[开启|关闭]工具箱\n` +
             ''
 
         let msg_outdata = `已经用不上的功能：\n` +
@@ -159,7 +165,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
         if (e.isMaster && (input_tts == 'pro' || input_tts == 'm' || input_tts == 'p')) {
-            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg4_1], `tts语音帮助-m`)
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg_for_master2, msg4_1], `tts语音帮助-m`)
         } else {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg1_1, msg4_1], `tts语音帮助`)
         }

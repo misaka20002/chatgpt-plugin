@@ -570,7 +570,7 @@ export class chatgpt extends plugin {
   }
 
   /**
-   * bot现在可以对「第一人称开头的句子」回复
+   * bot现在可以对「包含第一人称的句子」回复
    */
   async chatgpt_for_firstperson_call(e) {
     if (!Config.chat_for_First_person) {

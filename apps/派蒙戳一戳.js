@@ -450,7 +450,7 @@ export class PaimonChuo extends plugin {
                     let message3 = await get_msg_KFC()
                     if (message3) {
                         chuo_text_generateAndSendAudio(message3, e);
-                        await e.reply((`“咳咳~”派蒙：`).replace(/派蒙/g, Config.tts_First_person) + `“${message3}”`)
+                        await e.reply((`“咳咳~”派蒙：\n`).replace(/派蒙/g, Config.tts_First_person) + `${message3}`)
                         break
                     }
                     logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
