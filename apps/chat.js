@@ -577,7 +577,7 @@ export class chatgpt extends plugin {
       logger.info('AI回应第一人称呼叫已关闭，不予理会')
       return false
     }
-    let msg = (Version.isTrss || e.adapter === 'shamrock') ? e.msg : e.raw_message
+    let msg = e.msg
     if (!msg || e.msg?.startsWith('#')) {
       logger.info('消息以#开头，，不予理会')
       return false
