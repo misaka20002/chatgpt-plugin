@@ -7,7 +7,7 @@ logger.info('chatgpt-plugin加载中')
 
 if (!global.segment) {
   try {
-    global.segment = (await import('icqq')).segment
+    global.segment = (await import('@icqqjs/icqq')).segment
   } catch (err) {
     global.segment = (await import('oicq')).segment
   }

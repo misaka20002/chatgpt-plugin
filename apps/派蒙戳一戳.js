@@ -1,5 +1,4 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import { segment } from 'icqq'
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'

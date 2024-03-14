@@ -15,7 +15,7 @@ try {
   module = await import('oicq')
 } catch (err) {
   try {
-    module = await import('icqq')
+    module = await import('@icqqjs/icqq')
   } catch (err1) {
     // 可能是go-cqhttp之类的
   }
