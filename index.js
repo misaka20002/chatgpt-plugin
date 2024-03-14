@@ -9,7 +9,11 @@ if (!global.segment) {
   try {
     global.segment = (await import('@icqqjs/icqq')).segment
   } catch (err) {
-    global.segment = (await import('oicq')).segment
+    try {
+      global.segment = (await import('icqq')).segment
+    } catch (err) {
+      global.segment = (await import('oicq')).segment
+    }
   }
 }
 

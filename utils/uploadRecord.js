@@ -17,7 +17,11 @@ try {
   try {
     module = await import('@icqqjs/icqq')
   } catch (err1) {
-    // 可能是go-cqhttp之类的
+      try {
+        module = await import('icqq')
+      } catch (err1) {
+        // 可能是go-cqhttp之类的
+      }
   }
 }
 let pcm2slk, core, Contactable
