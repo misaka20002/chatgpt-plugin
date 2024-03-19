@@ -79,7 +79,7 @@ const defaultConfig = {
   defaultTimeoutMs: 120000,
   chromeTimeoutMS: 120000,
   sydneyFirstMessageTimeout: 40000,
-  ttsSpace: 'https://v2.genshinvoice.top',
+  ttsSpace: 'https://bv2.firefly.matce.cn',
   // https://114514.201666.xyz
   huggingFaceReverseProxy: '',
   tts_First_person: '派蒙',
