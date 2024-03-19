@@ -384,56 +384,14 @@ export default class SydneyAIClient {
     if (tone.toLowerCase() === 'sydney' || tone.toLowerCase() === 'custom') {
       Config.toneStyle = 'Creative'
     }
-    const isCreative = tone.toLowerCase().includes('creative')
-    const toneOption = isCreative ? 'h3imaginative' : 'h3precise'
-    let optionsSets = [
-      'nlu_direct_response_filter',
-      'deepleo',
-      'disable_emoji_spoken_text',
-      'responsible_ai_policy_235',
-      'enablemm',
-      toneOption,
-      // 'dagslnv1',
-      // 'sportsansgnd',
-      // 'dl_edge_desc',
-      // 'noknowimg',
-      // 'dtappid',
-      // 'cricinfo',
-      // 'cricinfov2',
-      'dv3sugg',
-      // 'gencontentv3',
-      'iycapbing',
-      'iyxapbing',
-      // 'revimglnk',
-      // 'revimgsi2',
-      // 'revimgsrc1',
-      // 'revimgur',
-      // 'clgalileo',
-      'eredirecturl',
-      // copilot
-      'uquopt',
-      'papynoapi',
-      'gndlogcf',
-      'sapsgrd'
-    ]
-    if (!isCreative) {
-      optionsSets.push('clgalileo')
-    }
+    let optionsSets = getOptionSet(Config.toneStyle, Config.enableGenerateContents)
     let source = 'cib-ccp'; let gptId = 'copilot'
-    if (Config.enableGenerateContents) {
-      optionsSets.push(...['gencontentv3'])
-    }
     if (!Config.sydneyEnableSearch || toSummaryFileContent?.content) {
       optionsSets.push(...['nosearchall'])
     }
     if (isPro) {
       tone = tone + 'Classic'
       invocationId = 2
-    }
-    if (Config.sydneyGPT4Turbo) {
-      // tone = 'Creative'
-      // optionsSets.push('gpt4tmnc')
-      invocationId = 1
     }
     // wtf gpts?
     // if (Config.sydneyGPTs === 'Designer') {
@@ -474,30 +432,7 @@ export default class SydneyAIClient {
         'SearchQuery',
         'GeneratedCode'
       ],
-      sliceIds: [
-        'sappbcbt',
-        'inlineadsv2ho-prod',
-        'bgstream',
-        'dlidlat',
-        'autotts',
-        'dlid',
-        'sydoroff',
-        'voicemap',
-        '72enasright',
-        'semseronomon',
-        'srchqryfix',
-        'cmcpupsalltf',
-        'proupsallcf',
-        '206mems0',
-        '0209bicv3',
-        '205dcl1bt15',
-        'etlog',
-        'fpallsticy',
-        '0208papynoa',
-        'sapsgrd',
-        '1pgptwdes',
-        'newzigpt'
-      ],
+      sliceIds: [],
       requestId: crypto.randomUUID(),
       traceId: genRanHex(32),
       scenario: 'SERP',
@@ -555,10 +490,16 @@ export default class SydneyAIClient {
       conversationId,
       previousMessages,
       plugins: [
-        // {
-        //   id: 'c310c353-b9f0-4d76-ab0d-1dd5e979cf68'
-        // }
-      ]
+        {
+          id: 'c310c353-b9f0-4d76-ab0d-1dd5e979cf68',
+          category: 1
+        }
+      ],
+      extraExtensionParameters: {
+        'gpt-creator-persona': {
+          personaId: 'copilot'
+        }
+      }
     }
 
     if (encryptedconversationsignature) {
@@ -1007,4 +948,74 @@ async function generateRandomIP () {
   ip = baseIP + randomIPSuffix
   await redis.set('CHATGPT:BING_IP', ip, { EX: 86400 * 7 })
   return ip
+}
+
+/**
+ *
+ * @param {'Precise' | 'Balanced' | 'Creative'} tone
+ */
+function getOptionSet (tone, generateContent = false) {
+  let optionset = [
+    'nlu_direct_response_filter',
+    'deepleo',
+    'disable_emoji_spoken_text',
+    'responsible_ai_policy_235',
+    'enablemm',
+    'dv3sugg',
+    'autosave',
+    'iyxapbing',
+    'iycapbing',
+    'enable_user_consent',
+    'fluxmemcst'
+  ]
+  switch (tone) {
+    case 'Precise':
+      optionset.push(...[
+        'h3precise',
+        'sunoupsell',
+        'botthrottle',
+        'dlimitationnc',
+        'hourthrot',
+        'elec2t',
+        'elecgnd',
+        'gndlogcf',
+        'eredirecturl',
+        'clgalileo',
+        'gencontentv3'
+      ])
+      break
+    case 'Balance':
+      optionset.push(...[
+        'galileo',
+        'saharagenconv5',
+        'sunoupsell',
+        'botthrottle',
+        'dlimitationnc',
+        'hourthrot',
+        'elec2t',
+        'elecgnd',
+        'gndlogcf',
+        'eredirecturl'
+      ])
+      break
+    case 'Creative':
+      optionset.push(...[
+        'h3imaginative',
+        'sunoupsell',
+        'botthrottle',
+        'dlimitationnc',
+        'hourthrot',
+        'elec2t',
+        'elecgnd',
+        'gndlogcf',
+        'eredirecturl',
+        'clgalileo',
+        'gencontentv3'
+      ])
+      break
+  }
+  if (generateContent) {
+    optionset.push('gencontentv3')
+  }
+  return optionset
 }

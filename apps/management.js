@@ -1062,7 +1062,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     let map = {
       精准: 'Precise',
       创意: 'Creative',
-      均衡: 'Precise',
+      均衡: 'Balanced',
       Sydney: 'Creative',
       sydney: 'Creative',
       悉尼: 'Creative',
@@ -1074,7 +1074,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       Config.toneStyle = map[tongStyle]
       await this.reply('切换成功')
     } else {
-      await this.reply('没有这种风格。支持的风格：`精准`和`创意`，均支持设定')
+      await this.reply('没有这种风格。支持的风格：`精准`、`均衡`和`创意`，均支持设定')
     }
   }
 
@@ -1108,9 +1108,11 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       api3: 'API3',
       chatglm: 'ChatGLM-6B',
       claude: 'Claude',
-      poe: 'Poe',
+      claude2: 'claude.ai',
+      chatglm4: 'ChatGLM-4',
       xh: '星火',
-      qwen: '通义千问'
+      qwen: '通义千问',
+      gemini: 'Gemini'
     }
     let modeText = modeMap[mode || 'api']
     let message = `请访问yunzai.chat查看文档。当前为 ${modeText} 模式。`
@@ -1711,7 +1713,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
 
   async setClaudeModel (e) {
     this.setContext('saveClaudeModel')
-    await this.reply('请发送Claude模型，官方推荐模型：\nclaude-3-opus-20240229\nclaude-3-sonnet-20240229', true)
+    await this.reply('请发送Claude模型，官方推荐模型：\nclaude-3-opus-20240229\nclaude-3-sonnet-20240229\nclaude-3-haiku-20240307', true)
     return false
   }
 
