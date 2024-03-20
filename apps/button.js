@@ -5,6 +5,7 @@ const PLUGIN_CHAT = 'ChatGpt 对话'
 const PLUGIN_MANAGEMENT = 'ChatGPT-Plugin 管理'
 const PLUGIN_ENTERTAINMENT = 'ChatGPT-Plugin 娱乐小功能'
 const FUNCTION_CHAT = 'chatgpt'
+const FUNCTION_CHAT_for_firstperson_call = 'chatgpt_for_firstperson_call'
 const FUNCTION_CHAT3 = 'chatgpt3'
 const FUNCTION_CHAT1 = 'chatgpt1'
 const FUNCTION_BING = 'bing'
@@ -62,6 +63,7 @@ export class ChatGPTButtonHandler extends plugin {
     switch (fnc) {
       case `[${PLUGIN_CHAT}][${FUNCTION_CHAT3}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_CHAT1}]`:
+      case `[${PLUGIN_CHAT}][${FUNCTION_CHAT_for_firstperson_call}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_BING}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_GEMINI}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_XH}]`:
