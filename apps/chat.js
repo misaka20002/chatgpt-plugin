@@ -1040,7 +1040,7 @@ export class chatgpt extends plugin {
         if (sendable) {
           await this.reply(sendable)
         } else {
-          await this.reply(`${Config.tts_First_person}的儿童用手机的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: 30 })
+          await this.reply(`${Config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: 30 })
         }
       } else if (userSetting.usePicture || (!Config.enableMd && Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         try {
