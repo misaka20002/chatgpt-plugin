@@ -616,7 +616,7 @@ export async function recognitionResultsByGemini(e) {
                 baseUrl: Config.geminiBaseUrl,
                 debug: Config.debug
             })
-            const response = await fetch(img[0])
+            const response = await fetch(img[0], { timeout: 60000 });
             const base64Image = Buffer.from(await response.arrayBuffer())
             let msg = 'describe this image in Simplified Chinese'
             let recognitionResults = ''
