@@ -1,17 +1,16 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
-import { getUserReplySetting } from '../utils/common.js'
+import {
+    getUserReplySetting,
+    getImg
+} from '../utils/common.js'
 import { speakers, vits_emotion_map } from '../utils/tts.js'
 import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
 import fetch from 'node-fetch'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
-import {
-    getImg,
-    getUserReplySetting,
-  } from '../utils/common.js'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 
