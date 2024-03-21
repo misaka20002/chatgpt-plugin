@@ -33,6 +33,8 @@ import { getProxy } from '../utils/proxy.js'
 import { generateSuggestedResponse } from '../utils/chat.js'
 import Core from '../model/core.js'
 
+import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
+
 let version = Config.version
 let proxy = getProxy()
 
@@ -592,6 +594,35 @@ export class chatgpt extends plugin {
       logger.info('chatgpt闭嘴中，不予理会')
       return false
     }
+    // 获取gemini的识图结果并加入到向AI发送句子前面
+    if (Config.geminiKey) {
+      let img = await getImg(e)
+      if (img?.[0]) {
+        let client = new CustomGoogleGeminiClient({
+          e,
+          userId: e.sender.user_id,
+          key: Config.geminiKey,
+          model: 'gemini-pro-vision',
+          baseUrl: Config.geminiBaseUrl,
+          debug: Config.debug
+        })
+        const response = await fetch(img[0])
+        const base64Image = Buffer.from(await response.arrayBuffer())
+        let msg = 'describe this image in Simplified Chinese'
+        let recognitionResults
+        try {
+          let res = await client.sendMessage(msg, {
+            image: base64Image.toString('base64')
+          })
+          recognitionResults = res.text
+        } catch (err) {
+          recognitionResults = ''
+        }
+        if(recognitionResults) prompt = '"' + recognitionResults + '"' + prompt
+      }
+    }
+    // 获取gemini的识图结果-end
+
     // 获取用户配置
     const userData = await getUserData(e.user_id)
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
