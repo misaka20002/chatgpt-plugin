@@ -95,7 +95,12 @@ export class voicechangehelp extends plugin {
                 reg: '^#tts查看((当|目)前)?(语音)?设置$',
                 fnc: 'show_tts_voice_help_config',
                 permission: 'master'
-            }
+            },
+            {
+                reg: '^#chatgpt对话中图片识别(帮助)?',
+                fnc: 'set_recognitionByGemini',
+                permission: 'master'
+            },
             ]
         })
     }
@@ -147,6 +152,7 @@ export class voicechangehelp extends plugin {
 
         let msg_for_master2 = `Chatgpt管理杂项：\n` +
             ` #chatgpt必应(开启|关闭)搜索\n` +
+            ` #chatgpt对话中图片识别(帮助|开启|关闭)\n` +
             ` #chatgpt设置翻译来源(openai|gemini|星火|通义千问|xh|qwen)\n` +
             ` #chatgpt工具箱\n` +
             ` #chatgpt[开启|关闭]工具箱\n` +
@@ -458,6 +464,24 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             return e.reply(`tts转日语已设置为${input_tts}！`)
         } else {
             return e.reply('喵？可以选择把文本翻译成日语再发音哦\n#tts转日语(开启|关闭)')
+        }
+    }
+
+    /** ^#chatgpt对话中图片识别(帮助)? */
+    async set_recognitionByGemini(e) {
+        let input_tts = e.msg.replace(/^#chatgpt对话中图片识别(帮助)?/, '').trim()
+        if (!input_tts) {
+            let msg1 = `对话的前面加上gemini的识图结果，注意：\n1、建议关闭其他识别功能（尤其是楼上的最简单的OCR识别）；\n2、建议仅在所使用的ai引擎不支持图片识别时开启，例如使用gemini时开启，使用gpt或claude时关闭；\n3、需要配置了gemini的key才能使用；\n4、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；\n5、gemini需要涩涩会中断`
+            let msg_show = `当前设置：${Config.recognitionByGemini}`
+            let msg1_1 = `#chatgpt对话中图片识别(开启|关闭)`
+            let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `#chatgpt对话中图片识别帮助`);
+            return e.reply(msgx, false)
+        }
+        if (input_tts === '开启' || input_tts === '关闭') {
+            Config.recognitionByGemini = input_tts === '开启' ? true : false
+            return e.reply(`对话中图片识别已设置为${input_tts}！`)
+        } else {
+            return e.reply('喵？请输入\n#chatgpt对话中图片识别帮助')
         }
     }
 
