@@ -33,13 +33,12 @@ import { getProxy } from '../utils/proxy.js'
 import { generateSuggestedResponse } from '../utils/chat.js'
 import Core from '../model/core.js'
 
-import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
-
 let version = Config.version
 let proxy = getProxy()
 
 // 使机器人可以对其第一人称回应
 const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
+import { recognitionResultsByGemini } from './tts_voice_help.js'
 
 /**
  * 每个对话保留的时长。单个对话内ai是保留上下文的。超时后销毁对话，再次对话创建新的对话。
@@ -594,35 +593,6 @@ export class chatgpt extends plugin {
       logger.info('chatgpt闭嘴中，不予理会')
       return false
     }
-    // 获取gemini的识图结果并加入到向AI发送句子前面
-    if (Config.geminiKey) {
-      let img = await getImg(e)
-      if (img?.[0]) {
-        let client = new CustomGoogleGeminiClient({
-          e,
-          userId: e.sender.user_id,
-          key: Config.geminiKey,
-          model: 'gemini-pro-vision',
-          baseUrl: Config.geminiBaseUrl,
-          debug: Config.debug
-        })
-        const response = await fetch(img[0])
-        const base64Image = Buffer.from(await response.arrayBuffer())
-        let msg = 'describe this image in Simplified Chinese'
-        let recognitionResults
-        try {
-          let res = await client.sendMessage(msg, {
-            image: base64Image.toString('base64')
-          })
-          recognitionResults = res.text
-        } catch (err) {
-          recognitionResults = ''
-        }
-        if(recognitionResults) prompt = '"' + recognitionResults + '"' + prompt
-      }
-    }
-    // 获取gemini的识图结果-end
-
     // 获取用户配置
     const userData = await getUserData(e.user_id)
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
@@ -739,6 +709,15 @@ export class chatgpt extends plugin {
         await this.reply(`${Config.tts_First_person}在哦`, false, { recallMsg: 8 })
       }
     }
+
+    // 呆毛版 gemini的识图结果 + prompt
+    if (Config.recognitionByGemini && !!isImg) {
+      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e)
+      if (imgRecognitionByGeminiText) {
+        prompt = '"' + imgRecognitionByGeminiText + '"' + prompt
+      }
+    }
+
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
     let userReplySetting = await getUserReplySetting(this.e)
     // 图片模式就不管了，降低抱歉概率

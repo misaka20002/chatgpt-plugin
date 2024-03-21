@@ -666,6 +666,12 @@ export function supportGuoba () {
           component: 'Switch'
         },
         {
+          field: 'recognitionByGemini',
+          label: '对话中图片识别-gemini',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果；1、建议关闭其他识别功能（尤其是楼上的最简单的OCR识别）；2、建议仅在所使用的ai引擎不支持图片识别时开启，例如使用gemini时开启，使用gpt或claude时关闭；3、需要配置了gemini的key才能使用；4、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；5、gemini需要涩涩会中断',
+          component: 'Switch'
+        },
+        {
           field: 'enablePrivateChat',
           label: '是否允许私聊机器人',
           component: 'Switch'

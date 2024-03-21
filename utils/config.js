@@ -105,6 +105,7 @@ const defaultConfig = {
   tts_slice_pause_between_paragraphs_seconds: 0.2,
   tts_slice_pause_between_sentences_seconds: 0.2,
   exampleAudio: null,
+  recognitionByGemini: false,
   ttsHD: false,
   initiativeChatGroups: [],
   enableDraw: true,
