@@ -473,7 +473,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async set_recognitionByGemini(e) {
         let input_tts = e.msg.replace(/^#chatgpt对话中图片识别(帮助)?/, '').trim()
         if (!input_tts) {
-            let msg1 = `对话的前面加上gemini的识图结果，注意：\n1、建议关闭其他识别功能（尤其是楼上的最简单的OCR识别）；\n2、建议仅在所使用的ai引擎不支持图片识别时开启，例如使用gemini时开启，使用gpt或claude时关闭；\n3、需要配置了gemini的key才能使用；\n4、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；\n5、gemini需要涩涩会中断`
+            let msg1 = `对话的前面加上gemini的识图结果，注意：\n1、建议关闭其他识别功能（尤其是楼上的最简单的OCR识别）；\n2、建议仅在所使用的ai引擎不支持图片识别时开启，例如使用gemini时开启，使用gpt或claude时关闭；\n3、需要配置了gemini的key才能使用；\n4、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；\n5、gemini遇到涩涩会中断`
             let msg_show = `当前设置：${Config.recognitionByGemini}`
             let msg1_1 = `#chatgpt对话中图片识别(开启|关闭)`
             let msgx = await common.makeForwardMsg(e, [msg1, msg_show, msg1_1], `#chatgpt对话中图片识别帮助`);
