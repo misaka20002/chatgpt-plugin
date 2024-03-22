@@ -2,15 +2,16 @@ import plugin from '../../../lib/plugins/plugin.js';
 import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
 import {
-    getUserReplySetting,
-    getImg
+    getUserReplySetting
 } from '../utils/common.js'
-import { speakers, vits_emotion_map } from '../utils/tts.js'
+import {
+    speakers,
+    vits_emotion_map
+} from '../utils/tts.js'
 import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
 import fetch from 'node-fetch'
-import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 
@@ -21,86 +22,87 @@ export class voicechangehelp extends plugin {
             dsc: 'tts语音替换帮助',
             event: 'message',
             priority: 999,
-            rule: [{
-                reg: `^#tts(语音)?(替换)?帮助`,
-                fnc: 'voicechangehelp'
-            },
-            {
-                reg: '^#tts情感(设置)?(帮助)?',
-                fnc: 'set_vits_emotion',
-            },
-            {
-                reg: '^#tts语言设置(帮助)?',
-                fnc: 'set_tts_language',
-                permission: 'master'
-            },
-            {
-                reg: '^#ttslength(Scale)?设置(帮助)?',
-                fnc: 'set_lengthScale',
-                permission: 'master'
-            },
-            {
-                reg: '^#tts(语音)?转日语(帮助)?',
-                fnc: 'set_autoJapanese',
-                permission: 'master'
-            },
-            {
-                reg: '^#tts(语音)?切片生成(帮助)?',
-                fnc: 'set_tts_slice_is_slice_generation',
-                permission: 'master'
-            },
-            {
-                reg: '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?',
-                fnc: 'set_assistantLabel',
-                permission: 'master'
-            },
-            {
-                reg: '^#tts(设置|查看)?融合文本(帮助)?',
-                fnc: 'set_style_text',
-            },
-            {
-                reg: '^#tts(设置|查看)?融合权重(帮助)?',
-                fnc: 'set_style_text_weights',
-            },
-            {
-                reg: '^#chatgpt(设置|查看)?输出黑名单(帮助)?',
-                fnc: 'set_blockWords',
-                permission: 'master'
-            },
-            {
-                reg: '^#chatgpt(设置|查看)?输入黑名单(帮助)?',
-                fnc: 'set_promptBlockWords',
-                permission: 'master'
-            },
-            {
-                reg: '^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置',
-                fnc: 'delete_redis_all_user_config',
-                permission: 'master'
-            },
-            {
-                reg: '^#派蒙戳一戳设置(CD|cd)',
-                fnc: 'chuo_set_paimon_chou_cd',
-                permission: 'master'
-            },
-            {
-                reg: '^#派蒙戳(一戳)?(保存|添加)(图片|表情)$',
-                fnc: 'paimon_chuo_save_img',
-                permission: 'master'
-            },
-            {
-                reg: '^#tts(可选)?人物(可选)?列表$',
-                fnc: 'tts_show_speakers',
-            },
-            {
-                reg: '^#tts查看((当|目)前)?(语音)?设置$',
-                fnc: 'show_tts_voice_help_config',
-                permission: 'master'
-            },
-            {
-                reg: '^#chatgpt对话中图片识别(帮助)?',
-                fnc: 'set_recognitionByGemini',
-                permission: 'master'
-            },
+            rule: [
+                {
+                    reg: `^#tts(语音)?(替换)?帮助`,
+                    fnc: 'voicechangehelp'
+                },
+                {
+                    reg: '^#tts情感(设置)?(帮助)?',
+                    fnc: 'set_vits_emotion',
+                },
+                {
+                    reg: '^#tts语言设置(帮助)?',
+                    fnc: 'set_tts_language',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#ttslength(Scale)?设置(帮助)?',
+                    fnc: 'set_lengthScale',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#tts(语音)?转日语(帮助)?',
+                    fnc: 'set_autoJapanese',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#tts(语音)?切片生成(帮助)?',
+                    fnc: 'set_tts_slice_is_slice_generation',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?',
+                    fnc: 'set_assistantLabel',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#tts(设置|查看)?融合文本(帮助)?',
+                    fnc: 'set_style_text',
+                },
+                {
+                    reg: '^#tts(设置|查看)?融合权重(帮助)?',
+                    fnc: 'set_style_text_weights',
+                },
+                {
+                    reg: '^#chatgpt(设置|查看)?输出黑名单(帮助)?',
+                    fnc: 'set_blockWords',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#chatgpt(设置|查看)?输入黑名单(帮助)?',
+                    fnc: 'set_promptBlockWords',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置',
+                    fnc: 'delete_redis_all_user_config',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#派蒙戳一戳设置(CD|cd)',
+                    fnc: 'chuo_set_paimon_chou_cd',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#派蒙戳(一戳)?(保存|添加)(图片|表情)$',
+                    fnc: 'paimon_chuo_save_img',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#tts(可选)?人物(可选)?列表$',
+                    fnc: 'tts_show_speakers',
+                },
+                {
+                    reg: '^#tts查看((当|目)前)?(语音)?设置$',
+                    fnc: 'show_tts_voice_help_config',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#chatgpt对话中图片识别(帮助)?',
+                    fnc: 'set_recognitionByGemini',
+                    permission: 'master'
+                },
             ]
         })
     }
@@ -620,39 +622,5 @@ async function reNameAndSavePic(response, url, directory) {
     } catch (err) {
         logger.error(err)
         return null
-    }
-}
-
-/**
- * @description: 获取gemini的识图结果，需要填写了gemini的token
- * @param {*} e
- * @return {*} recognitionResults
- */
-export async function recognitionResultsByGemini(e) {
-    if (Config.geminiKey) {
-        let img = await getImg(e)
-        if (img?.[0]) {
-            let client = new CustomGoogleGeminiClient({
-                e,
-                userId: e.sender.user_id,
-                key: Config.geminiKey,
-                model: 'gemini-pro-vision',
-                baseUrl: Config.geminiBaseUrl,
-                debug: Config.debug
-            })
-            const response = await fetch(img[0], { timeout: 60000 });
-            const base64Image = Buffer.from(await response.arrayBuffer())
-            let msg = 'describe this image in Simplified Chinese'
-            let recognitionResults = ''
-            try {
-                let res = await client.sendMessage(msg, {
-                    image: base64Image.toString('base64')
-                })
-                recognitionResults = res.text
-            } catch (err) {
-                logger.info('派蒙第一人称对话-获取gemini的识图结果出错' + err)
-            }
-            return recognitionResults
-        }
     }
 }
