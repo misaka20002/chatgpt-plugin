@@ -605,6 +605,9 @@ async function parseSourceImg(e) {
 /** 下载好的图片重命名并存档在directory */
 async function reNameAndSavePic(response, url, directory) {
     try {
+        if (!fs.existsSync(directory))
+            fs.mkdirSync(directory, { recursive: true });
+
         // 计算URL的哈希值并将其作为文件名
         let hash_name = crypto.createHash('sha256').update(url).digest('hex')
         // 获取文件后缀
