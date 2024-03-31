@@ -135,6 +135,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
                         if (!message) throw new Error(responseBody)
                         else logger.mark(`成功获取转日语文本：${message}`)
+                        
+                        // 硬编码替换部分角色名
+                        message = message.replace(/可莉|コリー/g, 'クレー').replace(/派蒙|モンゴル/g, 'パイモン').replace(/纳西妲|ナシの実/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
                         text = message
                         break
                     } catch (err) {
@@ -153,7 +156,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
             tts_language = "ZH"
         }
-        
+
         logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
 
         // exampleAudio暂时无法使用
