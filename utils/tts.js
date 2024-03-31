@@ -64,8 +64,6 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji  6. 替换第一人称+'：'，例如可莉：; 7. 替换日语翻译中的リディア为クレー; 8. 替换日语翻译中的派モン为パイモン; 9. 替换（小声）; 10.~ 替换为 ，11.替换↓chat.js处理过的换行文本 12.处理多余的，。 13.适配删除中括号好感度
         //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')  
 
-        logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
-
         // tts情感自动设置
         if (Config.vits_auto_emotion) {
             vits_emotion = get_tts_Emotion(text)
@@ -102,6 +100,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
             // 使用网址的自动转日语，若#tts语音转日语关闭 则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
             if (!Config.autoJapanese) {
+                logger.info(`正在使用网页api转日语，基于文本：'${text}'`)
                 let body_translation = {
                     data: [
                         text
@@ -154,6 +153,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
             tts_language = "ZH"
         }
+        
+        logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
 
         // exampleAudio暂时无法使用
         let exampleAudio = null
