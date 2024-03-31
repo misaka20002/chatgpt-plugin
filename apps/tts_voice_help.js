@@ -5,7 +5,8 @@ import {
     getUserReplySetting
 } from '../utils/common.js'
 import {
-    speakers,
+    speakers_ZH,
+    speakers_JP,
     vits_emotion_map
 } from '../utils/tts.js'
 import crypto from 'crypto'
@@ -187,45 +188,42 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
     /** ^#tts(可选)?人物(可选)?列表$ */
     async tts_show_speakers(e) {
-        let msg1 = `tts可选人物列表：`
-        let msg2 = `（每名用户都可以单独设置）\n` +
+        let strs = [`tts可选人物列表：`]
+        strs.push(`（每名用户都可以单独设置）\n` +
             `  *2024年3月31日新增碧蓝档案角色（"阿慈谷日富美"及其下角色）语音，仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。\n` +
             `#chatgpt设置全局vits语音角色派蒙_ZH\n` +
-            `#chatgpt设置语音角色可莉_ZH`
-        let speakertip1 = "可选列表：\n"
-        let speakertip2 = ""
-        let speakertip3 = ""
-        for (let i = 0; i < speakers.length; i++) {
-            if (i <= (speakers.length / 3)) {
-                speakertip1 += speakers[i]
-                if (i % 2 == 0) {
-                    speakertip1 += "　　"
+            `#chatgpt设置语音角色可莉_ZH`)
+        let batchSpeakersNum = speakers_ZH.length / 50
+        let speakersSliced
+        let strsLenght = strs.length
+        for (let i = 0; i < batchSpeakersNum; i++) {
+            speakersSliced = speakers_ZH.slice(i * 50, (i + 1) * 50)
+            strs[i + strsLenght] = '中文ZH角色：\n'
+            for (let j = 0; j < speakersSliced.length; j++) {
+                if (j % 2 == 0) {
+                    strs[i + strsLenght] += speakersSliced[j] + "　　"
                 }
                 else {
-                    speakertip1 += "\n"
+                    strs[i + strsLenght] += speakersSliced[j] + "\n"
                 }
             }
-            if (i <= ((speakers.length * 2) / 3) && i > (speakers.length / 3)) {
-                speakertip2 += speakers[i]
-                if (i % 2 == 0) {
-                    speakertip2 += "　　"
-                }
-                else {
-                    speakertip2 += "\n"
-                }
-            }
-            if (i > ((speakers.length * 2) / 3)) {
-                speakertip3 += speakers[i]
-                if (i % 2 == 0) {
-                    speakertip3 += "　　"
-                }
-                else {
-                    speakertip3 += "\n"
-                }
-            }
-
         }
-        let msgx = await common.makeForwardMsg(e, [msg1, msg2, speakertip1, speakertip2, speakertip3], `tts可选人物列表`);
+        batchSpeakersNum = speakers_JP.length / 50
+        strsLenght = strs.length
+        for (let i = 0; i < batchSpeakersNum; i++) {
+            speakersSliced = speakers_JP.slice(i * 50, (i + 1) * 50)
+            strs[i + strsLenght] = '日文JP角色：\n'
+            for (let j = 0; j < speakersSliced.length; j++) {
+                if (j % 2 == 0) {
+                    strs[i + strsLenght] += speakersSliced[j] + "　　"
+                }
+                else {
+                    strs[i + strsLenght] += speakersSliced[j] + "\n"
+                }
+            }
+        }
+
+        let msgx = await common.makeForwardMsg(e, strs, `tts可选人物列表`);
         e.reply(msgx);
         return true;
     }
