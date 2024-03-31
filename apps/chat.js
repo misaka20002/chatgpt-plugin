@@ -1028,7 +1028,7 @@ export class chatgpt extends plugin {
         // 先把文字回复发出去，避免过久等待合成语音
         if (Config.alsoSendText || ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
-            await this.reply(`${Config.tts_First_person}知道哦`, false, { recallMsg: 30 } )
+            await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: 30 } )
           }
           let responseText = await convertFaces(response, Config.enableRobotAt, e)
           if (handler.has('chatgpt.markdown.convert')) {
