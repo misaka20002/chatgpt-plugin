@@ -713,7 +713,7 @@ export function supportGuoba () {
         {
           field: 'defaultTTSRole',
           label: 'vits默认角色',
-          bottomHelpMessage: 'vits-uma-genshin-honkai语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定。*2024年3月31日新增碧蓝档案等角色（"阿慈谷日富美"及其下角色）语音，仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。#tts可选人物列表',
+          bottomHelpMessage: 'vits-uma-genshin-honkai语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定。*2024年3月31日新增碧蓝档案等角色（"阿慈谷日富美"及其下角色）语音，仅支持日语语言，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。#tts可选人物列表',
           component: 'Select',
           componentProps: {
             options: [{

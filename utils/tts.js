@@ -98,7 +98,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             if (url == "https://bv2.firefly.matce.cn/run/predict") url = "https://ba.firefly.matce.cn/run/predict"
             tts_language = "JP"
 
-            // 使用网址的自动转日语，若#tts语音转日语关闭 则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
+            // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
             if (!Config.autoJapanese) {
                 logger.info(`正在使用网页api转日语，基于文本：'${text}'`)
                 let body_translation = {
