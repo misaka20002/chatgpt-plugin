@@ -96,6 +96,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // 如果 speaker 在数组 speakers_JP 中
         if (speakers_JP.includes(speaker)) {
             // 自动切换网址
+            if (space == "https://bv2.firefly.matce.cn") space = "https://ba.firefly.matce.cn"
             if (url == "https://bv2.firefly.matce.cn/run/predict") url = "https://ba.firefly.matce.cn/run/predict"
             tts_language = "JP"
 
@@ -149,6 +150,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // 如果 speaker 在数组 speakers_ZH 中
         if (speakers_ZH.includes(speaker)) {
             // 则使用中文
+            if (space == "https://ba.firefly.matce.cn") space = "https://bv2.firefly.matce.cn"
             if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
             tts_language = "ZH"
         }
