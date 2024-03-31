@@ -713,7 +713,7 @@ export function supportGuoba () {
         {
           field: 'defaultTTSRole',
           label: 'vits默认角色',
-          bottomHelpMessage: 'vits-uma-genshin-honkai语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定',
+          bottomHelpMessage: 'vits-uma-genshin-honkai语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定。*2024年3月31日新增碧蓝档案角色（"阿慈谷日富美"及其下角色）语音，仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。',
           component: 'Select',
           componentProps: {
             options: [{
@@ -1054,7 +1054,7 @@ export function supportGuoba () {
         {
           field: 'tts_language',
           label: 'TTS语音使用的语言',
-          bottomHelpMessage: '可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)',
+          bottomHelpMessage: '可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了',
           component: 'Select',
           componentProps: {
             options: [

@@ -189,6 +189,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async tts_show_speakers(e) {
         let msg1 = `tts可选人物列表：`
         let msg2 = `（每名用户都可以单独设置）\n` +
+            `  *2024年3月31日新增碧蓝档案角色（"阿慈谷日富美"及其下角色）语音，仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。\n` +
             `#chatgpt设置全局vits语音角色派蒙_ZH\n` +
             `#chatgpt设置语音角色可莉_ZH`
         let speakertip1 = "可选列表：\n"
@@ -281,15 +282,15 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     async set_tts_language(e) {
         let input_tts = e.msg.replace(/^#tts语言设置(帮助)?/, '').trim()
         if (!input_tts) {
-            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和人家说话人家可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto`, false)
+            return e.reply(`选择发音的语言（但不会自动翻译过去哦，你用外语和人家说话人家可能就会用外语回复你了）。\n可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n例如#tts语言设置auto\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了`, false)
         }
         input_tts = input_tts.toLowerCase()
         if (/^zh$|^jp$|^en$|^mix$|^auto$/.test(input_tts)) {
             if (/^zh$|^jp$|^en$/.test(input_tts)) input_tts = input_tts.toUpperCase()
             Config.tts_language = input_tts
-            return e.reply(`tts语言已设置为${input_tts}！`)
+            return e.reply(`tts语言已设置为${input_tts}！\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了`)
         } else {
-            return e.reply('可选ZH, JP, EN, mix(api暂不支持), auto\n例如#tts语言设置auto', false)
+            return e.reply('可选ZH, JP, EN, mix(api暂不支持), auto\n例如#tts语言设置ZH', false)
         }
     }
 
