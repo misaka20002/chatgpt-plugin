@@ -33,7 +33,7 @@ export async function recognitionResultsByGemini(e) {
                 recognitionResults = res.text
             } catch (err) {
                 logger.info('派蒙第一人称对话-获取gemini的识图结果出错' + err)
-                if(!res?.text) recognitionResults = '附带了一张儿童不宜的涩图。'
+                recognitionResults = '附带了一张儿童不宜的涩图。'
             }
             return recognitionResults
         }
