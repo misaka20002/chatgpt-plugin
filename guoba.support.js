@@ -965,7 +965,7 @@ export function supportGuoba () {
         {
             field: 'paimon_chou_text_generateAndSendAudio',
             label: '戳一戳发送文案的同时发送语音',
-            bottomHelpMessage: '戳一戳发送文案的同时发送语音',
+            bottomHelpMessage: '戳一戳发送文案的同时发送语音（需要先开启全局语音模式或用户开启语音模式）',
             component: 'Switch'
         },
         {
@@ -1106,20 +1106,20 @@ export function supportGuoba () {
         },
         {
           field: 'ttsHD',
-          label: '开启本地SILK转码',
-          bottomHelpMessage: '开启本地SILK转码后，NTQQ内核版本9.0.0-9.0.7将无法播放语音',
+          label: '开启本地SILK转码方案2',
+          bottomHelpMessage: '开启本地SILK转码方案2后，NTQQ内核版本9.0.0-9.0.7将无法播放语音。呆毛-此方案只推荐在无法本地silk转码且他服务器转码失效时开启',
           component: 'Switch'
         },
         {
           field: 'initiativeChatGroups',
           label: '主动发起聊天群聊的群号',
-          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key',
+          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛版-经测试喵崽无法使用',
           component: 'Input'
         },
         {
           field: 'helloPrompt',
           label: '打招呼prompt',
-          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字',
+          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
           component: 'Input'
         },
         {
