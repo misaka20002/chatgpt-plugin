@@ -877,7 +877,7 @@ export function supportGuoba () {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '大力感谢genshinvoice.top提供的api支持——请填入https://v2.genshinvoice.top或https://bv2.firefly.matce.cn',
+          bottomHelpMessage: '大力感谢genshinvoice.top和firefly.matce.cn提供的api支持——请填入https://bv2.firefly.matce.cn',
           component: 'Input'
         },
         {

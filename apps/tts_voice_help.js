@@ -131,7 +131,7 @@ export class voicechangehelp extends plugin {
             ` #tts(查看|设置)融合权重` +
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
-            `https://v2.genshinvoice.top\n` +
+            `https://bv2.firefly.matce.cn\n` +
             `2. 云转码API发送数据模式 选择：[文件]/[url]都可以`
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
