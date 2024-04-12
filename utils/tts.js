@@ -117,17 +117,18 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 if (Config.debug) {
                     logger.info(body_translation)
                 }
+                let responseBody, response
                 for (let post_times = 1; post_times <= 5; post_times++) {
                     try {
                         logger.info(`正在第${post_times}次使用接口转日语${url}`)
-                        let response = await newFetch(url, {
+                        response = await newFetch(url, {
                             method: 'POST',
                             body: JSON.stringify(body_translation),
                             headers: {
                                 'content-type': 'application/json'
                             }
                         })
-                        let responseBody = await response.text()
+                        responseBody = await response.text()
                         let json = JSON.parse(responseBody)
                         if (Config.debug) {
                             logger.info(json)
@@ -146,7 +147,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         text = message
                         break
                     } catch (err) {
-                        logger.error(`转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status)
+                        logger.error(`转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
                         if (post_times == 5) throw new Error('网址api转日语错误，responseBody:', responseBody)
                         // 等待5000ms
                         await sleep_zz(5000)
@@ -236,85 +237,15 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             } */
         }
 
-        let post_times = 1
-        /*第一次try*/
-        logger.info(`正在使用接口${url}`)
+        
+        // tts_post
         if (Config.debug) {
             logger.info(body)
         }
-        let response = await newFetch(url, {
-            method: 'POST',
-            body: JSON.stringify(body),
-            headers: {
-                'content-type': 'application/json'
-            }
-        })
-        let responseBody = await response.text()
-        try {
-            let json = JSON.parse(responseBody)
-            if (Config.debug) {
-                logger.info(json)
-            }
-            if (response.status > 299) {
-                logger.info(json)
-                throw new Error(JSON.stringify(json))
-            }
-            let [message, audioInfo] = json?.data
-            logger.info(message)
-
-            /* 本api responseBody 参考:
-                {
-                    "data": [
-                        "Success",
-                        {
-                            "name": "/tmp/gradio/530b4995ce71b56987e7141032f60c9f8db1ac18/audio.wav",
-                            "data": null,
-                            "is_file": true,
-                            "orig_name": "audio.wav"
-                        }
-                    ],
-                    "is_generating": false,
-                    "duration": 0.26611995697021484,
-                    "average_duration": 0.6881923574796864
-                }
-            */
-            /*这api怎么天天换参数呢*/
-            /*循环遍历audioInfo对象找到下载地址*/
-            let audioLink
-            for (let read_audioInfo in audioInfo) {
-                if (/.*(\/|\\\\).*(\/|\\\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
-                    audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
-                    break
-                }
-            }
-            if (!audioLink) {
-                logger.error(responseBody)
-                throw new Error(responseBody)
-            } else logger.mark(`成功获取音频地址${audioLink}`)
-
-            /*原版
-            let audioLink = `${space}/file=${audioInfo.path}`*/
-
-            /* 真的需要反代的话这一行需要修改
-                if (Config.huggingFaceReverseProxy) {
-                  if (Config.debug) {
-                    logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
-                  }
-                  let spaceHost = _.trimStart(space, 'https://')
-                  audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
-                }
-            */
-            return audioLink
-        } catch (err) {
-            logger.error(`生成语音api发生错误，请检查是否配置了正确的api。第一次。当前语音api status为`, response.status)
-            /*throw new Error(responseBody)*/
-        }
-        /*尝试重试try*/
-        for (; post_times < 5; post_times++) {
-            // 等待5000ms
-            await sleep_zz(5000)
+        let responseBody, response
+        for (let post_times = 1; post_times <= 5; post_times++) {
             try {
-                logger.info(`正在第${post_times + 1}次使用接口${url}`)
+                logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
                 response = await newFetch(url, {
                     method: 'POST',
                     body: JSON.stringify(body),
@@ -323,46 +254,44 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     }
                 })
                 responseBody = await response.text()
-                try {
-                    let json = JSON.parse(responseBody)
-                    if (Config.debug) {
-                        logger.info(json)
-                    }
-                    if (response.status > 299) {
-                        logger.info(json)
-                        throw new Error(JSON.stringify(json))
-                    }
-                    let [message, audioInfo] = json?.data
-                    logger.info(message)
-
-                    /*这api怎么天天换参数呢*/
-                    let audioLink
-                    for (let read_audioInfo in audioInfo) {
-                        if (/\/.*\/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
-                            audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
-                            break
-                        }
-                    }
-                    if (!audioLink) throw new Error(responseBody)
-                    else logger.mark(`成功获取音频地址${audioLink}`)
-
-                    /*let audioLink = `${space}/file=${audioInfo.path}`*/
-
-                    /* 真的需要反代的话这一行需要修改
-                        if (Config.huggingFaceReverseProxy) {
-                          if (Config.debug) {
-                            logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
-                          }
-                          let spaceHost = _.trimStart(space, 'https://')
-                          audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
-                        }
-                    */
-                    return audioLink
-                } catch (err) {
-                    logger.error(`生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times + 1}次。当前语音api status为`, response.status)
+                let json = JSON.parse(responseBody)
+                if (Config.debug) {
+                    logger.info(json)
                 }
+                if (response.status > 299) {
+                    logger.info(json)
+                    throw new Error(JSON.stringify(json))
+                }
+                let [message, audioInfo] = json?.data
+                logger.info(message)
+
+                /*这api怎么天天换参数呢*/
+                let audioLink
+                for (let read_audioInfo in audioInfo) {
+                    if (/.*(\/|\\\\).*(\/|\\\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                        audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                        break
+                    }
+                }
+                if (!audioLink) throw new Error(responseBody)
+                else logger.mark(`[chatgpt-tts]成功获取音频地址${audioLink}`)
+
+                /*let audioLink = `${space}/file=${audioInfo.path}`*/
+
+                /* 真的需要反代的话这一行需要修改
+                    if (Config.huggingFaceReverseProxy) {
+                      if (Config.debug) {
+                        logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
+                      }
+                      let spaceHost = _.trimStart(space, 'https://')
+                      audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
+                    }
+                */
+                return audioLink
             } catch (err) {
-                logger.error(`For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times + 1}次。当前语音api status为`, response.status)
+                logger.error(`生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status)
+                // 等待5000ms
+                await sleep_zz(5000)
             }
         }
         logger.error(body)
@@ -389,6 +318,8 @@ export function convertSpeaker(speaker) {
         case '刻晴': return '刻晴_ZH'
         case '珊瑚宫心海': return '珊瑚宫心海_ZH'
         case '迪卢克': return '迪卢克_ZH'
+        case '心奈': return '春原心奈'
+        case '小春': return '下江小春'
     }
 
     return speaker
