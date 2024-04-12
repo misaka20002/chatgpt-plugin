@@ -975,6 +975,12 @@ export function supportGuoba () {
             component: 'Switch'
         },
         {
+            field: 'paimon_chou_IsUseLoliconApi',
+            label: '戳一戳使用涩图api',
+            bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
+            component: 'Switch'
+        },
+        {
           field: 'vits_emotion',
           label: 'emotion',
           bottomHelpMessage: '控制发音情感；可用命令：#tts情感设置帮助',

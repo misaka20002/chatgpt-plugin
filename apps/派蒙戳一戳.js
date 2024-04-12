@@ -8,7 +8,8 @@ import uploadRecord from '../utils/uploadRecord.js'
 import {
     generate_msg_Daiyu,
     generateHello,
-    generate_msg_randomHellow_TuWeiLoveSpeech
+    generate_msg_randomHellow_TuWeiLoveSpeech,
+    generate_msg_randomPlayingMsg
 } from '../utils/randomMessage.js'
 import { generateAudio } from '../utils/common.js'
 import fs from 'fs'
@@ -150,7 +151,9 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 5)
+                let mutetype
+                if (Config.paimon_chou_IsUseLoliconApi) mutetype = Math.ceil(Math.random() * 5)
+                else mutetype = Math.ceil(Math.random() * 3)
                 let url, msg, res
                 switch (mutetype) {
                     case 1:
@@ -239,6 +242,9 @@ export class PaimonChuo extends plugin {
                                 break;
                             case '派蒙_JP':
                                 voice_lists = voice_list_paimon_jp;
+                                break;
+                            case '春原心菜':
+                                voice_lists = voice_list_Sunohara_Kokona_jp;
                                 break;
                             // 缺省时将返回随机音频替换为返回随机文本
                             default:
@@ -346,7 +352,7 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机表情包生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 6)
+                let mutetype = Math.ceil(Math.random() * 7)
                 switch (mutetype) {
                     case 1:
                         await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
@@ -365,6 +371,9 @@ export class PaimonChuo extends plugin {
                         break;
                     case 6:
                         await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
+                        break;
+                    case 7:
+                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${e.sender.nickname}","message":"${generate_msg_randomPlayingMsg()}"}`))
                         break;
                 }
             }
@@ -1645,6 +1654,36 @@ let voice_list_kyoka_jp = [
     "https://patchwiki.biligame.com/images/pcr/6/60/5o86g9fm84zktpdhgn3eslvgfkwmx3p.mp3",
     "https://patchwiki.biligame.com/images/pcr/8/86/d49nib6cyx6j835qhkvy5eh15a09jsn.mp3",
     "https://patchwiki.biligame.com/images/pcr/a/a5/58c51bv849m4reqcook11whkiibyt2e.mp3"
+]
+
+
+/**春原心奈  来自：https://zh.moegirl.org.cn/zh-hans/%E6%98%A5%E5%8E%9F%E5%BF%83%E8%8F%9C 正则表达式匹配：   "https:\S*(ogg|mp3|wav)"         */
+let voice_list_Sunohara_Kokona_jp = [
+    "https://img.moegirl.org.cn/common/d/d3/BA_V_Kokona_Title.ogg",
+    "https://img.moegirl.org.cn/common/1/10/BA_V_Kokona_Gachaget.ogg",
+    "https://img.moegirl.org.cn/common/7/7e/BA_V_Kokona_Cafe_monolog_1.ogg",
+    "https://img.moegirl.org.cn/common/e/ec/BA_V_Kokona_Cafe_monolog_2.ogg",
+    "https://img.moegirl.org.cn/common/2/2b/BA_V_Kokona_Cafe_monolog_3.ogg",
+    "https://img.moegirl.org.cn/common/8/84/BA_V_Kokona_Cafe_monolog_4.ogg",
+    "https://img.moegirl.org.cn/common/e/ef/BA_V_Kokona_Cafe_monolog_5.ogg",
+    "https://img.moegirl.org.cn/common/b/bd/BA_V_Kokona_LogIn_1.ogg",
+    "https://img.moegirl.org.cn/common/e/e1/BA_V_Kokona_LogIn_2.ogg",
+    "https://img.moegirl.org.cn/common/f/f6/BA_V_Kokona_Lobby_1.ogg",
+    "https://img.moegirl.org.cn/common/b/b7/BA_V_Kokona_Lobby_2.ogg",
+    "https://img.moegirl.org.cn/common/e/eb/BA_V_Kokona_Lobby_3.ogg",
+    "https://img.moegirl.org.cn/common/1/1a/BA_V_Kokona_Lobby_4.ogg",
+    "https://img.moegirl.org.cn/common/b/b6/BA_V_Kokona_Lobby_5.ogg",
+    "https://img.moegirl.org.cn/common/e/e7/BA_V_Kokona_Season_Birthday_Player.ogg",
+    "https://img.moegirl.org.cn/common/9/98/BA_V_Kokona_Season_Birthday.ogg",
+    "https://img.moegirl.org.cn/common/c/c8/BA_V_Kokona_Season_NewYear.ogg",
+    "https://img.moegirl.org.cn/common/2/2a/BA_V_Kokona_Season_Xmas.ogg",
+    "https://img.moegirl.org.cn/common/9/98/BA_V_Kokona_Season_Halloween.ogg",
+    "https://img.moegirl.org.cn/common/e/e9/BA_V_Kokona_ExWeapon_Get.ogg",
+    "https://img.moegirl.org.cn/common/5/59/BA_V_Kokona_MemorialLobby_1.ogg",
+    "https://img.moegirl.org.cn/common/0/06/BA_V_Kokona_MemorialLobby_2.ogg",
+    "https://img.moegirl.org.cn/common/1/18/BA_V_Kokona_MemorialLobby_3.ogg",
+    "https://img.moegirl.org.cn/common/2/2a/BA_V_Kokona_MemorialLobby_4.ogg",
+    "https://img.moegirl.org.cn/common/b/bd/BA_V_Kokona_MemorialLobby_5.ogg"
 ]
 
 /**被戳次数文本 */

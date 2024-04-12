@@ -587,6 +587,13 @@ export class chatgpt extends plugin {
       logger.info('机器人自己发出来的消息，不予理会')
       return false
     }
+    let ats = e.message.filter(m => m.type === 'at')
+    if (!(e.atme || e.atBot) && ats.length > 0) {
+      if (Config.debug) {
+        logger.mark('[AI回应第一人称呼叫]艾特别人了，没艾特我，不予理会')
+      }
+      return false
+    }
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {

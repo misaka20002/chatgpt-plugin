@@ -184,6 +184,29 @@ const randomHellow_TuWeiLoveSpeech = [
   '派蒙想要爆棚的好运气，和无限爱派蒙的你°˖✧◝(⁰▿⁰)◜✧˖°'
 ]
 
+const randomPlayingMsg = [
+  '小孩？哪里有小孩？',
+  '来点小孩',
+  '用一句话总结自己：比狗困，比猪馋，比驴犟',
+  '我发誓，我再也不熬夜了，我要是再熬夜，我就再发誓',
+  '为什么要讨厌我们这些懒人，我们明明什么都没有做',
+  '其实到了我这个年纪，你就没必要跟我掏心掏肺了，你直接掏钱就行了',
+  '运动是一种享受， 但是我不爱运动，因为我不是那种贪图享乐的人',
+  '今天用手机拍街景，以为拍到了迪丽热巴，后来才发现开的是前置摄像头',
+  '再鲁一次就睡觉',
+  '你一定要好好和她走下去，我坐车',
+  '我其实是一个小男娘',
+  '要看我女装吗',
+  '我其实是小萝莉',
+  '等我变成女孩子我一定要让群友爽一爽',
+  '好无聊好想被强奸',
+  '兄弟，我香吗？',
+  '今天中奖100w，我来给群友每人发100',
+  '今夜年愁未到香',
+  '我女装之后就没有女人什么事了',
+  '我是群里最可爱的小萝莉'
+]
+
 
 /* const newFetch = (url, options = {}) => {
   const defaultOptions = Config.proxy
@@ -225,4 +248,10 @@ export async function generate_msg_Daiyu() {
 export async function generate_msg_randomHellow_TuWeiLoveSpeech() {
   let text_number = Math.ceil(Math.random() * randomHellow_TuWeiLoveSpeech['length'])
   return randomHellow_TuWeiLoveSpeech[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
+}
+
+/**在数组 randomPlayingMsg 中随机选一个字符串 */
+export async function generate_msg_randomPlayingMsg() {
+  let text_number = Math.ceil(Math.random() * randomPlayingMsg['length'])
+  return randomPlayingMsg[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
 }
