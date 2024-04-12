@@ -373,7 +373,10 @@ export class PaimonChuo extends plugin {
                         await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
                         break;
                     case 7:
-                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${e.sender.nickname}","message":"${generate_msg_randomPlayingMsg()}"}`))
+                        let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
+                        // let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
+                        let randomPlayingMsg = await generate_msg_randomPlayingMsg()
+                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${usrinfo.nickname}","message":"${randomPlayingMsg}"}`))
                         break;
                 }
             }
