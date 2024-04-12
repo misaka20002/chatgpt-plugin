@@ -246,6 +246,9 @@ export class PaimonChuo extends plugin {
                             case '春原心菜':
                                 voice_lists = voice_list_Sunohara_Kokona_jp;
                                 break;
+                            case '下江小春':
+                                voice_lists = voice_list_Shimoe_Koharu_jp;
+                                break;
                             // 缺省时将返回随机音频替换为返回随机文本
                             default:
                                 this.send_randow_text_msg(e);
@@ -1659,7 +1662,6 @@ let voice_list_kyoka_jp = [
     "https://patchwiki.biligame.com/images/pcr/a/a5/58c51bv849m4reqcook11whkiibyt2e.mp3"
 ]
 
-
 /**春原心奈  来自：https://zh.moegirl.org.cn/zh-hans/%E6%98%A5%E5%8E%9F%E5%BF%83%E8%8F%9C 正则表达式匹配：   "https:\S*(ogg|mp3|wav)"         */
 let voice_list_Sunohara_Kokona_jp = [
     "https://img.moegirl.org.cn/common/d/d3/BA_V_Kokona_Title.ogg",
@@ -1687,6 +1689,60 @@ let voice_list_Sunohara_Kokona_jp = [
     "https://img.moegirl.org.cn/common/1/18/BA_V_Kokona_MemorialLobby_3.ogg",
     "https://img.moegirl.org.cn/common/2/2a/BA_V_Kokona_MemorialLobby_4.ogg",
     "https://img.moegirl.org.cn/common/b/bd/BA_V_Kokona_MemorialLobby_5.ogg"
+]
+
+/**下江小春  来自：https://zh.moegirl.org.cn/%E4%B8%8B%E6%B1%9F%E5%B0%8F%E6%98%A5 正则表达式匹配：   "https:\S*(ogg|mp3|wav)"         */
+let voice_list_Shimoe_Koharu_jp = [
+    "https://img.moegirl.org.cn/common/d/d4/BA_V_Koharu_Title.ogg",
+    "https://img.moegirl.org.cn/common/8/85/BA_V_Koharu_Gachaget.ogg",
+    "https://img.moegirl.org.cn/common/1/1e/BA_V_Koharu_Cafe_Monolog_1.ogg",
+    "https://img.moegirl.org.cn/common/5/5a/BA_V_Koharu_Cafe_Monolog_2.ogg",
+    "https://img.moegirl.org.cn/common/0/08/BA_V_Koharu_Cafe_Monolog_3.ogg",
+    "https://img.moegirl.org.cn/common/c/c4/BA_V_Koharu_Cafe_Act_1.ogg",
+    "https://img.moegirl.org.cn/common/0/03/BA_V_Koharu_Cafe_Act_2.ogg",
+    "https://img.moegirl.org.cn/common/d/d9/BA_V_Koharu_Login_1.ogg",
+    "https://img.moegirl.org.cn/common/e/ef/BA_V_Koharu_Login_2.ogg",
+    "https://img.moegirl.org.cn/common/7/7d/BA_V_Koharu_Lobby_1.ogg",
+    "https://img.moegirl.org.cn/common/c/c5/BA_V_Koharu_Lobby_2.ogg",
+    "https://img.moegirl.org.cn/common/2/24/BA_V_Koharu_Lobby_3.ogg",
+    "https://img.moegirl.org.cn/common/2/2c/BA_V_Koharu_Lobby_4.ogg",
+    "https://img.moegirl.org.cn/common/a/a0/BA_V_Koharu_Lobby_5.ogg",
+    "https://img.moegirl.org.cn/common/5/51/BA_V_Koharu_Season_Birthday_Player.ogg",
+    "https://img.moegirl.org.cn/common/c/c7/BA_V_Koharu_Season_Birthday.ogg",
+    "https://img.moegirl.org.cn/common/f/f6/BA_V_Koharu_Season_Newyear.ogg",
+    "https://img.moegirl.org.cn/common/c/c8/BA_V_Koharu_Season_Xmas.ogg",
+    "https://img.moegirl.org.cn/common/8/85/BA_V_Koharu_Season_Halloween.ogg",
+    "https://img.moegirl.org.cn/common/e/e5/BA_V_Koharu_Exweapon_Get.ogg",
+    "https://img.moegirl.org.cn/common/d/df/BA_V_Koharu_Memoriallobby_1.ogg",
+    "https://img.moegirl.org.cn/common/c/c7/BA_V_Koharu_Memoriallobby_2.ogg",
+    "https://img.moegirl.org.cn/common/8/8f/BA_V_Koharu_Memoriallobby_3.ogg",
+    "https://img.moegirl.org.cn/common/7/7f/BA_V_Koharu_Memoriallobby_4.ogg",
+    "https://img.moegirl.org.cn/common/a/ac/BA_V_Koharu_Memoriallobby_5.ogg",
+    "https://img.moegirl.org.cn/common/b/b6/BA_V_Koharu_Swimsuit_Gachaget.ogg",
+    "https://img.moegirl.org.cn/common/e/e9/BA_V_Koharu_Swimsuit_Cafe_monolog_1.ogg",
+    "https://img.moegirl.org.cn/common/d/d9/BA_V_Koharu_Swimsuit_Cafe_monolog_2.ogg",
+    "https://img.moegirl.org.cn/common/f/fd/BA_V_Koharu_Swimsuit_Cafe_monolog_3.ogg",
+    "https://img.moegirl.org.cn/common/0/02/BA_V_Koharu_Swimsuit_Cafe_monolog_4.ogg",
+    "https://img.moegirl.org.cn/common/3/3d/BA_V_Koharu_Swimsuit_Cafe_monolog_5.ogg",
+    "https://img.moegirl.org.cn/common/1/1f/BA_V_Koharu_Swimsuit_LogIn_1.ogg",
+    "https://img.moegirl.org.cn/common/5/59/BA_V_Koharu_Swimsuit_LogIn_2.ogg",
+    "https://img.moegirl.org.cn/common/c/c5/BA_V_Koharu_Swimsuit_Lobby_1.ogg",
+    "https://img.moegirl.org.cn/common/3/32/BA_V_Koharu_Swimsuit_Lobby_2.ogg",
+    "https://img.moegirl.org.cn/common/b/b2/BA_V_Koharu_Swimsuit_Lobby_3.ogg",
+    "https://img.moegirl.org.cn/common/9/92/BA_V_Koharu_Swimsuit_Lobby_4.ogg",
+    "https://img.moegirl.org.cn/common/5/59/BA_V_Koharu_Swimsuit_Lobby_5.ogg",
+    "https://img.moegirl.org.cn/common/5/5f/BA_V_Koharu_Swimsuit_Season_Birthday_Player.ogg",
+    "https://img.moegirl.org.cn/common/4/44/BA_V_Koharu_Swimsuit_Season_Birthday.ogg",
+    "https://img.moegirl.org.cn/common/3/32/BA_V_Koharu_Swimsuit_Season_NewYear.ogg",
+    "https://img.moegirl.org.cn/common/d/d6/BA_V_Koharu_Swimsuit_Season_Xmas.ogg",
+    "https://img.moegirl.org.cn/common/8/88/BA_V_Koharu_Swimsuit_Season_Halloween.ogg",
+    "https://img.moegirl.org.cn/common/8/82/BA_V_Koharu_Swimsuit_ExWeapon_Get.ogg",
+    "https://img.moegirl.org.cn/common/6/69/BA_V_Koharu_Swimsuit_MemorialLobby_1.ogg",
+    "https://img.moegirl.org.cn/common/1/13/BA_V_Koharu_Swimsuit_MemorialLobby_2.ogg",
+    "https://img.moegirl.org.cn/common/9/9f/BA_V_Koharu_Swimsuit_MemorialLobby_3.ogg",
+    "https://img.moegirl.org.cn/common/e/ea/BA_V_Koharu_Swimsuit_MemorialLobby_4.ogg",
+    "https://img.moegirl.org.cn/common/2/2d/BA_V_Koharu_Swimsuit_MemorialLobby_5.ogg",
+    "https://img.moegirl.org.cn/common/e/ea/BA_V_Koharu_Swimsuit_MemorialLobby_4.ogg",
 ]
 
 /**被戳次数文本 */
