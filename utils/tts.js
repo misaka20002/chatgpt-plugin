@@ -169,7 +169,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let exampleAudio = null
 
         let body
-        // API更新了，目前只支持切片生成----------------
+        // API更新了，目前只支持切片生成
         tts_slice_is_slice_generation = true
         if (!tts_slice_is_slice_generation) {
             // 最大300字，截取处理后的前299个字符
@@ -203,7 +203,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         "fn_index": 0,  //切片生成这个不同
             } */
         } else {
-            // text可超过300字
+            // 2024年4月12日 切片生成 最大也被限定在300字，截取处理后的前299个字符
+            text = text.substr(0, 299);
             body = {
                 data: [
                     text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
