@@ -237,7 +237,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             } */
         }
 
-        
+
         // tts_post
         if (Config.debug) {
             logger.info(body)
@@ -289,7 +289,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 */
                 return audioLink
             } catch (err) {
-                logger.error(`生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status)
+                logger.error(`生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
                 // 等待5000ms
                 await sleep_zz(5000)
             }
