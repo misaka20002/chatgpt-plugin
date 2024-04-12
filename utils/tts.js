@@ -50,7 +50,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     }
     else {
         if (!speaker || speaker === '随机') {
-            logger.info('随机角色！这次哪个角色这么幸运会被选到呢……')
+            logger.info('[chatgpt-tts]随机角色！这次哪个角色这么幸运会被选到呢……')
             speaker = speakers[randomNum(0, speakers.length)]
         }
 
@@ -71,7 +71,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // tts情感自动设置
         if (Config.vits_auto_emotion) {
             vits_emotion = get_tts_Emotion(text)
-            logger.mark(`tts使用情感：${vits_emotion}`)
+            logger.mark(`[chatgpt-tts]tts使用情感：${vits_emotion}`)
         }
 
         // 校正api地址
@@ -79,12 +79,12 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         //校正为 https://bv2.firefly.matce.cn
         if (space.endsWith('/run/predict')) {
             let trimmedSpace = space.substring(0, space.length - 12)
-            logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
+            logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
             space = trimmedSpace
         }
         if (space.endsWith('/')) {
             let trimmedSpace = _.trimEnd(space, '/')
-            logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
+            logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
             space = trimmedSpace
         }
 
@@ -105,7 +105,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
             if (!Config.autoJapanese) {
                 if (Config.debug)
-                    logger.info(`正在使用网页api转日语，基于文本：'${text}'`)
+                    logger.info(`[chatgpt-tts]正在使用网页api转日语，基于文本：'${text}'`)
                 let body_translation = {
                     data: [
                         text
@@ -117,10 +117,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 if (Config.debug) {
                     logger.info(body_translation)
                 }
-                let responseBody, response
+                let json, response
                 for (let post_times = 1; post_times <= 5; post_times++) {
                     try {
-                        logger.info(`正在第${post_times}次使用接口转日语${url}`)
+                        logger.info(`[chatgpt-tts]正在第${post_times}次使用接口转日语${url}`)
                         response = await newFetch(url, {
                             method: 'POST',
                             body: JSON.stringify(body_translation),
@@ -128,8 +128,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                                 'content-type': 'application/json'
                             }
                         })
-                        responseBody = await response.text()
-                        let json = JSON.parse(responseBody)
+                        let responseBody = await response.text()
+                        json = JSON.parse(responseBody)
                         if (Config.debug) {
                             logger.info(json)
                         }
@@ -140,15 +140,15 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         let [message] = json?.data
 
                         if (!message) throw new Error(responseBody)
-                        else logger.mark(`成功获取网页api转日语文本：${message}`)
+                        else logger.mark(`[chatgpt-tts]成功获取网页api转日语文本：${message}`)
 
                         // 硬编码替换部分角色名
                         message = message.replace(/可莉|コリー/g, 'クレー').replace(/派蒙|モンゴル/g, 'パイモン').replace(/纳西妲|ナシの実/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
                         text = message
                         break
                     } catch (err) {
-                        logger.error(`转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
-                        if (post_times == 5) throw new Error('网址api转日语错误，responseBody:', responseBody)
+                        logger.error(`[chatgpt-tts]转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+                        if (post_times == 5) throw new Error('网址api转日语错误，responseBody:', json)
                         // 等待5000ms
                         await sleep_zz(5000)
                     }
@@ -163,7 +163,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             tts_language = "ZH"
         }
 
-        logger.info(`正在使用${speaker}，基于文本：'${text}'生成语音`)
+        logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
 
         // exampleAudio暂时无法使用
         let exampleAudio = null
@@ -242,7 +242,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         if (Config.debug) {
             logger.info(body)
         }
-        let responseBody, response
+        let json, response
         for (let post_times = 1; post_times <= 5; post_times++) {
             try {
                 logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
@@ -253,8 +253,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         'content-type': 'application/json'
                     }
                 })
-                responseBody = await response.text()
-                let json = JSON.parse(responseBody)
+                let responseBody = await response.text()
+                json = JSON.parse(responseBody)
                 if (Config.debug) {
                     logger.info(json)
                 }
@@ -263,17 +263,17 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     throw new Error(JSON.stringify(json))
                 }
                 let [message, audioInfo] = json?.data
-                logger.info(message)
+                logger.info(`[chatgpt-tts]api生成信息：`, message)
 
                 /*这api怎么天天换参数呢*/
                 let audioLink
                 for (let read_audioInfo in audioInfo) {
-                    if (/.*(\/|\\\\).*(\/|\\\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                    if (/.*(\/|\\).*(\/|\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
                         audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
                         break
                     }
                 }
-                if (!audioLink) throw new Error(responseBody)
+                if (!audioLink) throw new Error('[chatgpt-tts]未匹配到音频链接', json)
                 else logger.mark(`[chatgpt-tts]成功获取音频地址${audioLink}`)
 
                 /*let audioLink = `${space}/file=${audioInfo.path}`*/
@@ -289,13 +289,13 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 */
                 return audioLink
             } catch (err) {
-                logger.error(`生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+                logger.error(`[chatgpt-tts]生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
                 // 等待5000ms
                 await sleep_zz(5000)
             }
         }
         logger.error(body)
-        throw new Error('responseBody:', responseBody)
+        throw new Error('[chatgpt-tts]responseBody:', json)
     }
 }
 
