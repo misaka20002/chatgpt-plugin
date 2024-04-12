@@ -282,8 +282,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             /*循环遍历audioInfo对象找到下载地址*/
             let audioLink
             for (let read_audioInfo in audioInfo) {
-                // if (/\/.*\/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
-                if (/.*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                if (/.*(\/|\\\\).*(\/|\\\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
                     audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
                     break
                 }
