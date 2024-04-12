@@ -139,7 +139,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         }
                         let [message] = json?.data
 
-                        if (!message) throw new Error(responseBody)
+                        if (!message) throw new Error('[chatgpt-tts]api转日语错误',responseBody)
                         else logger.mark(`[chatgpt-tts]成功获取网页api转日语文本：${message}`)
 
                         // 硬编码替换部分角色名
@@ -148,7 +148,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                         break
                     } catch (err) {
                         logger.error(`[chatgpt-tts]转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
-                        if (post_times == 5) throw new Error('网址api转日语错误，responseBody:', json)
+                        if (post_times == 5) throw new Error('[chatgpt-tts]网址api转日语错误，建议使用#tts转日语开启\nresponseBody:', json)
                         // 等待5000ms
                         await sleep_zz(5000)
                     }
