@@ -322,6 +322,7 @@ export function convertSpeaker(speaker) {
         case '心奈': return '春原心奈'
         case '小春': return '下江小春'
     }
+    // "天见和香", "黑崎小雪", "黑见芹香", "槌永日和", "爱丽丝", "鹫见芹奈", "连河切里诺", "浅黄睦月", "天童爱丽丝", "下江小春", "小鸟游星野", 
 
     return speaker
 }
