@@ -6,11 +6,10 @@ import websocket from '@fastify/websocket'
 
 import fs from 'fs'
 import path from 'path'
-import os from 'os'
 import websocketclient from 'ws'
 
 import { Config } from '../utils/config.js'
-import { UserInfo, GetUser, AddUser } from './modules/user_data.js'
+import { UserInfo, GetUser, AddUser, ReplaceUsers } from './modules/user_data.js'
 import { getPublicIP, getUserData, getMasterQQ, randomString, getUin } from '../utils/common.js'
 
 import webRoute from './modules/web_route.js'
@@ -20,6 +19,7 @@ import Guoba from './modules/guoba.js'
 import SettingView from './modules/setting_view.js'
 
 const __dirname = path.resolve()
+const isTrss = Array.isArray(Bot.uin)
 
 // 无法访问端口的情况下创建与media的通讯
 async function mediaLink () {
@@ -78,12 +78,12 @@ async function mediaLink () {
               if (data.qq && data.passwd) {
                 const token = randomString(32)
                 if (data.qq == getUin() && await redis.get('CHATGPT:ADMIN_PASSWD') == data.passwd) {
-                  AddUser({ user: data.qq, token, autho: 'admin' })
+                  await AddUser({ user: data.qq, token, autho: 'admin' })
                   ws.send(JSON.stringify({ command: data.command, state: true, autho: 'admin', token, region: getUin(), type: 'server' }))
                 } else {
                   const user = await getUserData(data.qq)
                   if (user.passwd != '' && user.passwd === data.passwd) {
-                    AddUser({ user: data.qq, token, autho: 'user' })
+                    await AddUser({ user: data.qq, token, autho: 'user' })
                     ws.send(JSON.stringify({ command: data.command, state: true, autho: 'user', token, region: getUin(), type: 'server' }))
                   } else {
                     ws.send(JSON.stringify({ command: data.command, state: false, error: `用户名密码错误,如果忘记密码请私聊机器人输入 ${data.qq == getUin() ? '#修改管理密码' : '#修改用户密码'} 进行修改`, region: getUin(), type: 'server' }))
@@ -291,7 +291,6 @@ export async function createServer () {
       connection.socket.send(JSON.stringify(response))
     })
     connection.socket.on('message', async (message) => {
-      const isTrss = Array.isArray(Bot.uin)
       try {
         const data = JSON.parse(message)
         const user = UserInfo(data.token)
@@ -304,7 +303,12 @@ export async function createServer () {
             if (data.id && data.message) {
               if (data.group) {
                 if (isTrss) {
-                  Bot[user.user].pickGroup(parseInt(data.id)).sendMsg(data.message)
+                  let msg = []
+                  if (data.quotable) {
+                    msg.push(segment.at(data.quotable.user_id, data.quotable.user_name))
+                  }
+                  msg.push(data.message)
+                  Bot[user.user].pickGroup(parseInt(data.id)).sendMsg(msg)
                 } else {
                   Bot.sendGroupMsg(parseInt(data.id), data.message, data.quotable)
                 }
@@ -351,32 +355,76 @@ export async function createServer () {
             }
             const groupList = await _Bot.getGroupList()
             groupList.forEach(async (item) => {
-              const group = _Bot.pickGroup(item.group_id)
+              const group = _Bot.pickGroup(isTrss ? item : item.group_id)
               const groupMessages = await group.getChatHistory()
-              groupMessages.forEach(async (e) => {
+              if (groupMessages) {
+                groupMessages.forEach(async (e) => {
+                  e.message = e.message.map(item => {
+                    if (item.type === 'at') {
+                      return { ...item, text: group.pickMember(parseInt(item.qq)).card || group.pickMember(parseInt(item.qq)).nickname }
+                    }
+                    return item
+                  })
+                  const messageData = {
+                    notice: 'clientMessage',
+                    message: e.message,
+                    sender: e.sender,
+                    group: {
+                      isGroup: true,
+                      group_id: e.group_id,
+                      group_name: e.group_name || group.group_name
+                    },
+                    quotable: {
+                      user_id: e.user_id,
+                      time: e.time,
+                      seq: e.seq,
+                      rand: e.rand,
+                      message: e.message,
+                      user_name: e.sender.nickname
+                    },
+                    read: true
+                  }
+                  await connection.socket.send(JSON.stringify(messageData))
+                })
+              } else {
                 const messageData = {
-                  notice: 'clientMessage',
-                  message: e.message,
-                  sender: e.sender,
+                  notice: 'clientList',
+                  user_id: _Bot.uin,
+                  nickname: _Bot.nickname,
                   group: {
                     isGroup: true,
-                    group_id: e.group_id,
-                    group_name: e.group_name || item.group_name
+                    group_id: group.group_id,
+                    group_name: group.group_name
                   },
                   quotable: {
-                    user_id: e.user_id,
-                    time: e.time,
-                    seq: e.seq,
-                    rand: e.rand,
-                    message: e.message,
-                    user_name: e.sender.nickname
+                    user_id: _Bot.uin,
+                    user_name: _Bot.nickname
                   },
-                  read: true
                 }
                 await connection.socket.send(JSON.stringify(messageData))
-              })
+              }
+            })
+            const friendList = await _Bot.getFriendList()
+            friendList.forEach(async (item) => {
+              const friend = _Bot.pickFriend(item)
+              const messageData = {
+                notice: 'clientList',
+                user_id: item,
+                nickname: friend.nickname,
+                group: {
+                  isGroup: false,
+                },
+                quotable: {
+                  user_id: _Bot.uin,
+                  user_name: _Bot.nickname
+                },
+              }
+              await connection.socket.send(JSON.stringify(messageData))
             })
 
+            break
+          case 'ping': // 心跳
+            await connection.socket.send(JSON.stringify({ command: 'ping', time: new Date(), state: true }))
             break
           default:
             await connection.socket.send(JSON.stringify({ data }))
@@ -395,6 +443,18 @@ export async function createServer () {
     return request
   }
   Bot.on('message', e => {
+    e.message = e.message.map(item => {
+      if (item.type === 'at') {
+        let user
+        try {
+          user = e.group.pickMember(parseInt(item.qq)).card || e.group.pickMember(parseInt(item.qq)).nickname
+        } catch (error) {
+          user = item.qq
+        }
+        return { ...item, text: user }
+      }
+      return item
+    })
     const messageData = {
       notice: 'clientMessage',
       message: e.message,
@@ -402,7 +462,7 @@ export async function createServer () {
       group: {
         isGroup: e.isGroup || e.group_id != undefined,
         group_id: e.group_id,
-        group_name: e.group_name
+        group_name: e.group_name || e.bot.gl?.get(e.group_id)?.group_name || e.group_id
       },
       quotable: {
         user_id: e.user_id,
@@ -410,7 +470,7 @@ export async function createServer () {
         seq: e.seq,
         rand: e.rand,
         message: e.message,
-        user_name: e.sender.nickname
+        user_name: e.sender.card || e.sender.nickname
       }
     }
     if (clients) {
@@ -593,6 +653,7 @@ export async function runServer () {
       server.log.info(`server listening on ${server.server.address().port}`)
     }
   })
+  await ReplaceUsers()
 }
 
 export async function stopServer () {

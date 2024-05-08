@@ -7,7 +7,7 @@ import fetch, {
 import crypto from 'crypto'
 import WebSocket from 'ws'
 import { Config } from './config.js'
-import { formatDate, getMasterQQ, isCN, getUserData, limitString } from './common.js'
+import { formatDate, getMasterQQ, isCN, getUserData, limitString, extractMarkdownJson } from './common.js'
 import moment from 'moment'
 import { getProxy } from './proxy.js'
 import common from '../../../lib/common/common.js'
@@ -257,6 +257,7 @@ export default class SydneyAIClient {
       messageType = 'Chat',
       toSummaryFileContent,
       onImageCreateRequest = prompt => {},
+      onSunoCreateRequest = prompt => {},
       isPro = this.pro
     } = opts
     // if (messageType === 'Chat') {
@@ -336,7 +337,8 @@ export default class SydneyAIClient {
     const text = (useCast?.bing || Config.sydney).replaceAll(namePlaceholder, botName || defaultBotName) +
       ((Config.enableGroupContext && groupId) ? groupContextTip : '') +
       ((Config.enforceMaster && master) ? masterTip : '') +
-      (Config.sydneyMood ? moodTip : '')
+      (Config.sydneyMood ? moodTip : '') +
+      ((!Config.enableGenerateSuno && Config.bingSuno != 'bing' && Config.enableGenerateSunoForger) ? 'If I ask you to generate music or write songs, you need to reply with information suitable for Suno to generate music. The returned message is in JSON format, with a structure of {"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}.' : '')
     if (!text) {
       previousMessages = pm
     } else {
@@ -386,7 +388,7 @@ export default class SydneyAIClient {
     }
     let optionsSets = getOptionSet(Config.toneStyle, Config.enableGenerateContents)
     let source = 'cib-ccp'; let gptId = 'copilot'
-    if (!Config.sydneyEnableSearch || toSummaryFileContent?.content) {
+    if ((!Config.sydneyEnableSearch && !Config.enableGenerateContents && !Config.enableGenerateSuno) || toSummaryFileContent?.content) {
       optionsSets.push(...['nosearchall'])
     }
     if (isPro) {
@@ -410,7 +412,7 @@ export default class SydneyAIClient {
     // }
     let maxConv = Config.maxNumUserMessagesInConversation
     const currentDate = moment().format('YYYY-MM-DDTHH:mm:ssZ')
-    const imageDate = await this.kblobImage(opts.imageUrl)
+    const imageDate = await this.kblobImage(opts.imageUrl, conversationId)
     let argument0 = {
       source,
       optionsSets,
@@ -430,7 +432,9 @@ export default class SydneyAIClient {
         'SemanticSerp',
         'GenerateContentQuery',
         'SearchQuery',
-        'GeneratedCode'
+        'GeneratedCode',
+        // 'InternalTasksMessage',
+        // 'Disclaimer'
       ],
       sliceIds: [],
       requestId: crypto.randomUUID(),
@@ -501,7 +505,12 @@ export default class SydneyAIClient {
         }
       }
     }
-
+    if (Config.enableGenerateSuno){
+      argument0.plugins.push({
+        "id": "22b7f79d-8ea4-437e-b5fd-3e21f09f7bc1",
+        "category": 1
+      })
+    }
     if (encryptedconversationsignature) {
       delete argument0.conversationSignature
     }
@@ -705,6 +714,13 @@ export default class SydneyAIClient {
               adaptiveCardsSoFar = message.adaptiveCards
               suggestedResponsesSoFar = message.suggestedResponses
             }
+            if (messages[0].contentType === 'SUNO') {
+              onSunoCreateRequest({
+                songtId: messages[0]?.hiddenText.split('=')[1],
+                songPrompt: messages[0]?.text,
+                cookie: this.opts.cookies
+              })
+            }
             const updatedText = messages[0].text
             if (!updatedText || updatedText === replySoFar[cursor]) {
               return
@@ -819,6 +835,16 @@ export default class SydneyAIClient {
               message.adaptiveCards = adaptiveCardsSoFar
               message.text = replySoFar.join('')
             }
+            // 伪造歌曲生成
+            if (Config.enableGenerateSunoForger) {
+              const sunoList = extractMarkdownJson(message.text)
+              for (let suno of sunoList) {
+                if (suno.option == 'Suno') {
+                  logger.info(`开始生成歌曲${suno.tags}`)
+                  onSunoCreateRequest(suno)
+                }
+              }
+            }
             resolve({
               message,
               conversationExpiryTime: event?.item?.conversationExpiryTime
@@ -880,20 +906,34 @@ export default class SydneyAIClient {
     }
   }
 
-  async kblobImage (url) {
+  async kblobImage (url, conversationId) {
     if (!url) return false
+    if (!conversationId) return false
+    // 获取并转换图片为base64
+    let imgBase64
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`图片${url}获取失败：${response.status}`)
+      }
+      const arrayBuffer = await response.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      imgBase64 = buffer.toString('base64')
+    } catch (error) {
+      console.error(error)
+      return false
+    }
     const formData = new FormData()
     formData.append('knowledgeRequest', JSON.stringify({
-      imageInfo: {
-        url
-      },
+      imageInfo: {},
       knowledgeRequest: {
         invokedSkills: ['ImageById'],
         subscriptionId: 'Bing.Chat.Multimodal',
         invokedSkillsRequestData: { enableFaceBlur: true },
-        convoData: { convoid: '', convotone: 'Creative' }
+        convoData: { convoid: conversationId, convotone: 'Creative' }
       }
     }))
+    formData.append('imageBase64', imgBase64)
     const fetchOptions = {
       headers: {
         Referer: 'https://www.bing.com/search?q=Bing+AI&showconv=1&FORM=hpcodx'
@@ -962,6 +1002,11 @@ function getOptionSet (tone, generateContent = false) {
     'responsible_ai_policy_235',
     'enablemm',
     'dv3sugg',
+    'uquopt',
+    'bicfluxv2',
+    'langdtwb',
+    'fluxprod',
+    'eredirecturl',
     'autosave',
     'iyxapbing',
     'iycapbing',
@@ -979,7 +1024,6 @@ function getOptionSet (tone, generateContent = false) {
         'elec2t',
         'elecgnd',
         'gndlogcf',
-        'eredirecturl',
         'clgalileo',
         'gencontentv3'
       ])
@@ -995,7 +1039,6 @@ function getOptionSet (tone, generateContent = false) {
         'elec2t',
         'elecgnd',
         'gndlogcf',
-        'eredirecturl'
       ])
       break
     case 'Creative':
@@ -1008,14 +1051,16 @@ function getOptionSet (tone, generateContent = false) {
         'elec2t',
         'elecgnd',
         'gndlogcf',
-        'eredirecturl',
         'clgalileo',
         'gencontentv3'
       ])
       break
   }
-  if (generateContent) {
-    optionset.push('gencontentv3')
+  if (Config.enableGenerateSuno){
+    optionset.push(...[
+      '014CB21D',
+      'B3FF9F21'
+    ])
   }
   return optionset
 }
