@@ -95,9 +95,10 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
         // wss连接新站点
         if (space == 'https://fs.firefly.matce.cn') {
+            text = text.substr(0, 299);
             let result
             try {
-                result = await connectToWss({ speaker: speaker, text: text, });
+                result = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio });
             } catch (error) {
                 logger.error(`[chatgpt-tts]连接到wss失败：${error}`)
                 throw new Error(`[chatgpt-tts]连接到wss失败：${error}`)
@@ -387,92 +388,58 @@ async function connectToWss(result = {}) {
     let wss = 'wss://fs.firefly.matce.cn/queue/join'
     let session_hash = ""
 
-    // 第一次连接--------------------------------------
-    const socket_1 = new WebSocket(wss);
+    if (result.config_referenceAudioPath) {
+        fn_index = 3
+        // 第一次连接--------------------------------------
+        const socket_3_1 = new WebSocket(wss);
 
-    socket_1.addEventListener('open', function (event) {
-        // console.log('1st Connected to wss server');
-    });
-    socket_1.addEventListener('error', function (event) {
-        // console.error('1st Error occurred:', event);
-        // 处理连接错误
-        throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
-    });
-
-    socket_1.addEventListener('message', function (event) {
-        // console.log('1st Message from server:', event.data);
-        // 当从服务器接收到消息时，可以在此处处理它
-        const data = JSON.parse(event.data);
-
-        let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
-        let send_data = { "data": [result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
-
-        if (data.msg == "send_hash") {
-            socket_1.send(JSON.stringify(send_hash));
-        }
-        else if (data.msg == "send_data") {
-            socket_1.send(JSON.stringify(send_data));
-        }
-        else if (data.msg == "process_completed") {
-            // 获取结果
-            // console.log(data.output)
-            result = { ...result, sft_path: data.output.data[0], sft_name: data.output.data[1] }
-        }
-    });
-
-    socket_1.addEventListener('close', function (event) {
-        // console.log('1st Connection to wss server closed');
-
-        // 第二次连接--------------------------------------
-        fn_index = 2
-        const socket_2 = new WebSocket(wss);
-
-        socket_2.addEventListener('open', function (event) {
-            // console.log('2nd Connected to wss server');
+        socket_3_1.addEventListener('open', function (event) {
+            // console.log('1st Connected to wss server');
         });
-        socket_2.addEventListener('error', function (event) {
-            // console.error('2nd Error occurred:', event);
+        socket_3_1.addEventListener('error', function (event) {
+            // console.error('1st Error occurred:', event);
             // 处理连接错误
-            throw new Error(`[chatgpt-tts]第二次连接到wss失败：${event}`)
+            throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
         });
 
-        socket_2.addEventListener('message', function (event) {
-            // console.log('2nd Message from server:', event.data);
+        socket_3_1.addEventListener('message', function (event) {
+            // console.log('1st Message from server:', event.data);
             // 当从服务器接收到消息时，可以在此处处理它
             const data = JSON.parse(event.data);
 
             let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
-            let send_data = { "data": [result.sft_path], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+            let send_data = { "data": [result.config_referenceAudioPath], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
 
             if (data.msg == "send_hash") {
-                socket_2.send(JSON.stringify(send_hash));
+                socket_3_1.send(JSON.stringify(send_hash));
             }
             else if (data.msg == "send_data") {
-                socket_2.send(JSON.stringify(send_data));
+                socket_3_1.send(JSON.stringify(send_data));
             }
             else if (data.msg == "process_completed") {
                 // 获取结果
                 // console.log(data.output)
-                result = { ...result, referenceAudioPath: data.output.data[0].name, referenceAudioOrig_name: data.output.data[0].orig_name }
+                result = { ...result, referenceAudioPath: data.output.data[0].name, sft_name: data.output.data[1], referenceAudioOrig_name: "audio.wav" }
             }
         });
 
-        socket_2.addEventListener('close', function (event) {
-            // console.log('2nd Connection to wss server closed');
-            // 第三次连接--------------------------------------
-            fn_index = 4
-            const socket_3 = new WebSocket(wss);
+        socket_3_1.addEventListener('close', function (event) {
+            // console.log('1st Connection to wss server closed');
 
-            socket_3.addEventListener('open', function (event) {
+            // 第二次连接--------------------------------------
+            fn_index = 4
+            const socket_3_2 = new WebSocket(wss);
+
+            socket_3_2.addEventListener('open', function (event) {
                 // console.log('3rd Connected to wss server');
             });
-            socket_3.addEventListener('error', function (event) {
+            socket_3_2.addEventListener('error', function (event) {
                 // console.error('3rd Error occurred:', event);
                 // 处理连接错误
                 throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
             });
 
-            socket_3.addEventListener('message', function (event) {
+            socket_3_2.addEventListener('message', function (event) {
                 // console.log('3rd Message from server:', event.data);
                 // 当从服务器接收到消息时，可以在此处处理它
                 const data = JSON.parse(event.data);
@@ -481,10 +448,10 @@ async function connectToWss(result = {}) {
                 let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, 0, 48, 0.7, 1.5, 0.7, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
 
                 if (data.msg == "send_hash") {
-                    socket_3.send(JSON.stringify(send_hash));
+                    socket_3_2.send(JSON.stringify(send_hash));
                 }
                 else if (data.msg == "send_data") {
-                    socket_3.send(JSON.stringify(send_data));
+                    socket_3_2.send(JSON.stringify(send_data));
                 }
                 else if (data.msg == "process_completed") {
                     // 获取结果
@@ -493,12 +460,126 @@ async function connectToWss(result = {}) {
                 }
             });
 
-            socket_3.addEventListener('close', function (event) {
+            socket_3_2.addEventListener('close', function (event) {
                 // console.log('3rd Connection to wss server closed');
                 lock = false
             });
         });
-    });
+    }
+    else {
+        // 第一次连接--------------------------------------
+        const socket_1 = new WebSocket(wss);
+
+        socket_1.addEventListener('open', function (event) {
+            // console.log('1st Connected to wss server');
+        });
+        socket_1.addEventListener('error', function (event) {
+            // console.error('1st Error occurred:', event);
+            // 处理连接错误
+            throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
+        });
+
+        socket_1.addEventListener('message', function (event) {
+            // console.log('1st Message from server:', event.data);
+            // 当从服务器接收到消息时，可以在此处处理它
+            const data = JSON.parse(event.data);
+
+            let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
+            let send_data = { "data": [result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+
+            if (data.msg == "send_hash") {
+                socket_1.send(JSON.stringify(send_hash));
+            }
+            else if (data.msg == "send_data") {
+                socket_1.send(JSON.stringify(send_data));
+            }
+            else if (data.msg == "process_completed") {
+                // 获取结果
+                // console.log(data.output)
+                result = { ...result, sft_path: data.output.data[0], sft_name: data.output.data[1] }
+            }
+        });
+
+        socket_1.addEventListener('close', function (event) {
+            // console.log('1st Connection to wss server closed');
+
+            // 第二次连接--------------------------------------
+            fn_index = 2
+            const socket_2 = new WebSocket(wss);
+
+            socket_2.addEventListener('open', function (event) {
+                // console.log('2nd Connected to wss server');
+            });
+            socket_2.addEventListener('error', function (event) {
+                // console.error('2nd Error occurred:', event);
+                // 处理连接错误
+                throw new Error(`[chatgpt-tts]第二次连接到wss失败：${event}`)
+            });
+
+            socket_2.addEventListener('message', function (event) {
+                // console.log('2nd Message from server:', event.data);
+                // 当从服务器接收到消息时，可以在此处处理它
+                const data = JSON.parse(event.data);
+
+                let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
+                let send_data = { "data": [result.sft_path], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+
+                if (data.msg == "send_hash") {
+                    socket_2.send(JSON.stringify(send_hash));
+                }
+                else if (data.msg == "send_data") {
+                    socket_2.send(JSON.stringify(send_data));
+                }
+                else if (data.msg == "process_completed") {
+                    // 获取结果
+                    // console.log(data.output)
+                    result = { ...result, referenceAudioPath: data.output.data[0].name, referenceAudioOrig_name: data.output.data[0].orig_name }
+                }
+            });
+
+            socket_2.addEventListener('close', function (event) {
+                // console.log('2nd Connection to wss server closed');
+                // 第三次连接--------------------------------------
+                fn_index = 4
+                const socket_3 = new WebSocket(wss);
+
+                socket_3.addEventListener('open', function (event) {
+                    // console.log('3rd Connected to wss server');
+                });
+                socket_3.addEventListener('error', function (event) {
+                    // console.error('3rd Error occurred:', event);
+                    // 处理连接错误
+                    throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
+                });
+
+                socket_3.addEventListener('message', function (event) {
+                    // console.log('3rd Message from server:', event.data);
+                    // 当从服务器接收到消息时，可以在此处处理它
+                    const data = JSON.parse(event.data);
+
+                    let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
+                    let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, 0, 48, 0.7, 1.5, 0.7, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+
+                    if (data.msg == "send_hash") {
+                        socket_3.send(JSON.stringify(send_hash));
+                    }
+                    else if (data.msg == "send_data") {
+                        socket_3.send(JSON.stringify(send_data));
+                    }
+                    else if (data.msg == "process_completed") {
+                        // 获取结果
+                        // console.log(data.output)
+                        result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
+                    }
+                });
+
+                socket_3.addEventListener('close', function (event) {
+                    // console.log('3rd Connection to wss server closed');
+                    lock = false
+                });
+            });
+        });
+    }
     // 关闭连接
     // socket.close();
     for (let i = 0; i < 120; i++) { // 等待时间120秒
