@@ -7,6 +7,7 @@ import {
 import {
     speakers_ZH,
     speakers_JP,
+    speakers_EN,
     vits_emotion_map
 } from '../utils/tts.js'
 import crypto from 'crypto'
@@ -207,11 +208,27 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 }
             }
         }
+
         batchSpeakersNum = speakers_JP.length / 50
         strsLenght = strs.length
         for (let i = 0; i < batchSpeakersNum; i++) {
             speakersSliced = speakers_JP.slice(i * 50, (i + 1) * 50)
             strs[i + strsLenght] = '日文JP角色：\n'
+            for (let j = 0; j < speakersSliced.length; j++) {
+                if (j % 2 == 0) {
+                    strs[i + strsLenght] += speakersSliced[j] + "　　"
+                }
+                else {
+                    strs[i + strsLenght] += speakersSliced[j] + "\n"
+                }
+            }
+        }
+
+        batchSpeakersNum = speakers_EN.length / 50
+        strsLenght = strs.length
+        for (let i = 0; i < batchSpeakersNum; i++) {
+            speakersSliced = speakers_EN.slice(i * 50, (i + 1) * 50)
+            strs[i + strsLenght] = '英文EN角色：\n'
             for (let j = 0; j < speakersSliced.length; j++) {
                 if (j % 2 == 0) {
                     strs[i + strsLenght] += speakersSliced[j] + "　　"
