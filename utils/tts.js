@@ -387,11 +387,13 @@ async function connectToWss(result = {}) {
     let fn_index = 1
     let wss = 'wss://fs.firefly.matce.cn/queue/join'
     let session_hash = ""
+    let socket_trunk = {}
 
     if (result.config_referenceAudioPath) {
         fn_index = 3
         // 第一次连接--------------------------------------
         const socket_3_1 = new WebSocket(wss);
+        socket_trunk.socket_3_1 = socket_3_1
 
         socket_3_1.addEventListener('open', function (event) {
             // console.log('1st Connected to wss server');
@@ -429,6 +431,7 @@ async function connectToWss(result = {}) {
             // 第二次连接--------------------------------------
             fn_index = 4
             const socket_3_2 = new WebSocket(wss);
+            socket_trunk.socket_3_2 = socket_3_2
 
             socket_3_2.addEventListener('open', function (event) {
                 // console.log('3rd Connected to wss server');
@@ -469,6 +472,7 @@ async function connectToWss(result = {}) {
     else {
         // 第一次连接--------------------------------------
         const socket_1 = new WebSocket(wss);
+        socket_trunk.socket_1 = socket_1
 
         socket_1.addEventListener('open', function (event) {
             // console.log('1st Connected to wss server');
@@ -506,6 +510,7 @@ async function connectToWss(result = {}) {
             // 第二次连接--------------------------------------
             fn_index = 2
             const socket_2 = new WebSocket(wss);
+            socket_trunk.socket_2 = socket_2
 
             socket_2.addEventListener('open', function (event) {
                 // console.log('2nd Connected to wss server');
@@ -542,6 +547,7 @@ async function connectToWss(result = {}) {
                 // 第三次连接--------------------------------------
                 fn_index = 4
                 const socket_3 = new WebSocket(wss);
+                socket_trunk.socket_3 = socket_3
 
                 socket_3.addEventListener('open', function (event) {
                     // console.log('3rd Connected to wss server');
@@ -580,11 +586,16 @@ async function connectToWss(result = {}) {
             });
         });
     }
-    // 关闭连接
-    // socket.close();
     for (let i = 0; i < 120; i++) { // 等待时间120秒
         if (lock == false) break;
         await sleep_pai(1000)
+    }
+    // 关闭连接
+    // socket.close();
+    // 获取对象的socket_trunk中的全部对象，执行关闭连接操作
+    for (let i = 0; i < Object.keys(socket_trunk).length; i++) {
+        // console.log(Object.keys(socket_trunk)[i])
+        socket_trunk[Object.keys(socket_trunk)[i]].close();
     }
     return result.voiceUrl
 }
