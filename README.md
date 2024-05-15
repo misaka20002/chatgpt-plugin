@@ -4,6 +4,7 @@
 - vit2语音模型替换语音引擎为Bert-VITS2模型（感谢genshinvoice.top提供的api支持！）
 - 更新日志：
 - 2024年3月31日更新了碧蓝档案角色语音，并将自动转日语输出。
+- 2024年5月15日vits源新增Fish-VITS2模型，详细在锅巴中设置（感谢firefly.matce.cn提供的api支持！）
 ### 新增：
 - 戳一戳功能，锅巴开启关闭
   - 受#chatgpt设置AI第一人称 和锅巴控制

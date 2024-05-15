@@ -855,7 +855,7 @@ export function supportGuoba () {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '大力感谢genshinvoice.top和firefly.matce.cn提供的api支持——请填入https://bv2.firefly.matce.cn',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn',
           component: 'Input'
         },
         {
@@ -961,7 +961,7 @@ export function supportGuoba () {
         {
           field: 'vits_emotion',
           label: 'emotion',
-          bottomHelpMessage: '（已失效）控制发音情感；可用命令：#tts情感设置帮助',
+          bottomHelpMessage: '（仅限Bert-VITS2）控制发音情感；可用命令：#tts情感设置帮助',
           component: 'Select',
           componentProps: {
             options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'') } })
@@ -970,19 +970,19 @@ export function supportGuoba () {
         {
           field: 'vits_auto_emotion',
           label: 'tts语音启动自动情感',
-          bottomHelpMessage: '（已失效）自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感',
+          bottomHelpMessage: '（仅限Bert-VITS2）自动根据句子中的感情词匹配tts中的100种情感，将会覆盖当前tts情感',
           component: 'Switch'
         },
         {
             field: 'style_text',
             label: 'tts融合文本',
-            bottomHelpMessage: '（已失效）使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能',
+            bottomHelpMessage: '（仅限Bert-VITS2）使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能',
             component: 'Input'
         },
         {
             field: 'style_text_weights',
             label: 'tts融合文本权重',
-            bottomHelpMessage: '（已失效）主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认为0.7',
+            bottomHelpMessage: '（仅限Bert-VITS2）主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认为0.7',
             component: 'InputNumber',
             componentProps: {
                 min: 0,
@@ -998,7 +998,7 @@ export function supportGuoba () {
         {
           field: 'sdp_ratio',
           label: 'SDP ratio',
-          bottomHelpMessage: '（已失效）控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
+          bottomHelpMessage: '（仅限Bert-VITS2）控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0,
@@ -1008,7 +1008,7 @@ export function supportGuoba () {
         {
           field: 'noiseScale',
           label: 'noise',
-          bottomHelpMessage: '（已失效）控制情感变化程度，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2）控制情感变化程度，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
@@ -1018,7 +1018,7 @@ export function supportGuoba () {
         {
           field: 'noiseScaleW',
           label: 'noiseScaleW',
-          bottomHelpMessage: '（已失效）控制音素发音长度，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2）控制音素发音长度，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
@@ -1028,7 +1028,7 @@ export function supportGuoba () {
         {
           field: 'lengthScale',
           label: 'lengthScale',
-          bottomHelpMessage: '（已失效）控制整体语速，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2）控制整体语速，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
@@ -1038,7 +1038,7 @@ export function supportGuoba () {
         {
           field: 'tts_language',
           label: 'TTS语音使用的语言',
-          bottomHelpMessage: '（已失效）可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了',
+          bottomHelpMessage: '（仅限Bert-VITS2）可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了',
           component: 'Select',
           componentProps: {
             options: [
@@ -1053,19 +1053,19 @@ export function supportGuoba () {
         {
           field: 'exampleAudio',
           label: 'exampleAudio',
-          bottomHelpMessage: '（可用）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft/Genshin_ZH/派蒙/79f29fa7eb30df9e.wav',
+          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft/Genshin_ZH/派蒙/79f29fa7eb30df9e.wav',
           component: 'Input'
         },
         {
           field: 'tts_slice_is_slice_generation',
           label: 'tts语音 切片生成',
-          bottomHelpMessage: '（已失效）使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但1、会增加生成耗时，2、会导致每一段句子语气不一致，3、增加post失败概率。（2024年3月7日 API更新了，目前只支持切片生成，所有语音已强制使用切片生成）',
+          bottomHelpMessage: '（仅限Bert-VITS2）使用切片生成而不是普通生成，可以突破字数300的限制，可以控制段间停顿和句间停顿；但1、会增加生成耗时，2、会导致每一段句子语气不一致，3、增加post失败概率。（2024年3月7日 API更新了，目前只支持切片生成，所有语音已强制使用切片生成）',
           component: 'Switch'
         },
         {
           field: 'tts_slice_pause_between_paragraphs_seconds',
           label: '切片生成 段间停顿时长（秒）',
-          bottomHelpMessage: '（已失效）作用于切片生成，需要大于句间停顿才有效，范围0-10；推荐0.2秒',
+          bottomHelpMessage: '（仅限Bert-VITS2）作用于切片生成，需要大于句间停顿才有效，范围0-10；推荐0.2秒',
           component: 'InputNumber',
           componentProps: {
             min: 0,
@@ -1075,13 +1075,13 @@ export function supportGuoba () {
         {
           field: 'tts_slice_is_Split_by_sentence',
           label: '切片生成 按句切分',
-          bottomHelpMessage: '（已失效）按句切分 在按段落切分的基础上再按句子切分文本',
+          bottomHelpMessage: '（仅限Bert-VITS2）按句切分 在按段落切分的基础上再按句子切分文本',
           component: 'Switch'
         },
         {
           field: 'tts_slice_pause_between_sentences_seconds',
           label: '切片生成 句间停顿时长（秒）',
-          bottomHelpMessage: '（已失效）作用于切片生成，开启按句切分才生效，范围0-5；推荐0.2秒',
+          bottomHelpMessage: '（仅限Bert-VITS2）作用于切片生成，开启按句切分才生效，范围0-5；推荐0.2秒',
           component: 'InputNumber',
           componentProps: {
             min: 0,
