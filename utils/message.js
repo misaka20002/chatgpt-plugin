@@ -15,18 +15,23 @@ export class OfficialChatGPTClient {
     this._apiReverseUrl = apiReverseUrl
   }
 
-  async sendMessage (prompt, opts = {}) {
+  async sendMessage (prompt, opts = {}, retry = 3, errorMsg) {
+    if (retry < 0) {
+      throw new Error(errorMsg || 'retry limit exceeded')
+    }
     let {
       conversationId,
       parentMessageId = uuidv4(),
       messageId = uuidv4(),
-      action = 'next'
+      action = 'next',
+      model = ''
     } = opts
     let url = this._apiReverseUrl || officialChatGPTAPI
     if (this._apiReverseUrl && Config.proxy && !Config.apiForceUseReverse) {
       // 如果配了proxy，而且有反代，但是没开启强制反代
       url = officialChatGPTAPI
     }
+
     const body = {
       action,
       messages: [
@@ -40,7 +45,7 @@ export class OfficialChatGPTClient {
           metadata: {}
         }
       ],
-      model: Config.useGPT4 ? 'gpt-4' : 'text-davinci-002-render-sha',
+      model: model || (Config.useGPT4 ? 'gpt-4o' : 'auto'),
       parent_message_id: parentMessageId,
       timezone_offset_min: -480,
       history_and_training_disabled: false
@@ -56,12 +61,13 @@ export class OfficialChatGPTClient {
         headers: {
           accept: 'text/event-stream',
           'x-openai-assistant-app-id': '',
-          authorization: `Bearer ${this._accessToken}`,
+          authorization: this._accessToken ? `Bearer ${this._accessToken}` : '',
           'content-type': 'application/json',
           referer: 'https://chat.openai.com/chat',
           library: 'chatgpt-plugin'
         },
-        referrer: 'https://chat.openai.com/chat'
+        referrer: 'https://chat.openai.com/chat',
+        timeout: 10000
       }
       logger.info('using api3 reverse proxy: ' + url)
       let requestLib = url.startsWith('https') ? https : http
@@ -143,17 +149,57 @@ export class OfficialChatGPTClient {
       req.write(JSON.stringify(body))
       req.end()
     })
-    const response = await requestP
-    if (statusCode === 200) {
-      return {
-        text: response.response,
-        conversationId: response.conversationId,
-        id: response.messageId,
-        parentMessageId
+    try {
+      const response = await requestP
+      if (statusCode === 200) {
+        return {
+          text: response.response,
+          conversationId: response.conversationId,
+          id: response.messageId,
+          parentMessageId
+        }
+      } else {
+        console.log(response)
+        throw new Error(JSON.stringify(response))
       }
-    } else {
-      console.log(response)
-      throw new Error(response)
+    } catch (err) {
+      logger.warn(err)
+      if (err.message?.includes('You have sent too many messages to the model. Please try again later.')) {
+        logger.warn('账户的gpt-o额度不足，将降级为auto重试')
+        opts.model = 'auto'
+      }
+      return await this.sendMessage(prompt, opts, retry - 1, err.message)
     }
+  }
+
+  voices = ['ember', 'cove',
+    'juniper', 'sky', 'breeze'
+    // '__internal_only_shimmer',
+    // '__internal_only_santa'
+  ]
+
+  async synthesis (opts = {}) {
+    const { id, conversationId } = opts
+    let url = this._apiReverseUrl.replace('/conversation', '/synthesize')
+    let randomVoice = this.voices[Math.floor(Math.random() * this.voices.length)]
+    url = `${url}?message_id=${id}&conversation_id=${conversationId}&voice=${randomVoice}&format=mp3`
+    let res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        accept: 'audio/mpeg',
+        'x-openai-assistant-app-id': '',
+        authorization: this._accessToken ? `Bearer ${this._accessToken}` : '',
+        referer: 'https://chat.openai.com/chat',
+        library: 'chatgpt-plugin'
+      }
+    })
+    if (res.status !== 200) {
+      throw new Error(await res.text())
+    }
+    if (res.headers.get('content-type') !== 'audio/mpeg') {
+      throw new Error('invalid content type')
+    }
+    let buffer = await res.arrayBuffer()
+    return Buffer.from(buffer)
   }
 }
