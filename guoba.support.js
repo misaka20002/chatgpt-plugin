@@ -1053,7 +1053,7 @@ export function supportGuoba () {
         {
           field: 'exampleAudio',
           label: 'exampleAudio',
-          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft/Genshin_ZH/派蒙/79f29fa7eb30df9e.wav',
+          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
           component: 'Input'
         },
         {

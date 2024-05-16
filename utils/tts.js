@@ -396,16 +396,19 @@ async function connectToWss(result = {}) {
         socket_trunk.socket_3_1 = socket_3_1
 
         socket_3_1.addEventListener('open', function (event) {
-            // console.log('1st Connected to wss server');
+            if (Config.debug)
+                console.log('[chatgpt-tts]1st Connected to wss server');
         });
         socket_3_1.addEventListener('error', function (event) {
-            // console.error('1st Error occurred:', event);
+            if (Config.debug)
+                console.error('[chatgpt-tts]1st Error occurred:', event);
             // 处理连接错误
             throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
         });
 
         socket_3_1.addEventListener('message', function (event) {
-            // console.log('1st Message from server:', event.data);
+            if (Config.debug)
+                console.log('[chatgpt-tts]1st Message from server:', event.data);
             // 当从服务器接收到消息时，可以在此处处理它
             const data = JSON.parse(event.data);
 
@@ -420,13 +423,15 @@ async function connectToWss(result = {}) {
             }
             else if (data.msg == "process_completed") {
                 // 获取结果
-                // console.log(data.output)
+                if (Config.debug)
+                    console.log(data.output)
                 result = { ...result, referenceAudioPath: data.output.data[0].name, sft_name: data.output.data[1], referenceAudioOrig_name: "audio.wav" }
             }
         });
 
         socket_3_1.addEventListener('close', function (event) {
-            // console.log('1st Connection to wss server closed');
+            if (Config.debug)
+                console.log('[chatgpt-tts]1st Connection to wss server closed');
 
             // 第二次连接--------------------------------------
             fn_index = 4
@@ -434,16 +439,19 @@ async function connectToWss(result = {}) {
             socket_trunk.socket_3_2 = socket_3_2
 
             socket_3_2.addEventListener('open', function (event) {
-                // console.log('3rd Connected to wss server');
+                if (Config.debug)
+                    console.log('[chatgpt-tts]3rd Connected to wss server');
             });
             socket_3_2.addEventListener('error', function (event) {
-                // console.error('3rd Error occurred:', event);
+                if (Config.debug)
+                    console.error('[chatgpt-tts]3rd Error occurred:', event);
                 // 处理连接错误
                 throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
             });
 
             socket_3_2.addEventListener('message', function (event) {
-                // console.log('3rd Message from server:', event.data);
+                if (Config.debug)
+                    console.log('[chatgpt-tts]3rd Message from server:', event.data);
                 // 当从服务器接收到消息时，可以在此处处理它
                 const data = JSON.parse(event.data);
 
@@ -458,13 +466,15 @@ async function connectToWss(result = {}) {
                 }
                 else if (data.msg == "process_completed") {
                     // 获取结果
-                    // console.log(data.output)
+                    if (Config.debug)
+                        console.log(data.output)
                     result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
                 }
             });
 
             socket_3_2.addEventListener('close', function (event) {
-                // console.log('3rd Connection to wss server closed');
+                if (Config.debug)
+                    console.log('[chatgpt-tts]3rd Connection to wss server closed');
                 lock = false
             });
         });
@@ -475,16 +485,19 @@ async function connectToWss(result = {}) {
         socket_trunk.socket_1 = socket_1
 
         socket_1.addEventListener('open', function (event) {
-            // console.log('1st Connected to wss server');
+            if (Config.debug)
+                console.log('[chatgpt-tts]1st Connected to wss server');
         });
         socket_1.addEventListener('error', function (event) {
-            // console.error('1st Error occurred:', event);
+            if (Config.debug)
+                console.error('[chatgpt-tts]1st Error occurred:', event);
             // 处理连接错误
             throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
         });
 
         socket_1.addEventListener('message', function (event) {
-            // console.log('1st Message from server:', event.data);
+            if (Config.debug)
+                console.log('[chatgpt-tts]1st Message from server:', event.data);
             // 当从服务器接收到消息时，可以在此处处理它
             const data = JSON.parse(event.data);
 
@@ -499,13 +512,15 @@ async function connectToWss(result = {}) {
             }
             else if (data.msg == "process_completed") {
                 // 获取结果
-                // console.log(data.output)
+                if (Config.debug)
+                    console.log(data.output)
                 result = { ...result, sft_path: data.output.data[0], sft_name: data.output.data[1] }
             }
         });
 
         socket_1.addEventListener('close', function (event) {
-            // console.log('1st Connection to wss server closed');
+            if (Config.debug)
+                console.log('[chatgpt-tts]1st Connection to wss server closed');
 
             // 第二次连接--------------------------------------
             fn_index = 2
@@ -513,16 +528,19 @@ async function connectToWss(result = {}) {
             socket_trunk.socket_2 = socket_2
 
             socket_2.addEventListener('open', function (event) {
-                // console.log('2nd Connected to wss server');
+                if (Config.debug)
+                    console.log('[chatgpt-tts]2nd Connected to wss server');
             });
             socket_2.addEventListener('error', function (event) {
-                // console.error('2nd Error occurred:', event);
+                if (Config.debug)
+                    console.error('[chatgpt-tts]2nd Error occurred:', event);
                 // 处理连接错误
                 throw new Error(`[chatgpt-tts]第二次连接到wss失败：${event}`)
             });
 
             socket_2.addEventListener('message', function (event) {
-                // console.log('2nd Message from server:', event.data);
+                if (Config.debug)
+                    console.log('[chatgpt-tts]2nd Message from server:', event.data);
                 // 当从服务器接收到消息时，可以在此处处理它
                 const data = JSON.parse(event.data);
 
@@ -537,29 +555,34 @@ async function connectToWss(result = {}) {
                 }
                 else if (data.msg == "process_completed") {
                     // 获取结果
-                    // console.log(data.output)
+                    if (Config.debug)
+                        console.log(data.output)
                     result = { ...result, referenceAudioPath: data.output.data[0].name, referenceAudioOrig_name: data.output.data[0].orig_name }
                 }
             });
 
             socket_2.addEventListener('close', function (event) {
-                // console.log('2nd Connection to wss server closed');
+                if (Config.debug)
+                    console.log('[chatgpt-tts]2nd Connection to wss server closed');
                 // 第三次连接--------------------------------------
                 fn_index = 4
                 const socket_3 = new WebSocket(wss);
                 socket_trunk.socket_3 = socket_3
 
                 socket_3.addEventListener('open', function (event) {
-                    // console.log('3rd Connected to wss server');
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]3rd Connected to wss server');
                 });
                 socket_3.addEventListener('error', function (event) {
-                    // console.error('3rd Error occurred:', event);
+                    if (Config.debug)
+                        console.error('[chatgpt-tts]3rd Error occurred:', event);
                     // 处理连接错误
                     throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
                 });
 
                 socket_3.addEventListener('message', function (event) {
-                    // console.log('3rd Message from server:', event.data);
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]3rd Message from server:', event.data);
                     // 当从服务器接收到消息时，可以在此处处理它
                     const data = JSON.parse(event.data);
 
@@ -574,13 +597,15 @@ async function connectToWss(result = {}) {
                     }
                     else if (data.msg == "process_completed") {
                         // 获取结果
-                        // console.log(data.output)
+                        if (Config.debug)
+                            console.log(data.output)
                         result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
                     }
                 });
 
                 socket_3.addEventListener('close', function (event) {
-                    // console.log('3rd Connection to wss server closed');
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]3rd Connection to wss server closed');
                     lock = false
                 });
             });
@@ -594,7 +619,6 @@ async function connectToWss(result = {}) {
     // socket.close();
     // 获取对象的socket_trunk中的全部对象，执行关闭连接操作
     for (let i = 0; i < Object.keys(socket_trunk).length; i++) {
-        // console.log(Object.keys(socket_trunk)[i])
         socket_trunk[Object.keys(socket_trunk)[i]].close();
     }
     return result.voiceUrl
