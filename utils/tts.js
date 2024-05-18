@@ -46,279 +46,278 @@ function randomNum(minNum, maxNum) {
 }
 
 export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)) {
-    if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
-    {
-        /*        let character_voice_language = speaker.substring(speaker.length - 2);
-                let textfix = text.replace(/\#|(\[派蒙\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '');
-                //replace: 1.删除[派蒙] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji
-                let audioLink = `https://genshinvoice.top/api?speaker=${speaker}&text=${textfix}&format=wav&language=${character_voice_language}&length=1&sdp=0.4&noise=0.6&noisew=0.8`
-        */
-        return audioLink
+    // if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
+    // {
+    //     /*        let character_voice_language = speaker.substring(speaker.length - 2);
+    //             let textfix = text.replace(/\#|(\[派蒙\])/g, '').replace(/派蒒/g, '派蒙').replace(/(\^([0-9])\^(.*|\n$))/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '');
+    //             //replace: 1.删除[派蒙] ; 2.替换派蒒 ; 3.删除bing ^1^开头的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji
+    //             let audioLink = `https://genshinvoice.top/api?speaker=${speaker}&text=${textfix}&format=wav&language=${character_voice_language}&length=1&sdp=0.4&noise=0.6&noisew=0.8`
+    //     */
+    //     return audioLink
+    // }
+    if (!speaker || speaker === '随机') {
+        logger.info('[chatgpt-tts]随机角色！这次哪个角色这么幸运会被选到呢……')
+        speaker = speakers[randomNum(0, speakers.length)]
     }
-    else {
-        if (!speaker || speaker === '随机') {
-            logger.info('[chatgpt-tts]随机角色！这次哪个角色这么幸运会被选到呢……')
-            speaker = speakers[randomNum(0, speakers.length)]
+
+    // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
+
+
+    /*处理tts语音文本：*/
+    let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
+
+    text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/（..）/g, '').replace(/~/g, '，').replace(/，，，|，，|。。。/g, '。').replace(/，。|。。|。，/g, '。').replace(/\[好感度.*\d+\]/, '').replace(/\[好感度.*\d+\]/, '')
+    //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji  6. 替换第一人称+'：'，例如可莉：; 9. 替换（小声）; 10.~ 替换为 ，11.替换↓chat.js处理过的换行文本 12.处理多余的，。 13.适配删除中括号好感度
+    //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')  
+
+    // #gpt翻日 硬编码替换部分角色名
+    if (Config.autoJapanese)
+        text = text.replace(/可莉|コリー|リディア/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
+
+    // tts情感自动设置
+    if (Config.vits_auto_emotion) {
+        vits_emotion = get_tts_Emotion(text)
+        logger.mark(`[chatgpt-tts]tts使用情感：${vits_emotion}`)
+    }
+
+    // 校正api地址
+    let space = Config.ttsSpace
+    //校正为 https://bv2.firefly.matce.cn
+    if (space.endsWith('/run/predict')) {
+        let trimmedSpace = space.substring(0, space.length - 12)
+        logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
+        space = trimmedSpace
+    }
+    if (space.endsWith('/')) {
+        let trimmedSpace = _.trimEnd(space, '/')
+        logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
+        space = trimmedSpace
+    }
+
+    // wss连接Fish-Vits站点
+    if (space == 'https://fs.firefly.matce.cn') {
+        text = text.substr(0, 299);
+        let result
+        try {
+            result = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio });
+        } catch (error) {
+            logger.error(`[chatgpt-tts]连接到wss失败：${error}`)
+            throw new Error(`[chatgpt-tts]连接到wss失败：${error}`)
         }
+        return result
+    }
 
-        // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
+    // post连接Bert-Vits站点
+    let url = `${space}/run/predict`
+    /* 真的需要反代的话这一行需要修改
+      if (Config.huggingFaceReverseProxy) {
+        url = `${Config.huggingFaceReverseProxy}/api/generate?space=${_.trimStart(space, 'https://')}`
+      }
+    */
 
+    // 如果 speaker 在数组 speakers_JP 中
+    if (speakers_JP.includes(speaker) || speakers_BA.includes(speaker)) {
+        // 自动切换网址
+        if (space == "https://bv2.firefly.matce.cn") space = "https://ba.firefly.matce.cn"
+        if (url == "https://bv2.firefly.matce.cn/run/predict") url = "https://ba.firefly.matce.cn/run/predict"
+        tts_language = "JP"
 
-        /*处理tts语音文本：*/
-        let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
-
-        text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/（..）/g, '').replace(/~/g, '，').replace(/，，，|，，|。。。/g, '。').replace(/，。|。。|。，/g, '。').replace(/\[好感度.*\d+\]/, '').replace(/\[好感度.*\d+\]/, '')
-        //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji  6. 替换第一人称+'：'，例如可莉：; 9. 替换（小声）; 10.~ 替换为 ，11.替换↓chat.js处理过的换行文本 12.处理多余的，。 13.适配删除中括号好感度
-        //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')  
-
-        // #gpt翻日 硬编码替换部分角色名
-        if (Config.autoJapanese)
-            text = text.replace(/可莉|コリー|リディア/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
-
-        // tts情感自动设置
-        if (Config.vits_auto_emotion) {
-            vits_emotion = get_tts_Emotion(text)
-            logger.mark(`[chatgpt-tts]tts使用情感：${vits_emotion}`)
-        }
-
-        // 校正api地址
-        let space = Config.ttsSpace
-        //校正为 https://bv2.firefly.matce.cn
-        if (space.endsWith('/run/predict')) {
-            let trimmedSpace = space.substring(0, space.length - 12)
-            logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
-            space = trimmedSpace
-        }
-        if (space.endsWith('/')) {
-            let trimmedSpace = _.trimEnd(space, '/')
-            logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
-            space = trimmedSpace
-        }
-
-        // wss连接Fish-Vits站点
-        if (space == 'https://fs.firefly.matce.cn') {
-            text = text.substr(0, 299);
-            let result
-            try {
-                result = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio });
-            } catch (error) {
-                logger.error(`[chatgpt-tts]连接到wss失败：${error}`)
-                throw new Error(`[chatgpt-tts]连接到wss失败：${error}`)
-            }
-            return result
-        }
-
-        // post连接Bert-Vits站点
-        let url = `${space}/run/predict`
-        /* 真的需要反代的话这一行需要修改
-          if (Config.huggingFaceReverseProxy) {
-            url = `${Config.huggingFaceReverseProxy}/api/generate?space=${_.trimStart(space, 'https://')}`
-          }
-        */
-
-        // 如果 speaker 在数组 speakers_JP 中
-        if (speakers_JP.includes(speaker) || speakers_BA.includes(speaker)) {
-            // 自动切换网址
-            if (space == "https://bv2.firefly.matce.cn") space = "https://ba.firefly.matce.cn"
-            if (url == "https://bv2.firefly.matce.cn/run/predict") url = "https://ba.firefly.matce.cn/run/predict"
-            tts_language = "JP"
-
-            // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
-            if (!Config.autoJapanese) {
-                if (Config.debug)
-                    logger.info(`[chatgpt-tts]正在使用网页api转日语，基于文本：'${text}'`)
-                let body_translation = {
-                    data: [
-                        text
-                    ],
-                    event_data: null,
-                    fn_index: 1,
-                    session_hash: ""
-                }
-                if (Config.debug) {
-                    logger.info(body_translation)
-                }
-                let json, response
-                for (let post_times = 1; post_times <= 5; post_times++) {
-                    try {
-                        logger.info(`[chatgpt-tts]正在第${post_times}次使用接口转日语${url}`)
-                        response = await newFetch(url, {
-                            method: 'POST',
-                            body: JSON.stringify(body_translation),
-                            headers: {
-                                'content-type': 'application/json'
-                            }
-                        })
-                        let responseBody = await response.text()
-                        json = JSON.parse(responseBody)
-                        if (Config.debug) {
-                            logger.info(json)
-                        }
-                        if (response.status > 299) {
-                            logger.info(json)
-                            throw new Error(JSON.stringify(json))
-                        }
-                        let [message] = json?.data
-
-                        if (!message) throw new Error('[chatgpt-tts]api转日语错误', responseBody)
-                        else logger.mark(`[chatgpt-tts]成功获取网页api转日语文本：${message}`)
-
-                        // 硬编码替换部分角色名
-                        message = message.replace(/可莉|コリー/g, 'クレー').replace(/派蒙|モンゴル/g, 'パイモン').replace(/纳西妲|ナシの実/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
-                        text = message
-                        break
-                    } catch (err) {
-                        logger.error(`[chatgpt-tts]转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
-                        if (post_times == 5) throw new Error('[chatgpt-tts]网址api转日语错误，建议使用#tts转日语开启\nresponseBody:', json)
-                        // 等待5000ms
-                        await sleep_zz(5000)
-                    }
-                }
-            }
-        }
-        // 如果 speaker 在数组 speakers_ZH 中
-        if (speakers_ZH.includes(speaker)) {
-            // 则使用中文
-            if (space == "https://ba.firefly.matce.cn") space = "https://bv2.firefly.matce.cn"
-            if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
-            tts_language = "ZH"
-        }
-
-        logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
-
-        // exampleAudio暂时无法使用
-        let exampleAudio = null
-
-        let body
-        // API更新了，目前只支持切片生成
-        tts_slice_is_slice_generation = true
-        if (!tts_slice_is_slice_generation) {
-            // 最大300字，截取处理后的前299个字符
-            text = text.substr(0, 299);
-            body = {
+        // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
+        if (!Config.autoJapanese) {
+            if (Config.debug)
+                logger.info(`[chatgpt-tts]正在使用网页api转日语，基于文本：'${text}'`)
+            let body_translation = {
                 data: [
-                    text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                    tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
+                    text
                 ],
                 event_data: null,
-                fn_index: 0,
+                fn_index: 1,
                 session_hash: ""
             }
-            /* 普通生成body参考：
-            {
-                "data": [
-                    "派蒙知道哦",
-                    "派蒙_ZH",
-                    0.2,
-                    0.6,
-                    0.8,
-                    1,
-                    "ZH",  //tts_language
-                    null,  //exampleAudio
-                    "Happy",
-                    "Text prompt",  //切片生成没有这一行
-                    "",
-                    0.7
-                ],
-                    "event_data": null,
-                        "fn_index": 0,  //切片生成这个不同
-            } */
-        } else {
-            // 2024年4月12日 切片生成 最大也被限定在300字，截取处理后的前299个字符
-            text = text.substr(0, 299);
-            body = {
-                data: [
-                    text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds,
-                    exampleAudio, vits_emotion, style_text, style_text_weights
-                ],
-                event_data: null,
-                fn_index: 0,
-                session_hash: ""
+            if (Config.debug) {
+                logger.info(body_translation)
             }
-            /* 切片生成body参考：
-            {
-                "data": [
-                    "派蒙知道哦",
-                    "派蒙_ZH",
-                    0.2,
-                    0.6,
-                    0.8,
-                    1,
-                    "ZH",  //tts_language
-                    false,  //按句切分
-                    0.6,  //段间停顿
-                    0.2,  //句间停顿
-                    null,  //exampleAudio
-                    "Happy",
-                    "",
-                    0.7
-                ],
-                    "event_data": null,
-                        "fn_index": 0
-            } */
-        }
-
-
-        // tts_post
-        if (Config.debug) {
-            logger.info(body)
-        }
-        let json, response
-        for (let post_times = 1; post_times <= 5; post_times++) {
-            try {
-                logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
-                response = await newFetch(url, {
-                    method: 'POST',
-                    body: JSON.stringify(body),
-                    headers: {
-                        'content-type': 'application/json'
+            let json, response
+            for (let post_times = 1; post_times <= 5; post_times++) {
+                try {
+                    logger.info(`[chatgpt-tts]正在第${post_times}次使用接口转日语${url}`)
+                    response = await newFetch(url, {
+                        method: 'POST',
+                        body: JSON.stringify(body_translation),
+                        headers: {
+                            'content-type': 'application/json'
+                        }
+                    })
+                    let responseBody = await response.text()
+                    json = JSON.parse(responseBody)
+                    if (Config.debug) {
+                        logger.info(json)
                     }
-                })
-                let responseBody = await response.text()
-                json = JSON.parse(responseBody)
-                if (Config.debug) {
-                    logger.info(json)
-                }
-                if (response.status > 299) {
-                    logger.info(json)
-                    throw new Error(JSON.stringify(json))
-                }
-                let [message, audioInfo] = json?.data
-                logger.info(`[chatgpt-tts]api生成信息：`, message)
-
-                /*这api怎么天天换参数呢*/
-                let audioLink
-                for (let read_audioInfo in audioInfo) {
-                    if (/.*(\/|\\).*(\/|\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
-                        audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
-                        break
+                    if (response.status > 299) {
+                        logger.info(json)
+                        throw new Error(JSON.stringify(json))
                     }
+                    let [message] = json?.data
+
+                    if (!message) throw new Error('[chatgpt-tts]api转日语错误', responseBody)
+                    else logger.mark(`[chatgpt-tts]成功获取网页api转日语文本：${message}`)
+
+                    // 硬编码替换部分角色名
+                    message = message.replace(/可莉|コリー/g, 'クレー').replace(/派蒙|モンゴル/g, 'パイモン').replace(/纳西妲|ナシの実/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
+                    text = message
+                    break
+                } catch (err) {
+                    logger.error(`[chatgpt-tts]转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+                    if (post_times == 5) throw new Error('[chatgpt-tts]网址api转日语错误，建议使用#tts转日语开启\nresponseBody:', json)
+                    // 等待5000ms
+                    await sleep_zz(5000)
                 }
-                if (!audioLink) throw new Error('[chatgpt-tts]未匹配到音频链接', json)
-                else logger.mark(`[chatgpt-tts]成功获取音频地址${audioLink}`)
-
-                /*let audioLink = `${space}/file=${audioInfo.path}`*/
-
-                /* 真的需要反代的话这一行需要修改
-                    if (Config.huggingFaceReverseProxy) {
-                      if (Config.debug) {
-                        logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
-                      }
-                      let spaceHost = _.trimStart(space, 'https://')
-                      audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
-                    }
-                */
-                return audioLink
-            } catch (err) {
-                logger.error(`[chatgpt-tts]生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
-                // 等待5000ms
-                await sleep_zz(5000)
             }
         }
-        logger.error(body)
-        throw new Error('[chatgpt-tts]responseBody:', json)
     }
+    // 如果 speaker 在数组 speakers_ZH 中
+    if (speakers_ZH.includes(speaker)) {
+        // 则使用中文
+        if (space == "https://ba.firefly.matce.cn") space = "https://bv2.firefly.matce.cn"
+        if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
+        tts_language = "ZH"
+    }
+
+    logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
+
+    // exampleAudio暂时无法使用
+    let exampleAudio = null
+
+    let body
+    // API更新了，目前只支持切片生成
+    tts_slice_is_slice_generation = true
+    if (!tts_slice_is_slice_generation) {
+        // 最大300字，截取处理后的前299个字符
+        text = text.substr(0, 299);
+        body = {
+            data: [
+                text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
+            ],
+            event_data: null,
+            fn_index: 0,
+            session_hash: ""
+        }
+        /* 普通生成body参考：
+        {
+            "data": [
+                "派蒙知道哦",
+                "派蒙_ZH",
+                0.2,
+                0.6,
+                0.8,
+                1,
+                "ZH",  //tts_language
+                null,  //exampleAudio
+                "Happy",
+                "Text prompt",  //切片生成没有这一行
+                "",
+                0.7
+            ],
+                "event_data": null,
+                    "fn_index": 0,  //切片生成这个不同
+        } */
+    } else {
+        // 2024年4月12日 切片生成 最大也被限定在300字，截取处理后的前299个字符
+        text = text.substr(0, 299);
+        body = {
+            data: [
+                text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds,
+                exampleAudio, vits_emotion, style_text, style_text_weights
+            ],
+            event_data: null,
+            fn_index: 0,
+            session_hash: ""
+        }
+        /* 切片生成body参考：
+        {
+            "data": [
+                "派蒙知道哦",
+                "派蒙_ZH",
+                0.2,
+                0.6,
+                0.8,
+                1,
+                "ZH",  //tts_language
+                false,  //按句切分
+                0.6,  //段间停顿
+                0.2,  //句间停顿
+                null,  //exampleAudio
+                "Happy",
+                "",
+                0.7
+            ],
+                "event_data": null,
+                    "fn_index": 0
+        } */
+    }
+
+
+    // tts_post
+    if (Config.debug) {
+        logger.info(body)
+    }
+    let json, response
+    for (let post_times = 1; post_times <= 5; post_times++) {
+        try {
+            logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
+            response = await newFetch(url, {
+                method: 'POST',
+                body: JSON.stringify(body),
+                headers: {
+                    'content-type': 'application/json'
+                }
+            })
+            let responseBody = await response.text()
+            json = JSON.parse(responseBody)
+            if (Config.debug) {
+                logger.info(json)
+            }
+            if (response.status > 299) {
+                logger.info(json)
+                throw new Error(JSON.stringify(json))
+            }
+            let [message, audioInfo] = json?.data
+            logger.info(`[chatgpt-tts]api生成信息：`, message)
+
+            /*这api怎么天天换参数呢*/
+            let audioLink
+            for (let read_audioInfo in audioInfo) {
+                if (/.*(\/|\\).*(\/|\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                    audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                    break
+                }
+            }
+            if (!audioLink) throw new Error('[chatgpt-tts]未匹配到音频链接', json)
+            else logger.mark(`[chatgpt-tts]成功获取音频地址${audioLink}`)
+
+            /*let audioLink = `${space}/file=${audioInfo.path}`*/
+
+            /* 真的需要反代的话这一行需要修改
+                if (Config.huggingFaceReverseProxy) {
+                  if (Config.debug) {
+                    logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
+                  }
+                  let spaceHost = _.trimStart(space, 'https://')
+                  audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
+                }
+            */
+            return audioLink
+        } catch (err) {
+            logger.error(`[chatgpt-tts]生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+            // 等待5000ms
+            await sleep_zz(5000)
+        }
+    }
+    logger.error(body)
+    throw new Error('[chatgpt-tts]responseBody:', json)
+
 }
 
 export function convertSpeaker(speaker) {
@@ -459,7 +458,7 @@ async function connectToWss(result = {}) {
                 const data = JSON.parse(event.data);
 
                 let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
-                let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, 0, 48, 0.7, 1.5, 0.7, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+                let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, Config.Fish_Maximum_tokens_per_batch, Config.Fish_Iterative_Prompt_Length, Config.Fish_Top_P, Config.Fish_Repetition_Penalty, Config.Fish_Temperature, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
 
                 if (data.msg == "send_hash") {
                     socket_3_2.send(JSON.stringify(send_hash));
@@ -590,7 +589,7 @@ async function connectToWss(result = {}) {
                     const data = JSON.parse(event.data);
 
                     let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
-                    let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, 0, 48, 0.7, 1.5, 0.7, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+                    let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, Config.Fish_Maximum_tokens_per_batch, Config.Fish_Iterative_Prompt_Length, Config.Fish_Top_P, Config.Fish_Repetition_Penalty, Config.Fish_Temperature, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
 
                     if (data.msg == "send_hash") {
                         socket_3.send(JSON.stringify(send_hash));

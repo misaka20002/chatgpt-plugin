@@ -913,50 +913,111 @@ export function supportGuoba () {
           }
         },
         {
-            label: 'VITS语音设置，可用命令#tts语音帮助',
-            component: 'Divider'
+          label: 'VITS语音设置，可用命令#tts语音帮助',
+          component: 'Divider'
         },
         {
-            field: 'tts_First_person',
-            label: 'AI的第一人称',
-            bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
-            component: 'Input'
+          field: 'tts_First_person',
+          label: 'AI的第一人称',
+          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
+          component: 'Input'
         },
         {
-            field: 'chat_for_First_person',
-            label: 'AI回应第一人称呼叫',
-            bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
-            component: 'Switch'
+          field: 'chat_for_First_person',
+          label: 'AI回应第一人称呼叫',
+          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
+          component: 'Switch'
         },
         {
-            field: 'paimon_chuoyichuo_open',
-            label: '开启戳一戳',
-            bottomHelpMessage: '是否开启戳一戳',
-            component: 'Switch'
+          field: 'paimon_chuoyichuo_open',
+          label: '开启戳一戳',
+          bottomHelpMessage: '是否开启戳一戳',
+          component: 'Switch'
         },
         {
-            field: 'paimon_chou_cd',
-            label: '戳一戳响应CD',
-            bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
-            component: 'InputNumber'
+          field: 'paimon_chou_cd',
+          label: '戳一戳响应CD',
+          bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
+          component: 'InputNumber'
         },
         {
-            field: 'paimon_chou_text_generateAndSendAudio',
-            label: '戳一戳发送文案的同时发送语音',
-            bottomHelpMessage: '戳一戳发送文案的同时发送语音（需要先开启全局语音模式或用户开启语音模式）',
-            component: 'Switch'
+          field: 'paimon_chou_text_generateAndSendAudio',
+          label: '戳一戳发送文案的同时发送语音',
+          bottomHelpMessage: '戳一戳发送文案的同时发送语音（需要先开启全局语音模式或用户开启语音模式）',
+          component: 'Switch'
         },
         {
-            field: 'paimon_chou_IsSendLocalpic',
-            label: '戳一戳发送本地图片（重启生效）',
-            bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/resources/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
-            component: 'Switch'
+          field: 'paimon_chou_IsSendLocalpic',
+          label: '戳一戳发送本地图片（重启生效）',
+          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/resources/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
+          component: 'Switch'
         },
         {
-            field: 'paimon_chou_IsUseLoliconApi',
-            label: '戳一戳使用涩图api',
-            bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
-            component: 'Switch'
+          field: 'paimon_chou_IsUseLoliconApi',
+          label: '戳一戳使用涩图api',
+          bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
+          component: 'Switch'
+        },
+        {
+          field: 'exampleAudio',
+          label: 'exampleAudio',
+          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
+          component: 'Input'
+        },
+        {
+          field: 'Fish_Iterative_Prompt_Length',
+          label: 'Iterative Prompt Length',
+          bottomHelpMessage: '（仅限Fish-VITS2）Iterative Prompt Length, 0 means off',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 512,
+            step: 1,
+          },
+        },
+        {
+          field: 'Fish_Maximum_tokens_per_batch',
+          label: 'Maximum tokens per batch',
+          bottomHelpMessage: '（仅限Fish-VITS2）Maximum tokens per batch, 0 means no limit',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 4096,
+            step: 1,
+          },
+        },
+        {
+          field: 'Fish_Top_P',
+          label: 'Top-P',
+          bottomHelpMessage: '（仅限Fish-VITS2）Top-P',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.01,
+          },
+        },
+        {
+          field: 'Fish_Repetition_Penalty',
+          label: 'Repetition Penalty',
+          bottomHelpMessage: '（仅限Fish-VITS2）Repetition Penalty',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 2,
+            step: 0.01,
+          },
+        },
+        {
+          field: 'Fish_Temperature',
+          label: 'Temperature',
+          bottomHelpMessage: '（仅限Fish-VITS2）Temperature',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 2,
+            step: 0.01,
+          },
         },
         {
           field: 'vits_emotion',
@@ -964,7 +1025,7 @@ export function supportGuoba () {
           bottomHelpMessage: '（仅限Bert-VITS2）控制发音情感；可用命令：#tts情感设置帮助',
           component: 'Select',
           componentProps: {
-            options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g,'') } })
+            options: vits_emotion_map.map(s => { return { label: s, value: s.replace(/(\s+)|([(].*[)])/g, "").replace(/:|([0-9]*)/g, '') } })
           }
         },
         {
@@ -974,20 +1035,20 @@ export function supportGuoba () {
           component: 'Switch'
         },
         {
-            field: 'style_text',
-            label: 'tts融合文本',
-            bottomHelpMessage: '（仅限Bert-VITS2）使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能',
-            component: 'Input'
+          field: 'style_text',
+          label: 'tts融合文本',
+          bottomHelpMessage: '（仅限Bert-VITS2）使用辅助文本的语意来辅助生成对话（语言保持与主文本相同）注意：不要使用指令式文本（如：开心），要使用带有强烈情感的文本（如：我好快乐！！！）效果较不明确，留空即为不使用该功能',
+          component: 'Input'
         },
         {
-            field: 'style_text_weights',
-            label: 'tts融合文本权重',
-            bottomHelpMessage: '（仅限Bert-VITS2）主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认为0.7',
-            component: 'InputNumber',
-            componentProps: {
-                min: 0,
-                max: 1
-            }
+          field: 'style_text_weights',
+          label: 'tts融合文本权重',
+          bottomHelpMessage: '（仅限Bert-VITS2）主文本和辅助文本的bert混合比率，0表示仅主文本，1表示仅辅助文本，范围0.0-1.0，默认为0.7',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1
+          }
         },
         {
           field: 'vits_emotion_locker',
@@ -1049,12 +1110,6 @@ export function supportGuoba () {
               { label: 'auto', value: 'auto' }
             ]
           }
-        },
-        {
-          field: 'exampleAudio',
-          label: 'exampleAudio',
-          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
-          component: 'Input'
         },
         {
           field: 'tts_slice_is_slice_generation',
