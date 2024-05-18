@@ -98,6 +98,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     // wss连接Fish-Vits站点
     if (space == 'https://fs.firefly.matce.cn') {
         text = text.substr(0, 299);
+        logger.info(`[chatgpt-tts]使用Fish-Vits生成语音，角色：${speaker}，文本：\n${text}`)
         let result
         try {
             result = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio });
