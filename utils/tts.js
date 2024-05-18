@@ -45,7 +45,7 @@ function randomNum(minNum, maxNum) {
     }
 }
 
-export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), vits_emotion = Config.vits_emotion, sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)) {
+export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale)) {
     // if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
     // {
     //     /*        let character_voice_language = speaker.substring(speaker.length - 2);
@@ -75,6 +75,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         text = text.replace(/可莉|コリー|リディア/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
 
     // tts情感自动设置
+    let vits_emotion = Config.vits_emotion
     if (Config.vits_auto_emotion) {
         vits_emotion = get_tts_Emotion(text)
         logger.mark(`[chatgpt-tts]tts使用情感：${vits_emotion}`)
@@ -108,6 +109,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     }
 
     // post连接Bert-Vits站点
+    let sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)
+
     let url = `${space}/run/predict`
     /* 真的需要反代的话这一行需要修改
       if (Config.huggingFaceReverseProxy) {
@@ -341,13 +344,14 @@ export function convertSpeaker(speaker) {
         case '迪卢克': return '迪卢克_ZH'
         case '心奈': return '春原心奈'
         case '小春': return '下江小春'
+        case '星野': return '小鸟游星野'
     }
     // "天见和香", "黑崎小雪", "黑见芹香", "槌永日和", "爱丽丝", "鹫见芹奈", "连河切里诺", "浅黄睦月", "天童爱丽丝", "下江小春", "小鸟游星野", 
 
     return speaker
 }
 
-/**输入文本，匹配tts情感中的100种（经过测试删减为6种）情感(例如派蒙生气地说道)，返回开头大写的情感单词，无匹配则使用[0]Happy，支持中英文。 */
+/**输入文本，匹配tts情感中的100种情感(例如派蒙生气地说道)，返回开头大写的情感单词，无匹配则使用[0]Happy，支持中英文。 */
 function get_tts_Emotion(chat_str) {
     /**提取vits_emotion_map中的括号内的感情词，放在数组emotion_language_map中； */
     let emotion_language_map
@@ -458,7 +462,7 @@ async function connectToWss(result = {}) {
                 const data = JSON.parse(event.data);
 
                 let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
-                let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, Config.Fish_Maximum_tokens_per_batch, Config.Fish_Iterative_Prompt_Length, Config.Fish_Top_P, Config.Fish_Repetition_Penalty, Config.Fish_Temperature, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+                let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, parseFloat(Config.Fish_Maximum_tokens_per_batch), parseFloat(Config.Fish_Iterative_Prompt_Length), parseFloat(Config.Fish_Top_P), parseFloat(Config.Fish_Repetition_Penalty), parseFloat(Config.Fish_Temperature), result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
 
                 if (data.msg == "send_hash") {
                     socket_3_2.send(JSON.stringify(send_hash));
@@ -589,7 +593,7 @@ async function connectToWss(result = {}) {
                     const data = JSON.parse(event.data);
 
                     let send_hash = { "fn_index": fn_index, "session_hash": session_hash }
-                    let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, Config.Fish_Maximum_tokens_per_batch, Config.Fish_Iterative_Prompt_Length, Config.Fish_Top_P, Config.Fish_Repetition_Penalty, Config.Fish_Temperature, result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
+                    let send_data = { "data": [result.text, true, { "name": result.referenceAudioPath, "data": `https://fs.firefly.matce.cn/file=${result.referenceAudioPath}`, "is_file": true, "orig_name": result.referenceAudioOrig_name }, result.sft_name, parseFloat(Config.Fish_Maximum_tokens_per_batch), parseFloat(Config.Fish_Iterative_Prompt_Length), parseFloat(Config.Fish_Top_P), parseFloat(Config.Fish_Repetition_Penalty), parseFloat(Config.Fish_Temperature), result.speaker], "event_data": null, "fn_index": fn_index, "session_hash": session_hash }
 
                     if (data.msg == "send_hash") {
                         socket_3.send(JSON.stringify(send_hash));
