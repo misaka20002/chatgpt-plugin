@@ -72,7 +72,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // #gpt翻日 硬编码替换部分角色名
     if (Config.autoJapanese)
-        text = text.replace(/可莉|コリー|リディア/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
+        text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
 
     // tts情感自动设置
     let vits_emotion = Config.vits_emotion
@@ -423,9 +423,13 @@ async function connectToWss(result = {}) {
 
             if (data.msg == "send_hash") {
                 socket_3_1.send(JSON.stringify(send_hash));
+                if (Config.debug)
+                    console.log('[chatgpt-tts]Send Message to server:', send_hash);
             }
             else if (data.msg == "send_data") {
                 socket_3_1.send(JSON.stringify(send_data));
+                if (Config.debug)
+                    console.log('[chatgpt-tts]Send Message to server:', send_data);
             }
             else if (data.msg == "process_completed") {
                 // 获取结果
@@ -466,9 +470,13 @@ async function connectToWss(result = {}) {
 
                 if (data.msg == "send_hash") {
                     socket_3_2.send(JSON.stringify(send_hash));
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]Send Message to server:', send_hash);
                 }
                 else if (data.msg == "send_data") {
                     socket_3_2.send(JSON.stringify(send_data));
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]Send Message to server:', send_data);
                 }
                 else if (data.msg == "process_completed") {
                     // 获取结果
@@ -512,9 +520,13 @@ async function connectToWss(result = {}) {
 
             if (data.msg == "send_hash") {
                 socket_1.send(JSON.stringify(send_hash));
+                if (Config.debug)
+                    console.log('[chatgpt-tts]Send Message to server:', send_hash);
             }
             else if (data.msg == "send_data") {
                 socket_1.send(JSON.stringify(send_data));
+                if (Config.debug)
+                    console.log('[chatgpt-tts]Send Message to server:', send_data);
             }
             else if (data.msg == "process_completed") {
                 // 获取结果
@@ -555,9 +567,13 @@ async function connectToWss(result = {}) {
 
                 if (data.msg == "send_hash") {
                     socket_2.send(JSON.stringify(send_hash));
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]Send Message to server:', send_hash);
                 }
                 else if (data.msg == "send_data") {
                     socket_2.send(JSON.stringify(send_data));
+                    if (Config.debug)
+                        console.log('[chatgpt-tts]Send Message to server:', send_data);
                 }
                 else if (data.msg == "process_completed") {
                     // 获取结果
@@ -597,9 +613,13 @@ async function connectToWss(result = {}) {
 
                     if (data.msg == "send_hash") {
                         socket_3.send(JSON.stringify(send_hash));
+                        if (Config.debug)
+                            console.log('[chatgpt-tts]Send Message to server:', send_hash);
                     }
                     else if (data.msg == "send_data") {
                         socket_3.send(JSON.stringify(send_data));
+                        if (Config.debug)
+                            console.log('[chatgpt-tts]Send Message to server:', send_data);
                     }
                     else if (data.msg == "process_completed") {
                         // 获取结果
