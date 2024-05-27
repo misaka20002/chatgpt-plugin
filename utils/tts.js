@@ -410,6 +410,7 @@ async function connectToWss(result = {}) {
             if (Config.debug)
                 console.error('[chatgpt-tts]1st Error occurred:', event);
             // 处理连接错误
+            lock = false
             throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
         });
 
@@ -457,6 +458,7 @@ async function connectToWss(result = {}) {
                 if (Config.debug)
                     console.error('[chatgpt-tts]3rd Error occurred:', event);
                 // 处理连接错误
+                lock = false
                 throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
             });
 
@@ -508,6 +510,7 @@ async function connectToWss(result = {}) {
             if (Config.debug)
                 console.error('[chatgpt-tts]1st Error occurred:', event);
             // 处理连接错误
+            lock = false
             throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
         });
 
@@ -555,6 +558,7 @@ async function connectToWss(result = {}) {
                 if (Config.debug)
                     console.error('[chatgpt-tts]2nd Error occurred:', event);
                 // 处理连接错误
+                lock = false
                 throw new Error(`[chatgpt-tts]第二次连接到wss失败：${event}`)
             });
 
@@ -601,6 +605,7 @@ async function connectToWss(result = {}) {
                     if (Config.debug)
                         console.error('[chatgpt-tts]3rd Error occurred:', event);
                     // 处理连接错误
+                    lock = false
                     throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
                 });
 
