@@ -484,6 +484,7 @@ async function connectToWss(result = {}) {
                     if (Config.debug)
                         console.log(data.output)
                     result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
+                    lock = false
                 }
             });
 
@@ -627,6 +628,7 @@ async function connectToWss(result = {}) {
                         if (Config.debug)
                             console.log(data.output)
                         result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
+                        lock = false
                     }
                 });
 
