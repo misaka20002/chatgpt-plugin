@@ -66,7 +66,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     /*处理tts语音文本：*/
     let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
 
-    text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/（..）/g, '').replace(/~/g, '，').replace(/，，，|，，|。。。/g, '。').replace(/，。|。。|。，/g, '。').replace(/\[好感度.*\d+\]/, '').replace(/\[好感度.*\d+\]/, '')
+    text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/（..）/g, '').replace(/~/g, '，').replace(/，，，|，，|。。。/g, '。').replace(/，。|。。|。，/g, '。').replace(/(\[|【)好感度.*\d+(\]|】)/g, '')
     //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji  6. 替换第一人称+'：'，例如可莉：; 9. 替换（小声）; 10.~ 替换为 ，11.替换↓chat.js处理过的换行文本 12.处理多余的，。 13.适配删除中括号好感度
     //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')  
 
