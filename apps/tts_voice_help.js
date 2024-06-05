@@ -153,6 +153,8 @@ export class voicechangehelp extends plugin {
             ` #chatgpt设置AI第一人称帮助\n` +
             ` #chatgpt(查看|设置)输出黑名单\n` +
             ` #chatgpt(查看|设置)输入黑名单\n` +
+            ` #chatgpt[开启|关闭]回复确认\n` +
+            ` #chatgpt[对话|管理|娱乐|绘图|人物设定|聊天记录]?指令表[帮助|搜索]?\n` +
             ` #派蒙戳一戳保存表情` +
             ''
 
