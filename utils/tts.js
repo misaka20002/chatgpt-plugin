@@ -655,5 +655,6 @@ async function connectToWss(result = {}) {
     for (let i = 0; i < Object.keys(socket_trunk).length; i++) {
         socket_trunk[Object.keys(socket_trunk)[i]].close();
     }
-    return result.voiceUrl
+    if (!result.voiceUrl) throw new Error("[chatgpt-tts]Fish-TTS语音合成等待超时");
+    else return result.voiceUrl
 }
