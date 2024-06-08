@@ -104,8 +104,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             result = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio });
         } catch (error) {
             if (Config.debug)
-                logger.error(`[chatgpt-tts]连接到wss失败：${error}`)
-            throw new Error(`[chatgpt-tts]连接到wss失败：${error}`)
+                logger.error(`[chatgpt-tts]连接到wss失败：${error.message}`)
+            throw new Error(`[chatgpt-tts]连接到wss失败：${error.message}`)
         }
         return result
     }
@@ -633,7 +633,7 @@ async function connectToWss(result = {}) {
                         // 获取结果
                         if (Config.debug)
                             console.log(data.output)
-                        if (!data.output?.data[0]?.name) throw new Error("[chatgpt-tts]Fish-TTS语音合成api返回Error，合成失败");
+                        if (!data.output?.data || !data.output.data[0]?.name) throw new Error("[chatgpt-tts]Fish-TTS语音合成api返回Error，合成失败");
                         result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
                         lock = false
                     }
