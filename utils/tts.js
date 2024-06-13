@@ -99,15 +99,21 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     if (space == 'https://fs.firefly.matce.cn') {
         text = text.substr(0, 299);
         logger.info(`[chatgpt-tts]使用Fish-Vits生成语音，角色：${speaker}，文本：\n${text}`)
-        let result
-        try {
-            result = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio });
-        } catch (error) {
-            if (Config.debug)
-                logger.error(`[chatgpt-tts]连接到wss失败：${error.message}`)
-            throw new Error(`[chatgpt-tts]连接到wss失败：${error.message}`)
+        let voiceUrl
+        let err_msg = ''
+        for (let i = 0; i < 3; i++) {
+            try {
+                voiceUrl = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio, wsTimeout: 60 * (i + 1) });
+            } catch (error) {
+                if (Config.debug)
+                    logger.error(`[chatgpt-tts]第${i + 1}次连接到wss失败：${error.message}`)
+                if (i == 2)
+                    err_msg = `[chatgpt-tts]第${i + 1}次连接到wss失败：${error.message}`
+            }
+            if (voiceUrl) break;
         }
-        return result
+        if (!voiceUrl) throw new Error(err_msg)
+        return voiceUrl
     }
 
     // post连接Bert-Vits站点
@@ -647,7 +653,7 @@ async function connectToWss(result = {}) {
             });
         });
     }
-    for (let i = 0; i < 120; i++) { // 等待时间120秒
+    for (let i = 0; i < result.wsTimeout; i++) { // 等待时间
         if (lock == false) break;
         await sleep_pai(1000)
     }
