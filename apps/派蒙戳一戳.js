@@ -425,70 +425,10 @@ export class PaimonChuo extends plugin {
 
     /** 随机回复文案 */
     async send_randow_text_msg(e) {
-        let mutetype = Math.ceil(Math.random() * 12)
+        let mutetype = Math.ceil(Math.random() * 15)
+        let message = ''
         switch (mutetype) {
             case 1:
-                let message1 = await generate_msg_Daiyu()
-                chuo_text_generateAndSendAudio(message1, e);
-                await e.reply(message1)
-                break;
-            case 2:
-                let message2 = Math.ceil(Math.random() * kaomoji_list['length'])
-                await e.reply(kaomoji_list[message2 - 1].replace(/派蒙/g, Config.tts_First_person))
-                break;
-            case 3:
-                let message3 = await generate_msg_randomHellow_TuWeiLoveSpeech()
-                await e.reply(message3)
-                break;
-            case 4:
-            case 5:
-                let today = new Date();
-                if (today.getDay() === 4) {
-                    let message3 = await get_msg_KFC()
-                    if (message3) {
-                        chuo_text_generateAndSendAudio(message3, e);
-                        await e.reply((`“咳咳~”派蒙：\n`).replace(/派蒙/g, Config.tts_First_person) + `${message3}`)
-                        break
-                    }
-                    logger.mark('[戳一戳回复随机文字][随机疯狂星期四api失效]')
-                }
-                this.send_paimon_msg(e);
-                break;
-            case 6:
-                let message6 = await get_msg_hitokoto(false)
-                if (message6) {
-                    chuo_text_generateAndSendAudio(message6, e);
-                    await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message6}”`)
-                    break
-                }
-                logger.mark('[戳一戳回复随机文字][一言api失效]')
-            case 7:
-                let message7 = await get_msg_pphua()
-                if (message7) {
-                    chuo_text_generateAndSendAudio(message7, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message7}”`)
-                    break
-                }
-                logger.mark('[戳一戳回复随机文字][随机皮皮话api失效]')
-            case 8:
-                let message8 = await get_msg_mingyanjingju()
-                if (message8) {
-                    chuo_text_generateAndSendAudio(message8, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message8}”`)
-                    break
-                }
-                logger.mark('[戳一戳回复随机文字][随机名言警句api失效]')
-            case 9:
-                let message9 = await get_msg_gushici()
-                if (message9) {
-                    chuo_text_generateAndSendAudio(message9, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message9}”`)
-                    break
-                }
-                logger.mark('[戳一戳回复随机文字][随机古诗词api失效]')
-                this.send_paimon_msg(e);
-                break;
-            case 10:
                 // 要今天使用过绘图的人才能激活这个奖励
                 if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
                     let random_nai_time = Math.ceil(Math.random() * 4)
@@ -499,6 +439,88 @@ export class PaimonChuo extends plugin {
                     e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘画次数哦~`, false, { recallMsg: 55 })
                     break;
                 }
+                this.send_paimon_msg(e);
+                break;
+            case 2:
+                await e.reply(kaomoji_list[(Math.ceil(Math.random() * kaomoji_list['length'])) - 1].replace(/派蒙/g, Config.tts_First_person))
+                break;
+            case 3:
+                message = await generate_msg_randomHellow_TuWeiLoveSpeech()
+                await e.reply(message)
+                break;
+            case 4:
+            case 5:
+                let today = new Date();
+                if (today.getDay() === 4) {
+                    message = await get_msg_KFC()
+                    if (message) {
+                        chuo_text_generateAndSendAudio(message, e);
+                        await e.reply((`“咳咳~”派蒙：\n`).replace(/派蒙/g, Config.tts_First_person) + `${message}`)
+                        break
+                    }
+                }
+                this.send_paimon_msg(e);
+                break;
+            case 6:
+                message = await get_msg_hitokoto(false)
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+            case 7:
+                message = await get_msg_pphua()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+            case 8:
+                message = await get_msg_mingyanjingju()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+            case 9:
+                message = await get_msg_gushici()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+            case 10:
+                message = await get_msg_wyyrp()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始网抑云：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+            case 11:
+                message = await get_msg_AWord()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始模别人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+            case 12:
+                message = await get_msg_SickMsg()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`“咳咳~”派蒙开始说胡话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    break
+                }
+
+                // 如果这个第6~12都失效就发送派蒙戳一戳默认一言
+                this.send_paimon_msg(e);
+                break;
+
+            // 新增的本地一言
+            case 15:
+                message = await generate_msg_Daiyu()
+                chuo_text_generateAndSendAudio(message, e);
+                await e.reply(message)
+                break;
             default:
                 this.send_paimon_msg(e);
                 break;
@@ -679,6 +701,40 @@ async function get_msg_KFC() {
     }
 }
 
+/**随机一言 返回文本/错误则返回null */
+async function get_msg_AWord() {
+    let url = 'https://oiapi.net/API/AWord'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机一言] 接口请求失败')
+        }
+        res = await res.json()
+        return res.message
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**随机发病语录 返回文本/错误则返回null */
+async function get_msg_SickMsg() {
+    let url = 'https://oiapi.net/API/SickL/'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][随机发病语录] 接口请求失败')
+        }
+        res = await res.json()
+        return res.message
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
 /**
  * @description: 随机返回文件夹里面的1张图片的地址
  * @param {*} 文件夹路径
@@ -749,12 +805,14 @@ async function send_msg_DailyEnglish(e) {
         res = await res.json()
 
         if (res.data) {
-            e.reply(`来和${Config.tts_First_person}一起学英语吧>_<\n${res.data.en}`);
+            e.reply(`来和${Config.tts_First_person}一起学英语吧，老师读一遍，${Config.tts_First_person}读一遍>_<\n${res.data.en}`);
             // 图片
             await e.reply(await segment.image(res.data.image))
             await common.sleep(100);
             // 音频
-            await e.reply(await chuo_silk_voice(res.data.tts, e))
+            e.reply(await chuo_silk_voice(res.data.tts, e))
+            // 使用tts语音发送
+            chuo_text_generateAndSendAudio(res.data.en, e);
         }
         return true
     }

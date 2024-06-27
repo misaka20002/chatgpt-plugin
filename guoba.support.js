@@ -3,7 +3,7 @@ import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { supportConfigurations as voxRoleList } from './utils/tts/voicevox.js'
 // 支持锅巴
-export function supportGuoba () {
+export function supportGuoba() {
   return {
     // 插件信息，将会显示在前端页面
     // 如果你的插件没有在插件库里，那么需要填上补充信息
@@ -568,8 +568,8 @@ export function supportGuoba () {
           field: 'qwenTemperature',
           label: '通义千问温度',
           bottomHelpMessage: '用于控制随机性和多样性的程度。具体来说，temperature值控制了生成文本时对每个候选词的概率分布进行平滑的程度。较高的temperature值会降低概率分布的峰值，使得更多的低概率词被选择，生成结果更加多样化；而较低的temperature值则会增强概率分布的峰值，使得高概率词更容易被选择，生成结果更加确定。\n' +
-              '\n' +
-              '取值范围： (0, 2),系统默认值1.0',
+            '\n' +
+            '取值范围： (0, 2),系统默认值1.0',
           component: 'InputNumber'
         },
         {
@@ -604,6 +604,14 @@ export function supportGuoba () {
           label: 'Gemini反代',
           bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com',
           component: 'Input'
+        },
+        {
+          component: "Divider",
+          label: "呆毛版提示：gemini获取发送者昵称等信息需要开启Bing栏目内的：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”；同时开启后会替换设定中的 [name] 字符串为机器人群昵称/昵称",
+          componentProps: {
+            orientation: "left",
+            plain: true,
+          },
         },
         {
           label: '以下为一些杂项配置。',
@@ -1297,11 +1305,11 @@ export function supportGuoba () {
         }
       ],
       // 获取配置数据方法（用于前端填充显示数据）
-      getConfigData () {
+      getConfigData() {
         return Config
       },
       // 设置配置的方法（前端点确定后调用的方法）
-      setConfigData (data, { Result }) {
+      setConfigData(data, { Result }) {
         for (let [keyPath, value] of Object.entries(data)) {
           // 处理黑名单
           if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups') { value = value.toString().split(/[,，;；\|]/) }
