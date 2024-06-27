@@ -1,3 +1,5 @@
+<img decoding="async" align=right src="https://github.com/misaka20002/chatgpt-plugin/assets/40714502/498efc25-c2d0-4bba-9872-274feff31f08" width="40%">
+
 ## 简介：
 - 最完善的戳一戳功能，整合数十种api
 - 最清晰的Vits语音，支持中日英三语发音（感谢genshinvoice.top提供的api支持！）
