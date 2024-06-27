@@ -1300,7 +1300,7 @@ export function supportGuoba() {
         {
           field: 'extraUrl',
           label: '智能模式url',
-          bottomHelpMessage: '（测试期间提供一个公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space）参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras',
+          bottomHelpMessage: '（测试期间提供一个公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space）参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
           component: 'Input'
         }
       ],
