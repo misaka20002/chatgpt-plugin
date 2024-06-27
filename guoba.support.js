@@ -607,7 +607,7 @@ export function supportGuoba() {
         },
         {
           component: "Divider",
-          label: "呆毛版提示：gemini获取发送者昵称等信息需要开启Bing栏目内的：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”；同时开启后会替换设定中的 [name] 字符串为机器人群昵称/昵称",
+          label: "呆毛版提示：gemini获取发送者昵称等信息需要开启Bing栏目内的：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”；同时开启后会替换设定中的 [name] 字符串为机器人群昵称/昵称；",
           componentProps: {
             orientation: "left",
             plain: true,
@@ -1299,8 +1299,8 @@ export function supportGuoba() {
         },
         {
           field: 'extraUrl',
-          label: '额外工具url',
-          bottomHelpMessage: '（测试期间提供一个公益接口，一段时间后撤掉）参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras',
+          label: '智能模式url',
+          bottomHelpMessage: '（测试期间提供一个公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space）参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras',
           component: 'Input'
         }
       ],
