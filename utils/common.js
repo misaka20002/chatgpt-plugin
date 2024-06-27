@@ -707,9 +707,16 @@ export async function getUserReplySetting (e) {
   return userSetting
 }
 
-export async function getImg (e) {
+/**
+ * @description: （呆毛版）处理消息中的图片：当消息引用了图片，则将对应图片放入e.img ，优先级==> e.source.img > e.img > At头像（开启时）；
+ * @param {*} e
+ * @param {*} alsoGetAtAvatar 开启使用At用户头像作为图片，默认 true
+ * @param {*} useOrigin 是否使用原图，默认为false
+ * @return {*}
+ */
+export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
   // 取消息中的图片、at的头像、回复的图片，放入e.img
-  if (e.at && !e.source) {
+  if (e.at && !e.source && !e.img && alsoGetAtAvatar) {
     e.img = [`https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.at}`]
   }
   if (e.source) {
@@ -731,6 +738,13 @@ export async function getImg (e) {
         }
       }
       e.img = i
+    }
+    // e.img 数组图片和以图画图使用小图而不是原图大图
+    if (!useOrigin && e.img) {
+      for (let i = 0; i < e.img.length; i++) {
+        e.img[i] = e.img[i].replace(/is_origin=\d$/, 'is_origin=0')// 匹配qq聊天中的原图
+        // TODO 匹配wechat、tg聊天中的原图
+      }
     }
   }
   return e.img

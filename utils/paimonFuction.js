@@ -6,12 +6,11 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
 /**
  * @description: 获取gemini的识图结果，需要填写了gemini的token
  * @param {*} e
+ * @param {*} img 数组
  * @return {*} recognitionResults
  */
-export async function recognitionResultsByGemini(e) {
+export async function recognitionResultsByGemini(e, img) {
     if (Config.geminiKey) {
-        // let img = await getImg(e)
-        let img = await parseSourceImg(e) // 这个版本不获取at的头像
         if (img?.[0]) {
             let client = new CustomGoogleGeminiClient({
                 e,
@@ -37,44 +36,4 @@ export async function recognitionResultsByGemini(e) {
             return recognitionResults
         }
     }
-}
-
-/**
- * @description: 处理消息中的图片：当消息引用了图片，则将对应图片放入e.img ，优先级==> e.source.img > e.img
- * @param {*} e
- * @param {*} useOrigin 是否使用原图，默认为false
- * @return {*}处理过后的e
- */
-async function parseSourceImg(e, useOrigin = false) {
-    if (e.source) {
-        let reply;
-        if (e.isGroup) {
-            reply = (await e.group.getChatHistory(e.source.seq, 1)).pop()?.message;
-        } else {
-            reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
-        }
-        if (reply) {
-            let i = []
-            for (const val of reply) {
-                if (val.type === 'image') {
-                    i.push(val.url)
-                }
-                //   if (val.type == "file") {
-                //     e.reply("不支持消息中的文件，请将该文件以图片发送...", true);
-                //     return;
-                //   }
-            }
-            e.img = i
-        }
-        // 如果不是主人，参考图片和以图画图使用小图而不是原图大图
-        // if (!e.isMaster && !useOrigin && e.img) {
-        // 所有人都用小图
-        if (!useOrigin && e.img) {
-            for (let i = 0; i < e.img.length; i++) {
-                e.img[i] = e.img[i].replace(/is_origin=\d$/, 'is_origin=0')// 匹配qq聊天中的原图
-                // TODO 匹配wechat、tg聊天中的原图
-            }
-        }
-    }
-    return e.img;
 }

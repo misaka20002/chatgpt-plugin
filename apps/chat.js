@@ -646,7 +646,8 @@ export class chatgpt extends plugin {
     }
     let userSetting = await getUserReplySetting(this.e)
     let useTTS = !!userSetting.useTTS
-    const isImg = await getImg(e)
+    /** 呆毛版：禁用对话时使用用户头像 ocr/识图 */
+    const isImg = await getImg(e, false)
     if (Config.imgOcr && !!isImg) {
       let imgOcrText = await getImageOcrText(e)
       if (imgOcrText) {
@@ -671,7 +672,7 @@ export class chatgpt extends plugin {
 
     // 呆毛版 gemini的识图结果 + prompt
     if (Config.recognitionByGemini && !!isImg) {
-      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e)
+      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, isImg)
       if (imgRecognitionByGeminiText) {
         prompt = '拿出了一张照片："' + imgRecognitionByGeminiText + '"' + prompt
       }
