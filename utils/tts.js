@@ -106,13 +106,13 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 voiceUrl = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio, wsTimeout: 60 * (i + 1) });
             } catch (error) {
                 if (Config.debug)
-                    logger.error(`[chatgpt-tts]第${i + 1}次连接到wss失败：${error.message}`)
+                    logger.error(`[chatgpt-tts]共${i + 1}次尝试连接到Fish-Vits语音合成失败：${error.message}`)
                 if (i == 2)
-                    err_msg = `[chatgpt-tts]第${i + 1}次连接到wss失败：${error.message}`
+                    err_msg = `[chatgpt-tts]共${i + 1}次尝试连接到Fish-Vits语音合成失败`
             }
             if (voiceUrl) break;
         }
-        if (!voiceUrl) throw new Error(err_msg)
+        if (!voiceUrl) throw { message: err_msg }
         return voiceUrl
     }
 
