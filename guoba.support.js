@@ -754,12 +754,12 @@ export function supportGuoba() {
         {
           field: 'ttsAutoFallbackThreshold',
           label: '语音转文字阈值',
-          helpMessage: '语音模式下，字数超过这个阈值就降级为文字',
+          helpMessage: '语音模式下，字数超过这个阈值就降级为文字。呆毛版 已做超300字自动切割文字处理，建议设置1200字。',
           bottomHelpMessage: '语音转为文字的阈值',
           component: 'InputNumber',
           componentProps: {
             min: 0,
-            max: 299
+            max: 99999
           }
         },
         {
