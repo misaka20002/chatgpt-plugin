@@ -468,13 +468,13 @@ export class PaimonChuo extends plugin {
                     await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
                     break
                 }
-            case 7:
-                message = await get_msg_pphua()
-                if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
-                }
+            // case 7:
+            //     message = await get_msg_pphua()
+            //     if (message) {
+            //         chuo_text_generateAndSendAudio(message, e);
+            //         await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+            //         break
+            //     }
             case 8:
                 message = await get_msg_mingyanjingju()
                 if (message) {
@@ -622,23 +622,6 @@ async function get_msg_wyyrp() {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
             throw new Error('[派蒙戳一戳][网易云热评] 接口请求失败')
-        }
-        res = await res.json()
-        return res.data.content
-    }
-    catch (err) {
-        logger.error(err)
-        return null
-    }
-}
-
-/**随机皮皮话 返回文本/错误则返回null */
-async function get_msg_pphua() {
-    let url = 'https://api.haah.net/api/free/wenan-pp?key=sDSdBlcAD1YvgtkWuijyE4AhTw'
-    try {
-        let res = await fetch(url).catch((err) => logger.error(err))
-        if (!res) {
-            throw new Error('[派蒙戳一戳][随机皮皮话] 接口请求失败')
         }
         res = await res.json()
         return res.data.content
