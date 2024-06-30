@@ -402,6 +402,7 @@ async function connectToWss(result = {}) {
     let wss = 'wss://fs.firefly.matce.cn/queue/join'
     let session_hash = ""
     let socket_trunk = {}
+    let get_error
 
     if (result.config_referenceAudioPath) {
         fn_index = 3
@@ -418,7 +419,7 @@ async function connectToWss(result = {}) {
                 console.error('[chatgpt-tts]1st Error occurred:', event);
             // 处理连接错误
             lock = false
-            throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
+            get_error = { message: "[chatgpt-tts]第一次连接到wss失败" }
         });
 
         socket_3_1.addEventListener('message', function (event) {
@@ -466,7 +467,7 @@ async function connectToWss(result = {}) {
                     console.error('[chatgpt-tts]3rd Error occurred:', event);
                 // 处理连接错误
                 lock = false
-                throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
+                get_error = { message: "[chatgpt-tts]第2次-有参考音频-连接到wss失败" }
             });
 
             socket_3_2.addEventListener('message', function (event) {
@@ -518,7 +519,7 @@ async function connectToWss(result = {}) {
                 console.error('[chatgpt-tts]1st Error occurred:', event);
             // 处理连接错误
             lock = false
-            throw new Error(`[chatgpt-tts]第一次连接到wss失败：${event}`)
+            get_error = { message: "[chatgpt-tts]第一次连接到wss失败" }
         });
 
         socket_1.addEventListener('message', function (event) {
@@ -566,7 +567,7 @@ async function connectToWss(result = {}) {
                     console.error('[chatgpt-tts]2nd Error occurred:', event);
                 // 处理连接错误
                 lock = false
-                throw new Error(`[chatgpt-tts]第二次连接到wss失败：${event}`)
+                get_error = { message: "[chatgpt-tts]第二次连接到wss失败" }
             });
 
             socket_2.addEventListener('message', function (event) {
@@ -613,7 +614,7 @@ async function connectToWss(result = {}) {
                         console.error('[chatgpt-tts]3rd Error occurred:', event);
                     // 处理连接错误
                     lock = false
-                    throw new Error(`[chatgpt-tts]第三次连接到wss失败：${event}`)
+                    get_error = { message: "[chatgpt-tts]第三次连接到wss失败" }
                 });
 
                 socket_3.addEventListener('message', function (event) {
@@ -639,8 +640,10 @@ async function connectToWss(result = {}) {
                         // 获取结果
                         if (Config.debug)
                             console.log(data.output)
-                        if (!data.output?.data || !data.output.data[0]?.name) throw new Error("[chatgpt-tts]Fish-TTS语音合成api返回Error，合成失败");
-                        result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
+                        if (!data.output?.data || !data.output.data[0]?.name)
+                            get_error = { message: "[chatgpt-tts]Fish-TTS语音合成api返回Error，合成失败" }
+                        else
+                            result = { ...result, voiceUrl: `https://fs.firefly.matce.cn/file=${data.output.data[0].name}` }
                         lock = false
                     }
                 });
@@ -663,8 +666,13 @@ async function connectToWss(result = {}) {
     for (let i = 0; i < Object.keys(socket_trunk).length; i++) {
         socket_trunk[Object.keys(socket_trunk)[i]].close();
     }
-    if (!result.voiceUrl) throw new Error("[chatgpt-tts]Fish-TTS语音合成等待超时");
-    else return result.voiceUrl
+    if (!result.voiceUrl)
+        if (get_error)
+            throw get_error
+        else
+            throw { message: "[chatgpt-tts]Fish-TTS语音合成等待超时" };
+
+    return result.voiceUrl
 }
 
 /**推荐
