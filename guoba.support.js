@@ -921,7 +921,7 @@ export function supportGuoba() {
           }
         },
         {
-          label: 'VITS语音设置，可用命令#tts语音帮助',
+          label: '呆毛版 机器人cos设置',
           component: 'Divider'
         },
         {
@@ -965,6 +965,10 @@ export function supportGuoba() {
           label: '戳一戳使用涩图api',
           bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
           component: 'Switch'
+        },
+        {
+          label: 'VITS语音自定义设置，可用命令#tts语音帮助 ；ps.请先配置好：语音模式源为vits-uma；vits默认角色；vits-uma-genshin-honkai语音转换API地址',
+          component: 'Divider'
         },
         {
           field: 'exampleAudio',

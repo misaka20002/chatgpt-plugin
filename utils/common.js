@@ -711,43 +711,65 @@ export async function getUserReplySetting (e) {
  * @description: （呆毛版）处理消息中的图片：当消息引用了图片，则将对应图片放入e.img ，优先级==> e.source.img > e.img > At头像（开启时）；
  * @param {*} e
  * @param {*} alsoGetAtAvatar 开启使用At用户头像作为图片，默认 true
- * @param {*} useOrigin 是否使用原图，默认为false
+ * @param {*} useOrigin 是否使用原图，默认 false
  * @return {*}
  */
 export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
-  // 取消息中的图片、at的头像、回复的图片，放入e.img
-  if (e.at && !e.source && !e.img && alsoGetAtAvatar) {
-    e.img = [`https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.at}`]
+  let reply;
+  if (alsoGetAtAvatar && e.at && !e.source && !e.reply_id && !e.img) {
+    if (e.atBot) {
+      const setting = await Config.getSetting();
+      if (setting.shield) {
+        delete e.img;
+      } else {
+        e.img = [];
+        e.img[0] =
+          e.bot.avatar || `https://q1.qlogo.cn/g?b=qq&s=0&nk=${Bot.uin}`;
+      }
+    }
+    if (e.at) {
+      try {
+        e.img = [await e.group.pickMember(e.at).getAvatarUrl()];
+      } catch (error) {
+        e.img = [`https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.at}`];
+      }
+    }
   }
+  // ICQQ原生
   if (e.source) {
-    let reply
-    let seq = e.isGroup ? e.source.seq : e.source.time
-    // if (e.adapter === 'shamrock') {
-    //   seq = e.source.message_id
-    // }
     if (e.isGroup) {
-      reply = (await e.group.getChatHistory(seq, 1)).pop()?.message
+      reply = (await e.group.getChatHistory(e.source.seq, 1)).pop()?.message;
     } else {
-      reply = (await e.friend.getChatHistory(seq, 1)).pop()?.message
-    }
-    if (reply) {
-      let i = []
-      for (let val of reply) {
-        if (val.type === 'image') {
-          i.push(val.url)
-        }
-      }
-      e.img = i
-    }
-    // e.img 数组图片和以图画图使用小图而不是原图大图
-    if (!useOrigin && e.img) {
-      for (let i = 0; i < e.img.length; i++) {
-        e.img[i] = e.img[i].replace(/is_origin=\d$/, 'is_origin=0')// 匹配qq聊天中的原图
-        // TODO 匹配wechat、tg聊天中的原图
-      }
+      reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
     }
   }
-  return e.img
+  // 添加OneBotv11适配器
+  else if (e.reply_id) {
+    reply = (await e.getReply(e.reply_id)).message;
+  }
+  if (reply) {
+    let i = []
+    for (const val of reply) {
+      if (val.type == 'image') {
+        i.push(val.url)
+      }
+      if (val.type == "file") {
+        e.reply("不支持消息中的文件，请将该文件以图片发送...", true);
+        return;
+      }
+    }
+    e.img = i
+  }
+  // 如果不是主人，e.img 数组参考图片和以图画图使用小图而不是原图大图
+  // if (!e.isMaster && !useOrigin && e.img) {
+  // 所有人都用小图
+  if (!useOrigin && e.img) {
+    for (let i = 0; i < e.img.length; i++) {
+      e.img[i] = e.img[i].replace(/is_origin=\d$/, 'is_origin=0')// 匹配qq聊天中的原图
+      // TODO 匹配wechat、tg聊天中的原图
+    }
+  }
+  return e.img;
 }
 
 export async function getImageOcrText (e) {
