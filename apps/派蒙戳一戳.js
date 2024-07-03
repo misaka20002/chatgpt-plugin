@@ -259,8 +259,8 @@ export class PaimonChuo extends plugin {
                 this.addJinyanTimes(e.operator_id, 1);
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id) || await e.bot.pickMember(e.group_id, e.operator_id)
-                    let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin?.[0] || Bot.uin) || await e.bot.pickMember(e.group_id, Bot.uin?.[0] || Bot.uin)
+                    const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
+                    const botinfo = await e.bot.getGroupMemberInfo?.(e.group_id, Bot.uin?.[0] || Bot.uin) || await e.bot.pickMember?.(e.group_id, Bot.uin?.[0] || Bot.uin)
                     // bot是群主||bot是管理员时用户不是群主或管理员
                     if ((botinfo.role === 'owner' || botinfo.is_owner) || ((botinfo.role === 'admin' || botinfo.is_admin) && ((usrinfo.role !== 'owner' || !usrinfo.is_owner) && (usrinfo.role !== 'admin' || !usrinfo.is_admin)))) {
                         // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
