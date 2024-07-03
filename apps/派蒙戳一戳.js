@@ -259,10 +259,10 @@ export class PaimonChuo extends plugin {
                 this.addJinyanTimes(e.operator_id, 1);
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
-                    let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
-                    let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
+                    let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id) || await e.bot.pickMember(e.group_id, e.operator_id)
+                    let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin?.[0] || Bot.uin) || await e.bot.pickMember(e.group_id, Bot.uin?.[0] || Bot.uin)
                     // bot是群主||bot是管理员时用户不是群主或管理员
-                    if (botinfo.role === 'owner' || (botinfo.role === 'admin' && (usrinfo.role !== 'owner' && usrinfo.role !== 'admin'))) {
+                    if ((botinfo.role === 'owner' || botinfo.is_owner) || ((botinfo.role === 'admin' || botinfo.is_admin) && ((usrinfo.role !== 'owner' || !usrinfo.is_owner) && (usrinfo.role !== 'admin' || !usrinfo.is_admin)))) {
                         // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
                         /* botinfo = { "group_id": __num__, "user_id": __num__, "nickname": "小派蒙", "card": "", "sex": "female", "age": 9, "join_time": 1698625488, "last_sent_time": 1706151598, "level": 1, "role": "owner", "title": "", "title_expire_time": 0, "shutup_time": 0, "update_time": 0 }
                         usrinfo = { "group_id": __num__, "user_id": __num__, "nickname": "_昵称_", "card": "_群昵称_", "sex": "male", "age": 88, "area": "", "join_time": 1705783666, "last_sent_time": 1706152333, "level": 1, "rank": "潜水", "role": "member", "title": "", "title_expire_time": 4294967295, "shutup_time": 0, "update_time": 1706151633 } ； */
@@ -359,10 +359,8 @@ export class PaimonChuo extends plugin {
                         await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
                         break;
                     case 7:
-                        let usrinfo = await e.bot.getGroupMemberInfo(e.group_id, e.operator_id)
-                        // let botinfo = await e.bot.getGroupMemberInfo(e.group_id, Bot.uin)
                         let randomPlayingMsg = await generate_msg_randomPlayingMsg()
-                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${usrinfo.nickname}","message":"${randomPlayingMsg}"}`))
+                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${e.sender.nickname}","message":"${randomPlayingMsg}"}`))
                         break;
                 }
             }

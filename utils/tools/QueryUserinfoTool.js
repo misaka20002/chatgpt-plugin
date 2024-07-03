@@ -19,7 +19,7 @@ export class QueryUserinfoTool extends AbstractTool {
       let { qq } = opts
       qq = isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
       if (e.isGroup && typeof e.bot.getGroupMemberInfo === 'function') {
-        let user = await e.bot.getGroupMemberInfo(e.group_id, qq || e.sender.user_id, true)
+        let user = await e.bot.getGroupMemberInfo(e.group_id, qq || e.sender.user_id, true)||await e.bot.pickMember(e.group_id, qq || e.sender.user_id)
         // let mm = await e.group.getMemberMap()
         // let user = mm.get(qq) || e.sender.user_id
         let master = (await getMasterQQ())[0]
