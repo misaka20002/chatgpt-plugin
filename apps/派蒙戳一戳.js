@@ -16,7 +16,7 @@ import fs from 'fs'
 import path from 'path'
 
 // 如使用非icqq请在此处填写机器人QQ号
-let BotQQ = ''
+let BotQQ = Bot.uin?.[0] || Bot.uin
 
 // 支持信息详见文件最下方
 // 在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
@@ -58,7 +58,6 @@ export class PaimonChuo extends plugin {
         // init()  // 写在这里的函数每次戳一戳都会触发
     }
 
-
     async chuoyichuo(e) {
         if (!Config.paimon_chuoyichuo_open) return false
 
@@ -95,7 +94,7 @@ export class PaimonChuo extends plugin {
             return true
         }
 
-        if (e.target_id == cfg.qq || BotQQ == e.operator_id) {
+        if (e.fromChuoyichuo_ByMeg || e.target_id == cfg.qq || BotQQ == e.operator_id) {
             /**统计每日被戳次数 */
             let count = await redis.incr(`paimon_pokecount`);
             // redis记录每日被戳次数，次日零点过期

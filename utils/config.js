@@ -88,6 +88,8 @@ const defaultConfig = {
   tts_First_person: '派蒙',
   chat_for_First_person: true,
   paimon_chuoyichuo_open: true,
+  paimon_chuoyichuo_ByMsgGroups: [],
+  paimon_chuoyichuo_Probability_ByMsgGroups: 5,
   paimon_chou_cd: 20,
   paimon_chou_IsSendLocalpic: true,
   paimon_chou_IsUseLoliconApi: false,

@@ -943,6 +943,24 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'paimon_chuoyichuo_ByMsgGroups',
+          label: '随机触发戳一戳内容的群号',
+          bottomHelpMessage: '随机触发戳一戳内容的群号（针对无法使用戳一戳的适配器）（需要先开启戳一戳）。群号用英文逗号隔开',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'paimon_chuoyichuo_Probability_ByMsgGroups',
+          label: '随机触发戳一戳内容的概率',
+          helpMessage: '单位：%',
+          bottomHelpMessage: '随机触发戳一戳内容的概率（针对无法使用戳一戳的适配器）。',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 100,
+            step: 1,
+          },
+        },
+        {
           field: 'paimon_chou_cd',
           label: '戳一戳响应CD',
           bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
@@ -1316,7 +1334,7 @@ export function supportGuoba() {
       setConfigData(data, { Result }) {
         for (let [keyPath, value] of Object.entries(data)) {
           // 处理黑名单
-          if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups') { value = value.toString().split(/[,，;；\|]/) }
+          if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') { value = value.toString().split(/[,，;；\|]/) }
           if (keyPath === 'blacklist' || keyPath === 'whitelist') {
             // 6-10位数的群号或qq
             const regex = /^\^?[1-9]\d{5,9}(\^[1-9]\d{5,9})?$/
