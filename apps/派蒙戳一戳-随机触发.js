@@ -4,7 +4,7 @@
 // import { PaimonChuo } from './派蒙戳一戳.js'
 
 // // 如使用非icqq请在此处填写机器人QQ号
-// let BotQQ = Bot.uin?.[0] || Bot.uin
+// let BotQQ = ''
 
 // export class PaimonChuoRandom extends plugin {
 //     constructor() {

@@ -16,7 +16,7 @@ import fs from 'fs'
 import path from 'path'
 
 // 如使用非icqq请在此处填写机器人QQ号
-let BotQQ = Bot.uin?.[0] || Bot.uin
+let BotQQ = ''
 
 // 支持信息详见文件最下方
 // 在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
@@ -259,7 +259,7 @@ export class PaimonChuo extends plugin {
                 // 如果不是主人戳
                 if (!cfg.masterQQ.includes(e.operator_id)) {
                     const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
-                    const botinfo = await e.bot.getGroupMemberInfo?.(e.group_id, Bot.uin?.[0] || Bot.uin) || await e.bot.pickMember?.(e.group_id, Bot.uin?.[0] || Bot.uin)
+                    const botinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.self_id) || await e.bot.pickMember?.(e.group_id, e.self_id)
                     // bot是群主||bot是管理员时用户不是群主或管理员
                     if ((botinfo.role === 'owner' || botinfo.is_owner) || ((botinfo.role === 'admin' || botinfo.is_admin) && ((usrinfo.role !== 'owner' || !usrinfo.is_owner) && (usrinfo.role !== 'admin' || !usrinfo.is_admin)))) {
                         // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
