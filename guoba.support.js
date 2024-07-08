@@ -863,7 +863,7 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；',
           component: 'Input'
         },
         {
@@ -987,6 +987,18 @@ export function supportGuoba() {
         {
           label: 'VITS语音自定义设置，可用命令#tts语音帮助 ；ps.请先配置好：语音模式源为vits-uma；vits默认角色；vits-uma-genshin-honkai语音转换API地址',
           component: 'Divider'
+        },
+        {
+          field: 'api_fish_audio_token',
+          label: 'token',
+          bottomHelpMessage: '（仅限api.fish.audio）先自己登录 https://api.fish.audio ，来到语音合成，找到喜欢的发音人，例如派蒙，在浏览器按F12来到 开发者工具/网络，随便生成一个语音，在例如task的post记录的标头下找到Bearer xxxxxxxxxxx ，和模型model的代码。这里填入你的xxxxxxxxxxx',
+          component: 'Input'
+        },
+        {
+          field: 'api_fish_audio_model',
+          label: 'model',
+          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型的代码，例如派蒙的是eacc56f8ab48443fa84421c547d3b60e',
+          component: 'Input'
         },
         {
           field: 'exampleAudio',

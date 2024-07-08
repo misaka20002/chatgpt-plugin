@@ -74,6 +74,18 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     if (Config.autoJapanese)
         text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|コーリ|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
 
+    // post到api.fish.audio获取音频
+    if (space.includes('api.fish.audio')) {
+        // 这个只能100字了
+        text = text.substr(0, 99);
+        logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
+        let voiceUrl
+        let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
+        voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
+        if (!voiceUrl) throw { message: err_msg }
+        return voiceUrl
+    }
+
     // tts情感自动设置
     let vits_emotion = Config.vits_emotion
     if (Config.vits_auto_emotion) {
@@ -675,7 +687,71 @@ async function connectToWss(result = {}) {
     return result.voiceUrl
 }
 
-/**推荐
- * 可莉也很爱你
- * sft_new/Genshin_ZH/可莉/44c561ccd517f0c0.wav_part69
- */
+// 以下为 fish.audio 用函数
+async function post_to_api_fish_audio_for_taskId(text) {
+    let taskId = false
+    const url = 'https://api.fish.audio/task';
+    const payload = {
+        "type": "tts",
+        "channel": "free",
+        "stream": true,
+        "model": Config.api_fish_audio_model,
+        "parameters": {
+            "text": text
+        }
+    };
+    await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + Config.api_fish_audio_token
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(response => {
+            taskId = response.headers.get('Task-Id');
+            // console.log('Task ID:', taskId);
+        })
+        .catch(error => {
+            console.error('[tts-fish-audio]POST失败:', error);
+        });
+    return taskId
+}
+
+async function get_api_fish_audio_for_audioURL(url) {
+    let audioURL = false
+    await fetch(url)
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('get_api_fish_audio_for_audioURL失败：', response.status);
+        })
+        .then(data => {
+            // console.log(data);
+            if (data.result)
+                audioURL = data.result
+            // console.log("音频地址为: ", audioURL)
+        })
+        .catch(error => {
+            console.error('[tts-fish-audio]get_api_fish_audio_for_audioURL内部错误', error);
+        });
+    return audioURL
+}
+
+async function wait_for_get_api_fish_audio_for_audioURL(text) {
+    const taskId = await post_to_api_fish_audio_for_taskId(text)
+    if (!taskId)
+        throw new Error("[tts-fish-audio]POST失败")
+    const url = `https://api.fish.audio/task/${taskId}`
+    let audioURL
+    for (let i = 0; i < 240; i++) {
+        audioURL = await get_api_fish_audio_for_audioURL(url)
+        if (!audioURL) await sleep_pai(2000)
+        else break
+    }
+    if (!audioURL)
+        throw new Error("[tts-fish-audio]POST超时失败")
+    console.log("[tts-fish-audio]音频生成成功：", audioURL)
+    return audioURL
+}
