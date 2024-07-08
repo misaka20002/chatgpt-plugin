@@ -743,7 +743,7 @@ async function get_api_fish_audio_for_audioURL(url) {
 async function wait_for_get_api_fish_audio_for_audioURL(text) {
     const taskId = await post_to_api_fish_audio_for_taskId(text)
     if (!taskId)
-        throw new Error("[tts-fish-audio]POST失败")
+        throw new Error("[tts-fish-audio]POST失败，请在锅巴中确认参数 api_fish_audio_token")
     const url = `https://api.fish.audio/task/${taskId}`
     let audioURL
     for (let i = 0; i < 240; i++) {
