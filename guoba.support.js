@@ -990,14 +990,14 @@ export function supportGuoba() {
         },
         {
           field: 'api_fish_audio_token',
-          label: 'token',
-          bottomHelpMessage: '（仅限api.fish.audio）先自己登录 https://api.fish.audio ，来到语音合成，找到喜欢的发音人，例如派蒙，在浏览器按F12来到 开发者工具/网络，随便生成一个语音，在例如task的post记录的标头下找到Bearer xxxxxxxxxxx ，和模型model的代码。这里填入你的xxxxxxxxxxx',
+          label: 'api_fish_audio_token',
+          bottomHelpMessage: '（仅限api.fish.audio）先自己登录 https://api.fish.audio ，来到语音合成，找到喜欢的发音人，例如派蒙，在浏览器按F12来到 开发者工具/网络，随便生成一个语音，在例如task的post记录的 标头 下找到 Authorization: "Bearer xxxxxxxxxxx" 并记下来；在 负载 下找到model（模型）的代码记下来。现在在这里填入你的 "Bearer xxxxxxxxxxx" 中的xxxxxxxxxxx',
           component: 'Input'
         },
         {
           field: 'api_fish_audio_model',
-          label: 'model',
-          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型的代码，例如派蒙的是eacc56f8ab48443fa84421c547d3b60e',
+          label: 'api_fish_audio_model',
+          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是eacc56f8ab48443fa84421c547d3b60e；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
           component: 'Input'
         },
         {
