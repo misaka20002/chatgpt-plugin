@@ -851,7 +851,7 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
-          label: '以下为杂七杂八的配置',
+          label: '以下为语音生成配置',
           component: 'Divider'
         },
         // {
@@ -863,7 +863,7 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；抱脸版因效果差且 vits默认角色 不通用暂不考虑适配',
           component: 'Input'
         },
         {
@@ -910,7 +910,7 @@ export function supportGuoba() {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: '语音传回是数据链接还是文件：genshinvoice.top选择url;如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          bottomHelpMessage: '语音传回是数据链接还是文件：呆毛版三种vits api选择url；如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
           component: 'Select',
           componentProps: {
             options: [
@@ -942,24 +942,24 @@ export function supportGuoba() {
           bottomHelpMessage: '是否开启戳一戳',
           component: 'Switch'
         },
-        {
-          field: 'paimon_chuoyichuo_ByMsgGroups',
-          label: '随机触发戳一戳内容的群号',
-          bottomHelpMessage: '随机触发戳一戳内容的群号（针对无法使用戳一戳的适配器）（需要先开启戳一戳）。群号用英文逗号隔开',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'paimon_chuoyichuo_Probability_ByMsgGroups',
-          label: '随机触发戳一戳内容的概率',
-          helpMessage: '单位：%',
-          bottomHelpMessage: '随机触发戳一戳内容的概率（针对无法使用戳一戳的适配器）。',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 100,
-            step: 1,
-          },
-        },
+        // {
+        //   field: 'paimon_chuoyichuo_ByMsgGroups',
+        //   label: '随机触发戳一戳内容的群号',
+        //   bottomHelpMessage: '随机触发戳一戳内容的群号（针对无法使用戳一戳的适配器）（需要先开启戳一戳）。群号用英文逗号隔开',
+        //   component: 'InputTextArea'
+        // },
+        // {
+        //   field: 'paimon_chuoyichuo_Probability_ByMsgGroups',
+        //   label: '随机触发戳一戳内容的概率',
+        //   helpMessage: '单位：%',
+        //   bottomHelpMessage: '随机触发戳一戳内容的概率（针对无法使用戳一戳的适配器）。',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 100,
+        //     step: 1,
+        //   },
+        // },
         {
           field: 'paimon_chou_cd',
           label: '戳一戳响应CD',
@@ -985,7 +985,17 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          label: 'VITS语音自定义设置，可用命令#tts语音帮助 ；ps.请先配置好：语音模式源为vits-uma；vits默认角色；vits-uma-genshin-honkai语音转换API地址',
+          label: '呆毛版 VITS语音自定义设置，可用命令#tts语音帮助 ；准备工作：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
+          component: 'Divider'
+        },
+        {
+          field: 'ttsHD',
+          label: '开启本地SILK转码方案2',
+          bottomHelpMessage: '开启本地SILK转码方案2后，NTQQ内核版本9.0.0-9.0.7将无法播放语音。此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
+          component: 'Switch'
+        },
+        {
+          label: 'fish.audio的设置',
           component: 'Divider'
         },
         {
@@ -999,6 +1009,10 @@ export function supportGuoba() {
           label: 'api_fish_audio_model',
           bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是eacc56f8ab48443fa84421c547d3b60e；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
           component: 'Input'
+        },
+        {
+          label: 'Fish-VITS2的设置',
+          component: 'Divider'
         },
         {
           field: 'exampleAudio',
@@ -1060,6 +1074,10 @@ export function supportGuoba() {
             max: 2,
             step: 0.01,
           },
+        },
+        {
+          label: 'Bert-VITS2的设置',
+          component: 'Divider'
         },
         {
           field: 'vits_emotion',
@@ -1186,10 +1204,8 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'ttsHD',
-          label: '开启本地SILK转码方案2',
-          bottomHelpMessage: '开启本地SILK转码方案2后，NTQQ内核版本9.0.0-9.0.7将无法播放语音。呆毛-此方案只推荐在无法本地silk转码且他服务器转码失效时开启',
-          component: 'Switch'
+          label: '以下为杂七杂八的配置',
+          component: 'Divider'
         },
         {
           field: 'initiativeChatGroups',
