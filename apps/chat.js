@@ -1009,8 +1009,11 @@ export class chatgpt extends plugin {
           try {
             e.msg = '#绘画' + Config.nai3PluginToPaintPrefix + json + 'best quality, amazing quality, very aesthetic, absurdres'
             console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
-            await nai.txt2img(e);
-            return true
+            let isTrue = await nai.txt2img(e);
+            if (isTrue)
+              return true
+            else
+              console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
           } catch (err) {
             console.log('[ChatGPT]调用nai插件错误：', err)
           }
