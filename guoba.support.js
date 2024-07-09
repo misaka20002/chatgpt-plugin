@@ -848,6 +848,40 @@ export function supportGuoba() {
           bottomHelpMessage: 'suno的__client token，需要与sunoSessToken一一对应数量相同，多个用逗号隔开',
           component: 'InputTextArea'
         },
+        {
+          field: 'enableChatSuno',
+          label: '允许聊天指令声音音乐',
+          bottomHelpMessage: '允许聊天指令声音音乐',
+          component: 'Switch'
+        },
+        {
+          field: 'SunoModel',
+          label: '调用模式',
+          bottomHelpMessage: '调用模式',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '本地', value: 'local' },
+              { label: '第三方', value: 'api' }
+            ]
+          }
+        },
+        {
+          field: 'bingSunoApi',
+          label: '第三方歌曲生成API地址',
+          bottomHelpMessage: 'https://github.com/gcui-art/suno-api的api地址',
+          component: 'Input'
+        },
+        {
+          field: 'sunoApiTimeout',
+          label: 'SunoApi获取超时时间',
+          helpMessage: '单位：秒',
+          bottomHelpMessage: '使用sunoApi获取数据时超时时间',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
         // {
         //   field: '2captchaToken',
         //   label: '验证码平台Token',
@@ -976,6 +1010,12 @@ export function supportGuoba() {
           field: 'paimon_chou_IsUseLoliconApi',
           label: '戳一戳使用涩图api',
           bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
+          component: 'Switch'
+        },
+        {
+          field: 'enableNai3Paint',
+          label: '连接NovelAi画图插件',
+          bottomHelpMessage: '连接NovelAi画图插件',
           component: 'Switch'
         },
         {
