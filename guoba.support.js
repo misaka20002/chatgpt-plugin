@@ -1027,7 +1027,7 @@ export function supportGuoba() {
         {
           field: 'enableNai3PluginToPaint',
           label: '使用nai插件绘画',
-          bottomHelpMessage: '使用nai插件绘画',
+          bottomHelpMessage: '使用nai插件绘画，需要先安装nai插件',
           component: 'Switch'
         },
         {

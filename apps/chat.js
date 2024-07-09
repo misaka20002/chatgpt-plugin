@@ -1002,13 +1002,13 @@ export class chatgpt extends plugin {
           let nai
           try {
             let { txt2img } = await import('../../nai-plugin/apps/Txt2img.js')
-            nai = new txt2img(e)
+            nai = new txt2img();
           } catch (err) {
             console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
           }
           try {
             e.msg = '#绘画artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ' + json + 'best quality, amazing quality, very aesthetic, absurdres'
-            await nai.aiPainting(e)
+            await nai.txt2img(e);
             return true
           } catch (err) {
             console.log('[ChatGPT]调用nai插件错误：', err)
