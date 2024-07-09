@@ -804,13 +804,13 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        prompt = prompt.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
-        prompt = prompt.replace(/_sender_id_/igm, e.sender.user_id)
-        prompt = prompt.replace(/_sender_gender_/igm, e.sender.sex)
-        prompt = prompt.replace(/_sender_age_/igm, e.sender.age)
-        prompt = prompt.replace(/_sender_area_/igm, e.sender.area)
-        prompt = prompt.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
-        prompt = prompt.replace(/_sender_title_/igm, e.sender.title)
+        system = system.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+        system = system.replace(/_sender_id_/igm, e.sender.user_id)
+        system = system.replace(/_sender_gender_/igm, e.sender.sex)
+        system = system.replace(/_sender_age_/igm, e.sender.age)
+        system = system.replace(/_sender_area_/igm, e.sender.area)
+        system = system.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+        system = system.replace(/_sender_title_/igm, e.sender.title)
       }
 
       if (Config.enableGroupContext && e.isGroup) {
