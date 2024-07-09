@@ -226,6 +226,18 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'switchToNai3PluginToPaint',
+          label: '使用nai插件代替Bing进行绘图',
+          bottomHelpMessage: '使用nai插件代替Bing进行绘图，需要先安装nai插件且开启 允许生成图像等内容',
+          component: 'Switch'
+        },
+        {
+          field: 'bingAPDraw',
+          label: '使用AP插件代替Bing进行绘图',
+          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容',
+          component: 'Switch'
+        },
+        {
           field: 'groupContextLength',
           label: '允许机器人读取近期的最多群聊聊天记录条数。',
           bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
@@ -1013,15 +1025,9 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'switchToNai3PluginToPaint',
-          label: '使用nai插件代替Bing进行绘图',
-          bottomHelpMessage: '使用nai插件代替Bing进行绘图，需要先开启 允许生成图像等内容',
-          component: 'Switch'
-        },
-        {
-          field: 'bingAPDraw',
-          label: '使用AP插件代替Bing进行绘图',
-          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先开启 允许生成图像等内容',
+          field: 'enableNai3PluginToPaint',
+          label: '使用nai插件绘画',
+          bottomHelpMessage: '使用nai插件绘画',
           component: 'Switch'
         },
         {

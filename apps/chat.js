@@ -987,6 +987,35 @@ export class chatgpt extends plugin {
       for (let quote of quotemessage) {
         if (quote.imageLink) imgUrls.push(quote.imageLink)
       }
+
+      // 处理nai3生成 呆毛版 连接NovelAi画图插件
+      if (Config.enableNai3PluginToPaint) {
+        let json = response?.match(/({.*})/)?.[1];
+        try {
+          json = JSON.parse(json)?.tags;
+        }
+        catch (err) {
+          json = false
+        }
+        if (json) {
+          // 使用nai插件
+          let nai
+          try {
+            let { txt2img } = await import('../../nai-plugin/apps/Txt2img.js')
+            nai = new txt2img(e)
+          } catch (err) {
+            console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
+          }
+          try {
+            e.msg = '#绘画artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ' + json + 'best quality, amazing quality, very aesthetic, absurdres'
+            await nai.aiPainting(e)
+            return true
+          } catch (err) {
+            console.log('[ChatGPT]调用nai插件错误：', err)
+          }
+        }
+      }
+
       if (useTTS) {
         // 缓存数据
         this.cacheContent(e, use, response, prompt, quotemessage, mood, chatMessage.suggestedResponses, imgUrls)

@@ -813,9 +813,9 @@ class Core {
         system = system.replace(/_sender_title_/igm, e.sender.title)
       }
       // 呆毛版 连接NovelAi画图插件
-      // if (Config.switchToNai3PluginToPaint) {
-      //   system += 'If I ask you to generate picture prompt or painting, you need to reply with information keywords suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"option": "Stable_Difussion", "tags": "Your tags"}```.'
-      // }
+      if (Config.enableNai3PluginToPaint) {
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with information keywords suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"option": "NovelAi", "tags": "Your tags"}```.'
+      }
 
       if (Config.enableGroupContext && e.isGroup) {
         let chats = await getChatHistoryGroup(e, Config.groupContextLength)

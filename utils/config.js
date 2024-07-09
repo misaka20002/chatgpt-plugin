@@ -89,6 +89,7 @@ const defaultConfig = {
   chat_for_First_person: true,
   isReplacePromptForSenderMsg: true,
   switchToNai3PluginToPaint: false,
+  enableNai3PluginToPaint: true,
   paimon_chuoyichuo_open: true,
   paimon_chuoyichuo_ByMsgGroups: [],
   paimon_chuoyichuo_Probability_ByMsgGroups: 5,
