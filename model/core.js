@@ -814,7 +814,8 @@ class Core {
       }
       // 呆毛版 连接NovelAi画图插件
       if (Config.enableNai3PluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with keywords in English suitable for Stable Difussion to generate picture. The keywords you writed is to refer to the formatting writing, usage, and detailing of the above prompts content format about Stable Difussion, and do your best, your imagination, to give its corresponding positive and negative prompts. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags"}```.'
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags"}```.'
+        // system += 'If I ask you to generate picture prompt or painting, you need to reply with keywords in English suitable for Stable Difussion to generate picture. The keywords you writed is to refer to the formatting writing, usage, and detailing of the above prompts content format about Stable Difussion, and do your best, your imagination, to give its corresponding positive and negative prompts. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags"}```.'
       }
 
       if (Config.enableGroupContext && e.isGroup) {
