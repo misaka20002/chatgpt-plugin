@@ -87,6 +87,7 @@ const defaultConfig = {
   huggingFaceReverseProxy: '',
   tts_First_person: '派蒙',
   chat_for_First_person: true,
+  isReplacePromptForSenderMsg: true,
   paimon_chuoyichuo_open: true,
   paimon_chuoyichuo_ByMsgGroups: [],
   paimon_chuoyichuo_Probability_ByMsgGroups: 5,

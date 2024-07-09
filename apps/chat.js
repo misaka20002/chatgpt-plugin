@@ -597,6 +597,14 @@ export class chatgpt extends plugin {
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
     // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
     prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
+
+    // 呆毛版 在 prompt 中替换文本使用 e.at 信息
+    if (Config.isReplacePromptForSenderMsg) {
+      // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
+      const atMessage = e.message?.find(item => item.type === "at");
+      prompt = prompt + `。拿出一张名片，上面写着“${atMessage.text}${atMessage.qq ? `，QQ号${atMessage.qq}` : ''}”`
+    }
+    
     await this.abstractChat(e, prompt, use)
   }
 
@@ -658,6 +666,26 @@ export class chatgpt extends plugin {
         prompt = prompt + ' "'
       }
     }
+
+    // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+    if (Config.isReplacePromptForSenderMsg) {
+      prompt = prompt.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+      prompt = prompt.replace(/_sender_id_/igm, e.sender.user_id)
+      prompt = prompt.replace(/_sender_gender_/igm, e.sender.sex)
+      prompt = prompt.replace(/_sender_age_/igm, e.sender.age)
+      prompt = prompt.replace(/_sender_area_/igm, e.sender.area)
+      prompt = prompt.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+      prompt = prompt.replace(/_sender_title_/igm, e.sender.title)
+    }
+
+    // 呆毛版 gemini的识图结果 + prompt
+    if (Config.recognitionByGemini && !!isImg) {
+      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, isImg)
+      if (imgRecognitionByGeminiText) {
+        prompt = '拿出了一张照片："' + imgRecognitionByGeminiText + '"' + prompt
+      }
+    }
+
     // 检索是否有屏蔽词
     const promtBlockWord = Config.promptBlockWords.find(word => prompt.toLowerCase().includes(word.toLowerCase()))
     if (promtBlockWord) {
@@ -668,14 +696,6 @@ export class chatgpt extends plugin {
     let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
     if (confirmOn) {
       await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: 8 })
-    }
-
-    // 呆毛版 gemini的识图结果 + prompt
-    if (Config.recognitionByGemini && !!isImg) {
-      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, isImg)
-      if (imgRecognitionByGeminiText) {
-        prompt = '拿出了一张照片："' + imgRecognitionByGeminiText + '"' + prompt
-      }
     }
 
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)

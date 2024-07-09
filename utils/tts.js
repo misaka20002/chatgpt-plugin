@@ -84,7 +84,12 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
         let voiceUrl
         let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
-        voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
+        try {
+            voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
+        }
+        catch (err) {
+            throw new Error('[chatgpt-tts]', err)
+        }
         if (!voiceUrl) throw { message: err_msg }
         return voiceUrl
     }
@@ -743,7 +748,7 @@ async function get_api_fish_audio_for_audioURL(url) {
 async function wait_for_get_api_fish_audio_for_audioURL(text) {
     const taskId = await post_to_api_fish_audio_for_taskId(text)
     if (!taskId)
-        throw new Error("[tts-fish-audio]POST失败，请在锅巴中确认参数 api_fish_audio_token")
+        throw new Error("[tts-fish-audio]POST失败：请确认fish.audio站点及api_fish_audio_token是否可用")
     const url = `https://api.fish.audio/task/${taskId}`
     let audioURL
     for (let i = 0; i < 240; i++) {

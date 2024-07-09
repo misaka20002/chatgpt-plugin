@@ -850,10 +850,6 @@ export function supportGuoba() {
           bottomHelpMessage: 'suno的__client token，需要与sunoSessToken一一对应数量相同，多个用逗号隔开',
           component: 'InputTextArea'
         },
-        {
-          label: '以下为语音生成配置',
-          component: 'Divider'
-        },
         // {
         //   field: '2captchaToken',
         //   label: '验证码平台Token',
@@ -910,7 +906,7 @@ export function supportGuoba() {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: '语音传回是数据链接还是文件：呆毛版三种vits api选择url；如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          bottomHelpMessage: '语音传回是数据链接还是文件：呆毛版三种vits api选择链接；如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
           component: 'Select',
           componentProps: {
             options: [
@@ -934,6 +930,12 @@ export function supportGuoba() {
           field: 'chat_for_First_person',
           label: 'AI回应第一人称呼叫',
           bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
+          component: 'Switch'
+        },
+        {
+          field: 'isReplacePromptForSenderMsg',
+          label: '在设定中替换指定字符串为用户信息',
+          bottomHelpMessage: '_sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；并且附上at用户的名称和qq号。',
           component: 'Switch'
         },
         {
@@ -985,7 +987,7 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          label: '呆毛版 VITS语音自定义设置，可用命令#tts语音帮助 ；准备工作：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
+          label: '呆毛版 VITS语音自定义设置：可用命令#tts语音帮助 ；先在本页设置好：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
           component: 'Divider'
         },
         {
