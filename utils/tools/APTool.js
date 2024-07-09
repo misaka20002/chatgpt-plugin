@@ -28,13 +28,13 @@ export class APTool extends AbstractTool {
       try {
         // eslint-disable-next-line camelcase
         let { txt2img } = await import('../../../nai-plugin/apps/Txt2img.js')
-        nai = new txt2img(e)
+        nai = new txt2img()
       } catch (err) {
         return 'the user didn\'t install nai-plugin. suggest him to install'
       }
       try {
         e.msg = '#绘画artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ' + prompt + 'best quality, amazing quality, very aesthetic, absurdres'
-        await nai.aiPainting(e)
+        await nai.txt2img(e)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'
