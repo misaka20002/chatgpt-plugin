@@ -1,4 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
+import { Config } from '../../utils/config.js'
 
 export class APTool extends AbstractTool {
   name = 'draw'
@@ -21,27 +22,49 @@ export class APTool extends AbstractTool {
       e.at = null
     }
     e.atBot = false
-    let ap
-    try {
-      // eslint-disable-next-line camelcase
-      let { Ai_Painting } = await import('../../../ap-plugin/apps/aiPainting.js')
-      ap = new Ai_Painting(e)
-    } catch (err) {
+    // 使用nai插件
+    if (Config.switchToNai3PluginToPaint) {
+      let nai
       try {
-        // ap的dev分支改名了
         // eslint-disable-next-line camelcase
-        let { Ai_Painting } = await import('../../../ap-plugin/apps/ai_painting.js')
-        ap = new Ai_Painting(e)
-      } catch (err1) {
-        return 'the user didn\'t install ap-plugin. suggest him to install'
+        let { Ai_Painting } = await import('../../../nai-plugin/apps/Txt2img.js')
+        nai = new Ai_Painting(e)
+      } catch (err) {
+        return 'the user didn\'t install nai-plugin. suggest him to install'
+      }
+      try {
+        e.msg = '#绘画artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ' + prompt
+        await nai.aiPainting(e)
+        return 'draw success, picture has been sent.'
+      } catch (err) {
+        return 'draw failed due to unknown error'
       }
     }
-    try {
-      e.msg = '#绘图' + prompt
-      await ap.aiPainting(e)
-      return 'draw success, picture has been sent.'
-    } catch (err) {
-      return 'draw failed due to unknown error'
+
+    // 使用ap插件
+    else {
+      let ap
+      try {
+        // eslint-disable-next-line camelcase
+        let { Ai_Painting } = await import('../../../ap-plugin/apps/aiPainting.js')
+        ap = new Ai_Painting(e)
+      } catch (err) {
+        try {
+          // ap的dev分支改名了
+          // eslint-disable-next-line camelcase
+          let { Ai_Painting } = await import('../../../ap-plugin/apps/ai_painting.js')
+          ap = new Ai_Painting(e)
+        } catch (err1) {
+          return 'the user didn\'t install ap-plugin. suggest him to install'
+        }
+      }
+      try {
+        e.msg = '#绘图' + prompt
+        await ap.aiPainting(e)
+        return 'draw success, picture has been sent.'
+      } catch (err) {
+        return 'draw failed due to unknown error'
+      }
     }
   }
 }

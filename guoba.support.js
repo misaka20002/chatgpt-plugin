@@ -1013,9 +1013,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'enableNai3Paint',
-          label: '连接NovelAi画图插件',
-          bottomHelpMessage: '连接NovelAi画图插件',
+          field: 'switchToNai3PluginToPaint',
+          label: '使用nai插件代替Bing进行绘图',
+          bottomHelpMessage: '使用nai插件代替Bing进行绘图，需要先开启 允许生成图像等内容',
+          component: 'Switch'
+        },
+        {
+          field: 'bingAPDraw',
+          label: '使用AP插件代替Bing进行绘图',
+          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先开启 允许生成图像等内容',
           component: 'Switch'
         },
         {

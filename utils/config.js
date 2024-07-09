@@ -88,7 +88,7 @@ const defaultConfig = {
   tts_First_person: '派蒙',
   chat_for_First_person: true,
   isReplacePromptForSenderMsg: true,
-  enableNai3Paint: true,
+  switchToNai3PluginToPaint: false,
   paimon_chuoyichuo_open: true,
   paimon_chuoyichuo_ByMsgGroups: [],
   paimon_chuoyichuo_Probability_ByMsgGroups: 5,
