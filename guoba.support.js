@@ -1031,6 +1031,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'nai3PluginToPaintPrefix',
+          label: 'nai插件绘画前缀',
+          bottomHelpMessage: '定义绘画前缀，即角色和画师',
+          component: 'Switch'
+        },
+        {
           label: '呆毛版 VITS语音自定义设置：可用命令#tts语音帮助 ；先在本页设置好：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
           component: 'Divider'
         },

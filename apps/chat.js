@@ -1007,7 +1007,7 @@ export class chatgpt extends plugin {
             console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
           }
           try {
-            e.msg = '#绘画artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ' + json + 'best quality, amazing quality, very aesthetic, absurdres'
+            e.msg = '#绘画' + Config.nai3PluginToPaintPrefix + json + 'best quality, amazing quality, very aesthetic, absurdres'
             console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
             await nai.txt2img(e);
             return true
