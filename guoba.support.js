@@ -1033,7 +1033,7 @@ export function supportGuoba() {
         {
           field: 'nai3PluginToPaintPrefix',
           label: 'nai插件绘画前缀',
-          bottomHelpMessage: '定义绘画前缀，即角色和画师',
+          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等',
           component: 'Input',
           componentProps: {
             placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
