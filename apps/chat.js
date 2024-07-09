@@ -655,6 +655,7 @@ export class chatgpt extends plugin {
     }
     let userSetting = await getUserReplySetting(this.e)
     let useTTS = !!userSetting.useTTS
+
     /** 呆毛版：禁用对话时使用用户头像 ocr/识图 */
     const isImg = await getImg(e, false)
     if (Config.imgOcr && !!isImg) {
@@ -666,17 +667,6 @@ export class chatgpt extends plugin {
         }
         prompt = prompt + ' "'
       }
-    }
-
-    // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
-    if (Config.isReplacePromptForSenderMsg) {
-      prompt = prompt.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
-      prompt = prompt.replace(/_sender_id_/igm, e.sender.user_id)
-      prompt = prompt.replace(/_sender_gender_/igm, e.sender.sex)
-      prompt = prompt.replace(/_sender_age_/igm, e.sender.age)
-      prompt = prompt.replace(/_sender_area_/igm, e.sender.area)
-      prompt = prompt.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
-      prompt = prompt.replace(/_sender_title_/igm, e.sender.title)
     }
 
     // 呆毛版 gemini的识图结果 + prompt

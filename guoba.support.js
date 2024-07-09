@@ -600,18 +600,16 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          field: 'isReplacePromptForSenderMsg',
+          label: '呆毛版 gemini设定拓展',
+          bottomHelpMessage: '（仅限gemini使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；并且附上at用户的名称和qq号。或者使用开启Bing栏目内的在gemini中表现不好的选项：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”；同时开启后会替换设定中的 [name] 字符串为机器人群昵称/昵称。',
+          component: 'Switch'
+        },
+        {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
           bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com',
           component: 'Input'
-        },
-        {
-          component: "Divider",
-          label: "呆毛版提示：gemini获取发送者昵称等信息需要开启Bing栏目内的：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”；同时开启后会替换设定中的 [name] 字符串为机器人群昵称/昵称；",
-          componentProps: {
-            orientation: "left",
-            plain: true,
-          },
         },
         {
           label: '以下为一些杂项配置。',
@@ -930,12 +928,6 @@ export function supportGuoba() {
           field: 'chat_for_First_person',
           label: 'AI回应第一人称呼叫',
           bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
-          component: 'Switch'
-        },
-        {
-          field: 'isReplacePromptForSenderMsg',
-          label: '在设定中替换指定字符串为用户信息',
-          bottomHelpMessage: '_sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；并且附上at用户的名称和qq号。',
           component: 'Switch'
         },
         {
