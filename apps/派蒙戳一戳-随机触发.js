@@ -15,7 +15,7 @@
 //                 priority: 999,
 //                 rule: [
 //                     {
-//                         reg: '#?戳一?戳?',
+//                         reg: '^[^#][sS]*',
 //                         fnc: 'chuoyichuo_ByMeg',
 //                     },
 //                 ]

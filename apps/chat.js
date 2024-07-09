@@ -602,9 +602,10 @@ export class chatgpt extends plugin {
     if (Config.isReplacePromptForSenderMsg) {
       // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
       const atMessage = e.message?.find(item => item.type === "at");
-      prompt = prompt + `。拿出一张名片，上面写着“${atMessage.text}${atMessage.qq ? `，QQ号${atMessage.qq}` : ''}”`
+      if (atMessage)
+        prompt = prompt + `。拿出一张名片，上面写着“${atMessage.text}${atMessage.qq ? `，QQ号${atMessage.qq}` : ''}”`
     }
-    
+
     await this.abstractChat(e, prompt, use)
   }
 
