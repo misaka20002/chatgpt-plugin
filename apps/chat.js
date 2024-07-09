@@ -1023,7 +1023,7 @@ export class chatgpt extends plugin {
               return true
             else {
               console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
-              this.reply('人家不能使用\n' + e.msg);
+              response = '人家不能使用\n' + e.msg;
             }
           } catch (err) {
             console.log('[ChatGPT]调用nai插件错误：', err)
