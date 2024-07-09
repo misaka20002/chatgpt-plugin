@@ -990,7 +990,7 @@ export class chatgpt extends plugin {
 
       // 处理nai3生成 呆毛版 连接NovelAi画图插件
       if (Config.enableNai3PluginToPaint) {
-        let json = response?.match(/({.*})/)?.[1];
+        let json = response?.match(/({.*})/s)?.[1];
         try {
           json = JSON.parse(json)?.tags;
         }
