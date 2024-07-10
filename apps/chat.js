@@ -640,19 +640,20 @@ export class chatgpt extends plugin {
         }
       }
     }
-    // 当前用户有对话许可则不再判断黑名单
-    if (!chatPermission) {
-      if (blacklist.join('').length > 0) {
-        for (const item of blacklist) {
-          if (e.isGroup && !item.startsWith('^') && item === e.group_id.toString()) return false
-          if (item.startsWith('^') && item.slice(1) === e.sender.user_id.toString()) return false
-          if (item.length > 11) {
-            const [group, qq] = item.split('^')
-            if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) return false
-          }
+    // 判断黑名单
+    if (blacklist.join('').length > 0) {
+      for (const item of blacklist) {
+        if (e.isGroup && !item.startsWith('^') && item === e.group_id.toString()) return false
+        if (item.startsWith('^') && item.slice(1) === e.sender.user_id.toString()) return false
+        if (item.length > 11) {
+          const [group, qq] = item.split('^')
+          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) return false
         }
       }
     }
+    // 当白名单设置不为空的时候，使用白名单加黑名单模式
+    if(whitelist.join('').length > 0) return false
+
     let userSetting = await getUserReplySetting(this.e)
     let useTTS = !!userSetting.useTTS
 
