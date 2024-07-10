@@ -992,7 +992,10 @@ export class chatgpt extends plugin {
       if (Config.enableNai3PluginToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
         try {
-          json = JSON.parse(json)?.tags;
+          json = JSON.parse(json);
+          if (!Boolean(json?.Tools.includes("NovelAi")))
+            throw new Error("[ChatGPT]未返回NovelAi绘画用JSON")
+          json = json?.tags
         }
         catch (err) {
           json = false
@@ -1023,7 +1026,7 @@ export class chatgpt extends plugin {
               return true
             else {
               console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
-              response = '人家还不能使用这个啦：\n' + e.msg;
+              response = '人家在这个群不能使用#绘画 功能啦';
             }
           } catch (err) {
             console.log('[ChatGPT]调用nai插件错误：', err)

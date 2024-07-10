@@ -1026,8 +1026,8 @@ export function supportGuoba() {
         },
         {
           field: 'enableNai3PluginToPaint',
-          label: '使用nai插件绘画',
-          bottomHelpMessage: '使用nai插件绘画，需要先安装nai插件',
+          label: 'Gemini使用nai插件绘画',
+          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度或使用#结束对话',
           component: 'Switch'
         },
         {
