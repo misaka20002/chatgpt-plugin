@@ -11,7 +11,10 @@ import {
     generate_msg_randomHellow_TuWeiLoveSpeech,
     generate_msg_randomPlayingMsg
 } from '../utils/randomMessage.js'
-import { generateAudio } from '../utils/common.js'
+import {
+    generateAudio,
+    getUin
+ } from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -59,7 +62,6 @@ export class PaimonChuo extends plugin {
     }
 
     async chuoyichuo(e) {
-        console.log("11")
         if (!Config.paimon_chuoyichuo_open) return false
 
         // 戳一戳响应CD
@@ -95,9 +97,7 @@ export class PaimonChuo extends plugin {
             return true
         }
 
-        console.log("12")
-        if (e.target_id == cfg.qq || e.target_id == BotQQ) {
-            console.log("13")
+        if (e.target_id == cfg.qq || e.target_id == BotQQ ||  e.target_id == getUin(e)) {
             /**统计每日被戳次数 */
             let count = await redis.incr(`paimon_pokecount`);
             // redis记录每日被戳次数，次日零点过期
