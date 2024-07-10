@@ -88,6 +88,8 @@ export default class XinghuoClient {
       APILink = '/v3.1/chat'
     } else if (Config.xhmode === 'apiv3.5') {
       APILink = '/v3.5/chat'
+    } else if (Config.xhmode === 'apiv4.0') {
+      APILink = '/v4.0/chat'
     }
     const date = new Date().toGMTString()
     const algorithm = 'hmac-sha256'
@@ -184,6 +186,8 @@ export default class XinghuoClient {
       domain = 'generalv3'
     } else if (Config.xhmode == 'apiv3.5') {
       domain = 'generalv3.5'
+    } else if (Config.xhmode == 'apiv4.0') {
+      domain = '4.0Ultra'
     }
     // 编写消息内容
     const wsSendData = {
@@ -383,7 +387,7 @@ export default class XinghuoClient {
     let chatId = option?.chatId
     let image = option?.image
 
-    if (Config.xhmode == 'api' || Config.xhmode == 'apiv2' || Config.xhmode == 'apiv3' || Config.xhmode == 'apiv3.5' || Config.xhmode == 'assistants') {
+    if (Config.xhmode == 'api' || Config.xhmode == 'apiv2' || Config.xhmode == 'apiv3' || Config.xhmode == 'apiv3.5' || Config.xhmode == 'assistants' || Config.xhmode == 'apiv4.0') {
       if (!Config.xhAppId || !Config.xhAPISecret || !Config.xhAPIKey) throw new Error('未配置api')
       let Prompt = []
       // 设定
@@ -458,7 +462,7 @@ export default class XinghuoClient {
         images
       }
     } else {
-      throw new Error('星火模式错误')
+      throw new Error('未知的模式' + Config.xhmode)
     }
   }
 
