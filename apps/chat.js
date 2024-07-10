@@ -1014,6 +1014,29 @@ export class chatgpt extends plugin {
           json = false
         }
         if (json) {
+          // 硬编码为角色添加作品名
+          json = json.replace(/nahida/igm, "nahida_(genshin_impact)")
+          json = json.replace(/klee/igm, "klee_(genshin_impact)")
+          json = json.replace(/paimon/igm, "paimon_(genshin_impact)")
+          json = json.replace(/bailu/igm, "bailu_(honkai:_star_rail)")
+          json = json.replace(/clara/igm, "clara_(honkai:_star_rail)")
+          json = json.replace(/last_order/igm, "last_order(Toaru_Majutsu_no_Index)")
+          json = json.replace(/sayu/igm, "sayu_(genshin_impact)")
+          json = json.replace(/diona/igm, "diona_(genshin_impact)")
+          json = json.replace(/yaoyao/igm, "yaoyao_(genshin_impact)")
+          json = json.replace(/qiqi/igm, "qiqi_(genshin_impact)")
+          json = json.replace(/furina/igm, "furina_(Genshin_Impact)")
+          json = json.replace(/Oyama_Mahiro/igm, "Oyama_Mahiro(Onichanhaoshimai)")
+          json = json.replace(/arona/igm, "arona_(blue_archive)")
+          json = json.replace(/sora/igm, "sora_(blue_archive)")
+          json = json.replace(/kokona/igm, "kokona_(blue_archive)")
+          json = json.replace(/hoshino/igm, "hoshino_(blue_archive)")
+          json = json.replace(/Shimoe_Koharu/igm, "Shimoe_Koharu_(Blue archive)")
+          json = json.replace(/Gawr_Gura/igm, "Gawr_Gura_(Hololive)")
+          json = json.replace(/suzuran/igm, "suzuran_(arknights)")
+          json = json.replace(/Anya_Forger/igm, "Anya_Forger(SPY×FAMILY) light pink hair")
+          json = json.replace(/nakano_Azusa/igm, "nakano_Azusa(K-ON)")
+
           if (Config.enableNai3PluginToPaint) {
             // 使用nai插件
             let nai
