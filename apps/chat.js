@@ -500,7 +500,7 @@ export class chatgpt extends plugin {
         return false
       }
 
-      // 如果仅At机器人而没有msg则调用戳一戳
+      // 如果仅At机器人而没有msg则调用戳一戳，发现崽根本就不传递At空msg，用不了
       if (!msg) {
         if (!e.isGroup) return false
         e.operator_id = e.user_id
