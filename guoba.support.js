@@ -1031,9 +1031,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableApPluginToPaint',
+          label: 'Gemini使用ap插件绘画',
+          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度或使用#结束对话',
+          component: 'Switch'
+        },
+        {
           field: 'nai3PluginToPaintPrefix',
-          label: 'nai插件绘画前缀',
-          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等',
+          label: 'Gemini绘画的前缀',
+          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
           component: 'Input',
           componentProps: {
             placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',

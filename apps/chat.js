@@ -988,8 +988,8 @@ export class chatgpt extends plugin {
         if (quote.imageLink) imgUrls.push(quote.imageLink)
       }
 
-      // 处理nai3生成 呆毛版 连接NovelAi画图插件
-      if (Config.enableNai3PluginToPaint) {
+      // 处理nai3生成 呆毛版 连接画图插件
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
         try {
           json = JSON.parse(json);
@@ -1001,35 +1001,67 @@ export class chatgpt extends plugin {
           json = false
         }
         if (json) {
-          // 使用nai插件
-          let nai
+          if (Config.enableNai3PluginToPaint) {
+            // 使用nai插件
+            let nai
+            try {
+              let { txt2img } = await import('../../nai-plugin/apps/Txt2img.js')
+              nai = new txt2img();
+            } catch (err) {
+              console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
+            }
+            try {
+              // 随机使用宽图或竖图
+              let strPaint = ''
+              const random_nai = Math.random();
+              if (random_nai < 0.3) {
+                strPaint = '宽图'
+              }
+              else if (random_nai < 0.6) {
+                strPaint = '方图'
+              }
+              e.msg = `#绘画${strPaint}` + Config.nai3PluginToPaintPrefix + ', ' + json + ', best quality, amazing quality, very aesthetic, absurdres'
+              console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
+              let isTrue = await nai.txt2img(e);
+              if (isTrue)
+                return true
+              else {
+                console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
+                response = '人家在这个群还不能使用#绘画 功能啦';
+              }
+            } catch (err) {
+              console.log('[ChatGPT]调用nai插件错误：', err)
+            }
+          }
+        }
+        else if (Config.enableApPluginToPaint) {
+          // 使用ap插件
+          let ap
           try {
-            let { txt2img } = await import('../../nai-plugin/apps/Txt2img.js')
-            nai = new txt2img();
+            let { Ai_Painting } = await import('../../ap-plugin/apps/aiPainting.js')
+            ap = new Ai_Painting()
           } catch (err) {
-            console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
+            try {
+              // ap的dev分支改名了
+              let { Ai_Painting } = await import('../../ap-plugin/apps/ai_painting.js')
+              ap = new Ai_Painting()
+            } catch (err2) {
+              console.log('[ChatGPT]调用ap插件错误-未安装ap插件')
+            }
           }
           try {
-            // 随机使用宽图或竖图
-            let strPaint = ''
-            const random_nai = Math.random();
-            if (random_nai < 0.3) {
-              strPaint = '宽图'
-            }
-            else if (random_nai < 0.6) {
-              strPaint = '方图'
-            }
-            e.msg = `#绘画${strPaint}` + Config.nai3PluginToPaintPrefix + ', ' + json + ', best quality, amazing quality, very aesthetic, absurdres'
-            console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
-            let isTrue = await nai.txt2img(e);
+            e.msg = '#绘图' + Config.nai3PluginToPaintPrefix + ', ' + json + ', best quality, amazing quality, very aesthetic, absurdres'
+            console.log('[ChatGPT]开始调用ap插件绘画：\nmsg: ', e.msg)
+            let isTrue = await ap.aiPainting(e);
             if (isTrue)
               return true
             else {
-              console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
-              response = '人家在这个群不能使用#绘画 功能啦';
+              console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
+              response = '人家在这个群还不能使用#绘图 功能啦';
+              // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
             }
           } catch (err) {
-            console.log('[ChatGPT]调用nai插件错误：', err)
+            console.log('[ChatGPT]调用ap插件错误：', err)
           }
         }
       }

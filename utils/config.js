@@ -90,6 +90,7 @@ const defaultConfig = {
   isReplacePromptForSenderMsg: true,
   switchToNai3PluginToPaint: false,
   enableNai3PluginToPaint: false,
+  enableApPluginToPaint: false,
   nai3PluginToPaintPrefix: "paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
   paimon_chuoyichuo_open: true,
   paimon_chuoyichuo_ByMsgGroups: [],
