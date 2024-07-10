@@ -503,12 +503,15 @@ export class chatgpt extends plugin {
         return false
       }
 
+      console.log("00")
       // if (!msg) { // 发现崽根本就不传递At空msg，用不了，改 戳
       if (Boolean(e.msg.match(/^#?戳$/))) {
+        console.log("01")
         e.operator_id = e.user_id
         e.target_id = getUin(e)
         const chatgptPaimonChuo = new PaimonChuo();
         chatgptPaimonChuo.chuoyichuo(e);
+        console.log("02")
         return true
       }
 
