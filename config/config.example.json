@@ -87,7 +87,7 @@
   "Fish_Top_P": 0.7,
   "Fish_Repetition_Penalty": 1.5,
   "Fish_Temperature": 0.7,
-  "api_fish_audio_model": "eacc56f8ab48443fa84421c547d3b60e",
+  "api_fish_audio_model": "efc1ce3726a64bbc947d53a1465204aa",
   "api_fish_audio_token": "Your Bearer Token",
   "recognitionByGemini": false,
   "ttsHD": false,

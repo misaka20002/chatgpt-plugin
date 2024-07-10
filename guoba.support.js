@@ -1068,7 +1068,7 @@ export function supportGuoba() {
         {
           field: 'api_fish_audio_model',
           label: 'api_fish_audio_model',
-          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是eacc56f8ab48443fa84421c547d3b60e；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
+          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
           component: 'Input'
         },
         {
