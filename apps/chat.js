@@ -499,10 +499,12 @@ export class chatgpt extends plugin {
       if (e.msg?.startsWith('#')) {
         return false
       }
+      if ((e.isGroup || e.group_id) && !(e.atme || e.atBot || (e.at === e.self_id))) {
+        return false
+      }
 
-      // 如果仅At机器人而没有msg则调用戳一戳，发现崽根本就不传递At空msg，用不了
-      if (!msg) {
-        if (!e.isGroup) return false
+      // if (!msg) { // 发现崽根本就不传递At空msg，用不了，改 戳
+      if (Boolean(e.msg.match(/^#?戳/))) {
         e.operator_id = e.user_id
         e.target_id = getUin(e)
         const chatgptPaimonChuo = new PaimonChuo();
@@ -510,9 +512,6 @@ export class chatgpt extends plugin {
         return true
       }
 
-      if ((e.isGroup || e.group_id) && !(e.atme || e.atBot || (e.at === e.self_id))) {
-        return false
-      }
       if (e.user_id == getUin(e)) return false
       prompt = msg.trim()
       try {
