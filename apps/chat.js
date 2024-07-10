@@ -664,7 +664,7 @@ export class chatgpt extends plugin {
       }
     }
     // 当白名单设置不为空的时候，使用白名单加黑名单模式
-    if(whitelist.join('').length > 0) return false
+    if(whitelist.join('').length > 0 && !chatPermission) return false
 
     let userSetting = await getUserReplySetting(this.e)
     let useTTS = !!userSetting.useTTS
