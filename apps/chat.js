@@ -41,6 +41,7 @@ let proxy = getProxy()
 // 使机器人可以对其第一人称回应
 const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
 import { recognitionResultsByGemini } from '../utils/paimonFuction.js'
+import { PaimonChuo } from '../apps/派蒙戳一戳.js'
 
 /**
  * 每个对话保留的时长。单个对话内ai是保留上下文的。超时后销毁对话，再次对话创建新的对话。
@@ -495,9 +496,20 @@ export class chatgpt extends plugin {
     let msg = e.msg
     let prompt
     if (this.toggleMode === 'at') {
-      if (!msg || e.msg?.startsWith('#')) {
+      if (e.msg?.startsWith('#')) {
         return false
       }
+
+      // 如果仅At机器人而没有msg则调用戳一戳
+      if (!msg) {
+        if (!e.isGroup) return false
+        e.operator_id = e.user_id
+        e.target_id = getUin(e)
+        const chatgptPaimonChuo = new PaimonChuo();
+        chatgptPaimonChuo.chuoyichuo(e);
+        return true
+      }
+
       if ((e.isGroup || e.group_id) && !(e.atme || e.atBot || (e.at === e.self_id))) {
         return false
       }

@@ -94,7 +94,7 @@ export class PaimonChuo extends plugin {
             return true
         }
 
-        if (e.fromChuoyichuo_ByMeg || e.target_id == cfg.qq || BotQQ == e.operator_id) {
+        if (e.target_id == cfg.qq || e.target_id == BotQQ) {
             /**统计每日被戳次数 */
             let count = await redis.incr(`paimon_pokecount`);
             // redis记录每日被戳次数，次日零点过期
