@@ -496,7 +496,7 @@ export class chatgpt extends plugin {
     let msg = e.msg
     let prompt
     if (this.toggleMode === 'at') {
-      if (e.msg?.startsWith('#')) {
+      if (!msg || e.msg?.startsWith('#')) {
         return false
       }
       if ((e.isGroup || e.group_id) && !(e.atme || e.atBot || (e.at === e.self_id))) {
@@ -668,8 +668,8 @@ export class chatgpt extends plugin {
     let userSetting = await getUserReplySetting(this.e)
     let useTTS = !!userSetting.useTTS
 
-    /** 呆毛版：禁用对话时使用用户头像 ocr/识图 */
-    const isImg = await getImg(e, false)
+    /** 呆毛版：对话获取At用户头像 ocr/识图 */
+    const isImg = await getImg(e)
     if (Config.imgOcr && !!isImg) {
       let imgOcrText = await getImageOcrText(e)
       if (imgOcrText) {
