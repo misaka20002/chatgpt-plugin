@@ -717,16 +717,10 @@ export async function getUserReplySetting (e) {
 export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
   let reply;
   if (alsoGetAtAvatar && e.at && !e.source && !e.reply_id && !e.img) {
-    if (e.atBot) {
-      const setting = await Config.getSetting();
-      if (setting.shield) {
-        delete e.img;
-      } else {
-        e.img = [];
-        e.img[0] =
-          e.bot.avatar || `https://q1.qlogo.cn/g?b=qq&s=0&nk=${Bot.uin}`;
-      }
-    }
+    // if (e.atBot) { // 不获取Bot的头像，无意义
+    //   e.img = [];
+    //   e.img[0] = e.bot.avatar || `https://q1.qlogo.cn/g?b=qq&s=0&nk=${getUin(e)}`;
+    // }
     if (e.at) {
       try {
         e.img = [await e.group.pickMember(e.at).getAvatarUrl()];

@@ -88,7 +88,7 @@ export class voicechangehelp extends plugin {
                     permission: 'master'
                 },
                 {
-                    reg: '^#派蒙戳(一戳)?(保存|添加)(图片|表情)$',
+                    reg: '^#派蒙戳(一戳)?(保存|添加)(图片|表情(包)?)$',
                     fnc: 'paimon_chuo_save_img',
                     permission: 'master'
                 },

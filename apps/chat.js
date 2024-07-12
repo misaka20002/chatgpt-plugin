@@ -609,14 +609,6 @@ export class chatgpt extends plugin {
     // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
     prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
 
-    // 呆毛版 在 prompt 中替换文本使用 e.at 信息
-    if (Config.isReplacePromptForSenderMsg) {
-      // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
-      const atMessage = e.message?.find(item => item.type === "at");
-      if (atMessage)
-        prompt = prompt + `。拿出一张名片，上面写着“${atMessage.text}${atMessage.qq ? `，QQ号${atMessage.qq}` : ''}”`
-    }
-
     await this.abstractChat(e, prompt, use)
   }
 
@@ -679,6 +671,14 @@ export class chatgpt extends plugin {
         }
         prompt = prompt + ' "'
       }
+    }
+
+    // 呆毛版 在 prompt 中替换文本使用 e.at 信息
+    if (Config.isReplacePromptForSenderMsg) {
+      // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
+      const atMessage = e.message?.find(item => item?.type === "at" && item?.qq != getUin(e));
+      if (atMessage)
+        prompt = `照片上还写着“${atMessage?.text?.replace(/^@/g, '')}${atMessage?.qq ? `，QQ号${atMessage?.qq}` : ''}”` + prompt
     }
 
     // 呆毛版 gemini的识图结果 + prompt

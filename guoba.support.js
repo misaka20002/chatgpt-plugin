@@ -234,7 +234,7 @@ export function supportGuoba() {
         {
           field: 'bingAPDraw',
           label: '使用AP插件代替Bing进行绘图',
-          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容',
+          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容；都启用则优先级：nai > ap > bing',
           component: 'Switch'
         },
         {
@@ -625,6 +625,27 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'enableNai3PluginToPaint',
+          label: '呆毛版 Gemini使用nai插件绘画',
+          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度或使用#结束对话',
+          component: 'Switch'
+        },
+        {
+          field: 'enableApPluginToPaint',
+          label: '呆毛版 Gemini使用ap插件绘画',
+          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度或使用#结束对话；都启用则优先级：nai > ap',
+          component: 'Switch'
+        },
+        {
+          field: 'nai3PluginToPaintPrefix',
+          label: '呆毛版 Gemini绘画的前缀',
+          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
+          },
+        },
+        {
           label: '以下为一些杂项配置。',
           component: 'Divider'
         },
@@ -829,19 +850,20 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableDraw',
+          label: 'OpenAI绘图功能开关',
+          bottomHelpMessage: '注意OpenAI token的消耗，绘制大小为1024x1024的1张图片，预计消耗0.24美元余额；指令：#dalle3(画图|绘图)  #(chatgpt|dalle)编辑图片  #(搞|改)(她|他)头像  #(chatgpt|ChatGPT|dalle|Dalle)(修图|图片变形|改图)  #(chatgpt|ChatGPT|dalle|Dalle)(绘图|画图)；不受此限制的可用指令：#bing(画图|绘图)',
+          component: 'Switch'
+        },
+        {
           field: 'drawCD',
-          label: '绘图CD',
+          label: 'OpenAI绘图CD',
           helpMessage: '单位：秒',
           bottomHelpMessage: '绘图指令的CD时间，主人不受限制',
           component: 'InputNumber',
           componentProps: {
             min: 0
           }
-        },
-        {
-          field: 'enableDraw',
-          label: '绘图功能开关',
-          component: 'Switch'
         },
         {
           label: '以下为Suno音乐合成的配置。',
@@ -1022,27 +1044,6 @@ export function supportGuoba() {
           label: '戳一戳使用涩图api',
           bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
           component: 'Switch'
-        },
-        {
-          field: 'enableNai3PluginToPaint',
-          label: 'Gemini使用nai插件绘画',
-          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度或使用#结束对话',
-          component: 'Switch'
-        },
-        {
-          field: 'enableApPluginToPaint',
-          label: 'Gemini使用ap插件绘画',
-          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度或使用#结束对话',
-          component: 'Switch'
-        },
-        {
-          field: 'nai3PluginToPaintPrefix',
-          label: 'Gemini绘画的前缀',
-          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
-          component: 'Input',
-          componentProps: {
-            placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
-          },
         },
         {
           label: '呆毛版 VITS语音自定义设置：可用命令#tts语音帮助 ；先在本页设置好：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
