@@ -14,7 +14,7 @@ import {
 import {
     generateAudio,
     getUin
- } from '../utils/common.js'
+} from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -97,7 +97,7 @@ export class PaimonChuo extends plugin {
             return true
         }
 
-        if (e.target_id == cfg.qq || e.target_id == BotQQ ||  e.target_id == getUin(e)) {
+        if (e.target_id == cfg.qq || e.target_id == BotQQ || e.target_id == getUin(e)) {
             /**统计每日被戳次数 */
             let count = await redis.incr(`paimon_pokecount`);
             // redis记录每日被戳次数，次日零点过期
@@ -340,7 +340,7 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机表情包生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 7)
+                let mutetype = Math.ceil(Math.random() * 8)
                 switch (mutetype) {
                     case 1:
                         await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
@@ -361,8 +361,9 @@ export class PaimonChuo extends plugin {
                         await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
                         break;
                     case 7:
+                    case 8:
                         let randomPlayingMsg = await generate_msg_randomPlayingMsg()
-                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${e.sender.nickname}","message":"${randomPlayingMsg}"}`))
+                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${e.sender.card || e.sender.nickname}","message":"${randomPlayingMsg}"}`))
                         break;
                 }
             }

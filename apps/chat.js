@@ -1000,41 +1000,44 @@ export class chatgpt extends plugin {
         if (quote.imageLink) imgUrls.push(quote.imageLink)
       }
 
-      // 处理nai3生成 呆毛版 连接画图插件
+      // 处理 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
+        let jsonTags
         try {
           json = JSON.parse(json);
-          if (!Boolean(json?.Tools.includes("NovelAi")))
+          if (!Boolean(json?.Tools.match(/NovelAi/i)))
             throw new Error("[ChatGPT]未返回NovelAi绘画用JSON")
-          json = json?.tags
+          jsonTags = json?.tags
         }
         catch (err) {
-          json = false
+          jsonTags = false
         }
-        if (json) {
+        if (jsonTags) {
+          // gpt的回复语句
+          response = json?.msg
           // 硬编码为角色添加作品名
-          json = json.replace(/nahida/igm, "nahida_(genshin_impact)")
-          json = json.replace(/klee/igm, "klee_(genshin_impact)")
-          json = json.replace(/paimon/igm, "paimon_(genshin_impact)")
-          json = json.replace(/bailu/igm, "bailu_(honkai:_star_rail)")
-          json = json.replace(/clara/igm, "clara_(honkai:_star_rail)")
-          json = json.replace(/last_order/igm, "last_order(Toaru_Majutsu_no_Index)")
-          json = json.replace(/sayu/igm, "sayu_(genshin_impact)")
-          json = json.replace(/diona/igm, "diona_(genshin_impact)")
-          json = json.replace(/yaoyao/igm, "yaoyao_(genshin_impact)")
-          json = json.replace(/qiqi/igm, "qiqi_(genshin_impact)")
-          json = json.replace(/furina/igm, "furina_(Genshin_Impact)")
-          json = json.replace(/Oyama_Mahiro/igm, "Oyama_Mahiro(Onichanhaoshimai)")
-          json = json.replace(/arona/igm, "arona_(blue_archive)")
-          json = json.replace(/sora/igm, "sora_(blue_archive)")
-          json = json.replace(/kokona/igm, "kokona_(blue_archive)")
-          json = json.replace(/hoshino/igm, "hoshino_(blue_archive)")
-          json = json.replace(/Shimoe_Koharu/igm, "Shimoe_Koharu_(Blue archive)")
-          json = json.replace(/Gawr_Gura/igm, "Gawr_Gura_(Hololive)")
-          json = json.replace(/suzuran/igm, "suzuran_(arknights)")
-          json = json.replace(/Anya_Forger/igm, "Anya_Forger(SPY×FAMILY) light pink hair")
-          json = json.replace(/nakano_Azusa/igm, "nakano_Azusa(K-ON)")
+          jsonTags = jsonTags.replace(/nahida/igm, "nahida_(genshin_impact)")
+          jsonTags = jsonTags.replace(/klee/igm, "klee_(genshin_impact)")
+          jsonTags = jsonTags.replace(/paimon/igm, "paimon_(genshin_impact)")
+          jsonTags = jsonTags.replace(/bailu/igm, "bailu_(honkai:_star_rail)")
+          jsonTags = jsonTags.replace(/clara/igm, "clara_(honkai:_star_rail)")
+          jsonTags = jsonTags.replace(/last_order/igm, "last_order(Toaru_Majutsu_no_Index)")
+          jsonTags = jsonTags.replace(/sayu/igm, "sayu_(genshin_impact)")
+          jsonTags = jsonTags.replace(/diona/igm, "diona_(genshin_impact)")
+          jsonTags = jsonTags.replace(/yaoyao/igm, "yaoyao_(genshin_impact)")
+          jsonTags = jsonTags.replace(/qiqi/igm, "qiqi_(genshin_impact)")
+          jsonTags = jsonTags.replace(/furina/igm, "furina_(Genshin_Impact)")
+          jsonTags = jsonTags.replace(/Oyama_Mahiro/igm, "Oyama_Mahiro(Onichanhaoshimai)")
+          jsonTags = jsonTags.replace(/arona/igm, "arona_(blue_archive)")
+          jsonTags = jsonTags.replace(/sora/igm, "sora_(blue_archive)")
+          jsonTags = jsonTags.replace(/kokona/igm, "kokona_(blue_archive)")
+          jsonTags = jsonTags.replace(/hoshino/igm, "hoshino_(blue_archive)")
+          jsonTags = jsonTags.replace(/Shimoe_Koharu/igm, "Shimoe_Koharu_(Blue archive)")
+          jsonTags = jsonTags.replace(/Gawr_Gura/igm, "Gawr_Gura_(Hololive)")
+          jsonTags = jsonTags.replace(/suzuran/igm, "suzuran_(arknights)")
+          jsonTags = jsonTags.replace(/Anya_Forger/igm, "Anya_Forger(SPY×FAMILY) light pink hair")
+          jsonTags = jsonTags.replace(/nakano_Azusa/igm, "nakano_Azusa(K-ON)")
 
           if (Config.enableNai3PluginToPaint) {
             // 使用nai插件
@@ -1055,11 +1058,13 @@ export class chatgpt extends plugin {
               else if (random_nai < 0.6) {
                 strPaint = '方图'
               }
-              e.msg = `#绘画${strPaint}` + Config.nai3PluginToPaintPrefix + ', ' + json + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#绘画${strPaint}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
               let isTrue = await nai.txt2img(e);
-              if (isTrue)
-                return true
+              if (isTrue) {
+                if (!response)
+                  return true
+              }
               else {
                 console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
                 response = '人家在这个群还不能使用#绘画 功能啦';
@@ -1068,35 +1073,37 @@ export class chatgpt extends plugin {
               console.log('[ChatGPT]调用nai插件错误：', err)
             }
           }
-        }
-        else if (Config.enableApPluginToPaint) {
-          // 使用ap插件
-          let ap
-          try {
-            let { Ai_Painting } = await import('../../ap-plugin/apps/aiPainting.js')
-            ap = new Ai_Painting()
-          } catch (err) {
+          else if (Config.enableApPluginToPaint) {
+            // 使用ap插件
+            let ap
             try {
-              // ap的dev分支改名了
-              let { Ai_Painting } = await import('../../ap-plugin/apps/ai_painting.js')
+              let { Ai_Painting } = await import('../../ap-plugin/apps/aiPainting.js')
               ap = new Ai_Painting()
-            } catch (err2) {
-              console.log('[ChatGPT]调用ap插件错误-未安装ap插件')
+            } catch (err) {
+              try {
+                // ap的dev分支改名了
+                let { Ai_Painting } = await import('../../ap-plugin/apps/ai_painting.js')
+                ap = new Ai_Painting()
+              } catch (err2) {
+                console.log('[ChatGPT]调用ap插件错误-未安装ap插件')
+              }
             }
-          }
-          try {
-            e.msg = '#绘图' + Config.nai3PluginToPaintPrefix + ', ' + json + ', best quality, amazing quality, very aesthetic, absurdres'
-            console.log('[ChatGPT]开始调用ap插件绘画：\nmsg: ', e.msg)
-            let isTrue = await ap.aiPainting(e);
-            if (isTrue)
-              return true
-            else {
-              console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
-              response = '人家在这个群还不能使用#绘图 功能啦';
-              // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
+            try {
+              e.msg = '#绘图' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              console.log('[ChatGPT]开始调用ap插件绘画：\nmsg: ', e.msg)
+              let isTrue = await ap.aiPainting(e);
+              if (isTrue) {
+                if (!response)
+                  return true
+              }
+              else {
+                console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
+                response = '人家在这个群还不能使用#绘图 功能啦';
+                // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
+              }
+            } catch (err) {
+              console.log('[ChatGPT]调用ap插件错误：', err)
             }
-          } catch (err) {
-            console.log('[ChatGPT]调用ap插件错误：', err)
           }
         }
       }
