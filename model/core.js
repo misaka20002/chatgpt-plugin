@@ -814,8 +814,9 @@ class Core {
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply based on your character settings"}```.'
-        // system += 'If I ask you to generate picture prompt or painting, you need to reply with keywords in English suitable for Stable Difussion to generate picture. The keywords you writed is to refer to the formatting writing, usage, and detailing of the above prompts content format about Stable Difussion, and do your best, your imagination, to give its corresponding positive and negative prompts. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags"}```.'
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
+        // system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply based on your character settings"}```.'
+        // system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your personality"}```.'
       }
 
       if (Config.enableGroupContext && e.isGroup) {
