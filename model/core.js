@@ -639,6 +639,12 @@ class Core {
         }
         option = Object.assign(option, conversation)
       }
+
+      // 呆毛版 连接画图插件
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
+      }
+
       if (Config.smartMode) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
         let sender = e.sender.user_id
@@ -815,8 +821,6 @@ class Core {
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
         system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
-        // system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply based on your character settings"}```.'
-        // system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your personality"}```.'
       }
 
       if (Config.enableGroupContext && e.isGroup) {
@@ -866,6 +870,12 @@ class Core {
       let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, maxModelTokens)
+
+      // 呆毛版 连接画图插件
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
+      }
+
       if (Config.enableChatSuno) {
         system += 'If I ask you to generate music or write songs, you need to reply with information suitable for Suno to generate music. Please use keywords such as Verse, Chorus, Bridge, Outro, and End to segment the lyrics, such as [Verse 1], The returned song information needs to be wrapped in JSON format and sent to me in Markdown format. The message structure is ` ` JSON {"option": "Suno", "tags": "style", "title": "title of The Song", "lyrics": "lyrics"} `.'
       }

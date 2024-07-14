@@ -234,7 +234,7 @@ export function supportGuoba() {
         {
           field: 'bingAPDraw',
           label: '使用AP插件代替Bing进行绘图',
-          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容；都启用则优先级：nai > ap > bing',
+          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容；优先级：nai > ap > bing',
           component: 'Switch'
         },
         {
@@ -623,27 +623,6 @@ export function supportGuoba() {
           label: 'Gemini反代',
           bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com',
           component: 'Input'
-        },
-        {
-          field: 'enableNai3PluginToPaint',
-          label: '呆毛版 Gemini使用nai插件绘画',
-          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度或使用#结束对话',
-          component: 'Switch'
-        },
-        {
-          field: 'enableApPluginToPaint',
-          label: '呆毛版 Gemini使用ap插件绘画',
-          bottomHelpMessage: '用法：使用Gemini并告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度或使用#结束对话；都启用则优先级：nai > ap',
-          component: 'Switch'
-        },
-        {
-          field: 'nai3PluginToPaintPrefix',
-          label: '呆毛版 Gemini绘画的前缀',
-          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
-          component: 'Input',
-          componentProps: {
-            placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
-          },
         },
         {
           label: '以下为一些杂项配置。',
@@ -1044,6 +1023,27 @@ export function supportGuoba() {
           label: '戳一戳使用涩图api',
           bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
           component: 'Switch'
+        },
+        {
+          field: 'enableNai3PluginToPaint',
+          label: '连接nai插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；',
+          component: 'Switch'
+        },
+        {
+          field: 'enableApPluginToPaint',
+          label: '连接ap插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap',
+          component: 'Switch'
+        },
+        {
+          field: 'nai3PluginToPaintPrefix',
+          label: '连接绘画插件的前缀',
+          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
+          },
         },
         {
           label: '呆毛版 VITS语音自定义设置：可用命令#tts语音帮助 ；先在本页设置好：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
