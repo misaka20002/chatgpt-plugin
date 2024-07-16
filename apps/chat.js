@@ -1004,24 +1004,27 @@ export class chatgpt extends plugin {
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
         let jsonTags, jsonMsg
-        try {
-          json = JSON.parse(json);
-          if (!Boolean(json?.Tools.match(/NovelAi/i)))
-            throw new Error("[ChatGPT]未返回NovelAi绘画用JSON")
-          jsonTags = json?.tags
-          jsonMsg = json?.msg || `${Config.tts_First_person}头有点晕`
-        }
-        catch (err) {
-          jsonTags = false
+        if (json) {
+          try {
+            json = JSON.parse(json);
+            if (!Boolean(json?.Tools.match(/NovelAi/i)))
+              throw new Error("[ChatGPT]未返回NovelAi绘画用JSON")
+            jsonTags = json?.tags
+            jsonMsg = json?.msg || `${Config.tts_First_person}头有点晕`
+          }
+          catch (err) {
+            jsonTags = false
+          }
         }
         // 处理 response 太长了以至于少了最后的 } 的情况
         if (!jsonTags) {
           let json2
-          if (Boolean(response?.match(/"Tools": "NovelAi"/i)))
+          if (Boolean(response?.match(/"Tools": "NovelAi"/i))) {
             json2 = response?.match(/"tags": "(.*)/si)?.[1] || response?.replace(/"Tools": "NovelAi"|\`\`\`(json)?|"tags":?/ig, "")
-          if (json2) {
-            jsonTags = json2;
-            jsonMsg = `这个太难了，${Config.tts_First_person}头晕晕了`;
+            if (json2) {
+              jsonTags = json2;
+              jsonMsg = `这个太难了，${Config.tts_First_person}头晕晕了`;
+            }
           }
         }
         // 开始调用绘画插件
