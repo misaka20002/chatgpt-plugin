@@ -1003,19 +1003,34 @@ export class chatgpt extends plugin {
       // 处理 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
-        let jsonTags
+        let jsonTags, jsonMsg
         try {
           json = JSON.parse(json);
           if (!Boolean(json?.Tools.match(/NovelAi/i)))
             throw new Error("[ChatGPT]未返回NovelAi绘画用JSON")
           jsonTags = json?.tags
+          jsonMsg = json?.msg || `${Config.tts_First_person}头有点晕`
         }
         catch (err) {
           jsonTags = false
         }
+        // 处理 response 太长了以至于少了最后的 } 的情况
+        if (!jsonTags) {
+          let json2
+          if (Boolean(response?.match(/"Tools": "NovelAi"/i)))
+            json2 = response?.match(/"tags": "(.*)/si)?.[1] || response?.replace(/"Tools": "NovelAi"|\`\`\`(json)?|"tags":?/ig, "")
+          if (json2) {
+            jsonTags = json2;
+            jsonMsg = `这个太难了，${Config.tts_First_person}头晕晕了`;
+          }
+        }
+        // 开始调用绘画插件
         if (jsonTags) {
+          // 处理GPT Bug
+          if (Boolean(jsonMsg?.match(/Your reply matches your character settings|matches your character/i)))
+            jsonMsg = `这个太难了，${Config.tts_First_person}头有点晕`
           // gpt的回复语句
-          response = json?.msg
+          response = jsonMsg
           // 硬编码为角色添加作品名
           jsonTags = jsonTags.replace(/nahida/igm, "{{nahida_(genshin_impact)}}")
           jsonTags = jsonTags.replace(/klee/igm, "{{klee_(genshin_impact)}}")
@@ -1067,7 +1082,7 @@ export class chatgpt extends plugin {
               }
               else {
                 console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
-                response = '人家在这个群还不能使用#绘画 功能啦';
+                response = `${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`;
               }
             } catch (err) {
               console.log('[ChatGPT]调用nai插件错误：', err)
@@ -1098,7 +1113,7 @@ export class chatgpt extends plugin {
               }
               else {
                 console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
-                response = '人家在这个群还不能使用#绘图 功能啦';
+                response = `${Config.tts_First_person}在这个群还不能使用#绘图 功能啦`;
                 // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
               }
             } catch (err) {
