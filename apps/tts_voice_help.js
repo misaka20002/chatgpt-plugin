@@ -202,7 +202,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             let strsLenght = strs.length
             for (let i = 0; i < batchSpeakersNum; i++) {
                 speakersSliced = speakers_vits_uma_genshin_honkai.slice(i * 50, (i + 1) * 50)
-                strs[i + strsLenght] = '中文ZH角色：\n'
+                strs[i + strsLenght] = '可选角色：\n'
                 for (let j = 0; j < speakersSliced.length; j++) {
                     if (j % 2 == 0) {
                         strs[i + strsLenght] += speakersSliced[j] + "　　"

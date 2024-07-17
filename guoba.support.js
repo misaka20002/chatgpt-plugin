@@ -625,7 +625,7 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
-          label: '以下为一些杂项配置。',
+          label: '以下为通用配置。',
           component: 'Divider'
         },
         {
@@ -675,113 +675,6 @@ export function supportGuoba() {
           field: 'defaultUsePicture',
           label: '全局图片模式',
           bottomHelpMessage: '全局默认以图片形式回复',
-          component: 'Switch'
-        },
-        {
-          field: 'defaultUseTTS',
-          label: '全局语音模式',
-          bottomHelpMessage: '全局默认以语音形式回复，使用默认角色音色',
-          component: 'Switch'
-        },
-        {
-          field: 'ttsMode',
-          label: '语音模式源',
-          bottomHelpMessage: '语音模式下使用何种语音源进行文本->音频转换',
-          component: 'Select',
-          componentProps: {
-            options: [
-              {
-                label: 'vits-uma-genshin-honkai',
-                value: 'vits-uma-genshin-honkai'
-              },
-              {
-                label: '微软Azure',
-                value: 'azure'
-              },
-              {
-                label: 'VoiceVox',
-                value: 'voicevox'
-              }
-            ]
-          }
-        },
-        {
-          field: 'defaultTTSRole',
-          label: 'vits默认角色',
-          bottomHelpMessage: 'vits-uma-genshin-honkai语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定。*2024年3月31日新增碧蓝档案等角色（"阿慈谷日富美"及其下角色）语音，仅支持日语语言，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。#tts可选人物列表',
-          component: 'Select',
-          componentProps: {
-            options: [{
-              label: '随机',
-              value: '随机'
-            }].concat(speakers.map(s => { return { label: s, value: s } }))
-          }
-        },
-        {
-          field: 'azureTTSSpeaker',
-          label: 'Azure默认角色',
-          bottomHelpMessage: '微软Azure语音模式下，未指定角色时使用的角色。若用户通过指令指定了角色，将忽略本设定',
-          component: 'Select',
-          componentProps: {
-            options: [{
-              label: '随机',
-              value: '随机'
-            },
-            ...azureRoleList.flatMap(item => [
-              item.roleInfo
-            ]).map(s => ({
-              label: s,
-              value: s
-            }))]
-          }
-        },
-        {
-          field: 'voicevoxTTSSpeaker',
-          label: 'VoiceVox默认角色',
-          bottomHelpMessage: 'VoiceVox语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定',
-          component: 'Select',
-          componentProps: {
-            options: [{
-              label: '随机',
-              value: '随机'
-            },
-            ...voxRoleList.flatMap(item => [
-              ...item.styles.map(style => `${item.name}-${style.name}`),
-              item.name
-            ]).map(s => ({
-              label: s,
-              value: s
-            }))]
-          }
-        },
-        {
-          field: 'ttsRegex',
-          label: '语音过滤正则表达式',
-          bottomHelpMessage: '语音模式下，配置此项以过滤不想被读出来的内容。表达式测试地址：https://www.runoob.com/regexp/regexp-syntax.html',
-          component: 'Input'
-        },
-        {
-          field: 'ttsAutoFallbackThreshold',
-          label: '语音转文字阈值',
-          helpMessage: '语音模式下，字数超过这个阈值就降级为文字。呆毛版 已做超300字自动切割文字处理，建议设置1200字。',
-          bottomHelpMessage: '语音转为文字的阈值',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 99999
-          }
-        },
-        {
-          field: 'alsoSendText',
-          label: '语音同时发送文字',
-          bottomHelpMessage: '语音模式下，同时发送文字版，避免音质较低听不懂',
-          component: 'Switch'
-        },
-        {
-          field: 'autoJapanese',
-          label: 'vits模式日语输出',
-          bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
-            '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译...',
           component: 'Switch'
         },
         {
@@ -901,16 +794,78 @@ export function supportGuoba() {
         //   component: 'InputPassword'
         // },
         {
-          field: 'ttsSpace',
-          label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          label: '以下为语音合成设置',
+          component: 'Divider'
+        },
+        {
+          field: 'defaultUseTTS',
+          label: '全局语音模式',
+          bottomHelpMessage: '全局默认以语音形式回复，使用默认角色音色',
+          component: 'Switch'
+        },
+        {
+          field: 'ttsAutoFallbackThreshold',
+          label: '语音转文字阈值',
+          helpMessage: '语音模式下，字数超过这个阈值就降级为文字。呆毛版 已做超300字自动切割文字处理，建议设置1200字。',
+          bottomHelpMessage: '语音转为文字的阈值',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 99999
+          }
+        },
+        {
+          field: 'alsoSendText',
+          label: '语音同时发送文字',
+          bottomHelpMessage: '语音模式下，同时发送文字版，避免音质较低听不懂',
+          component: 'Switch'
+        },
+        {
+          field: 'ttsRegex',
+          label: '语音过滤正则表达式',
+          bottomHelpMessage: '语音模式下，配置此项以过滤不想被读出来的内容。表达式测试地址：https://www.runoob.com/regexp/regexp-syntax.html',
           component: 'Input'
         },
         {
-          field: 'voicevoxSpace',
-          label: 'voicevox语音转换API地址',
-          bottomHelpMessage: '可使用https://2ndelement-voicevox.hf.space, 也可github搜索voicevox-engine自建',
+          field: 'cloudTranscode',
+          label: '云转码API地址',
+          bottomHelpMessage: '目前只支持node-silk语音转码，可在本地node-silk无法使用时尝试使用云端资源转码',
           component: 'Input'
+        },
+        {
+          field: 'cloudMode',
+          label: '云转码API发送数据模式',
+          bottomHelpMessage: '语音传回是数据链接还是文件：呆毛版三种vits api选择链接；如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '文件', value: 'file' },
+              { label: '链接', value: 'url' }
+              // { label: '数据', value: 'buffer' }
+            ]
+          }
+        },
+        {
+          field: 'ttsMode',
+          label: '语音模式源',
+          bottomHelpMessage: '语音模式下使用何种语音源进行文本->音频转换',
+          component: 'Select',
+          componentProps: {
+            options: [
+              {
+                label: 'vits-uma-genshin-honkai',
+                value: 'vits-uma-genshin-honkai'
+              },
+              {
+                label: '微软Azure',
+                value: 'azure'
+              },
+              {
+                label: 'VoiceVox',
+                value: 'voicevox'
+              }
+            ]
+          }
         },
         {
           field: 'azureTTSKey',
@@ -936,114 +891,78 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'azureTTSSpeaker',
+          label: 'Azure默认角色',
+          bottomHelpMessage: '微软Azure语音模式下，未指定角色时使用的角色。若用户通过指令指定了角色，将忽略本设定',
+          component: 'Select',
+          componentProps: {
+            options: [{
+              label: '随机',
+              value: '随机'
+            },
+            ...azureRoleList.flatMap(item => [
+              item.roleInfo
+            ]).map(s => ({
+              label: s,
+              value: s
+            }))]
+          }
+        },
+        {
+          field: 'voicevoxSpace',
+          label: 'voicevox语音转换API地址',
+          bottomHelpMessage: '可使用https://2ndelement-voicevox.hf.space, 也可github搜索voicevox-engine自建',
+          component: 'Input'
+        },
+        {
+          field: 'voicevoxTTSSpeaker',
+          label: 'VoiceVox默认角色',
+          bottomHelpMessage: 'VoiceVox语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定',
+          component: 'Select',
+          componentProps: {
+            options: [{
+              label: '随机',
+              value: '随机'
+            },
+            ...voxRoleList.flatMap(item => [
+              ...item.styles.map(style => `${item.name}-${style.name}`),
+              item.name
+            ]).map(s => ({
+              label: s,
+              value: s
+            }))]
+          }
+        },
+        {
+          field: 'ttsSpace',
+          label: 'vits-uma-genshin-honkai语音转换API地址',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          component: 'Input'
+        },
+        {
           field: 'huggingFaceReverseProxy',
           label: '语音转换huggingface反代',
           bottomHelpMessage: '没有就空着',
           component: 'Input'
         },
         {
-          field: 'cloudTranscode',
-          label: '云转码API地址',
-          bottomHelpMessage: '目前只支持node-silk语音转码，可在本地node-silk无法使用时尝试使用云端资源转码',
-          component: 'Input'
-        },
-        {
-          field: 'cloudMode',
-          label: '云转码API发送数据模式',
-          bottomHelpMessage: '语音传回是数据链接还是文件：呆毛版三种vits api选择链接；如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          field: 'defaultTTSRole',
+          label: 'vits默认角色',
+          bottomHelpMessage: 'vits-uma-genshin-honkai语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定。可用指令：#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能。可用指令：#tts可选人物列表',
           component: 'Select',
           componentProps: {
-            options: [
-              { label: '文件', value: 'file' },
-              { label: '链接', value: 'url' }
-              // { label: '数据', value: 'buffer' }
-            ]
+            options: [{
+              label: '随机',
+              value: '随机'
+            }].concat(speakers.map(s => { return { label: s, value: s } }))
           }
         },
         {
-          label: '呆毛版 机器人cos设置',
-          component: 'Divider'
-        },
-        {
-          field: 'tts_First_person',
-          label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
-          component: 'Input'
-        },
-        {
-          field: 'chat_for_First_person',
-          label: 'AI回应第一人称呼叫',
-          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
+          field: 'autoJapanese',
+          label: 'vits模式日语输出',
+          bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
+            '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译...',
           component: 'Switch'
-        },
-        {
-          field: 'paimon_chuoyichuo_open',
-          label: '开启戳一戳',
-          bottomHelpMessage: '是否开启戳一戳',
-          component: 'Switch'
-        },
-        // {
-        //   field: 'paimon_chuoyichuo_ByMsgGroups',
-        //   label: '随机触发戳一戳内容的群号',
-        //   bottomHelpMessage: '随机触发戳一戳内容的群号（针对无法使用戳一戳的适配器）（需要先开启戳一戳）。群号用英文逗号隔开',
-        //   component: 'InputTextArea'
-        // },
-        // {
-        //   field: 'paimon_chuoyichuo_Probability_ByMsgGroups',
-        //   label: '随机触发戳一戳内容的概率',
-        //   helpMessage: '单位：%',
-        //   bottomHelpMessage: '随机触发戳一戳内容的概率（针对无法使用戳一戳的适配器）。',
-        //   component: "InputNumber",
-        //   componentProps: {
-        //     min: 0,
-        //     max: 100,
-        //     step: 1,
-        //   },
-        // },
-        {
-          field: 'paimon_chou_cd',
-          label: '戳一戳响应CD',
-          bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
-          component: 'InputNumber'
-        },
-        {
-          field: 'paimon_chou_text_generateAndSendAudio',
-          label: '戳一戳发送文案的同时发送语音',
-          bottomHelpMessage: '戳一戳发送文案的同时发送语音（需要先开启全局语音模式或用户开启语音模式）',
-          component: 'Switch'
-        },
-        {
-          field: 'paimon_chou_IsSendLocalpic',
-          label: '戳一戳发送本地图片（重启生效）',
-          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/resources/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
-          component: 'Switch'
-        },
-        {
-          field: 'paimon_chou_IsUseLoliconApi',
-          label: '戳一戳使用涩图api',
-          bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
-          component: 'Switch'
-        },
-        {
-          field: 'enableNai3PluginToPaint',
-          label: '连接nai插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；',
-          component: 'Switch'
-        },
-        {
-          field: 'enableApPluginToPaint',
-          label: '连接ap插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap',
-          component: 'Switch'
-        },
-        {
-          field: 'nai3PluginToPaintPrefix',
-          label: '连接绘画插件的前缀',
-          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
-          component: 'Input',
-          componentProps: {
-            placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
-          },
         },
         {
           label: '呆毛版 VITS语音自定义设置：可用命令#tts语音帮助 ；先在本页设置好：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
@@ -1266,6 +1185,91 @@ export function supportGuoba() {
             min: 0,
             max: 5.0
           }
+        },
+        {
+          label: '呆毛版 机器人cos设置',
+          component: 'Divider'
+        },
+        {
+          field: 'tts_First_person',
+          label: 'AI的第一人称',
+          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
+          component: 'Input'
+        },
+        {
+          field: 'chat_for_First_person',
+          label: 'AI回应第一人称呼叫',
+          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
+          component: 'Switch'
+        },
+        {
+          field: 'paimon_chuoyichuo_open',
+          label: '开启戳一戳',
+          bottomHelpMessage: '是否开启戳一戳',
+          component: 'Switch'
+        },
+        // {
+        //   field: 'paimon_chuoyichuo_ByMsgGroups',
+        //   label: '随机触发戳一戳内容的群号',
+        //   bottomHelpMessage: '随机触发戳一戳内容的群号（针对无法使用戳一戳的适配器）（需要先开启戳一戳）。群号用英文逗号隔开',
+        //   component: 'InputTextArea'
+        // },
+        // {
+        //   field: 'paimon_chuoyichuo_Probability_ByMsgGroups',
+        //   label: '随机触发戳一戳内容的概率',
+        //   helpMessage: '单位：%',
+        //   bottomHelpMessage: '随机触发戳一戳内容的概率（针对无法使用戳一戳的适配器）。',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 100,
+        //     step: 1,
+        //   },
+        // },
+        {
+          field: 'paimon_chou_cd',
+          label: '戳一戳响应CD',
+          bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
+          component: 'InputNumber'
+        },
+        {
+          field: 'paimon_chou_text_generateAndSendAudio',
+          label: '戳一戳发送文案的同时发送语音',
+          bottomHelpMessage: '戳一戳发送文案的同时发送语音（需要先开启全局语音模式或用户开启语音模式）',
+          component: 'Switch'
+        },
+        {
+          field: 'paimon_chou_IsSendLocalpic',
+          label: '戳一戳发送本地图片（重启生效）',
+          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/resources/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
+          component: 'Switch'
+        },
+        {
+          field: 'paimon_chou_IsUseLoliconApi',
+          label: '戳一戳使用涩图api',
+          bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
+          component: 'Switch'
+        },
+        {
+          field: 'enableNai3PluginToPaint',
+          label: '连接nai插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；',
+          component: 'Switch'
+        },
+        {
+          field: 'enableApPluginToPaint',
+          label: '连接ap插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap',
+          component: 'Switch'
+        },
+        {
+          field: 'nai3PluginToPaintPrefix',
+          label: '连接绘画插件的前缀',
+          bottomHelpMessage: '定义绘画前缀，例如角色、画师、环境等；ap/nai共用',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'paimon(genshin), artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
+          },
         },
         {
           label: '以下为杂七杂八的配置',
