@@ -93,6 +93,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // 使用vits-uma ；post到hf.space/api/generate获取音频
     if (space.includes('hf.space')) {
+        text = text.substr(0, 299);
         // 用<zh> or <jp>包裹句子
         text = wrapTextByLanguage(text)
         logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)

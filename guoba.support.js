@@ -205,7 +205,7 @@ export function supportGuoba() {
         {
           field: 'enableGroupContext',
           label: '是否允许机器人读取近期的群聊聊天记录',
-          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息',
+          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
           component: 'Switch'
         },
         {
@@ -615,7 +615,7 @@ export function supportGuoba() {
         {
           field: 'isReplacePromptForSenderMsg',
           label: '呆毛版 gemini设定拓展',
-          bottomHelpMessage: '（仅限gemini使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；并且附上at用户的名称和qq号。或者使用开启Bing栏目内的在gemini中表现不好的选项：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”；同时开启后会替换设定中的 [name] 字符串为机器人群昵称/昵称。',
+          bottomHelpMessage: '（仅限gemini使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
           component: 'Switch'
         },
         {
@@ -643,7 +643,7 @@ export function supportGuoba() {
         {
           field: 'whitelist',
           label: '对话白名单',
-          bottomHelpMessage: '呆毛版 输入群号，用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。说明：1、全局白名单模式，即除白名单以外的都不能使用插件对话；2、可在白名单的基础上指定黑名单；3、若什么都不填则关闭白名单功能仅使用黑名单功能。' +
+          bottomHelpMessage: '呆毛版优先白名单方案：输入群号，用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。说明：1、全局白名单模式，即除白名单以外的都不能使用插件对话；2、可在白名单的基础上指定黑名单；3、若什么都不填则关闭白名单功能仅使用黑名单功能。' +
             '白名单优先级：群号^qq > qq > 群号。\n' +
             '黑名单优先级: 群号 > qq > 群号^qq。',
           component: 'Input'
@@ -806,7 +806,7 @@ export function supportGuoba() {
         {
           field: 'ttsAutoFallbackThreshold',
           label: '语音转文字阈值',
-          helpMessage: '语音模式下，字数超过这个阈值就降级为文字。呆毛版 已做超300字自动切割文字处理，建议设置1200字。',
+          helpMessage: '语音模式下，字数超过这个阈值就降级为文字。',
           bottomHelpMessage: '语音转为文字的阈值',
           component: 'InputNumber',
           componentProps: {
@@ -935,7 +935,7 @@ export function supportGuoba() {
         },
         {
           field: 'ttsSpace',
-          label: 'vits-uma-genshin-honkai语音转换API地址',
+          label: 'vits语音转换API地址',
           bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
           component: 'Input'
         },
@@ -989,6 +989,43 @@ export function supportGuoba() {
           label: 'api_fish_audio_model',
           bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
           component: 'Input'
+        },
+        {
+          label: 'vits-uma的设置',
+          component: 'Divider'
+        },
+        {
+          field: 'noiseScale',
+          label: 'noise',
+          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制情感变化程度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.1,
+            max: 2,
+            step: 0.1
+          }
+        },
+        {
+          field: 'noiseScaleW',
+          label: 'noiseScaleW',
+          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制音素发音长度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.1,
+            max: 2,
+            step: 0.001
+          }
+        },
+        {
+          field: 'lengthScale',
+          label: 'lengthScale',
+          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制整体语速，范围0.1-2.0',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.1,
+            max: 2,
+            step: 0.1
+          }
         },
         {
           label: 'Fish-VITS2的设置',
