@@ -9,6 +9,7 @@ import {
     speakers_JP,
     speakers_EN,
     speakers_BA,
+    speakers_vits_uma_genshin_honkai,
     vits_emotion_map
 } from '../utils/tts.js'
 import crypto from 'crypto'
@@ -193,66 +194,86 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
     /** ^#tts(可选)?人物(可选)?列表$ */
     async tts_show_speakers(e) {
-        let strs = [`tts可选人物列表：\n#chatgpt设置全局vits语音角色派蒙_ZH\n#chatgpt设置语音角色可莉_ZH\n  （↑每名用户都可以单独设置）`]
-        strs.push(`` +
-            `其中BA角色集仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能（已失效），若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能（需要设置翻译源）。`)
-        let batchSpeakersNum = speakers_ZH.length / 50
-        let speakersSliced
-        let strsLenght = strs.length
-        for (let i = 0; i < batchSpeakersNum; i++) {
-            speakersSliced = speakers_ZH.slice(i * 50, (i + 1) * 50)
-            strs[i + strsLenght] = '中文ZH角色：\n'
-            for (let j = 0; j < speakersSliced.length; j++) {
-                if (j % 2 == 0) {
-                    strs[i + strsLenght] += speakersSliced[j] + "　　"
-                }
-                else {
-                    strs[i + strsLenght] += speakersSliced[j] + "\n"
+        let strs = Config.ttsSpace?.includes('hf.space') ? [`tts可选人物列表：\n#chatgpt设置全局vits语音角色派蒙\n#chatgpt设置语音角色可莉\n  （↑每名用户都可以单独设置）`] : (Config.ttsSpace?.includes('api.fish.audio') ? ["api.fish.audio不支持可选人物列表"] : [`tts可选人物列表：\n#chatgpt设置全局vits语音角色派蒙_ZH\n#chatgpt设置语音角色可莉_ZH\n  （↑每名用户都可以单独设置）`])
+
+        if (Config.ttsSpace?.includes('hf.space')) {
+            let batchSpeakersNum = speakers_vits_uma_genshin_honkai.length / 50
+            let speakersSliced
+            let strsLenght = strs.length
+            for (let i = 0; i < batchSpeakersNum; i++) {
+                speakersSliced = speakers_vits_uma_genshin_honkai.slice(i * 50, (i + 1) * 50)
+                strs[i + strsLenght] = '中文ZH角色：\n'
+                for (let j = 0; j < speakersSliced.length; j++) {
+                    if (j % 2 == 0) {
+                        strs[i + strsLenght] += speakersSliced[j] + "　　"
+                    }
+                    else {
+                        strs[i + strsLenght] += speakersSliced[j] + "\n"
+                    }
                 }
             }
         }
-
-        batchSpeakersNum = speakers_JP.length / 50
-        strsLenght = strs.length
-        for (let i = 0; i < batchSpeakersNum; i++) {
-            speakersSliced = speakers_JP.slice(i * 50, (i + 1) * 50)
-            strs[i + strsLenght] = '日文JP角色：\n'
-            for (let j = 0; j < speakersSliced.length; j++) {
-                if (j % 2 == 0) {
-                    strs[i + strsLenght] += speakersSliced[j] + "　　"
-                }
-                else {
-                    strs[i + strsLenght] += speakersSliced[j] + "\n"
-                }
-            }
-        }
-
-        batchSpeakersNum = speakers_EN.length / 50
-        strsLenght = strs.length
-        for (let i = 0; i < batchSpeakersNum; i++) {
-            speakersSliced = speakers_EN.slice(i * 50, (i + 1) * 50)
-            strs[i + strsLenght] = '英文EN角色：\n'
-            for (let j = 0; j < speakersSliced.length; j++) {
-                if (j % 2 == 0) {
-                    strs[i + strsLenght] += speakersSliced[j] + "　　"
-                }
-                else {
-                    strs[i + strsLenght] += speakersSliced[j] + "\n"
+        else {
+            strs.push(`` +
+                `其中BA角色集仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能（已失效），若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能（需要设置翻译源）。`)
+            let batchSpeakersNum = speakers_ZH.length / 50
+            let speakersSliced
+            let strsLenght = strs.length
+            for (let i = 0; i < batchSpeakersNum; i++) {
+                speakersSliced = speakers_ZH.slice(i * 50, (i + 1) * 50)
+                strs[i + strsLenght] = '中文ZH角色：\n'
+                for (let j = 0; j < speakersSliced.length; j++) {
+                    if (j % 2 == 0) {
+                        strs[i + strsLenght] += speakersSliced[j] + "　　"
+                    }
+                    else {
+                        strs[i + strsLenght] += speakersSliced[j] + "\n"
+                    }
                 }
             }
-        }
 
-        batchSpeakersNum = speakers_BA.length / 50
-        strsLenght = strs.length
-        for (let i = 0; i < batchSpeakersNum; i++) {
-            speakersSliced = speakers_BA.slice(i * 50, (i + 1) * 50)
-            strs[i + strsLenght] = 'BA角色：\n'
-            for (let j = 0; j < speakersSliced.length; j++) {
-                if (j % 2 == 0) {
-                    strs[i + strsLenght] += speakersSliced[j] + "　　"
+            batchSpeakersNum = speakers_JP.length / 50
+            strsLenght = strs.length
+            for (let i = 0; i < batchSpeakersNum; i++) {
+                speakersSliced = speakers_JP.slice(i * 50, (i + 1) * 50)
+                strs[i + strsLenght] = '日文JP角色：\n'
+                for (let j = 0; j < speakersSliced.length; j++) {
+                    if (j % 2 == 0) {
+                        strs[i + strsLenght] += speakersSliced[j] + "　　"
+                    }
+                    else {
+                        strs[i + strsLenght] += speakersSliced[j] + "\n"
+                    }
                 }
-                else {
-                    strs[i + strsLenght] += speakersSliced[j] + "\n"
+            }
+
+            batchSpeakersNum = speakers_EN.length / 50
+            strsLenght = strs.length
+            for (let i = 0; i < batchSpeakersNum; i++) {
+                speakersSliced = speakers_EN.slice(i * 50, (i + 1) * 50)
+                strs[i + strsLenght] = '英文EN角色：\n'
+                for (let j = 0; j < speakersSliced.length; j++) {
+                    if (j % 2 == 0) {
+                        strs[i + strsLenght] += speakersSliced[j] + "　　"
+                    }
+                    else {
+                        strs[i + strsLenght] += speakersSliced[j] + "\n"
+                    }
+                }
+            }
+
+            batchSpeakersNum = speakers_BA.length / 50
+            strsLenght = strs.length
+            for (let i = 0; i < batchSpeakersNum; i++) {
+                speakersSliced = speakers_BA.slice(i * 50, (i + 1) * 50)
+                strs[i + strsLenght] = 'BA角色：\n'
+                for (let j = 0; j < speakersSliced.length; j++) {
+                    if (j % 2 == 0) {
+                        strs[i + strsLenght] += speakersSliced[j] + "　　"
+                    }
+                    else {
+                        strs[i + strsLenght] += speakersSliced[j] + "\n"
+                    }
                 }
             }
         }
