@@ -101,7 +101,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             data: [
                 text, language, speaker,
                 noiseScale, noiseScaleW, lengthScale
-            ]
+            ],
+            fn_index: 0,
+            session_hash: "",
         }
         // post
         if (Config.debug) {
@@ -109,12 +111,12 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
         if (space.endsWith('/api/generate')) {
             let trimmedSpace = space.substring(0, space.length - 13)
-            logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
+            // logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
             space = trimmedSpace
         }
         if (space.endsWith('/')) {
             let trimmedSpace = _.trimEnd(space, '/')
-            logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
+            // logger.warn(`vits api 当前为${space}，已校正为${trimmedSpace}`)
             space = trimmedSpace
         }
         let url = `${space}/api/generate`
@@ -138,7 +140,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     logger.info(json)
                 }
                 if (response.status > 299) {
-                    logger.info(json)
+                    // logger.info(json)
                     throw new Error(JSON.stringify(json))
                 }
                 let [message, audioInfo, take] = json?.data
@@ -165,12 +167,12 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     //校正space
     if (space.endsWith('/run/predict')) {
         let trimmedSpace = space.substring(0, space.length - 12)
-        logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
+        // logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
         space = trimmedSpace
     }
     if (space.endsWith('/')) {
         let trimmedSpace = _.trimEnd(space, '/')
-        logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
+        // logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
         space = trimmedSpace
     }
 
@@ -247,7 +249,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                             logger.info(json)
                         }
                         if (response.status > 299) {
-                            logger.info(json)
+                            // logger.info(json)
                             throw new Error(JSON.stringify(json))
                         }
                         let [message] = json?.data
@@ -332,7 +334,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                     logger.info(json)
                 }
                 if (response.status > 299) {
-                    logger.info(json)
+                    // logger.info(json)
                     throw new Error(JSON.stringify(json))
                 }
                 let [message, audioInfo] = json?.data
