@@ -903,7 +903,7 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits-uma-genshin-honkai语音转换API地址',
-          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；抱脸版因效果差且 vits默认角色 不通用暂不考虑适配',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并刷新此页面将刷新 vits默认角色 列表',
           component: 'Input'
         },
         {
@@ -1190,31 +1190,34 @@ export function supportGuoba() {
         {
           field: 'noiseScale',
           label: 'noise',
-          bottomHelpMessage: '（仅限Bert-VITS2）控制情感变化程度，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制情感变化程度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
-            max: 2
+            max: 2,
+            step: 0.1
           }
         },
         {
           field: 'noiseScaleW',
           label: 'noiseScaleW',
-          bottomHelpMessage: '（仅限Bert-VITS2）控制音素发音长度，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制音素发音长度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
-            max: 2
+            max: 2,
+            step: 0.001
           }
         },
         {
           field: 'lengthScale',
           label: 'lengthScale',
-          bottomHelpMessage: '（仅限Bert-VITS2）控制整体语速，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制整体语速，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
-            max: 2
+            max: 2,
+            step: 0.1
           }
         },
         {

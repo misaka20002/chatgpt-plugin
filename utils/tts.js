@@ -1,6 +1,7 @@
 import { Config } from './config.js'
 import fetch from 'node-fetch'
 import _ from 'lodash'
+import { wrapTextByLanguage } from './common.js'
 import { getProxy } from './proxy.js'
 let proxy = getProxy()
 
@@ -13,7 +14,8 @@ export const speakers_ZH = ["阿扎尔_ZH", "塞德娜_ZH", "鹿野院平藏_ZH"
 export const speakers_JP = ["托克_JP", "希儿_JP", "阿祇_JP", "吉莲_JP", "花火_JP", "可莉_JP", "年长的患者_JP", "将司_JP", "向导_JP", "克雷薇_JP", "伊庭_JP", "真_JP", "晴霓_JP", "元太_JP", "玻瑞亚斯_JP", "莎塔娜_JP", "葛瑞丝_JP", "林尼_JP", "菲谢尔_JP", "阿尔卡米_JP", "凯西娅_JP", "阿仁_JP", "警觉的流浪者_JP", "波洛_JP", "木木_JP", "若心_JP", "卡卡瓦夏_JP", "卡莉娜_JP", "阿扎尔_JP", "莱斯格_JP", "古田_JP", "海妮耶_JP", "麦希尔_JP", "梦茗_JP", "法赫尔_JP", "药王秘传魁首_JP", "莺儿_JP", "木南杏奈_JP", "纳菲斯_JP", "维多克_JP", "丹吉尔_JP", "荒谷_JP", "言笑_JP", "伦纳德_JP", "库塞拉_JP", "隐书_JP", "科尔特_JP", "阿金_JP", "卓也_JP", "严苛评委_JP", "剑阵中的声音_JP", "黑泽京之介_JP", "劳维克_JP", "珐露珊母亲_JP", "阿夫辛_JP", "帕帕克_JP", "半夏_JP", "望雅_JP", "杜吉耶_JP", "五郎_JP", "狐妖_JP", "洛恩_JP", "百识_JP", "艾伯特_JP", "塔里克_JP", "钱德拉_JP", "阿灼_JP", "西尔弗_JP", "温世玲_JP", "回声海螺_JP", "罗刹_JP", "巫女_JP", "露子_JP", "提纳里_JP", "康纳_JP", "娜塔莎_JP", "丹恒•饮月_JP", "江蓠_JP", "正人_JP", "兴修_JP", "瑶瑶_JP", "银杏_JP", "垃垃撕圾_JP", "可可利亚_JP", "安西_JP", "阿贝多_JP", "阮•梅_JP", "希露瓦_JP", "狼哥_JP", "劳伦斯_JP", "悦_JP", "阿芬迪_JP", "云堇_JP", "罗巧_JP", "埃德_JP", "夜兰_JP", "雷电将军_JP", "哲平_JP", "浮游水蕈兽·元素生命_JP", "毗伽尔_JP", "贡达法_JP", "斯坦利_JP", "楠楠_JP", "塞琉斯_JP", "克罗索_JP", "赛索斯_JP", "安托万_JP", "埃勒曼_JP", "薇尔_JP", "阿娜耶_JP", "珠函_JP", "阿兰_JP", "河童_JP", "阿伟_JP", "大和田_JP", "今谷佳祐_JP", "维格尔_JP", "迪奥娜_JP", "库塞拉的信件_JP", "丝柯克_JP", "朱特_JP", "知更鸟_JP", "布洛克_JP", "九条孝行_JP", "接笏_JP", "炒冷饭机器人_JP", "淮安_JP", "老芬奇_JP", "佐西摩斯_JP", "老戴_JP", "长生_JP", "公司的业务员代表_JP", "萍姥姥_JP", "艾洛迪_JP", "雅各_JP", "德沃沙克_JP", "公输师傅_JP", "尤苏波夫_JP", "诺尔伯特_JP", "那维莱特_JP", "欧菲妮_JP", "芙宁娜_JP", "千织_JP", "特纳_JP", "奇怪的云骑_JP", "费迪南德_JP", "鲁哈维_JP", "帮派老大_JP", "小乐_JP", "冒失的帕拉德_JP", "深渊使徒_JP", "巴哈利_JP", "黛比_JP", "希格雯_JP", "幻胧_JP", "札齐_JP", "刻薄的小孩_JP", "乌维_JP", "卡波特_JP", "法伊兹_JP", "吴船长_JP", "塞萨尔的日记_JP", "松浦_JP", "葵_JP", "保姆_JP", "枫原景春_JP", "尚博迪克_JP", "陆行岩本真蕈·元素生命_JP", "古山_JP", "米凯_JP", "伊萨克_JP", "轰大叔_JP", "孟迪尔_JP", "绘星_JP", "深渊法师_JP", "沙寅_JP", "玛格丽特_JP", "真理医生_JP", "七七_JP", "稻生_JP", "女士_JP", "露尔薇_JP", "阿晃_JP", "华劳斯_JP", "记忆中的声音_JP", "卡布斯_JP", "星际和平播报_JP", "留云借风真君_JP", "闲云_JP", "爱贝尔_JP", "阿守_JP", "科林斯_JP", "阿丰_JP", "李丁_JP", "舒蕾_JP", "琳妮特_JP", "塔杰·拉德卡尼_JP", "甘雨_JP", "阿旭_JP", "塞德娜_JP", "霄翰_JP", "泽维尔_JP", "会场广播_JP", "艾米绮_JP", "有原则的猎犬家系成员_JP", "有乐斋_JP", "埃舍尔_JP", "桂乃芬_JP", "拍卖师_JP", "久利须_JP", "邓恩_JP", "台词评委_JP", "停云_JP", "某人的声音_JP", "景元_JP", "帕斯卡_JP", "远黛_JP", "爱德琳_JP", "白露_JP", "发抖的流浪者_JP", "明曦_JP", "沃特林_JP", "嘉良_JP", "娜维娅_JP", "凯亚_JP", "女声_JP", "查尔斯_JP", "克洛琳德_JP", "守护者的意志_JP", "胡尚_JP", "符玄_JP", "九条镰治_JP", "伊丝黛莱_JP", "肢体评委_JP", "穹_JP", "恕筠_JP", "小仓澪_JP", "温迪_JP", "净砚_JP", "洛伦佐_JP", "怀疑的患者_JP", "贾拉康_JP", "维卡斯_JP", "菲尔戈黛特_JP", "拉齐_JP", "斑目百兵卫_JP", "安武_JP", "消沉的患者_JP", "迈勒斯_JP", "娜比雅_JP", "申鹤_JP", "辛焱_JP", "神智昏乱的云骑_JP", "阿诺德_JP", "莱依拉_JP", "韦尔纳_JP", "镜流_JP", "丽莎_JP", "弗洛朗_JP", "管家奥斯威尔_JP", "斯科特_JP", "绍祖_JP", "捕头_JP", "巴蒂斯特_JP", "珊瑚_JP", "蒂玛乌斯_JP", "白术_JP", "丹羽_JP", "沙坎_JP", "皮特_JP", "木村_JP", "青雀_JP", "布尔米耶_JP", "筑梦师_JP", "维尔德_JP", "嘉明_JP", "丹恒_JP", "往昔的回声_JP", "格莉莎_JP", "杰娜姬_JP", "妮欧莎_JP", "藿藿_JP", "芷巧_JP", "浣溪_JP", "亚卡巴_JP", "老克_JP", "三田_JP", "胡桃_JP", "温和的声音_JP", "鹿野奈奈_JP", "唐娜_JP", "加福尔_JP", "三月七_JP", "福尔茨_JP", "阿利娅_JP", "卡西迪_JP", "荧_JP", "维利特_JP", "韵宁_JP", "法拉娜_JP", "萨姆_JP", "拉格沃克•夏尔•米哈伊尔_JP", "柊慎介_JP", "阿圆_JP", "卯师傅_JP", "阿蕾奇诺_JP", "稻城萤美_JP", "阿汉格尔_JP", "加萨尼_JP", "贝雅特丽奇_JP", "祖莉亚·德斯特雷_JP", "波提欧_JP", "艾莉丝_JP", "徐六石_JP", "卡莉露_JP", "埃尔欣根_JP", "旁白_JP", "史瓦罗_JP", "萨赫哈蒂_JP", "阿往_JP", "阿尼斯_JP", "伯恩哈德_JP", "白老先生_JP", "素裳_JP", "莱昂_JP", "尾巴_JP", "居勒什_JP", "一心传名刀_JP", "高善_JP", "拉赫曼_JP", "玛吉_JP", "卡玛尔_JP", "舍利夫_JP", "忠诚的侍从_JP", "旅行者_JP", "光之_JP", "纯也_JP", "苍老的声音_JP", "宵宫_JP", "马洛尼_JP", "派蒙_JP", "绿芙蓉_JP", "阿维丝_JP", "黑塔_JP", "西拉杰_JP", "岩夫_JP", "乔瓦尼_JP", "纪芳_JP", "达达利亚_JP", "宏达_JP", "手岛_JP", "天目十五_JP", "巴沙尔_JP", "小野寺_JP", "绮良良_JP", "刀疤刘_JP", "莫里斯_JP", "阿幸_JP", "男声_JP", "雪衣_JP", "重云_JP", "讨嫌的小孩_JP", "琳琅_JP", "星期日_JP", "戈尔代_JP", "长野原龙之介_JP", "玲可_JP", "嘉义_JP", "公主_JP", "梅里埃_JP", "北斗_JP", "伊莎朵_JP", "商人_JP", "阿巴图伊_JP", "钟离_JP", "大慈树王_JP", "菲米尼_JP", "艾文_JP", "副警长_JP", "铁尔南_JP", "珊瑚宫心海_JP", "纯水精灵_JP", "贝努瓦_JP", "萨福万_JP", "香菱_JP", "拍卖会工作人员_JP", "芙萝拉_JP", "玥辉_JP", "传次郎_JP", "杜拉夫_JP", "迈蒙_JP", "面具_JP", "加拉赫_JP", "艾尔海森_JP", "帕维耶_JP", "坎蒂丝_JP", "柯莱_JP", "慧心_JP", "智树_JP", "艾伦_JP", "阿拉夫_JP", "慈祥的女声_JP", "卡芙卡_JP", "石头_JP", "杰克_JP", "刃_JP", "伊迪娅_JP", "娜德瓦_JP", "斯万_JP", "卢卡奇_JP", "查宝_JP", "星稀_JP", "钟表匠_JP", "妮露_JP", "巴达维_JP", "观众_JP", "海芭夏_JP", "小川_JP", "魈_JP", "荒泷一斗_JP", "驭空_JP", "迪卢克_JP", "玛达赫_JP", "夏沃蕾_JP", "博士_JP", "暮夜剧团团长_JP", "斯薇塔_JP", "寒腿叔叔_JP", "星_JP", "帕姆_JP", "尤利安_JP", "警长_JP", "舒伯特_JP", "村田_JP", "绮珊_JP", "克拉拉_JP", "龙二_JP", "班尼特_JP", "夏洛蒂_JP", "瓦乐瑞娜_JP", "流萤_JP", "理查_JP", "奥列格_JP", "戴因斯雷布_JP", "枫原万叶_JP", "流浪者_JP", "加藤洋平_JP", "阿佩普_JP", "朱里厄_JP", "侯章_JP", "冥火大公_JP", "西衍先生_JP", "桑博_JP", "罗莎莉亚_JP", "阿鸠_JP", "昆钧_JP", "大肉丸_JP", "叶德_JP", "紫月季_JP", "大隆_JP", "德拉萝诗_JP", "琴_JP", "寒鸦_JP", "猎犬家系成员_JP", "埃泽_JP", "柴田_JP", "米卡_JP", "漱玉_JP", "诗筠_JP", "重佐_JP", "上杉_JP", "朱达尔_JP", "花角玉将_JP", "佩尔西科夫_JP", "叶卡捷琳娜_JP", "朔次郎_JP", "哈伦_JP", "里卡尔_JP", "杰洛尼_JP", "立本_JP", "玛乔丽_JP", "螺丝咕姆_JP", "巨大谜钟_JP", "考特里亚_JP", "安静的宾客_JP", "丹枢_JP", "梦主_JP", "阿来_JP", "拉伊德_JP", "镜中人_JP", "引导员_JP", "维多利亚_JP", "迪希雅_JP", "小组长_JP", "艾丝妲_JP", "笼钓瓶一心_JP", "托帕_JP", "梁沐_JP", "老孟_JP", "常九爷_JP", "独孤朔_JP", "彦卿_JP", "奥兹_JP", "迪尔菲_JP", "asideb_JP", "莱欧斯利_JP", "克列门特_JP", "枫_JP", "式大将_JP", "沙扎曼_JP", "薇娜_JP", "信使_JP", "阿山婆_JP", "歌蒂_JP", "帕梅拉_JP", "金人会长_JP", "茂才公_JP", "莱提西娅_JP", "虎克_JP", "砂金_JP", "安东尼娜_JP", "造物翻译官_JP", "瓦尔特_JP", "优菈_JP", "银狼_JP", "维尔芒_JP", "烟绯_JP", "魔女N_JP", "杰帕德_JP", "老章_JP", "蒂埃里_JP", "青镞_JP", "法哈德_JP", "砂糖_JP", "巴列维_JP", "长门幸子_JP", "石头老板_JP", "科玫_JP", "莫塞伊思_JP", "艾琳_JP", "黑天鹅_JP", "乌宰尔_JP", "菜菜子_JP", "艾丽_JP", "纳比尔_JP", "理水叠山真君_JP", "自称渊上之物_JP", "科拉莉_JP", "阿雩_JP", "托马_JP", "瑞安维尔_JP", "卢卡_JP", "黄泉_JP", "爱德华医生_JP", "珐露珊_JP", "古谷升_JP", "楚仪_JP", "八重神子_JP", "卡萝蕾_JP", "捕快_JP", "年幼的孩子_JP", "迪肯_JP", "掇星攫辰天君_JP", "博来_JP", "玛塞勒_JP", "空_JP", "裁判_JP", "嘉玛_JP", "独眼小僧_JP", "天叔_JP", "辛克尔_JP", "恶龙_JP", "凝光_JP", "神里绫人_JP", "鬼婆婆_JP", "伊德里西_JP", "布洛妮娅_JP", "shajinma_JP", "纳西妲_JP", "卡维_JP", "巴穆恩_JP", "莉莉安_JP", "钟表小子_JP", "嚣张的小孩_JP", "行秋_JP", "昆恩_JP", "米沙_JP", "翡翠_JP", "阿扎木_JP", "金忽律_JP", "黑田_JP", "斯嘉莉_JP", "被俘的信徒_JP", "费斯曼_JP", "奥泰巴_JP", "宁禄_JP", "阿洛瓦_JP", "薇若妮卡_JP", "新之丞_JP", "雷泽_JP", "博易_JP", "菲尔汀_JP", "诺艾尔_JP", "今谷三郎_JP", "信博_JP", "鹿野院平藏_JP", "知贵_JP", "界种科科员_JP", "悠策_JP", "厨子_JP", "大毫_JP", "乐平波琳_JP", "卡卡瓦夏的姐姐_JP", "神里绫华_JP", "凯瑟琳_JP", "马姆杜_JP", "商华_JP", "小贩_JP", "久岐忍_JP", "伊利亚斯_JP", "柊千里_JP", "泽田_JP", "雕像_JP", "巴尔塔萨_JP", "七叶寂照秘密主_JP", "浮游风蕈兽·元素生命_JP", "艾迪恩_JP", "安柏_JP", "芭芭拉_JP", "霄老大_JP", "西瓦尼_JP", "广大_JP", "连烟_JP", "冷漠的男性_JP", "百闻_JP", "焦躁的丹鼎司医士_JP", "九条裟罗_JP", "托帕&账账_JP", "知易_JP", "佩拉_JP", "阿基维利_JP", "莫娜_JP", "萨齐因_JP", "费索勒_JP", "刻晴_JP", "芙卡洛斯_JP", "伽吠毗陀_JP", "天真的少年_JP", "罗伊斯_JP", "今谷香里_JP", "松烟_JP", "北村_JP", "基娅拉_JP", "阿斯法德_JP", "羽生田千鹤_JP", "老高_JP", "库斯图_JP", "德田_JP", "竺子_JP", "早柚_JP", "银枝_JP", "霍夫曼_JP", "多莉_JP", "田铁嘴_JP", "云叔_JP", "乾玮_JP", "埃斯蒙德_JP", "宛烟_JP", "谢赫祖拜尔_JP", "艾薇拉_JP", "纪香_JP", "削月筑阳真君_JP", "舒翁_JP", "奇妙的船_JP", "埃洛伊_JP", "燕翠_JP", "一平_JP", "莎拉_JP", "耕一_JP", "岩明_JP", "齐米亚_JP", "伊洁贝儿_JP", "姬子_JP", "浮烟_JP", "夏妮_JP", "迪娜泽黛_JP", "赛诺_JP", "岚姐_JP", "平山_JP", "塞塔蕾_JP", "朋义_JP"]
 export const speakers_EN = ["多莉_EN", "朋义_EN", "柊千里_EN", "西瓦尼_EN", "鹿野奈奈_EN", "萍姥姥_EN", "阿泰菲_EN", "古田_EN", "科林斯_EN", "凝光_EN", "贡达法_EN", "往昔的回声_EN", "悦_EN", "博来_EN", "拍卖师_EN", "言笑_EN", "小野寺_EN", "葛瑞丝_EN", "伊丝黛莱_EN", "沙扎曼_EN", "刻薄的小孩_EN", "维多利亚_EN", "浮游水蕈兽·元素生命_EN", "希露瓦_EN", "卡西迪_EN", "小川_EN", "贾拉康_EN", "男声_EN", "九条镰治_EN", "鲁哈维_EN", "宵宫_EN", "艾尔海森_EN", "伯恩哈德_EN", "菜菜子_EN", "螺丝咕姆_EN", "丹羽_EN", "安托万_EN", "拍卖会工作人员_EN", "薇若妮卡_EN", "博士_EN", "芭芭拉_EN", "魔女N_EN", "浮烟_EN", "莱斯格_EN", "帕梅拉_EN", "李丁_EN", "叶卡捷琳娜_EN", "史瓦罗_EN", "北斗_EN", "久岐忍_EN", "西衍先生_EN", "符玄_EN", "重佐_EN", "若心_EN", "塔杰·拉德卡尼_EN", "莎拉_EN", "伊利亚斯_EN", "阿贝多_EN", "流浪者_EN", "贝雅特丽奇_EN", "凯亚_EN", "辛克尔_EN", "艾米绮_EN", "卡莉露_EN", "蒂埃里_EN", "侯章_EN", "阿守_EN", "乔瓦尼_EN", "知更鸟_EN", "狐妖_EN", "雅各_EN", "漱玉_EN", "掘掘博士_EN", "金忽律_EN", "荒谷_EN", "昌虎_EN", "娜塔莎_EN", "黑天鹅_EN", "海妮耶_EN", "藿藿_EN", "青雀_EN", "砂糖_EN", "舍利夫_EN", "重云_EN", "阿夫辛_EN", "温迪_EN", "神智昏乱的云骑_EN", "可可利亚_EN", "麦希尔_EN", "舒伯特_EN", "斯嘉莉_EN", "维利特_EN", "守护者的意志_EN", "卯师傅_EN", "丹枢_EN", "稻城萤美_EN", "布洛妮娅_EN", "青镞_EN", "商华_EN", "立本_EN", "阿晃_EN", "伦纳德_EN", "严苛评委_EN", "帮派老大_EN", "花火_EN", "接笏_EN", "向导_EN", "奥列格_EN", "库斯图_EN", "库塞拉的信件_EN", "沃特林_EN", "卡波特_EN", "卡卡瓦夏_EN", "米凯_EN", "淮安_EN", "阿诺德_EN", "大和田_EN", "塔里克_EN", "莫娜_EN", "桑博_EN", "阿幸_EN", "黑田_EN", "玛乔丽_EN", "老高_EN", "公输师傅_EN", "克拉拉_EN", "九条裟罗_EN", "谢赫祖拜尔_EN", "梁沐_EN", "雷泽_EN", "霄老大_EN", "霍夫曼_EN", "塞德娜_EN", "塞塔蕾_EN", "乌维_EN", "钱德拉_EN", "行秋_EN", "久利须_EN", "幻胧_EN", "阿雩_EN", "绮良良_EN", "云堇_EN", "奇怪的云骑_EN", "大肉丸_EN", "查尔斯_EN", "博易_EN", "玛文_EN", "阿祇_EN", "纳比尔_EN", "会场广播_EN", "三月七_EN", "维卡斯_EN", "法赫尔_EN", "戴派_EN", "尚博迪克_EN", "吉莲_EN", "薇尔_EN", "阿基维利_EN", "优菈_EN", "商人_EN", "阿往_EN", "法伊兹_EN", "希格雯_EN", "元太_EN", "绮珊_EN", "金人会长_EN", "朱里厄_EN", "瑞安维尔_EN", "派蒙_EN", "沙寅_EN", "杜吉耶_EN", "引导员_EN", "劳伦斯_EN", "暮夜剧团团长_EN", "独孤朔_EN", "迪卢克_EN", "银枝_EN", "刻晴_EN", "智树_EN", "诗筠_EN", "掇星攫辰天君_EN", "宛烟_EN", "费斯曼_EN", "迪肯_EN", "乾玮_EN", "艾洛迪_EN", "忠诚的侍从_EN", "大慈树王_EN", "乌宰尔_EN", "库塞拉_EN", "垃垃撕圾_EN", "驭空_EN", "伽吠毗陀_EN", "岚姐_EN", "白露_EN", "穹_EN", "芙卡洛斯_EN", "真_EN", "波提欧_EN", "畅畅_EN", "荒泷一斗_EN", "嘉义_EN", "隐书_EN", "轰大叔_EN", "烟绯_EN", "科尔特_EN", "温和的声音_EN", "平山_EN", "菲尔戈黛特_EN", "黛比_EN", "安柏_EN", "科拉莉_EN", "晴霓_EN", "舒翁_EN", "埃舍尔_EN", "胡桃_EN", "药王秘传魁首_EN", "寒鸦_EN", "明曦_EN", "刃_EN", "长野原龙之介_EN", "安静的宾客_EN", "公主_EN", "卓也_EN", "巴达维_EN", "罗刹_EN", "帕斯卡_EN", "艾伯特_EN", "琳妮特_EN", "女声_EN", "萨齐因_EN", "雷电将军_EN", "素裳_EN", "德拉萝诗_EN", "深渊使徒_EN", "查宝_EN", "迪希雅_EN", "埃泽_EN", "捕头_EN", "造物翻译官_EN", "露子_EN", "爱德琳_EN", "木村_EN", "流萤_EN", "稻生_EN", "纳菲斯_EN", "迪尔菲_EN", "云叔_EN", "星稀_EN", "露尔薇_EN", "坎蒂丝_EN", "今谷佳祐_EN", "亚卡巴_EN", "甘雨_EN", "卡维_EN", "老章_EN", "嘉良_EN", "龙二_EN", "阿洛瓦_EN", "阿巴图伊_EN", "宁禄_EN", "浣溪_EN", "塞萨尔的日记_EN", "加拉赫_EN", "斯万_EN", "阿灼_EN", "白老先生_EN", "巴穆恩_EN", "独眼小僧_EN", "纯水精灵_EN", "绘星_EN", "老孟_EN", "迈蒙_EN", "阿娜耶_EN", "女士_EN", "米卡_EN", "嘉明_EN", "波洛_EN", "松浦_EN", "海芭夏_EN", "莱依拉_EN", "拉赫曼_EN", "凯西娅_EN", "阿芬迪_EN", "托帕&账账_EN", "昆钧_EN", "尾巴_EN", "翡翠_EN", "天目十五_EN", "猎犬家系成员_EN", "杜拉夫_EN", "莎塔娜_EN", "威严的男子_EN", "伊庭_EN", "菲约尔_EN", "卢卡_EN", "毗伽尔_EN", "琳琅_EN", "讨嫌的小孩_EN", "丹恒_EN", "天叔_EN", "祖莉亚·德斯特雷_EN", "早柚_EN", "七七_EN", "长生_EN", "田铁嘴_EN", "特纳_EN", "玻瑞亚斯_EN", "夏沃蕾_EN", "昆恩_EN", "提纳里_EN", "马洛尼_EN", "瓦尔特_EN", "茂才公_EN", "黑泽京之介_EN", "瑶瑶_EN", "埃洛伊_EN", "娜维娅_EN", "玥辉_EN", "半夏_EN", "考特里亚_EN", "夏妮_EN", "巴哈利_EN", "卡布斯_EN", "奇妙的船_EN", "艾莉丝_EN", "艾薇拉_EN", "回声海螺_EN", "燕翠_EN", "岩明_EN", "迪奥娜_EN", "安武_EN", "望雅_EN", "基娅拉_EN", "枫原万叶_EN", "纳西妲_EN", "裁判_EN", "哈伦_EN", "杰娜姬_EN", "慈祥的女声_EN", "琴_EN", "传次郎_EN", "闲云_EN", "小乐_EN", "嚣张的小孩_EN", "消沉的患者_EN", "洛伦佐_EN", "今谷香里_EN", "斯科特_EN", "梅里埃_EN", "丹吉尔_EN", "雕像_EN", "银杏_EN", "阿兰_EN", "钟离_EN", "星际和平播报_EN", "年长的患者_EN", "花角玉将_EN", "高善_EN", "今谷三郎_EN", "绿芙蓉_EN", "拉伊德_EN", "皮特_EN", "娜比雅_EN", "葵_EN", "冥火大公_EN", "芙宁娜_EN", "维尔德_EN", "九条孝行_EN", "鬼婆婆_EN", "shajinma_EN", "蒂玛乌斯_EN", "木木_EN", "留云借风真君_EN", "陆行岩本真蕈·元素生命_EN", "艾丝妲_EN", "玛塞勒_EN", "赛索斯_EN", "珐露珊_EN", "罗巧_EN", "有原则的猎犬家系成员_EN", "净砚_EN", "克洛琳德_EN", "黄泉_EN", "丹恒•饮月_EN", "空_EN", "阿鸠_EN", "宏达_EN", "克列门特_EN", "夏洛蒂_EN", "康纳_EN", "大辅_EN", "光之_EN", "克雷薇_EN", "徐六石_EN", "伊莎朵_EN", "加萨尼_EN", "安东尼娜_EN", "斯坦利_EN", "年幼的孩子_EN", "阿斯法德_EN", "泽田_EN", "加藤洋平_EN", "德田_EN", "舒蕾_EN", "佐西摩斯_EN", "薇娜_EN", "铁尔南_EN", "伊德里西_EN", "狼哥_EN", "马姆杜_EN", "朔次郎_EN", "景元_EN", "帕姆_EN", "神里绫人_EN", "神里绫华_EN", "迪娜泽黛_EN", "丝柯克_EN", "佩拉_EN", "玛达赫_EN", "法哈德_EN", "费索勒_EN", "理水叠山真君_EN", "加福尔_EN", "卡芙卡_EN", "霄翰_EN", "帕维耶_EN", "星期日_EN", "莱昂_EN", "诺艾尔_EN", "托克_EN", "桂乃芬_EN", "鹿野院平藏_EN", "那维莱特_EN", "瓦乐瑞娜_EN", "艾文_EN", "江蓠_EN", "巴列维_EN", "巴尔塔萨_EN", "托马_EN", "彦卿_EN", "银狼_EN", "沙坎_EN", "岩夫_EN", "维格尔_EN", "被俘的信徒_EN", "韦尔纳_EN", "欧菲妮_EN", "八重神子_EN", "耕一_EN", "班尼特_EN", "莫塞伊思_EN", "艾伦_EN", "恶龙_EN", "杰洛尼_EN", "绍祖_EN", "佩尔西科夫_EN", "阿来_EN", "古山_EN", "迈勒斯_EN", "小仓澪_EN", "一平_EN", "西拉杰_EN", "老芬奇_EN", "竺子_EN", "楚仪_EN", "肢体评委_EN", "劳维克_EN", "羽生田千鹤_EN", "申鹤_EN", "维多克_EN", "理查_EN", "阮•梅_EN", "asideb_EN", "慧心_EN", "钟表匠_EN", "埃德蒙多_EN", "凯瑟琳_EN", "荧_EN", "百闻_EN", "札齐_EN", "拉齐_EN", "莺儿_EN", "赛诺_EN", "五郎_EN", "福尔茨_EN", "巴蒂斯特_EN", "焦躁的丹鼎司医士_EN", "副警长_EN", "戴因斯雷布_EN", "可莉_EN", "石头_EN", "长门幸子_EN", "星_EN", "旁白_EN", "罗伊斯_EN", "削月筑阳真君_EN", "罗莎莉亚_EN", "阿圆_EN", "嘉玛_EN", "艾迪恩_EN", "娜德瓦_EN", "玛吉_EN", "玲可_EN", "苍老的声音_EN", "泽维尔_EN", "叶德_EN", "有乐斋_EN", "记忆中的声音_EN", "三田_EN", "弗洛朗_EN", "斯薇塔_EN", "顺吉_EN", "阿汉格尔_EN", "芙萝拉_EN", "埃勒曼_EN", "魈_EN", "七叶寂照秘密主_EN", "纯也_EN", "手岛_EN", "真理医生_EN", "发抖的流浪者_EN", "大隆_EN", "阿拉夫_EN", "齐米亚_EN", "居勒什_EN", "千织_EN", "德沃沙克_EN", "爱德华医生_EN", "紫月季_EN", "洛恩_EN", "北村_EN", "埃斯蒙德_EN", "杰帕德_EN", "捕快_EN", "托帕_EN", "小贩_EN", "梦主_EN", "贝努瓦_EN", "大毫_EN", "怀疑的患者_EN", "拉格沃克•夏尔•米哈伊尔_EN", "雪衣_EN", "菲米尼_EN", "剑阵中的声音_EN", "镜中人_EN", "黑塔_EN", "柯莱_EN", "辛焱_EN", "胡尚_EN", "里卡尔_EN", "巨大谜钟_EN", "厨子_EN", "乐平波琳_EN", "阿金_EN", "阿蕾奇诺_EN", "芷巧_EN", "钟表小子_EN", "阿扎木_EN", "白术_EN", "阿尔卡米_EN", "夜兰_EN", "知易_EN", "伊迪娅_EN", "塞琉斯_EN", "阿佩普_EN", "炒冷饭机器人_EN", "吴船长_EN", "珊瑚_EN", "旅行者_EN", "克罗索_EN", "停云_EN", "爱贝尔_EN", "界种科科员_EN", "台词评委_EN", "村田_EN", "希儿_EN", "珠函_EN", "阿旭_EN", "自称渊上之物_EN", "奥泰巴_EN", "一心传名刀_EN", "卡萝蕾_EN", "费迪南德_EN", "菲谢尔_EN", "香菱_EN", "林尼_EN", "伊萨克_EN", "法拉娜_EN", "百识_EN", "杰克_EN", "广大_EN", "柴田_EN", "老戴_EN", "米沙_EN", "警长_EN", "妮露_EN", "歌蒂_EN", "埃德_EN", "邓恩_EN", "埃尔欣根_EN", "维尔芒_EN", "安西_EN", "韵宁_EN", "萨姆_EN", "信使_EN", "远黛_EN", "信博_EN", "尤利安_EN", "连烟_EN", "阿尼斯_EN", "巫女_EN", "卡卡瓦夏的姐姐_EN", "常九爷_EN", "冷漠的男性_EN", "笼钓瓶一心_EN", "卡莉娜_EN", "面具_EN", "寒腿叔叔_EN", "冒失的帕拉德_EN", "丽莎_EN", "镜流_EN", "达达利亚_EN", "莱欧斯利_EN", "阿扎尔_EN", "哲平_EN", "筑梦师_EN", "刀疤刘_EN", "木南杏奈_EN", "莱提西娅_EN", "将司_EN", "恕筠_EN", "上杉_EN", "唐娜_EN", "玛格丽特_EN", "深渊法师_EN", "阿山婆_EN", "艾丽_EN", "阿伟_EN", "七尾_EN", "奥兹_EN", "新之丞_EN", "砂金_EN", "萨赫哈蒂_EN", "悠策_EN", "姬子_EN", "科玫_EN", "虎克_EN", "尤苏波夫_EN", "华劳斯_EN", "枫原景春_EN", "艾琳_EN", "式大将_EN", "珊瑚宫心海_EN"]
 export const speakers_BA = ["白石歌原", "柚岛夏", "芹奈（圣诞）", "宇泽玲纱", "佐天泪子", "霞泽美游", "飞鸟马时", "下江小春", "连河切里诺", "冰室濑名", "优香（体操服）", "莲见（体操服）", "小鸟游星野", "勇美枫", "花冈柚子", "池仓玛丽娜", "狐坂若藻", "狮子堂泉", "乙花堇", "不破莲华", "扇喜葵", "丹花伊吹", "御坂美琴", "美甘尼禄", "春日椿", "朝比奈菲娜", "河和静子", "丰见小鸟", "桐生桔梗", "古关忧", "药子纱绫", "空崎日奈", "初音未来", "歌原（应援团）", "若叶日向", "大野月咏", "黑崎小雪", "白子（骑行）", "星野（泳装）", "梓（泳装）", "仲正一花", "鹫见芹奈", "锭前纱织", "和元泉艾米", "生盐诺亚", "银镜伊织", "守月铃美", "伊织（泳装）", "秤亚津子", "芹香（正月）", "食蜂操祈", "陸八魔阿露", "忧（泳装）", "朱城瑠美", "时（兔女郎）", "牛牧朱莉", "秋泉红叶", "千世（泳装）", "火宫千夏", "戒野美咲", "近卫南", "音濑小玉", "伊原木好美", "美游（泳装）", "桑上果穗", "咲（泳装）", "圆堂志美子", "小涂真纪", "左然", "枫香（正月）", "黑馆晴奈", "花凛（兔女郎）", "才羽绿", "猫塚响", "歌住樱子", "月雪宫子", "和香（温泉）", "剑先鹤城", "伊草遥香", "爱丽丝（女仆）", "明星日鞠", "陆景和", "浅黄睦月", "日奈（泳装）", "空井咲", "春原心奈", "鬼方佳代子", "赤司纯子", "佳代子（正月）", "小钩晴", "角楯花凛", "圣园未花", "姬木梅露", "静山真白", "鬼怒川霞", "砂狼白子", "羽川莲见", "一之濑明日奈", "理村爱理", "静子（泳装）", "明日奈（兔女郎）", "十六夜野宫", "夏彦", "睦月（正月）", "阿露（正月）", "桐藤渚", "佐城巴", "莫弈", "浦和花子", "阿慈谷日富美", "春原瞬", "枣伊吕波", "千鸟满", "安守实里", "日富美（泳装）", "水羽三森", "爱清枫香", "遥香（正月）", "鳄渊明里", "杏山和纱", "铜花瞬", "风仓萌绘", "黑见芹香", "伊落玛丽", "尼禄（兔女郎）", "合欢垣吹雪", "苍森美弥", "尾刃康娜", "才羽桃井", "早濑优香", "宫子（泳装）", "中务桐乃", "鹤城（泳装）", "柚子（女仆）", "天见和香", "白洲梓", "槌永日和", "各务千寻", "羽沼真琴", "若藻（泳装）", "天雨亚子", "下仓惠", "室笠朱音(茜)", "久田泉奈", "朝颜花江", "真白（泳装）", "泉奈（泳装）", "白子（泳装）", "间宵时雨", "天童爱丽丝", "勘解由小路紫", "响（应援团）", "奥空绫音"]
-export const speakers = [...speakers_ZH, ...speakers_JP, ...speakers_EN, ...speakers_BA]
+export const speakers_vits_uma_genshin_honkai = ['特别周', '无声铃鹿', '东海帝皇（帝宝，帝王）', '丸善斯基', '富士奇迹', '小栗帽', '黄金船', '伏特加', '大和赤骥', '大树快车', '草上飞', '菱亚马逊', '目白麦昆', '神鹰', '好歌剧', '成田白仁', '鲁道夫象征（皇帝）', '气槽', '爱丽数码', '星云天空', '玉藻十字', '美妙姿势', '琵琶晨光', '摩耶重炮', '曼城茶座', '美浦波旁', '目白赖恩', '菱曙', '雪中美人', '米浴', '艾尼斯风神', '爱丽速子（爱丽快子）', '爱慕织姬', '稻荷一', '胜利奖券', '空中神宫', '荣进闪耀', '真机伶', '川上公主', '黄金城（黄金城市）', '樱花进王', '采珠', '新光风', '东商变革', '超级小海湾', '醒目飞鹰（寄寄子）', '荒漠英雄', '东瀛佐敦', '中山庆典', '成田大进', '西野花', '春丽（乌拉拉）', '青竹回忆', '微光飞驹', '美丽周日', '待兼福来', 'mr cb（cb先生）', '名将怒涛（名将户仁）', '目白多伯', '优秀素质', '帝王光辉', '待兼诗歌剧', '生野狄杜斯', '目白善信', '大拓太阳神', '双涡轮（两立直，两喷射，二锅头，逆喷射）', '里见光钻（萨托诺金刚石）', '北部玄驹', '樱花千代王', '天狼星象征', '目白阿尔丹', '八重无敌', '鹤丸刚志', '目白光明', '成田拜仁（成田路）', '也文摄辉', '小林历奇', '北港火山', '奇锐骏', '苦涩糖霜', '小小蚕茧', '骏川手纲（绿帽恶魔）', '秋川弥生（小小理事长）', '乙名史悦子（乙名记者）', '桐生院葵', '安心泽刺刺美', '樫本理子', '神里绫华（龟龟）', '琴', '空（空哥）', '丽莎', '荧（荧妹）', '芭芭拉', '凯亚', '迪卢克', '雷泽', '安柏', '温迪', '香菱', '北斗', '行秋', '魈', '凝光', '可莉', '钟离', '菲谢尔（皇女）', '班尼特', '达达利亚（公子）', '诺艾尔（女仆）', '七七', '重云', '甘雨（椰羊）', '阿贝多', '迪奥娜（猫猫）', '莫娜', '刻晴', '砂糖', '辛焱', '罗莎莉亚', '胡桃', '枫原万叶（万叶）', '烟绯', '宵宫', '托马', '优菈', '雷电将军（雷神）', '早柚', '珊瑚宫心海（心海，扣扣米）', '五郎', '九条裟罗', '荒泷一斗（一斗）', '埃洛伊', '申鹤', '八重神子（神子）', '神里绫人（绫人）', '夜兰', '久岐忍', '鹿野苑平藏', '提纳里', '柯莱', '多莉', '云堇', '纳西妲（草神）', '深渊使徒', '妮露', '赛诺', '债务处理人', '坎蒂丝', '真弓快车', '秋人', '望族', '艾尔菲', '艾莉丝', '艾伦', '阿洛瓦', '天野', '天目十五', '愚人众-安德烈', '安顺', '安西', '葵', '青木', '荒川幸次', '荒谷', '有泽', '浅川', '麻美', '凝光助手', '阿托', '竺子', '百识', '百闻', '百晓', '白术', '贝雅特丽奇', '丽塔', '失落迷迭', '缭乱星棘', '伊甸', '伏特加女孩', '狂热蓝调', '莉莉娅', '萝莎莉娅', '八重樱', '八重霞', '卡莲', '第六夜想曲', '卡萝尔', '姬子', '极地战刃', '布洛妮娅', '次生银翼', '理之律者%26希儿', '理之律者', '迷城骇兔', '希儿', '魇夜星渊', '黑希儿', '帕朵菲莉丝', '不灭星锚', '天元骑英', '幽兰黛尔', '派蒙bh3', '爱酱', '绯玉丸', '德丽莎', '月下初拥', '朔夜观星', '暮光骑士', '格蕾修', '留云借风真君', '梅比乌斯', '仿犹大', '克莱因', '圣剑幽兰黛尔', '妖精爱莉', '特斯拉zero', '苍玄', '若水', '西琳', '戴因斯雷布', '贝拉', '赤鸢', '镇魂歌', '渡鸦', '人之律者', '爱莉希雅', '天穹游侠', '琪亚娜', '空之律者', '薪炎之律者', '云墨丹心', '符华', '识之律者', '特瓦林', '维尔薇', '芽衣', '雷之律者', '断罪影舞', '阿波尼亚', '榎本', '厄尼斯特', '恶龙', '范二爷', '法拉', '愚人众士兵', '愚人众士兵a', '愚人众士兵b', '愚人众士兵c', '愚人众a', '愚人众b', '飞飞', '菲利克斯', '女性跟随者', '逢岩', '摆渡人', '狂躁的男人', '奥兹', '芙萝拉', '跟随者', '蜜汁生物', '黄麻子', '渊上', '藤木', '深见', '福本', '芙蓉', '古泽', '古田', '古山', '古谷昇', '傅三儿', '高老六', '矿工冒', '元太', '德安公', '茂才公', '杰拉德', '葛罗丽', '金忽律', '公俊', '锅巴', '歌德', '阿豪', '狗三儿', '葛瑞丝', '若心', '阿山婆', '怪鸟', '广竹', '观海', '关宏', '蜜汁卫兵', '守卫1', '傲慢的守卫', '害怕的守卫', '贵安', '盖伊', '阿创', '哈夫丹', '日语阿贝多（野岛健儿）', '日语埃洛伊（高垣彩阳）', '日语安柏（石见舞菜香）', '日语神里绫华（早见沙织）', '日语神里绫人（石田彰）', '日语白术（游佐浩二）', '日语芭芭拉（鬼头明里）', '日语北斗（小清水亚美）', '日语班尼特（逢坂良太）', '日语坎蒂丝（柚木凉香）', '日语重云（齐藤壮马）', '日语柯莱（前川凉子）', '日语赛诺（入野自由）', '日语戴因斯雷布（津田健次郎）', '日语迪卢克（小野贤章）', '日语迪奥娜（井泽诗织）', '日语多莉（金田朋子）', '日语优菈（佐藤利奈）', '日语菲谢尔（内田真礼）', '日语甘雨（上田丽奈）', '日语（畠中祐）', '日语鹿野院平藏（井口祐一）', '日语空（堀江瞬）', '日语荧（悠木碧）', '日语胡桃（高桥李依）', '日语一斗（西川贵教）', '日语凯亚（鸟海浩辅）', '日语万叶（岛崎信长）', '日语刻晴（喜多村英梨）', '日语可莉（久野美咲）', '日语心海（三森铃子）', '日语九条裟罗（濑户麻沙美）', '日语丽莎（田中理惠）', '日语莫娜（小原好美）', '日语纳西妲（田村由加莉）', '日语妮露（金元寿子）', '日语凝光（大原沙耶香）', '日语诺艾尔（高尾奏音）', '日语奥兹（增谷康纪）', '日语派蒙（古贺葵）', '日语琴（斋藤千和）', '日语七七（田村由加莉）', '日语雷电将军（泽城美雪）', '日语雷泽（内山昂辉）', '日语罗莎莉亚（加隈亚衣）', '日语早柚（洲崎绫）', '日语散兵（柿原彻也）', '日语申鹤（川澄绫子）', '日语久岐忍（水桥香织）', '日语女士（庄子裕衣）', '日语砂糖（藤田茜）', '日语达达利亚（木村良平）', '日语托马（森田成一）', '日语提纳里（小林沙苗）', '日语温迪（村濑步）', '日语香菱（小泽亚李）', '日语魈（松冈祯丞）', '日语行秋（皆川纯子）', '日语辛焱（高桥智秋）', '日语八重神子（佐仓绫音）', '日语烟绯（花守由美里）', '日语夜兰（远藤绫）', '日语宵宫（植田佳奈）', '日语云堇（小岩井小鸟）', '日语钟离（前野智昭）', '杰克', '阿吉', '江舟', '鉴秋', '嘉义', '纪芳', '景澄', '经纶', '景明', '晋优', '阿鸠', '酒客', '乔尔', '乔瑟夫', '约顿', '乔伊斯', '居安', '君君', '顺吉', '纯也', '重佐', '大岛纯平', '蒲泽', '勘解由小路健三郎', '枫', '枫原义庆', '荫山', '甲斐田龍馬', '海斗', '惟神晴之介', '鹿野奈奈', '卡琵莉亚', '凯瑟琳', '加藤信悟', '加藤洋平', '胜家', '茅葺一庆', '和昭', '一正', '一道', '桂一', '庆次郎', '阿贤', '健司', '健次郎', '健三郎', '天理', '杀手a', '杀手b', '木南杏奈', '木村', '国王', '木下', '北村', '清惠', '清人', '克列门特', '骑士', '小林', '小春', '康拉德', '大肉丸', '琴美', '宏一', '康介', '幸德', '高善', '梢', '克罗索', '久保', '九条镰治', '久木田', '昆钧', '菊地君', '久利须', '黑田', '黑泽京之介', '响太', '岚姐', '兰溪', '澜阳', '劳伦斯', '乐明', '莱诺', '莲', '良子', '李当', '李丁', '小乐', '灵', '小玲', '琳琅a', '琳琅b', '小彬', '小德', '小楽', '小龙', '小吴', '小吴的记忆', '理正', '阿龙', '卢卡', '洛成', '罗巧', '北风狼', '卢正', '萍姥姥', '前田', '真昼', '麻纪', '真', '愚人众-马克西姆', '女性a', '女性b', '女性a的跟随者', '阿守', '玛格丽特', '真理', '玛乔丽', '玛文', '正胜', '昌信', '将司', '正人', '路爷', '老章', '松田', '松本', '松浦', '松坂', '老孟', '孟丹', '商人随从', '传令兵', '米歇尔', '御舆源一郎', '御舆源次郎', '千岩军教头', '千岩军士兵', '明博', '明俊', '美铃', '美和', '阿幸', '削月筑阳真君', '钱眼儿', '森彦', '元助', '理水叠山真君', '理水疊山真君', '朱老板', '木木', '村上', '村田', '永野', '长野原龙之介', '长濑', '中野志乃', '菜菜子', '楠楠', '成濑', '阿内', '宁禄', '牛志', '信博', '伸夫', '野方', '诺拉', '纪香', '诺曼', '修女', '纯水精灵', '小川', '小仓澪', '冈林', '冈崎绘里香', '冈崎陆斗', '奥拉夫', '老科', '鬼婆婆', '小野寺', '大河原五右卫门', '大久保大介', '大森', '大助', '奥特', '派蒙', '派蒙2', '病人a', '病人b', '巴顿', '派恩', '朋义', '围观群众', '围观群众a', '围观群众b', '围观群众c', '围观群众d', '围观群众e', '铜雀', '阿肥', '兴叔', '老周叔', '公主', '彼得', '乾子', '芊芊', '乾玮', '绮命', '杞平', '秋月', '昆恩', '雷电影', '兰道尔', '雷蒙德', '冒失的帕拉德', '伶一', '玲花', '阿仁', '家臣们', '梨绘', '荣江', '戎世', '浪人', '罗伊斯', '如意', '凉子', '彩香', '酒井', '坂本', '朔次郎', '武士a', '武士b', '武士c', '武士d', '珊瑚', '三田', '莎拉', '笹野', '聪美', '聪', '小百合', '散兵', '害怕的小刘', '舒伯特', '舒茨', '海龙', '世子', '谢尔盖', '家丁', '商华', '沙寅', '阿升', '柴田', '阿茂', '式大将', '清水', '志村勘兵卫', '新之丞', '志织', '石头', '诗羽', '诗筠', '石壮', '翔太', '正二', '周平', '舒杨', '齐格芙丽雅', '女士', '思勤', '六指乔瑟', '愚人众小兵d', '愚人众小兵a', '愚人众小兵b', '愚人众小兵c', '吴老五', '吴老二', '滑头鬼', '言笑', '吴老七', '士兵h', '士兵i', '士兵a', '士兵b', '士兵c', '士兵d', '士兵e', '士兵f', '士兵g', '奏太', '斯坦利', '掇星攫辰天君', '小头', '大武', '陶义隆', '杉本', '苏西', '嫌疑人a', '嫌疑人b', '嫌疑人c', '嫌疑人d', '斯万', '剑客a', '剑客b', '阿二', '忠胜', '忠夫', '阿敬', '孝利', '鹰司进', '高山', '九条孝行', '毅', '竹内', '拓真', '卓也', '太郎丸', '泰勒', '手岛', '哲平', '哲夫', '托克', '大boss', '阿强', '托尔德拉', '旁观者', '天成', '阿大', '蒂玛乌斯', '提米', '户田', '阿三', '一起的人', '德田', '德长', '智树', '利彦', '胖乎乎的旅行者', '藏宝人a', '藏宝人b', '藏宝人c', '藏宝人d', '阿祇', '恒雄', '露子', '话剧团团长', '内村', '上野', '上杉', '老戴', '老高', '老贾', '老墨', '老孙', '天枢星', '老云', '有乐斋', '丑雄', '乌维', '瓦京', '菲尔戈黛特', '维多利亚', '薇尔', '瓦格纳', '阿外', '侍女', '瓦拉', '望雅', '宛烟', '琬玉', '战士a', '战士b', '渡辺', '渡部', '阿伟', '文璟', '文渊', '韦尔纳', '王扳手', '武沛', '晓飞', '辛程', '星火', '星稀', '辛秀', '秀华', '阿旭', '徐刘师', '矢部', '八木', '山上', '阿阳', '颜笑', '康明', '泰久', '安武', '矢田幸喜', '矢田辛喜', '义坚', '莺儿', '盈丰', '宜年', '银杏', '逸轩', '横山', '永贵', '永业', '嘉久', '吉川', '义高', '用高', '阳太', '元蓉', '玥辉', '毓华', '有香', '幸也', '由真', '结菜', '韵宁', '百合', '百合华', '尤苏波夫', '裕子', '悠策', '悠也', '于嫣', '柚子', '老郑', '正茂', '志成', '芷巧', '知易', '支支', '周良', '珠函', '祝明', '祝涛']
+export const speakers = Config.ttsSpace.includes('matce.cn') ? [...speakers_ZH, ...speakers_JP, ...speakers_EN, ...speakers_BA] : (Config.ttsSpace.includes('hf.space') ? [...speakers_vits_uma_genshin_honkai] : ["请在锅巴设置发音人model"])
 export const vits_emotion_map = ['1: Happy (开心)', '2: Sad (伤心)', '3: Excited (兴奋)', '4: Angry (生气)', '5: Bored (无聊)', '6: Nervous (紧张)', '7: Content (满足)', '8: Frustrated (沮丧)', '9: Worried (担心)', '10: Relaxed (轻松)', '11: Enthusiastic (热情)', '12: Joyful (快乐)', '13: Melancholic (忧郁)', '14: Surprised (惊讶)', '15: Grateful (感激)', '16: Optimistic (乐观)', '17: Anxious (焦虑)', '18: Amused (逗乐)', '19: Embarrassed (尴尬)', '20: Hopeful (希望)', '21: Guilty (内疚)', '22: Restless (不安)', '23: Curious (好奇)', '24: Disappointed (失望)', '25: Thrilled (激动)', '26: Contented (满意)', '27: Impatient (不耐烦)', '28: Lonely (孤独)', '29: Disgusted (厌恶)', '30: Jealous (嫉妒)', '31: Proud (骄傲)', '32: Surprised (惊讶)', '33: Delighted (高兴)', '34: Drained (疲惫)', '35: Ecstatic (狂喜)', '36: Fulfilled (满足)', '37: Giddy (眩晕)', '38: Heartbroken (心碎)', '39: Inspired (受启发)', '40: Irritated (恼怒)', '41: Motivated (有动力)', '42: Overwhelmed (不堪重负)', '43: Peaceful (宁静)', '44: Regretful (后悔)', '45: Sentimental (感伤)', '46: Sympathetic (同情)', '47: Tired (疲倦)', '48: Uncomfortable (不舒服)', '49: Worrisome (担忧)', '50: Zealous (热心)', '51: Blissful (幸福)', '52: Depressed (抑郁)', '53: Elated (兴高采烈)', '54: Grumpy (脾气暴躁)', '55: Hopeless (绝望)', '56: Intrigued (好奇)', '57: Playful (调皮)', '58: Reflective (反思)', '59: Satisfied (满意)', '60: Shy (害羞)', '61: Suspicious (怀疑)', '62: Ambitious (雄心勃勃)', '63: Grieving (悲伤)', '64: Frightened (害怕)', '65: Helpless (无助)', '66: Lively (活力)', '67: Envious (羡慕)', '68: Impressed (印象深刻)', '69: Irrational (不理智)', '70: Longing (渴望)', '71: Restless (不安)', '72: Silly (愚蠢)', '73: Stressed (紧张)', '74: Sensitive (敏感)', '75: Thoughtful (思考)', '76: Unsettled (不稳定)', '77: Weak (脆弱)', '78: Wistful (怀念)', '79: Zealot (狂热)', '80: Thankful (感谢)', '81: Resentful (愤怒)', '82: Pessimistic (悲观)', '83: Ashamed (羞愧)', '84: Irritable (易怒)', '85: Jealous (妒忌)', '86: Numb (麻木)', '87: Resigned (顺从)', '88: Relieved (宽慰)', '89: Sorrowful (悲哀)', '90: Enraged (愤怒)', '91: Awestruck (敬畏)', '92: Gracious (亲切)', '93: Discontent (不满)', '94: Confused (困惑)', '95: Excitable (易激动)', '96: Fulfilled (满足)', '97: Jovial (快活)', '98: Lethargic (想睡)', '99: Regretful (后悔)', '100: Sarcastic (讽刺)']
 // export const vits_emotion_map = ['1: Happy (开心)', '2: Sad (伤心)', '3: Excited (兴奋)', '4: Angry (生气)', '5: Bored (困)', '6: Worried (担心)']
 
@@ -60,12 +62,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         speaker = speakers[randomNum(0, speakers.length)]
     }
 
-    // text = wrapTextByLanguage(text) //这函数用于<zh> or <jp>包裹句子，但v2.genshinvoice.top 现在支持"auto"了!!
-
-
-    /*处理tts语音文本：*/
+    /*处理文本：*/
     let tts_First_person_zh_colon_reg = new RegExp(Config.tts_First_person + '：', 'g');  //7. 替换第一人称+'：'，例如可莉：
-
     text = text.replace(/\#|(\[..\])|(\[.\])/g, '').replace(/派蒒/g, '派蒙').replace(/\(?\^([0-9])\^\)?/g, '').replace(/\n(:|：).*|\n$/g, '').replace(/(\ud83c[\udf00-\udfff])|(\ud83d[\udc00-\ude4f\ude80-\udeff])|[\u2600-\u2B55]/g, '').replace(tts_First_person_zh_colon_reg, '').replace(/（..）/g, '').replace(/~/g, '，').replace(/，，，|，，|。。。/g, '。').replace(/，。|。。|。，/g, '。').replace(/(\[|【)好感度.*\d+(\]|】)/g, '')
     //replace: 1.删除[？？]和[？] ; 2.替换派蒒 ; 3.删除bing (^1^)的注释 ; 4.删除bing ":"开头的注释 ; 5.删除所有emoji  6. 替换第一人称+'：'，例如可莉：; 9. 替换（小声）; 10.~ 替换为 ，11.替换↓chat.js处理过的换行文本 12.处理多余的，。 13.适配删除中括号好感度
     //注意：chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')  
@@ -74,7 +72,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     if (Config.autoJapanese)
         text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|コーリ|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
 
-    // 校正api地址
+
     let space = Config.ttsSpace
 
     // post到api.fish.audio获取音频
@@ -94,14 +92,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         return voiceUrl
     }
 
-    // tts情感自动设置
-    let vits_emotion = Config.vits_emotion
-    if (Config.vits_auto_emotion) {
-        vits_emotion = get_tts_Emotion(text)
-        logger.mark(`[chatgpt-tts]tts使用情感：${vits_emotion}`)
-    }
-
-    //校正为 https://bv2.firefly.matce.cn
+    //校正space
     if (space.endsWith('/run/predict')) {
         let trimmedSpace = space.substring(0, space.length - 12)
         logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
@@ -111,6 +102,66 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let trimmedSpace = _.trimEnd(space, '/')
         logger.warn(`[chatgpt-tts]vits api 当前为${space}，已校正为${trimmedSpace}`)
         space = trimmedSpace
+    }
+
+    // 使用vits-uma ；post到hf.space/api/generate获取音频
+    if (space.includes('hf.space')) {
+        // 用<zh> or <jp>包裹句子
+        text = wrapTextByLanguage(text)
+        logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
+        let body = {
+            data: [
+                text, language, speaker,
+                noiseScale, noiseScaleW, lengthScale
+            ]
+        }
+        // post
+        if (Config.debug) {
+            logger.info(body)
+        }
+        let url = `${space}/api/generate`
+        if (Config.huggingFaceReverseProxy) {
+            url = `${Config.huggingFaceReverseProxy}/api/generate?space=${_.trimStart(space, 'https://')}`
+        }
+        let json, response
+        for (let post_times = 1; post_times <= 5; post_times++) {
+            try {
+                logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
+                response = await newFetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(body),
+                    headers: {
+                        'content-type': 'application/json'
+                    }
+                })
+                let responseBody = await response.text()
+                json = JSON.parse(responseBody)
+                if (Config.debug) {
+                    logger.info(json)
+                }
+                if (response.status > 299) {
+                    logger.info(json)
+                    throw new Error(JSON.stringify(json))
+                }
+                let [message, audioInfo, take] = json?.data
+                logger.info(message, take)
+                let audioLink = `${space}/file=${audioInfo.name}`
+                if (Config.huggingFaceReverseProxy) {
+                    if (Config.debug) {
+                        logger.info('[chatgpt-tts]使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
+                    }
+                    let spaceHost = _.trimStart(space, 'https://')
+                    audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
+                }
+                return audioLink
+            } catch (err) {
+                logger.error(`[chatgpt-tts]生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+                // 等待5000ms
+                await sleep_zz(5000)
+            }
+            logger.error(body)
+            throw new Error('[chatgpt-tts]responseBody:', json)
+        }
     }
 
     // wss连接Fish-Vits站点
@@ -135,244 +186,231 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     }
 
     // post连接Bert-Vits站点
-    let sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)
+    if (space == "https://bv2.firefly.matce.cn" || space == "https://ba.firefly.matce.cn") {
+        let sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)
 
-    let url = `${space}/run/predict`
-    /* 真的需要反代的话这一行需要修改
-      if (Config.huggingFaceReverseProxy) {
-        url = `${Config.huggingFaceReverseProxy}/api/generate?space=${_.trimStart(space, 'https://')}`
-      }
-    */
+        // tts情感自动设置
+        let vits_emotion = Config.vits_emotion
+        if (Config.vits_auto_emotion) {
+            vits_emotion = get_tts_Emotion(text)
+            logger.mark(`[chatgpt-tts]tts使用情感：${vits_emotion}`)
+        }
 
-    // 如果 speaker 在数组 speakers_JP 中
-    if (speakers_JP.includes(speaker) || speakers_BA.includes(speaker)) {
-        // 自动切换网址
-        if (space == "https://bv2.firefly.matce.cn") space = "https://ba.firefly.matce.cn"
-        if (url == "https://bv2.firefly.matce.cn/run/predict") url = "https://ba.firefly.matce.cn/run/predict"
-        tts_language = "JP"
+        let url = `${space}/run/predict`
 
-        // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
-        if (!Config.autoJapanese) {
-            if (Config.debug)
-                logger.info(`[chatgpt-tts]正在使用网页api转日语，基于文本：'${text}'`)
-            let body_translation = {
+        // 如果 speaker 在数组 speakers_JP 中
+        if (speakers_JP.includes(speaker) || speakers_BA.includes(speaker)) {
+            // 自动切换网址
+            if (space == "https://bv2.firefly.matce.cn") space = "https://ba.firefly.matce.cn"
+            if (url == "https://bv2.firefly.matce.cn/run/predict") url = "https://ba.firefly.matce.cn/run/predict"
+            tts_language = "JP"
+
+            // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
+            if (!Config.autoJapanese) {
+                if (Config.debug)
+                    logger.info(`[chatgpt-tts]正在使用网页api转日语，基于文本：'${text}'`)
+                let body_translation = {
+                    data: [
+                        text
+                    ],
+                    event_data: null,
+                    fn_index: 1,
+                    session_hash: ""
+                }
+                if (Config.debug) {
+                    logger.info(body_translation)
+                }
+                let json, response
+                for (let post_times = 1; post_times <= 5; post_times++) {
+                    try {
+                        logger.info(`[chatgpt-tts]正在第${post_times}次使用接口转日语${url}`)
+                        response = await newFetch(url, {
+                            method: 'POST',
+                            body: JSON.stringify(body_translation),
+                            headers: {
+                                'content-type': 'application/json'
+                            }
+                        })
+                        let responseBody = await response.text()
+                        json = JSON.parse(responseBody)
+                        if (Config.debug) {
+                            logger.info(json)
+                        }
+                        if (response.status > 299) {
+                            logger.info(json)
+                            throw new Error(JSON.stringify(json))
+                        }
+                        let [message] = json?.data
+
+                        if (!message) throw new Error('[chatgpt-tts]api转日语错误', responseBody)
+                        else logger.mark(`[chatgpt-tts]成功获取网页api转日语文本：${message}`)
+
+                        // 硬编码替换部分角色名
+                        message = message.replace(/可莉|コリー/g, 'クレー').replace(/派蒙|モンゴル/g, 'パイモン').replace(/纳西妲|ナシの実/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
+                        text = message
+                        break
+                    } catch (err) {
+                        logger.error(`[chatgpt-tts]转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+                        if (post_times == 5) throw new Error('[chatgpt-tts]网址api转日语错误，建议使用#tts转日语开启\nresponseBody:', json)
+                        // 等待5000ms
+                        await sleep_zz(5000)
+                    }
+                }
+            }
+        }
+        // 如果 speaker 在数组 speakers_ZH 中
+        if (speakers_ZH.includes(speaker)) {
+            // 则使用中文
+            if (space == "https://ba.firefly.matce.cn") space = "https://bv2.firefly.matce.cn"
+            if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
+            tts_language = "ZH"
+        }
+
+        logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
+
+        // exampleAudio暂时无法使用
+        let exampleAudio = null
+
+        let body
+        // API更新了，目前只支持切片生成
+        tts_slice_is_slice_generation = true
+        if (!tts_slice_is_slice_generation) {
+            // 最大300字，截取处理后的前299个字符
+            text = text.substr(0, 299);
+            body = {
                 data: [
-                    text
+                    text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                    tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
                 ],
                 event_data: null,
-                fn_index: 1,
+                fn_index: 0,
                 session_hash: ""
             }
-            if (Config.debug) {
-                logger.info(body_translation)
+        } else {
+            // 2024年4月12日 切片生成 最大也被限定在300字，截取处理后的前299个字符
+            text = text.substr(0, 299);
+            body = {
+                data: [
+                    text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
+                    tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds,
+                    exampleAudio, vits_emotion, style_text, style_text_weights
+                ],
+                event_data: null,
+                fn_index: 0,
+                session_hash: ""
             }
-            let json, response
-            for (let post_times = 1; post_times <= 5; post_times++) {
-                try {
-                    logger.info(`[chatgpt-tts]正在第${post_times}次使用接口转日语${url}`)
-                    response = await newFetch(url, {
-                        method: 'POST',
-                        body: JSON.stringify(body_translation),
-                        headers: {
-                            'content-type': 'application/json'
-                        }
-                    })
-                    let responseBody = await response.text()
-                    json = JSON.parse(responseBody)
-                    if (Config.debug) {
-                        logger.info(json)
+        }
+
+        // post
+        if (Config.debug) {
+            logger.info(body)
+        }
+        let json, response
+        for (let post_times = 1; post_times <= 5; post_times++) {
+            try {
+                logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
+                response = await newFetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(body),
+                    headers: {
+                        'content-type': 'application/json'
                     }
-                    if (response.status > 299) {
-                        logger.info(json)
-                        throw new Error(JSON.stringify(json))
+                })
+                let responseBody = await response.text()
+                json = JSON.parse(responseBody)
+                if (Config.debug) {
+                    logger.info(json)
+                }
+                if (response.status > 299) {
+                    logger.info(json)
+                    throw new Error(JSON.stringify(json))
+                }
+                let [message, audioInfo] = json?.data
+                logger.info(`[chatgpt-tts]api生成信息：`, message)
+
+                /*这api怎么天天换参数呢*/
+                let audioLink
+                for (let read_audioInfo in audioInfo) {
+                    if (/.*(\/|\\).*(\/|\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
+                        audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
+                        break
                     }
-                    let [message] = json?.data
-
-                    if (!message) throw new Error('[chatgpt-tts]api转日语错误', responseBody)
-                    else logger.mark(`[chatgpt-tts]成功获取网页api转日语文本：${message}`)
-
-                    // 硬编码替换部分角色名
-                    message = message.replace(/可莉|コリー/g, 'クレー').replace(/派蒙|モンゴル/g, 'パイモン').replace(/纳西妲|ナシの実/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
-                    text = message
-                    break
-                } catch (err) {
-                    logger.error(`[chatgpt-tts]转日语For循环中发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
-                    if (post_times == 5) throw new Error('[chatgpt-tts]网址api转日语错误，建议使用#tts转日语开启\nresponseBody:', json)
-                    // 等待5000ms
-                    await sleep_zz(5000)
                 }
+                if (!audioLink) throw new Error('[chatgpt-tts]未匹配到音频链接', json)
+                else logger.mark(`[chatgpt-tts]成功获取音频地址${audioLink}`)
+
+                return audioLink
+            } catch (err) {
+                logger.error(`[chatgpt-tts]生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
+                // 等待5000ms
+                await sleep_zz(5000)
             }
         }
+        logger.error(body)
+        throw new Error('[chatgpt-tts]responseBody:', json)
     }
-    // 如果 speaker 在数组 speakers_ZH 中
-    if (speakers_ZH.includes(speaker)) {
-        // 则使用中文
-        if (space == "https://ba.firefly.matce.cn") space = "https://bv2.firefly.matce.cn"
-        if (url == "https://ba.firefly.matce.cn/run/predict") url = "https://bv2.firefly.matce.cn/run/predict"
-        tts_language = "ZH"
-    }
-
-    logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
-
-    // exampleAudio暂时无法使用
-    let exampleAudio = null
-
-    let body
-    // API更新了，目前只支持切片生成
-    tts_slice_is_slice_generation = true
-    if (!tts_slice_is_slice_generation) {
-        // 最大300字，截取处理后的前299个字符
-        text = text.substr(0, 299);
-        body = {
-            data: [
-                text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                tts_language, exampleAudio, vits_emotion, "Text prompt", style_text, style_text_weights
-            ],
-            event_data: null,
-            fn_index: 0,
-            session_hash: ""
-        }
-        /* 普通生成body参考：
-        {
-            "data": [
-                "派蒙知道哦",
-                "派蒙_ZH",
-                0.2,
-                0.6,
-                0.8,
-                1,
-                "ZH",  //tts_language
-                null,  //exampleAudio
-                "Happy",
-                "Text prompt",  //切片生成没有这一行
-                "",
-                0.7
-            ],
-                "event_data": null,
-                    "fn_index": 0,  //切片生成这个不同
-        } */
-    } else {
-        // 2024年4月12日 切片生成 最大也被限定在300字，截取处理后的前299个字符
-        text = text.substr(0, 299);
-        body = {
-            data: [
-                text, speaker, sdp_ratio, noiseScale, noiseScaleW, lengthScale,
-                tts_language, tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds, tts_slice_pause_between_sentences_seconds,
-                exampleAudio, vits_emotion, style_text, style_text_weights
-            ],
-            event_data: null,
-            fn_index: 0,
-            session_hash: ""
-        }
-        /* 切片生成body参考：
-        {
-            "data": [
-                "派蒙知道哦",
-                "派蒙_ZH",
-                0.2,
-                0.6,
-                0.8,
-                1,
-                "ZH",  //tts_language
-                false,  //按句切分
-                0.6,  //段间停顿
-                0.2,  //句间停顿
-                null,  //exampleAudio
-                "Happy",
-                "",
-                0.7
-            ],
-                "event_data": null,
-                    "fn_index": 0
-        } */
-    }
-
-
-    // tts_post
-    if (Config.debug) {
-        logger.info(body)
-    }
-    let json, response
-    for (let post_times = 1; post_times <= 5; post_times++) {
-        try {
-            logger.info(`[chatgpt-tts]正在第${post_times}次使用接口${url}`)
-            response = await newFetch(url, {
-                method: 'POST',
-                body: JSON.stringify(body),
-                headers: {
-                    'content-type': 'application/json'
-                }
-            })
-            let responseBody = await response.text()
-            json = JSON.parse(responseBody)
-            if (Config.debug) {
-                logger.info(json)
-            }
-            if (response.status > 299) {
-                logger.info(json)
-                throw new Error(JSON.stringify(json))
-            }
-            let [message, audioInfo] = json?.data
-            logger.info(`[chatgpt-tts]api生成信息：`, message)
-
-            /*这api怎么天天换参数呢*/
-            let audioLink
-            for (let read_audioInfo in audioInfo) {
-                if (/.*(\/|\\).*(\/|\\).*\.(wav|mp3)$/.test(audioInfo[read_audioInfo])) {
-                    audioLink = `${space}/file=${audioInfo[read_audioInfo]}`
-                    break
-                }
-            }
-            if (!audioLink) throw new Error('[chatgpt-tts]未匹配到音频链接', json)
-            else logger.mark(`[chatgpt-tts]成功获取音频地址${audioLink}`)
-
-            /*let audioLink = `${space}/file=${audioInfo.path}`*/
-
-            /* 真的需要反代的话这一行需要修改
-                if (Config.huggingFaceReverseProxy) {
-                  if (Config.debug) {
-                    logger.info('使用huggingface加速反代下载生成音频' + Config.huggingFaceReverseProxy)
-                  }
-                  let spaceHost = _.trimStart(space, 'https://')
-                  audioLink = `${Config.huggingFaceReverseProxy}/file=${audioInfo.name}?space=${spaceHost}`
-                }
-            */
-            return audioLink
-        } catch (err) {
-            logger.error(`[chatgpt-tts]生成语音api发生错误，请检查是否配置了正确的api。当前为第${post_times}次。当前语音api status为`, response.status, '错误：', err)
-            // 等待5000ms
-            await sleep_zz(5000)
-        }
-    }
-    logger.error(body)
-    throw new Error('[chatgpt-tts]responseBody:', json)
-
 }
 
 export function convertSpeaker(speaker) {
-    switch (speaker) {
-        case '派蒙':
-        case '小派蒙': return '派蒙_ZH'
-        case '纳西妲': return '纳西妲_ZH'
-        case '可莉': return '可莉_ZH'
-        case '早柚': return '早柚_ZH'
-        case '迪奥娜': return '迪奥娜_ZH'
-        case '瑶瑶': return '瑶瑶_ZH'
-        case '七七': return '七七_ZH'
-        case '希格雯': return '希格雯_ZH'
-        case '神里绫华': return '神里绫华_ZH'
-        case '胡桃': return '胡桃_ZH'
-        case '雷电将军': return '雷电将军_ZH'
-        case '芙宁娜': return '芙宁娜_ZH'
-        case '绮良良': return '绮良良_ZH'
-        case '刻晴': return '刻晴_ZH'
-        case '珊瑚宫心海': return '珊瑚宫心海_ZH'
-        case '迪卢克': return '迪卢克_ZH'
-        case '心奈': return '春原心奈'
-        case '小春': return '下江小春'
-        case '星野': return '小鸟游星野'
+    if (Config.ttsSpace.includes('hf.space')) {
+        switch (speaker) {
+            case '空':
+            case '空哥': return '空（空哥）'
+            case '荧':
+            case '荧妹': return '荧（荧妹）'
+            case '神里绫华':
+            case '龟龟': return '神里绫华（龟龟）'
+            case '菲谢尔':
+            case '皇女': return '菲谢尔（皇女）'
+            case '公子':
+            case '达达利亚': return '达达利亚（公子）'
+            case '诺艾尔':
+            case '女仆': return '诺艾尔（女仆）'
+            case '甘雨':
+            case '椰羊': return '甘雨（椰羊）'
+            case '雷神':
+            case '雷电将军': return '雷电将军（雷神）'
+            case '珊瑚宫心海':
+            case '心海': return '珊瑚宫心海（心海，扣扣米）'
+            case '荒泷一斗':
+            case '一斗': return '荒泷一斗（一斗）'
+            case '神子':
+            case '八重神子': return '八重神子（神子）'
+            case '绫人':
+            case '神里绫人': return '神里绫人（绫人）'
+            case '万叶':
+            case '枫原万叶': return '枫原万叶（万叶）'
+            case '猫猫':
+            case '迪奥娜': return '迪奥娜（猫猫）'
+            case '草神':
+            case '纳西妲': return '纳西妲（草神）'
+        }
     }
-    // "天见和香", "黑崎小雪", "黑见芹香", "槌永日和", "爱丽丝", "鹫见芹奈", "连河切里诺", "浅黄睦月", "天童爱丽丝", "下江小春", "小鸟游星野", 
+    else {
+        switch (speaker) {
+            case '派蒙':
+            case '小派蒙': return '派蒙_ZH'
+            case '纳西妲': return '纳西妲_ZH'
+            case '可莉': return '可莉_ZH'
+            case '早柚': return '早柚_ZH'
+            case '迪奥娜': return '迪奥娜_ZH'
+            case '瑶瑶': return '瑶瑶_ZH'
+            case '七七': return '七七_ZH'
+            case '希格雯': return '希格雯_ZH'
+            case '神里绫华': return '神里绫华_ZH'
+            case '胡桃': return '胡桃_ZH'
+            case '雷电将军': return '雷电将军_ZH'
+            case '芙宁娜': return '芙宁娜_ZH'
+            case '绮良良': return '绮良良_ZH'
+            case '刻晴': return '刻晴_ZH'
+            case '珊瑚宫心海': return '珊瑚宫心海_ZH'
+            case '迪卢克': return '迪卢克_ZH'
+            case '心奈': return '春原心奈'
+            case '小春': return '下江小春'
+            case '星野': return '小鸟游星野'
+        }
+        // "天见和香", "黑崎小雪", "黑见芹香", "槌永日和", "爱丽丝", "鹫见芹奈", "连河切里诺", "浅黄睦月", "天童爱丽丝", "下江小春", "小鸟游星野", 
+    }
 
     return speaker
 }
