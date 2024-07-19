@@ -65,9 +65,17 @@
 git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
 ```
 
+## 预览：
+
+<img decoding="async" src="https://github.com/user-attachments/assets/ecad8471-1b6a-4a2e-bbf8-d310cbf50e24" width="40%">
+
+<img decoding="async"  src="https://github.com/user-attachments/assets/2a8bc878-c97e-4e62-986d-1d2afb20e74d" width="40%">
 
 
 
+
+
+---
 
 
 
