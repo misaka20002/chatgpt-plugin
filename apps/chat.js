@@ -1079,6 +1079,9 @@ export class chatgpt extends plugin {
               e.msg = `#绘画${strPaint}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               if (e.img)
                 e.msg += ', Reference_Strength = 0.30';
+              if (Math.random() < 0.5) {
+                e.msg += ', smea';
+              }
               console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
               let isTrue = await nai.txt2img(e);
               if (isTrue) {
