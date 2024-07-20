@@ -787,8 +787,9 @@ async function post_to_api_fish_audio_for_taskId(text) {
     const tomorrowTime = tomorrow.getTime();
     const secondsUntilTomorrow = Math.floor((tomorrowTime - currentTime) / 1000);
 
+    // 原来使用量不是每日刷新的，那就记录30天使用量吧
     await redis.set("CHATGPT:api_fish_audio_tokenUsage", JSON.stringify(api_fish_audio_tokenUsage), {
-        EX: secondsUntilTomorrow,
+        EX: 60*60*24*30,
     });
 
     // post
