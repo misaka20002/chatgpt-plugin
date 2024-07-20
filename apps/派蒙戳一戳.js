@@ -340,7 +340,7 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机表情包生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 8)
+                let mutetype = Math.ceil(Math.random() * 12)
                 switch (mutetype) {
                     case 1:
                         await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
@@ -366,6 +366,20 @@ export class PaimonChuo extends plugin {
                         const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
                         await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${usrinfo.card || usrinfo.nickname}","message":"${randomPlayingMsg}"}`))
                         break;
+                    default:
+                        // 调用 #随机meme
+                        try {
+                            let { memes } = await import('./派蒙meme.js')
+                            // 注入参数
+                            const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
+                            e.sender = usrinfo
+                            e.user_id = e.operator_id
+                            const chuoMeme = new memes();
+                            chuoMeme.randomMemes(e);
+                        } catch (err) {
+                            console.log('[派蒙戳一戳]调用随机meme出错:', err)
+                        }
+                        break
                 }
             }
 

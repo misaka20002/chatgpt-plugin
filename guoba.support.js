@@ -1309,6 +1309,44 @@ export function supportGuoba() {
           },
         },
         {
+          label: '以下为meme表情生成',
+          component: 'Divider'
+        },
+        {
+          field: 'meme_baseUrl',
+          label: 'MEME api',
+          bottomHelpMessage: '默认值：https://memes.ikechan8370.com，也可以duplicate大大的space：https://huggingface.co/spaces/ikechan8370/meme-generator 然后api填https://[username]-meme-generator.hf.space；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://memes.ikechan8370.com',
+          },
+        },
+        {
+          field: 'meme_reply',
+          label: '是否引用',
+          bottomHelpMessage: '机器人发表情是否引用回复用户',
+          component: 'Switch'
+        },
+        {
+          field: 'meme_forceSharp',
+          label: '是否#指令',
+          bottomHelpMessage: '是否强制使用#触发命令',
+          component: 'Switch'
+        },
+        {
+          field: 'meme_masterProtectDo',
+          label: '反弹撅',
+          bottomHelpMessage: '主人保护，撅主人时会被反撅 (暂时只支持QQ)',
+          component: 'Switch'
+        },
+        {
+          field: 'meme_maxFileSize',
+          label: '图片大小',
+          bottomHelpMessage: '用户输入的图片，最大支持的文件大小',
+          helpMessage: '单位：MB',
+          component: 'InputNumber'
+        },
+        {
           label: '以下为杂七杂八的配置',
           component: 'Divider'
         },

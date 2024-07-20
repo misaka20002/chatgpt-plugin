@@ -3,30 +3,31 @@ import fetch, { File, FormData } from 'node-fetch'
 import fs from 'fs'
 import path from 'node:path'
 import _ from 'lodash'
+import { Config } from '../utils/config.js'
 
 if (!global.segment) {
   global.segment = (await import('oicq')).segment
 }
-const baseUrl = 'https://memes.ikechan8370.com'
+const baseUrl = Config.meme_baseUrl
 /**
  * 机器人发表情是否引用回复用户
  * @type {boolean}
  */
-const reply = true
+const reply = Config.meme_reply
 /**
  * 是否强制使用#触发命令
  */
-const forceSharp = true
+const forceSharp = Config.meme_forceSharp
 /**
  * 主人保护，撅主人时会被反撅 (暂时只支持QQ)
  * @type {boolean}
  */
-const masterProtectDo = true
+const masterProtectDo = Config.meme_masterProtectDo
 /**
  * 用户输入的图片，最大支持的文件大小，单位为MB
  * @type {number}
  */
-const maxFileSize = 10
+const maxFileSize = Config.meme_maxFileSize
 
 let keyMap = {}
 
