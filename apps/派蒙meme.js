@@ -571,7 +571,7 @@ function mkdirs (dirname) {
 }
 
 async function getMasterQQ () {
-  return (await import('../../lib/config/config.js')).default.masterQQ
+  return (await import('../../../lib/config/config.js')).default.masterQQ
 }
 
 async function getAvatar (e, userId = e.sender.user_id) {
