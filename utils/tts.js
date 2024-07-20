@@ -757,11 +757,46 @@ async function post_to_api_fish_audio_for_taskId(text) {
             "text": text
         }
     };
+
+    // 拥有多个账号时，token用英文逗号分割，将自动负载均衡
+    // 读取 redis
+    let api_fish_audio_tokenUsage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenUsage')) || {}
+    // 把 Config.api_fish_audio_token 以 , 分割为数组
+    const api_fish_audio_tokenArray = Config.api_fish_audio_token.split(',') || []
+
+    // 在数组 api_fish_audio_tokenArray 中查找 api_fish_audio_tokenUsage 的值，并返回其最小值的索引
+    const minIndex = api_fish_audio_tokenArray.reduce((minIndex, currentElement, currentIndex) => {
+        if (api_fish_audio_tokenUsage[currentElement] && (minIndex === -1 || parseInt(api_fish_audio_tokenUsage[currentElement]) < parseInt(api_fish_audio_tokenUsage[api_fish_audio_tokenArray[minIndex]]))) {
+            return currentIndex;
+        } else {
+            return minIndex;
+        }
+    }, -1);
+
+    // 如果 minIndex == -1 的话就用 [0]
+    const api_fish_audio_token = api_fish_audio_tokenArray[minIndex] || api_fish_audio_tokenArray[0]
+
+    // 更新对象 api_fish_audio_tokenUsage 并重新写入 redis
+    api_fish_audio_tokenUsage[api_fish_audio_token] = (parseInt(api_fish_audio_tokenUsage[api_fish_audio_token]) + 1) || 1;
+
+    // 计算从现在到明天凌晨0点的秒数
+    const currentTime = new Date().getTime();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const tomorrowTime = tomorrow.getTime();
+    const secondsUntilTomorrow = Math.floor((tomorrowTime - currentTime) / 1000);
+
+    await redis.set("CHATGPT:api_fish_audio_tokenUsage", JSON.stringify(api_fish_audio_tokenUsage), {
+        EX: secondsUntilTomorrow,
+    });
+
+    // post
     await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + Config.api_fish_audio_token
+            'Authorization': 'Bearer ' + api_fish_audio_token
         },
         body: JSON.stringify(payload)
     })
