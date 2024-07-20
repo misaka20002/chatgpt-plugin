@@ -780,12 +780,12 @@ async function post_to_api_fish_audio_for_taskId(text) {
     api_fish_audio_tokenUsage[api_fish_audio_token] = (parseInt(api_fish_audio_tokenUsage[api_fish_audio_token]) + 1) || 1;
 
     // 计算从现在到明天凌晨0点的秒数
-    const currentTime = new Date().getTime();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    const tomorrowTime = tomorrow.getTime();
-    const secondsUntilTomorrow = Math.floor((tomorrowTime - currentTime) / 1000);
+    // const currentTime = new Date().getTime();
+    // const tomorrow = new Date();
+    // tomorrow.setDate(tomorrow.getDate() + 1);
+    // tomorrow.setHours(0, 0, 0, 0);
+    // const tomorrowTime = tomorrow.getTime();
+    // const secondsUntilTomorrow = Math.floor((tomorrowTime - currentTime) / 1000);
 
     // 原来使用量不是每日刷新的，那就记录30天使用量吧
     await redis.set("CHATGPT:api_fish_audio_tokenUsage", JSON.stringify(api_fish_audio_tokenUsage), {
