@@ -656,14 +656,20 @@ export function supportGuoba() {
         },
         {
           field: 'imgOcr',
-          label: '图片识别',
-          bottomHelpMessage: '是否识别消息中图片的文字内容，需要同时包含图片和消息才生效',
+          label: '对话中图片OCR',
+          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；呆毛版 如果识别出文字会添加文本“拿出了一张图片上面写着:"xxxx"”',
           component: 'Switch'
         },
         {
           field: 'recognitionByGemini',
           label: '对话中图片识别-gemini',
           bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果；1、建议关闭其他识别功能（尤其是楼上的最简单的OCR识别）；2、建议仅在所使用的ai引擎不支持图片识别时开启，例如使用gemini时开启，使用gpt或claude时关闭；3、需要配置了gemini的key才能使用；4、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；5、gemini遇到涩涩会中断，因此被中断时本插件会自行添加文本“附带了一张儿童不宜的涩图。”',
+          component: 'Switch'
+        },
+        {
+          field: 'gemini_vqa_model',
+          label: '#识图 时使用的gemini版本',
+          bottomHelpMessage: '默认值：gemini-pro-vision；可选：gemini-1.5-flash',
           component: 'Switch'
         },
         {
@@ -981,7 +987,7 @@ export function supportGuoba() {
         {
           field: 'api_fish_audio_token',
           label: 'api_fish_audio_token',
-          bottomHelpMessage: '（仅限api.fish.audio）先自己登录 https://api.fish.audio ，来到语音合成，找到喜欢的发音人，例如派蒙，在浏览器按F12来到 开发者工具/网络，随便生成一个语音，在例如task的post记录的 标头 下找到 Authorization: "Bearer xxxxxxxxxxx" 并记下来；在 负载 下找到model（模型）的代码记下来。现在在这里填入你的 "Bearer xxxxxxxxxxx" 中的xxxxxxxxxxx。可选：拥有多个账号时，token用英文逗号分割，将自动负载均衡，例如“xxxxxxxxxxx,xxxxxxxxxxx”',
+          bottomHelpMessage: '（仅限api.fish.audio）先自己登录 https://api.fish.audio ，来到语音合成，找到喜欢的发音人，例如派蒙，在浏览器按F12来到 开发者工具/网络，随便生成一个语音，在例如task的post记录的 标头 下找到 Authorization: "Bearer xxxxxxxxxxx" 并记下来；在 负载 下找到model（模型）的代码记下来。现在在这里填入你的 "Bearer xxxxxxxxxxx" 中的xxxxxxxxxxx。可选：拥有多个账号时，token用英文逗号分割，将自动负载均衡，例如xxxxxxxxxxx,xxxxxxxxxxx',
           component: 'Input'
         },
         {

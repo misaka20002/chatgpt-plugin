@@ -619,7 +619,7 @@ ${translateLangLabels}
       e,
       userId: e.sender.user_id,
       key: Config.geminiKey,
-      model: 'gemini-pro-vision',
+      model: Config.gemini_vqa_model,
       baseUrl: Config.geminiBaseUrl,
       debug: Config.debug
     })

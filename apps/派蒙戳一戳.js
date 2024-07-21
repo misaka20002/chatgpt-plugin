@@ -377,7 +377,7 @@ export class PaimonChuo extends plugin {
                             const chuoMeme = new memes();
                             chuoMeme.randomMemes(e);
                         } catch (err) {
-                            console.log('[派蒙戳一戳]调用随机meme出错:', err)
+                            logger.error('[派蒙戳一戳]调用随机meme出错:', err)
                         }
                         break
                 }

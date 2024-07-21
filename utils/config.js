@@ -127,6 +127,7 @@ const defaultConfig = {
   meme_forceSharp: true,
   meme_masterProtectDo: true,
   meme_maxFileSize: 10,
+  gemini_vqa_model: "gemini-pro-vision",
   ttsHD: false,
   initiativeChatGroups: [],
   enableDraw: true,

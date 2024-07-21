@@ -665,7 +665,7 @@ export class chatgpt extends plugin {
     if (Config.imgOcr && !!isImg) {
       let imgOcrText = await getImageOcrText(e)
       if (imgOcrText) {
-        prompt = prompt + '"'
+        prompt = prompt + '拿出了一张图片上面写着:"'
         for (let imgOcrTextKey in imgOcrText) {
           prompt += imgOcrText[imgOcrTextKey]
         }
