@@ -614,6 +614,12 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'gemini_vqa_needMaster',
+          label: '只有主人才能#识图',
+          bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”',
+          component: 'Switch'
+        },
+        {
           field: 'geminiPrompt',
           label: '设定',
           component: 'InputTextArea'
@@ -627,7 +633,7 @@ export function supportGuoba() {
         {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
-          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com',
+          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com （常见报错：500 Internal Server Error）',
           component: 'Input'
         },
         {

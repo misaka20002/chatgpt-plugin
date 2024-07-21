@@ -606,6 +606,10 @@ ${translateLangLabels}
   }
 
   async vqa (e) {
+
+    // 只有主人才可以用识图功能
+    if (Config.gemini_vqa_needMaster && !e.isMaster) return false
+
     if (!Config.geminiKey) {
       e.reply('需要配置Gemini密钥以使用识图')
       return
