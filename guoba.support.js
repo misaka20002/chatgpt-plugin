@@ -604,7 +604,7 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '目前仅支持gemini-pro',
+          bottomHelpMessage: '默认值：gemini-pro；目前支持gemini-pro；gemini-1.5-flash',
           component: 'Input'
         },
         {
@@ -668,9 +668,9 @@ export function supportGuoba() {
         },
         {
           field: 'gemini_vqa_model',
-          label: '#识图 时使用的gemini版本',
+          label: '#识图 gemini model版本',
           bottomHelpMessage: '默认值：gemini-pro-vision；可选：gemini-1.5-flash',
-          component: 'Switch'
+          component: 'Input'
         },
         {
           field: 'enablePrivateChat',
