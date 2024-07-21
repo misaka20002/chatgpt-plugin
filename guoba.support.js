@@ -598,13 +598,19 @@ export function supportGuoba() {
         {
           field: 'geminiKey',
           label: 'API密钥',
-          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取',
+          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey 获取',
           component: 'InputPassword'
         },
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-pro；目前支持gemini-pro；gemini-1.5-flash',
+          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-pro；gemini-1.5-flash；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
+          component: 'Input'
+        },
+        {
+          field: 'gemini_vqa_model',
+          label: 'gemini识图模型',
+          bottomHelpMessage: '用于#识图；默认值：gemini-pro-vision；可选（注意配额）：gemini-1.5-flash；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
           component: 'Input'
         },
         {
@@ -665,12 +671,6 @@ export function supportGuoba() {
           label: '对话中图片识别-gemini',
           bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果；1、建议关闭其他识别功能（尤其是楼上的最简单的OCR识别）；2、建议仅在所使用的ai引擎不支持图片识别时开启，例如使用gemini时开启，使用gpt或claude时关闭；3、需要配置了gemini的key才能使用；4、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；5、gemini遇到涩涩会中断，因此被中断时本插件会自行添加文本“附带了一张儿童不宜的涩图。”',
           component: 'Switch'
-        },
-        {
-          field: 'gemini_vqa_model',
-          label: '#识图 gemini model版本',
-          bottomHelpMessage: '默认值：gemini-pro-vision；可选：gemini-1.5-flash',
-          component: 'Input'
         },
         {
           field: 'enablePrivateChat',
