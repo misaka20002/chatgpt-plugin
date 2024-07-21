@@ -764,17 +764,20 @@ async function post_to_api_fish_audio_for_taskId(text) {
     // 把 Config.api_fish_audio_token 以 , 分割为数组
     const api_fish_audio_tokenArray = Config.api_fish_audio_token.split(',') || []
 
-    // 在数组 api_fish_audio_tokenArray 中查找 api_fish_audio_tokenUsage 的值，并返回其最小值的索引
-    const minIndex = api_fish_audio_tokenArray.reduce((minIndex, currentElement, currentIndex) => {
-        if (api_fish_audio_tokenUsage[currentElement] && (minIndex === -1 || parseInt(api_fish_audio_tokenUsage[currentElement]) < parseInt(api_fish_audio_tokenUsage[api_fish_audio_tokenArray[minIndex]]))) {
-            return currentIndex;
-        } else {
-            return minIndex;
-        }
-    }, -1);
+    // 将对象 api_fish_audio_tokenUsage 的值赋给数组 api_fish_audio_tokenArray
+    const api_fish_audio_tokenArrayUsage = api_fish_audio_tokenArray.map(token => {
+        return {
+            token: token,
+            usage: api_fish_audio_tokenUsage[token] || 0
+        };
+    });
 
-    // 如果 minIndex == -1 的话就用 [0]
-    const api_fish_audio_token = api_fish_audio_tokenArray[minIndex] || api_fish_audio_tokenArray[0]
+    // 查找最小值的索引
+    const minIndex = api_fish_audio_tokenArrayUsage.reduce((minIndex, current, index, arr) => {
+        return current.usage < arr[minIndex].usage ? index : minIndex;
+    }, 0);
+
+    const api_fish_audio_token = api_fish_audio_tokenArrayUsage[minIndex]?.token
 
     // 更新对象 api_fish_audio_tokenUsage 并重新写入 redis
     api_fish_audio_tokenUsage[api_fish_audio_token] = (parseInt(api_fish_audio_tokenUsage[api_fish_audio_token]) + 1) || 1;
