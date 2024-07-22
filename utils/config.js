@@ -10,7 +10,7 @@ export const pureSydneyInstruction = 'You\'re an AI assistant named [name]. Answ
 const defaultConfig = {
   blockWords: ['屏蔽词1', '屏蔽词b'],
   promptBlockWords: ['屏蔽词1', '屏蔽词b'],
-  imgOcr: true,
+  imgOcr: false,
   defaultUsePicture: false,
   defaultUseTTS: false,
   defaultTTSRole: '派蒙_ZH',
@@ -22,7 +22,7 @@ const defaultConfig = {
   toggleMode: 'at',
   groupMerge: false,
   quoteReply: true,
-  showQRCode: true,
+  showQRCode: false,
   apiKey: '',
   openAiBaseUrl: defaultOpenAIReverseProxy,
   OpenAiPlatformRefreshToken: '',
@@ -82,7 +82,7 @@ const defaultConfig = {
   chromeTimeoutMS: 120000,
   sydneyFirstMessageTimeout: 40000,
   sunoApiTimeout: 60,
-  ttsSpace: 'https://bv2.firefly.matce.cn',
+  ttsSpace: '',
   // https://114514.201666.xyz
   huggingFaceReverseProxy: '',
   tts_First_person: '派蒙',
@@ -113,7 +113,7 @@ const defaultConfig = {
   tts_slice_is_Split_by_sentence: false,
   tts_slice_pause_between_paragraphs_seconds: 0.2,
   tts_slice_pause_between_sentences_seconds: 0.2,
-  exampleAudio: null,
+  exampleAudio: "",
   Fish_Iterative_Prompt_Length: 90,
   Fish_Maximum_tokens_per_batch: 0,
   Fish_Top_P: 0.7,
@@ -235,7 +235,7 @@ const defaultConfig = {
   claudeSystemPrompt: '', // claude api 设定
   translateSource: 'openai',
   enableMd: false, // 第三方md，非QQBot。需要适配器实现segment.markdown和segment.button方可使用，否则不建议开启，会造成各种错误
-  enableToolbox: true, // 默认关闭工具箱节省占用和加速启动
+  enableToolbox: false, // 默认关闭工具箱节省占用和加速启动
   version: 'v2.8.1'
 }
 const _path = process.cwd()

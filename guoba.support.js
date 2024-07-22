@@ -134,12 +134,6 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
-          field: 'smartMode',
-          label: '智能模式',
-          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合开启读取群聊上下文效果更佳',
-          component: 'Switch'
-        },
-        {
           field: 'openAiBaseUrl',
           label: 'OpenAI API服务器地址',
           bottomHelpMessage: 'OpenAI的API服务器地址。注意要带上/v1。默认为https://api.openai.com/v1',
@@ -174,6 +168,22 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'enableDraw',
+          label: 'OpenAI绘图功能开关',
+          bottomHelpMessage: '注意OpenAI token的消耗，绘制大小为1024x1024的1张图片，预计消耗0.24美元余额；指令：#dalle3(画图|绘图)  #(chatgpt|dalle)编辑图片  #(搞|改)(她|他)头像  #(chatgpt|ChatGPT|dalle|Dalle)(修图|图片变形|改图)  #(chatgpt|ChatGPT|dalle|Dalle)(绘图|画图)；不受此限制的可用指令：#bing(画图|绘图)',
+          component: 'Switch'
+        },
+        {
+          field: 'drawCD',
+          label: 'OpenAI绘图CD',
+          helpMessage: '单位：秒',
+          bottomHelpMessage: '绘图指令的CD时间，主人不受限制',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
+        {
           label: '以下为必应方式的配置。',
           component: 'Divider'
         },
@@ -203,17 +213,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'enableGroupContext',
-          label: '是否允许机器人读取近期的群聊聊天记录',
-          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
-          component: 'Switch'
-        },
-        {
-          field: 'groupContextTip',
-          label: '机器人读取聊天记录时的后台prompt',
-          component: 'InputTextArea'
-        },
-        {
           field: 'enforceMaster',
           label: '加强主人认知',
           bottomHelpMessage: '加强主人认知。希望机器人认清主人，避免NTR可开启。开启后可能会与自设定的内容有部分冲突。sydney模式可以放心开启',
@@ -236,12 +235,6 @@ export function supportGuoba() {
           label: '使用AP插件代替Bing进行绘图',
           bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容；优先级：nai > ap > bing',
           component: 'Switch'
-        },
-        {
-          field: 'groupContextLength',
-          label: '允许机器人读取近期的最多群聊聊天记录条数。',
-          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
-          component: 'InputNumber'
         },
         {
           field: 'enableRobotAt',
@@ -551,7 +544,7 @@ export function supportGuoba() {
         {
           field: 'qwenApiKey',
           label: '通义千问API Key',
-          component: 'InputPassword'
+          component: 'InputPassword；通义千问的ai人格使用“API方式”中的设置，请自行设置'
         },
         {
           field: 'qwenModel',
@@ -667,6 +660,29 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'smartMode',
+          label: '智能模式',
+          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合开启读取群聊上下文效果更佳',
+          component: 'Switch'
+        },
+        {
+          field: 'enableGroupContext',
+          label: '是否允许机器人读取近期的群聊聊天记录',
+          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
+          component: 'Switch'
+        },
+        {
+          field: 'groupContextTip',
+          label: '机器人读取聊天记录时的后台prompt',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'groupContextLength',
+          label: '允许机器人读取近期的最多群聊聊天记录条数。',
+          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
+          component: 'InputNumber'
+        },
+        {
           field: 'imgOcr',
           label: '对话中图片OCR',
           bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；呆毛版 如果识别出文字会添加文本“拿出了一张图片上面写着:"xxxx"”',
@@ -732,22 +748,6 @@ export function supportGuoba() {
           label: '启用二维码',
           bottomHelpMessage: '在图片模式中启用二维码。该对话内容将被发送至第三方服务器以进行渲染展示，如果不希望对话内容被上传到第三方服务器请关闭此功能',
           component: 'Switch'
-        },
-        {
-          field: 'enableDraw',
-          label: 'OpenAI绘图功能开关',
-          bottomHelpMessage: '注意OpenAI token的消耗，绘制大小为1024x1024的1张图片，预计消耗0.24美元余额；指令：#dalle3(画图|绘图)  #(chatgpt|dalle)编辑图片  #(搞|改)(她|他)头像  #(chatgpt|ChatGPT|dalle|Dalle)(修图|图片变形|改图)  #(chatgpt|ChatGPT|dalle|Dalle)(绘图|画图)；不受此限制的可用指令：#bing(画图|绘图)',
-          component: 'Switch'
-        },
-        {
-          field: 'drawCD',
-          label: 'OpenAI绘图CD',
-          helpMessage: '单位：秒',
-          bottomHelpMessage: '绘图指令的CD时间，主人不受限制',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
         },
         {
           label: '以下为Suno音乐合成的配置。',
@@ -946,6 +946,10 @@ export function supportGuoba() {
           }
         },
         {
+          label: 'VITS语音生成：前提：语音模式源为"vits-uma-genshin-honkai"；云转码API发送数据模式为链接；指令#tts语音帮助',
+          component: 'Divider'
+        },
+        {
           field: 'ttsSpace',
           label: 'vits语音转换API地址',
           bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
@@ -973,12 +977,8 @@ export function supportGuoba() {
           field: 'autoJapanese',
           label: 'vits模式日语输出',
           bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
-            '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译...',
+            '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译',
           component: 'Switch'
-        },
-        {
-          label: '呆毛版 VITS语音自定义设置：可用命令#tts语音帮助 ；先在本页设置好：语音模式源为"vits-uma-genshin-honkai"；vits默认角色；vits-uma-genshin-honkai语音转换API地址；云转码API发送数据模式；',
-          component: 'Divider'
         },
         {
           field: 'ttsHD',
