@@ -76,8 +76,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // post到api.fish.audio获取音频
     if (space.includes('api.fish.audio')) {
-        // 这个只能100字了
-        text = text.substr(0, 99);
+        // 截取前500个UTF-8字节的字符串
+        text = truncateUtf8String(text, 500);
         logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
         let voiceUrl
         let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
@@ -790,7 +790,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
     });
 
     if (Config.debug) {
-        console.log(`[tts-fish-audio]token使用量：\n`, api_fish_audio_tokenUsage, `\nbody:\n`, payload)
+        console.log(`[tts-fish-audio]此次使用token：\n${api_fish_audio_token}\ntoken当日使用量：\n`, api_fish_audio_tokenUsage, `\nbody:\n`, payload)
     }
 
     // post
@@ -854,3 +854,18 @@ async function wait_for_get_api_fish_audio_for_audioURL(text) {
     console.log("[tts-fish-audio]音频生成成功：", audioURL)
     return audioURL
 }
+
+/**
+ * @description: 截取 str 前 length 个UTF-8字节的字符串
+ * @param {*} str
+ * @param {*} length
+ * @return {*} str
+ */
+const truncateUtf8String = (str, length) => {
+    const buffer = Buffer.from(str, 'utf8');
+    if (buffer.length <= length) {
+        return str;
+    } else {
+        return buffer.subarray(0, length).toString('utf8');
+    }
+};
