@@ -97,7 +97,7 @@ export class PaimonChuo extends plugin {
             return true
         }
 
-        if (e.target_id == cfg.qq || e.target_id == BotQQ || e.target_id == getUin(e)) {
+        if (e.target_id == e.self_id || e.target_id == cfg.qq || e.target_id == BotQQ || e.target_id == getUin(e)) {
             /**统计每日被戳次数 */
             let count = await redis.incr(`paimon_pokecount`);
             // redis记录每日被戳次数，次日零点过期
@@ -374,6 +374,15 @@ export class PaimonChuo extends plugin {
                             const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
                             e.sender = usrinfo
                             e.user_id = e.operator_id
+                            e.message = [
+                                {
+                                    "type": "text",
+                                    "text": "戳"
+                                },
+                            ]
+                            if (Math.random() < 0.5) {
+                                e.message.push({ type: 'at', qq: e.self_id, text: '@小派蒙' })
+                            }
                             const chuoMeme = new memes();
                             chuoMeme.randomMemes(e);
                         } catch (err) {

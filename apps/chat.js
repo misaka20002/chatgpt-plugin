@@ -678,7 +678,7 @@ export class chatgpt extends plugin {
       // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
       const atMessage = e.message?.find(item => item?.type === "at" && item?.qq != getUin(e));
       if (atMessage)
-        prompt = `这张照片的主人是“${atMessage?.text?.replace(/^@/g, '')}${atMessage?.qq ? `，QQ号${atMessage?.qq}` : ''}”` + prompt
+        prompt = `这张照片的主人是“${atMessage?.text?.replace(/^@/g, '')}${atMessage?.qq ? `，QQ号是${atMessage?.qq}。` : ''}”` + prompt
     }
 
     // 呆毛版 gemini的识图结果 + prompt

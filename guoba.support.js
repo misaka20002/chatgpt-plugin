@@ -544,7 +544,8 @@ export function supportGuoba() {
         {
           field: 'qwenApiKey',
           label: '通义千问API Key',
-          component: 'InputPassword；通义千问的ai人格使用“API方式”中的设置，请自行设置'
+          bottomHelpMessage: '通义千问的ai人格使用“API方式”中的设置，请自行设置',
+          component: 'InputPassword'
         },
         {
           field: 'qwenModel',
