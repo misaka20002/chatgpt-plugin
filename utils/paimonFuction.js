@@ -1,5 +1,5 @@
 import { Config } from '../utils/config.js'
-import { getImg } from '../utils/common.js'
+// import { getImg } from '../utils/common.js'
 import fetch from 'node-fetch'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
 
@@ -16,7 +16,7 @@ export async function recognitionResultsByGemini(e, img) {
                 e,
                 userId: e.sender.user_id,
                 key: Config.geminiKey,
-                model: 'gemini-pro-vision',
+                model: Config.gemini_vqa_model,
                 baseUrl: Config.geminiBaseUrl,
                 debug: Config.debug
             })
