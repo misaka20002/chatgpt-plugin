@@ -752,7 +752,8 @@ export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
         return;
       }
     }
-    e.img = i
+    if (Boolean(i.length))
+      e.img = i;
   }
   // 如果不是主人，e.img 数组参考图片和以图画图使用小图而不是原图大图
   // if (!e.isMaster && !useOrigin && e.img) {
