@@ -746,7 +746,7 @@ async function connectToWss(result = {}) {
 
 // 以下为 fish.audio 用函数
 async function post_to_api_fish_audio_for_taskId(text) {
-    let taskId = false
+    let taskId = null
     const url = 'https://api.fish.audio/task';
     const payload = {
         "type": "tts",
@@ -812,7 +812,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
             // console.log('Task ID:', taskId);
         })
         .catch(error => {
-            console.error('[tts-fish-audio]POST失败:', error);
+            logger.error('[tts-fish-audio]fetch-taskID失败', error);
         });
     return taskId
 }
@@ -824,7 +824,7 @@ async function get_api_fish_audio_for_audioURL(url) {
             if (response.ok) {
                 return response.json();
             }
-            throw new Error('get_api_fish_audio_for_audioURL失败：', response.status);
+            throw new Error('获取taskID成功但获取音频链接JSON失败：', response.status);
         })
         .then(data => {
             // console.log(data);
@@ -833,24 +833,29 @@ async function get_api_fish_audio_for_audioURL(url) {
             // console.log("音频地址为: ", audioURL)
         })
         .catch(error => {
-            console.error('[tts-fish-audio]get_api_fish_audio_for_audioURL内部错误', error);
+            throw new Error('[tts-fish-audio]获取音频链接url失败；\n', error);
         });
     return audioURL
 }
 
 async function wait_for_get_api_fish_audio_for_audioURL(text) {
-    const taskId = await post_to_api_fish_audio_for_taskId(text)
+    let audioURL, taskId
+    try {
+        taskId = await post_to_api_fish_audio_for_taskId(text)
+    }
+    catch (err) {
+        throw new Error('[tts-fish-audio]获取taskID失败，请确认token可用性及api的连通性，error:\n', err)
+    }
     if (!taskId)
         throw new Error("[tts-fish-audio]POST失败：请确认fish.audio站点及api_fish_audio_token是否可用")
     const url = `https://api.fish.audio/task/${taskId}`
-    let audioURL
     for (let i = 0; i < 240; i++) {
         audioURL = await get_api_fish_audio_for_audioURL(url)
         if (!audioURL) await sleep_pai(2000)
         else break
     }
     if (!audioURL)
-        throw new Error("[tts-fish-audio]POST超时失败")
+        throw new Error("[tts-fish-audio]获取taskID成功但等待url超时失败")
     console.log("[tts-fish-audio]音频生成成功：", audioURL)
     return audioURL
 }
