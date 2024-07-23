@@ -81,12 +81,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
         let voiceUrl
         let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
-        try {
-            voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
-        }
-        catch (err) {
-            throw new Error('[chatgpt-tts]', err)
-        }
+        voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
         if (!voiceUrl) throw { message: err_msg }
         return voiceUrl
     }
