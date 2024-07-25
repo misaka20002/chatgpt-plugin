@@ -76,8 +76,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // post到api.fish.audio获取音频
     if (space.includes('api.fish.audio')) {
-        // 截取前500个UTF-8字节的字符串
-        text = truncateUtf8String(text, 500);
+        // 截取前 499 个UTF-8字节的字符串
+        text = truncateUtf8String(text, 499);
         logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
         let voiceUrl
         let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
