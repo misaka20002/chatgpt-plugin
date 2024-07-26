@@ -74,6 +74,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     let space = Config.ttsSpace
 
+    // 如果恰好删除[好感度100]后 text 长度是0；则返回纳西妲声音的“嘿”
+    if (text.length === 0) return "https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/d1919304f637ea8dc455dc92afe2ff6e_1431902895779023323.mp3"
+
     // post到api.fish.audio获取音频
     if (space.includes('api.fish.audio')) {
         // 截取前 499 个UTF-8字节的字符串
@@ -826,7 +829,7 @@ async function get_api_fish_audio_for_audioURL(url) {
             if (response.ok) {
                 return response.json();
             }
-            throw { message: "[chatgpt-tts]获取taskID成功但获取音频链接JSON失败"+ response.status }
+            throw { message: "[chatgpt-tts]获取taskID成功但获取音频链接JSON失败" + response.status }
         })
         .then(data => {
             // console.log(data);
