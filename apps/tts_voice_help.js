@@ -107,6 +107,11 @@ export class voicechangehelp extends plugin {
                     fnc: 'set_recognitionByGemini',
                     permission: 'master'
                 },
+                {
+                    reg: '^#派蒙tts查看fish用量$',
+                    fnc: 'paimon_tts_check_fish_audio_token_usage',
+                    permission: 'master'
+                },
             ]
         })
     }
@@ -620,6 +625,28 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         } else {
             return e.reply('请将图片一起发送或引用图片', true)
         }
+    }
+
+    /**^#派蒙tts查看fish用量$ */
+    async paimon_tts_check_fish_audio_token_usage(e) {
+        // 读取 redis
+        const api_fish_audio_tokenUsage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenUsage')) || {}
+        // 把 Config.api_fish_audio_token 以 , 分割为数组
+        const api_fish_audio_tokenArray = Config.api_fish_audio_token.split(',') || []
+
+        let msg1 = '当前api_fish_audio_token：'
+        let msg2 = ''
+        for (let i = 0; i < api_fish_audio_tokenArray.length; i++) {
+            msg2 += `┌ ${i + 1}. `
+            msg2 += api_fish_audio_tokenArray[i].replace(/(.{7}).{50}(.*)/, '$1****$2')
+            msg2 += '\n└ 今日用量：'
+            msg2 += api_fish_audio_tokenUsage[api_fish_audio_tokenArray[i]] || 0 + '\n\n'
+        }
+        if (!msg2) msg2 = '当前未配置api_fish_audio_token，请使用锅巴设置。'
+
+        const msgx = await common.makeForwardMsg(e, [msg1, msg2], '派蒙tts查看fish用量');
+        e.reply(msgx);
+        return true
     }
 
 

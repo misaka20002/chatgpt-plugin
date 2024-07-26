@@ -477,7 +477,7 @@ export class PaimonChuo extends plugin {
 
     /** 随机回复文案 */
     async send_randow_text_msg(e) {
-        let mutetype = Math.ceil(Math.random() * 15)
+        let mutetype = Math.ceil(Math.random() * 20)
         let message = ''
         switch (mutetype) {
             case 1:
