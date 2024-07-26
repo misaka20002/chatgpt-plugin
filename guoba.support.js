@@ -1337,25 +1337,25 @@ export function supportGuoba() {
         {
           field: 'meme_reply',
           label: '是否引用',
-          bottomHelpMessage: '机器人发表情是否引用回复用户',
+          bottomHelpMessage: '机器人发表情是否引用回复用户；重启生效',
           component: 'Switch'
         },
         {
           field: 'meme_forceSharp',
           label: '是否#指令',
-          bottomHelpMessage: '是否强制使用#触发命令',
+          bottomHelpMessage: '是否强制使用#触发命令；重启生效',
           component: 'Switch'
         },
         {
           field: 'meme_masterProtectDo',
           label: '反弹撅',
-          bottomHelpMessage: '主人保护，撅主人时会被反撅 (暂时只支持QQ)',
+          bottomHelpMessage: '主人保护，撅主人时会被反撅 (暂时只支持QQ)；重启生效',
           component: 'Switch'
         },
         {
           field: 'meme_maxFileSize',
           label: '图片大小',
-          bottomHelpMessage: '用户输入的图片，最大支持的文件大小',
+          bottomHelpMessage: '用户输入的图片，最大支持的文件大小；重启生效',
           helpMessage: '单位：MB',
           component: 'InputNumber'
         },

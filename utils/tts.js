@@ -805,7 +805,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
         .then(response => {
             taskId = response.headers.get('Task-Id');
             if (!taskId)
-                console.log('[tts-fish-audio]使用该token时出错：', taskId);
+                logger.error('[tts-fish-audio]使用该token时出错：', taskId);
             // console.log('Task ID:', taskId);
         })
         .catch(error => {
