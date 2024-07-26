@@ -772,6 +772,11 @@ async function post_to_api_fish_audio_for_taskId(text) {
         return current.usage < arr[minIndex].usage ? index : minIndex;
     }, 0);
 
+    if (api_fish_audio_tokenArrayUsage[minIndex]?.usage >= Config.api_fish_token_quota) {
+        logger.error(`[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token`)
+        throw { message: "[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token" }
+    }
+
     const api_fish_audio_token = api_fish_audio_tokenArrayUsage[minIndex]?.token
 
     // 更新对象 api_fish_audio_tokenUsage 并重新写入 redis
@@ -821,7 +826,7 @@ async function get_api_fish_audio_for_audioURL(url) {
             if (response.ok) {
                 return response.json();
             }
-            throw new Error('获取taskID成功但获取音频链接JSON失败：', response.status);
+            throw { message: "[chatgpt-tts]获取taskID成功但获取音频链接JSON失败"+ response.status }
         })
         .then(data => {
             // console.log(data);
@@ -830,7 +835,7 @@ async function get_api_fish_audio_for_audioURL(url) {
             // console.log("音频地址为: ", audioURL)
         })
         .catch(error => {
-            throw new Error('[tts-fish-audio]获取音频链接url失败：', error);
+            throw new Error('[tts-fish-audio]获取音频链接url内部错误：', error);
         });
     return audioURL
 }
@@ -844,7 +849,7 @@ async function wait_for_get_api_fish_audio_for_audioURL(text) {
         throw new Error('[tts-fish-audio]fetch-taskID内部错误:\n', err)
     }
     if (!taskId)
-        throw new Error("[tts-fish-audio]POST失败：请确认fish.audio站点及token是否可用")
+        throw { message: "[tts-fish-audio]POST失败：请确认fish.audio站点及token是否可用" }
     const url = `https://api.fish.audio/task/${taskId}`
     for (let i = 0; i < 240; i++) {
         audioURL = await get_api_fish_audio_for_audioURL(url)
@@ -852,7 +857,7 @@ async function wait_for_get_api_fish_audio_for_audioURL(text) {
         else break
     }
     if (!audioURL)
-        throw new Error("[tts-fish-audio]获取taskID成功但等待音频生成超时失败")
+        throw { message: "[tts-fish-audio]获取taskID成功但等待音频生成超时失败" }
     console.log("[tts-fish-audio]音频生成成功：", audioURL)
     return audioURL
 }

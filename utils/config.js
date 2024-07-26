@@ -121,6 +121,7 @@ const defaultConfig = {
   Fish_Temperature: 0.7,
   api_fish_audio_model: "efc1ce3726a64bbc947d53a1465204aa",
   api_fish_audio_token: "Your Bearer Token",
+  api_fish_token_quota: 49,
   recognitionByGemini: false,
   meme_baseUrl: "https://memes.ikechan8370.com",
   meme_reply: true,
