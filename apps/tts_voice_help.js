@@ -191,7 +191,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         if (e.isMaster && (input_tts == 'pro' || input_tts == 'm' || input_tts == 'p')) {
             msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1, msg1_1, msg_for_master, msg_for_master2, msg4_1], `tts语音帮助-m`)
         } else {
-            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg1_1, msg4_1], `tts语音帮助`)
+            msgx = await common.makeForwardMsg(e, [show_tts_voice_help_config_msg1, msg1_isn_master, msg4_1], `tts语音帮助`)
         }
         e.reply(msgx);
         return true;
@@ -638,7 +638,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         let msg2 = ''
         for (let i = 0; i < api_fish_audio_tokenArray.length; i++) {
             msg2 += `┌ ${i + 1}. `
-            msg2 += api_fish_audio_tokenArray[i].replace(/(.{7}).{150}(.*)/, '$1****$2')
+            msg2 += api_fish_audio_tokenArray[i].replace(/(.{7}).{156}(.*)/, '$1****$2')
             msg2 += '\n└ 今日用量：'
             msg2 += (api_fish_audio_tokenUsage[api_fish_audio_tokenArray[i]] || 0) + '\n\n'
         }
