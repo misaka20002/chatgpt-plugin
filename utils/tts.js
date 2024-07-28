@@ -813,7 +813,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
         .then(response => {
             taskId = response.headers.get('Task-Id');
             if (!taskId)
-                logger.error('[tts-fish-audio]使用该token时出错：', taskId);
+                logger.error('[tts-fish-audio]使用该token时出错：', api_fish_audio_token.replace(/(.{7}).{150}(.*)/, '$1****$2'));
             // console.log('Task ID:', taskId);
         })
         .catch(error => {
