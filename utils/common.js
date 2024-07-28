@@ -712,9 +712,11 @@ export async function getUserReplySetting (e) {
  * @param {*} e
  * @param {*} alsoGetAtAvatar 开启使用At用户头像作为图片，默认 true
  * @param {*} useOrigin 是否使用原图，默认 false
- * @return {*}
+ * @return {*} e.img 和 e.theImgIsGetFromSource ，当图片是从引用中获取的则 e.theImgIsGetFromSource 为 true
  */
-export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
+export async function getImg(e, alsoGetAtAvatar = true, useOrigin = false) {
+  if (Boolean(e.img?.length))
+    e.theImgIsGetFromSource = true;
   let reply;
   if (alsoGetAtAvatar && e.at && !e.source && !e.reply_id && !e.img) {
     // if (e.atBot) { // 不获取Bot的头像，无意义
@@ -737,7 +739,7 @@ export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
       reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
     }
   }
-  // 添加OneBotv11适配器
+  // 添加trss适配器
   else if (e.reply_id) {
     reply = (await e.getReply(e.reply_id)).message;
   }
@@ -752,8 +754,10 @@ export async function getImg (e, alsoGetAtAvatar = true, useOrigin = false) {
         return;
       }
     }
-    if (Boolean(i.length))
+    if (Boolean(i.length)) {
       e.img = i;
+      e.theImgIsGetFromSource = true;
+    }
   }
   // 如果不是主人，e.img 数组参考图片和以图画图使用小图而不是原图大图
   // if (!e.isMaster && !useOrigin && e.img) {

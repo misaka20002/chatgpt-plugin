@@ -677,7 +677,7 @@ export class chatgpt extends plugin {
     if (Config.isReplacePromptForSenderMsg) {
       // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
       const atMessage = e.message?.find(item => item?.type === "at" && item?.qq != getUin(e));
-      if (atMessage)
+      if (atMessage && !e.theImgIsGetFromSource)
         prompt = `这张照片上的${atMessage?.text ? `人是${atMessage?.text?.replace(/^@/g, '')}，` : ''}${atMessage?.qq ? `QQ号是${atMessage?.qq}。` : ''}` + prompt
     }
 
