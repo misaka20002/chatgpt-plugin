@@ -598,13 +598,13 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-pro；gemini-1.5-flash；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
+          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-pro；gemini-1.5-flash；gemini-1.5-flash-latest；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
           component: 'Input'
         },
         {
           field: 'gemini_vqa_model',
           label: 'gemini识图模型',
-          bottomHelpMessage: '用于#识图；默认值：gemini-pro-vision；可选（注意配额）：gemini-1.5-flash；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
+          bottomHelpMessage: '用于#识图；默认值：gemini-1.5-flash-latest；可选（注意配额）：gemini-1.5-flash；gemini-1.5-flash-latest；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
           component: 'Input'
         },
         {
