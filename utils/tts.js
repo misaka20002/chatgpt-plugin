@@ -777,6 +777,10 @@ async function post_to_api_fish_audio_for_taskId(text) {
 
     if (api_fish_audio_tokenArrayUsage[minIndex]?.usage >= Config.api_fish_token_quota) {
         logger.error(`[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token`)
+        if (Config.api_fish_control_defaultUseTTS) {
+            Config.defaultUseTTS = false
+            logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已关闭，将在次日 0:01 am 自动开启`)
+        }
         throw { message: "[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token" }
     }
 

@@ -114,6 +114,14 @@ export class voicechangehelp extends plugin {
                 },
             ]
         })
+        this.task = [
+            {
+                // 每日 0:01 am
+                cron: '0 1 0 * * ?',
+                name: '派蒙tts自动任务',
+                fnc: this.paimon_tts_Auto_tasker.bind(this)
+            },
+        ]
     }
 
 
@@ -573,13 +581,12 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             let msgx = await common.makeForwardMsg(e, [msg1, msg1_1], `tts重置所有用户单独设置`);
             return e.reply(msgx, false)
         }
-        let qcs = await redis.keys('CHATGPT:USER:*')
+        let chatgpt_user = await redis.keys('CHATGPT:USER:*')
         let deleted = 0
-        for (let i = 0; i < qcs.length; i++) {
-            await redis.del(qcs[i])
-            // todo clean last message id
+        for (let i = 0; i < chatgpt_user.length; i++) {
+            await redis.del(chatgpt_user[i])
             if (Config.debug) {
-                logger.info('delete gemini conversation bind: ' + qcs[i])
+                logger.info('delete chatgpt_user: ' + chatgpt_user[i])
             }
             deleted++
         }
@@ -605,7 +612,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return e.reply(show_tts_voice_help_config_msg2_msgx);
     }
 
-    /**^#派蒙戳(一戳)?(保存|添加)(图片|表情)$ */
+    /** ^#派蒙戳(一戳)?(保存|添加)(图片|表情)$ */
     async paimon_chuo_save_img(e) {
         e = await parseSourceImg(e)
         if (e.img) {
@@ -627,7 +634,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         }
     }
 
-    /**^#派蒙tts查看fish用量$ */
+    /** ^#派蒙tts查看fish用量$ */
     async paimon_tts_check_fish_audio_token_usage(e) {
         // 读取 redis
         const api_fish_audio_tokenUsage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenUsage')) || {}
@@ -646,6 +653,29 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
         const msgx = await common.makeForwardMsg(e, [msg1, msg2], '派蒙tts查看fish用量');
         e.reply(msgx);
+        return true
+    }
+
+    /** task任务: 派蒙tts自动任务 */
+    async paimon_tts_Auto_tasker() {
+        /** ^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置 */
+        let chatgpt_user = await redis.keys('CHATGPT:USER:*')
+        let deleted = 0
+        for (let i = 0; i < chatgpt_user.length; i++) {
+            await redis.del(chatgpt_user[i])
+            if (Config.debug) {
+                logger.info('delete chatgpt_user: ' + chatgpt_user[i])
+            }
+            deleted++
+        }
+        logger.mark(`[派蒙tts自动任务]已经重置${deleted}个用户的单独回复设置，所有用户将使用默认配置。`)
+
+        // chatgpt-tts-自动全局语音模式
+        if (Config.api_fish_control_defaultUseTTS && Config.api_fish_audio_token.length && Config.ttsSpace?.includes('api.fish.audio')) {
+            Config.defaultUseTTS = true
+            logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已开启，将在fish.audio达到配额后自动关闭`)
+        }
+
         return true
     }
 

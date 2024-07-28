@@ -1009,6 +1009,12 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'api_fish_control_defaultUseTTS',
+          label: '自动全局语音模式',
+          bottomHelpMessage: 'fish.audio达到配额后关闭全局语音模式；次日 0:01 am 自动开启全局语音模式；',
+          component: 'Switch'
+        },
+        {
           field: 'api_fish_audio_model',
           label: 'api_fish_audio_model',
           bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
