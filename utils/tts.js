@@ -748,6 +748,7 @@ async function connectToWss(result = {}) {
 // 以下为 fish.audio 用函数
 async function post_to_api_fish_audio_for_taskId(text) {
     let taskId = null
+    let needRefreshToken = false
     const url = 'https://api.fish.audio/task';
     const payload = {
         "type": "tts",
@@ -809,12 +810,13 @@ async function post_to_api_fish_audio_for_taskId(text) {
     }
 
     /** 此次使用的最小值的 token */
-    const api_fish_audio_token = api_fish_audio_tokenArrayUsage[minIndex]?.token
+    let api_fish_audio_token = api_fish_audio_tokenArrayUsage[minIndex]?.token
+    if (api_fish_audio_token == "获取token失败" || !api_fish_audio_token) {
+        api_fish_audio_token = ""
+        needRefreshToken = true;
+    }
     /** 此次使用的最小值的 accountId */
     const api_fish_audio_accountId = api_fish_audio_tokenArrayUsage[minIndex]?.accountId
-
-    // 更新对象 api_fish_audio_account_ID_Usage 并重新写入 redis
-    api_fish_audio_account_ID_Usage[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_Usage[api_fish_audio_accountId]) + 1) || 1;
 
     // 计算从现在到明天凌晨0点的秒数
     const currentTime = new Date().getTime();
@@ -824,38 +826,44 @@ async function post_to_api_fish_audio_for_taskId(text) {
     const tomorrowTime = tomorrow.getTime();
     const secondsUntilTomorrow = Math.floor((tomorrowTime - currentTime) / 1000);
 
-    await redis.set("CHATGPT:api_fish_audio_account_ID_Usage", JSON.stringify(api_fish_audio_account_ID_Usage), {
-        EX: secondsUntilTomorrow,
-    });
-
-    if (Config.debug) {
+    if (Config.debug)
         console.log(`[tts-fish-audio]此次使用账号：\n${api_fish_audio_accountId}\n当日使用量：\n`, api_fish_audio_tokenArrayUsage, `\nbody:\n`, payload)
-    }
 
     // post
-    await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + api_fish_audio_token
-        },
-        body: JSON.stringify(payload)
-    })
-        .then(response => {
-            taskId = response.headers.get('Task-Id');
+    if (!needRefreshToken) {
+        await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + api_fish_audio_token
+            },
+            body: JSON.stringify(payload)
         })
-        .catch(error => {
-            logger.error('[tts-fish-audio]fetch-taskID内部错误', error);
-        });
+            .then(response => {
+                taskId = response.headers.get('Task-Id');
 
-    // 判断 taskId
-    if (!taskId) {
-        logger.error(`[tts-fish-audio]使用该账号时出错：${minIndex + 1}. ${api_fish_audio_accountId}`);
-        // redis 记录出错 accountId
-        api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId]) + 1) || 1;
-        await redis.set("CHATGPT:api_fish_audio_account_ID_ErrorTimes", JSON.stringify(api_fish_audio_account_ID_ErrorTimes), {
-            EX: secondsUntilTomorrow,
-        });
+                if (!taskId) {
+                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status:${response.status == 401 ? "401错误，将刷新token" : response.status}\n  response.body:${response.body}`);
+                    if (response.status == 401)
+                        needRefreshToken = true;
+
+                    // 记录出错 redis
+                    api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId]) + 1) || 1;
+                    redis.set("CHATGPT:api_fish_audio_account_ID_ErrorTimes", JSON.stringify(api_fish_audio_account_ID_ErrorTimes), {
+                        EX: secondsUntilTomorrow,
+                    });
+                }
+
+                // 记录使用 redis
+                api_fish_audio_account_ID_Usage[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_Usage[api_fish_audio_accountId]) + 1) || 1;
+                redis.set("CHATGPT:api_fish_audio_account_ID_Usage", JSON.stringify(api_fish_audio_account_ID_Usage), {
+                    EX: secondsUntilTomorrow,
+                });
+            })
+            .catch(error => {
+                logger.error('[tts-fish-audio]fetch-taskID内部错误', error);
+            });
+    } else {
         // 更新 token
         post_to_api_fish_audio_for_token(api_fish_audio_accountId, accounts[api_fish_audio_accountId])
     }
@@ -885,7 +893,7 @@ export async function post_to_api_fish_audio_for_token(accountId, password) {
                 token = data?.token;
             })
             .catch(error => {
-                logger.error(`[tts-fish-audio]获取token错误:\n  accountId:${accountId}\n  password:${password}`);
+                logger.error(`[tts-fish-audio]第${i + 1}次获取token错误: accountId:${accountId}; password:${password}\n${error}`);
             });
         if (!token) await sleep_pai(5000)
         else {
@@ -895,6 +903,11 @@ export async function post_to_api_fish_audio_for_token(accountId, password) {
             });
             break
         }
+    }
+    if (!token) {
+        await redis.set(`CHATGPT:api_fish_audio_redis_token:${accountId}`, "获取token失败", {
+            EX: 172800,
+        });
     }
     return token
 }
