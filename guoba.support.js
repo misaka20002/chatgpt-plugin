@@ -994,7 +994,7 @@ export function supportGuoba() {
         {
           field: 'api_fish_audio_account_ID',
           label: 'api_fish_audio_account_ID',
-          bottomHelpMessage: '（仅限api.fish.audio）填写账号密码，用英文冒号分割：拥有多个账号时用英文逗号分割，将自动负载均衡。例如accountId1:password1,accountId2:password2；可用指令：#派蒙tts强制刷新fish账号',
+          bottomHelpMessage: '（仅限api.fish.audio）填写账号密码，用英文冒号分割；拥有多个账号时用英文逗号分割，将自动负载均衡。例如accountId1:password1,accountId2:password2；可用指令：#派蒙tts强制刷新fish账号',
           component: 'InputTextArea'
         },
         {

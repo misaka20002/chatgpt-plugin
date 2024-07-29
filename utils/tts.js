@@ -774,7 +774,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
     const accountIdArray = Object.keys(accounts);
 
     /** 整合redis后的对象 */
-    const api_fish_audio_tokenArrayUsage = accountIdArray.map(async accountId => {
+    let api_fish_audio_tokenArrayUsage = accountIdArray.map(async accountId => {
         let token = await redis.get(`CHATGPT:api_fish_audio_redis_token:${accountId}`) || ""
         return {
             accountId: accountId,
@@ -785,7 +785,13 @@ async function post_to_api_fish_audio_for_taskId(text) {
         };
     });
 
-    await Promise.all(api_fish_audio_tokenArrayUsage);
+    await Promise.all(api_fish_audio_tokenArrayUsage)
+        .then(results => {
+            api_fish_audio_tokenArrayUsage = results;
+        })
+        .catch(error => {
+            console.log('Promise.all:Error:', error);
+        });
 
     // 查找最小值的索引
     const minIndex = api_fish_audio_tokenArrayUsage.reduce((minIndex, current, index, arr) => {
