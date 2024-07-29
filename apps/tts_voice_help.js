@@ -663,7 +663,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             msg2 += `┌ ${i + 1}. `
             msg2 += accountIdArray[i]
             msg2 += '\n├ token：'
-            msg2 += token
+            msg2 += token.replace(/(.{7}).{150}(.*)/, '$1****$2')
             msg2 += '\n├ 今日用量：'
             msg2 += (api_fish_audio_account_ID_Usage[accountIdArray[i]] || 0)
             msg2 += '\n└ 今日出错：'
