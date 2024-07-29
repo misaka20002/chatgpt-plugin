@@ -992,9 +992,9 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'api_fish_audio_token',
-          label: 'api_fish_audio_token',
-          bottomHelpMessage: '（仅限api.fish.audio）先自己登录 https://api.fish.audio ，来到语音合成，找到喜欢的发音人，例如派蒙，在浏览器按F12来到 开发者工具/网络，随便生成一个语音，在例如task的post记录的 标头 下找到 Authorization: "Bearer xxxxxxxxxxx" 并记下来；在 负载 下找到model（模型）的代码记下来。现在在这里填入你的 "Bearer xxxxxxxxxxx" 中的xxxxxxxxxxx。可选：拥有多个账号时，token用英文逗号分割，将自动负载均衡，例如xxxxxxxxxxx,xxxxxxxxxxx',
+          field: 'api_fish_audio_account_ID',
+          label: 'api_fish_audio_account_ID',
+          bottomHelpMessage: '（仅限api.fish.audio）填写账号密码，用英文冒号分割：拥有多个账号时用英文逗号分割，将自动负载均衡。例如accountId1:password1,accountId2:password2；可用指令：#派蒙tts强制刷新fish账号',
           component: 'InputTextArea'
         },
         {

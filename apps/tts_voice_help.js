@@ -10,7 +10,8 @@ import {
     speakers_EN,
     speakers_BA,
     speakers_vits_uma_genshin_honkai,
-    vits_emotion_map
+    vits_emotion_map,
+    post_to_api_fish_audio_for_token
 } from '../utils/tts.js'
 import crypto from 'crypto'
 import path from 'path'
@@ -18,6 +19,7 @@ import fs from 'fs'
 import fetch from 'node-fetch'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
+const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 export class voicechangehelp extends plugin {
     constructor() {
@@ -112,6 +114,11 @@ export class voicechangehelp extends plugin {
                     fnc: 'paimon_tts_check_fish_audio_token_usage',
                     permission: 'master'
                 },
+                {
+                    reg: '^#派蒙tts强制刷新fish账号$',
+                    fnc: 'paimon_tts_refresh_fish_account_token',
+                    permission: 'master'
+                },
             ]
         })
         this.task = [
@@ -129,7 +136,7 @@ export class voicechangehelp extends plugin {
     async voicechangehelp(e) {
         let input_tts = e.msg.replace(/^#tts(语音)?(替换)?帮助/, '').trim()
         // let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n 发音语言：${Config.tts_language}\n tts情感设置上锁：${Config.vits_emotion_locker}\n vits_emotion：${Config.vits_emotion}\n 情感自动设置：${Config.vits_auto_emotion}\n noiseScale：${Config.noiseScale}\n noiseScaleW：${Config.noiseScaleW}\n lengthScale：${Config.lengthScale}\n sdp_ratio：${Config.sdp_ratio}\n 融合文本：${Config.style_text}\n 融合权重：${Config.style_text_weights}\n 切片生成：${Config.tts_slice_is_slice_generation}\n 段间停顿时长：${Config.tts_slice_pause_between_paragraphs_seconds} 秒\n 按句切分：${Config.tts_slice_is_Split_by_sentence}\n 句间停顿时长：${Config.tts_slice_pause_between_sentences_seconds} 秒\n 全局语音模式：${Config.defaultUseTTS}\n AI第一人称：${Config.tts_First_person}`
-        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n AI第一人称：${Config.tts_First_person}\n 全局语音模式：${Config.defaultUseTTS}\n${Config.ttsSpace?.includes("bv2.firefly.matce.cn") ? `以下为Bert-Vits参数：\n 发音语言：强制自动\n tts情感设置上锁：${Config.vits_emotion_locker} \n vits_emotion：${Config.vits_emotion} \n 情感自动设置：${Config.vits_auto_emotion} \n noiseScale：${Config.noiseScale} \n noiseScaleW：${Config.noiseScaleW} \n lengthScale：${Config.lengthScale} \n sdp_ratio：${Config.sdp_ratio} \n 融合文本：${Config.style_text} \n 融合权重：${Config.style_text_weights} \n 切片生成：${Config.tts_slice_is_slice_generation} \n 段间停顿时长：${Config.tts_slice_pause_between_paragraphs_seconds} 秒\n 按句切分：${Config.tts_slice_is_Split_by_sentence} \n 句间停顿时长：${Config.tts_slice_pause_between_sentences_seconds} 秒` : ''}${Config.ttsSpace?.includes("fs.firefly.matce.cn") ? `以下为Fish-Vits参数：\n exampleAudio：${Config.exampleAudio} \n Iterative Prompt Length：${Config.Fish_Iterative_Prompt_Length} \n Maximum tokens per batch：${Config.Fish_Maximum_tokens_per_batch} \n Top-P：${Config.Fish_Top_P} \n Repetition Penalty：${Config.Fish_Repetition_Penalty} \n Temperature：${Config.Fish_Temperature}` : ''}${Config.ttsSpace?.includes("api.fish.audio") ? `以下为api.fish.audio参数：\n 模型：${Config.api_fish_audio_model} \n token：已隐藏  \n 指令：#派蒙tts查看fish用量 ` : ''}${Config.ttsSpace?.includes("hf.space") ? `以下为vits-uma参数：\n noiseScale：${Config.noiseScale} \n noiseScaleW：${Config.noiseScaleW} \n lengthScale：${Config.lengthScale}` : ''}`
+        let show_tts_voice_help_config_msg1 = `tts语音当前设置：\n 默认角色：${Config.defaultTTSRole}\n AI第一人称：${Config.tts_First_person}\n 全局语音模式：${Config.defaultUseTTS}\n${Config.ttsSpace?.includes("bv2.firefly.matce.cn") ? `以下为Bert-Vits参数：\n 发音语言：强制自动\n tts情感设置上锁：${Config.vits_emotion_locker} \n vits_emotion：${Config.vits_emotion} \n 情感自动设置：${Config.vits_auto_emotion} \n noiseScale：${Config.noiseScale} \n noiseScaleW：${Config.noiseScaleW} \n lengthScale：${Config.lengthScale} \n sdp_ratio：${Config.sdp_ratio} \n 融合文本：${Config.style_text} \n 融合权重：${Config.style_text_weights} \n 切片生成：${Config.tts_slice_is_slice_generation} \n 段间停顿时长：${Config.tts_slice_pause_between_paragraphs_seconds} 秒\n 按句切分：${Config.tts_slice_is_Split_by_sentence} \n 句间停顿时长：${Config.tts_slice_pause_between_sentences_seconds} 秒` : ''}${Config.ttsSpace?.includes("fs.firefly.matce.cn") ? `以下为Fish-Vits参数：\n exampleAudio：${Config.exampleAudio} \n Iterative Prompt Length：${Config.Fish_Iterative_Prompt_Length} \n Maximum tokens per batch：${Config.Fish_Maximum_tokens_per_batch} \n Top-P：${Config.Fish_Top_P} \n Repetition Penalty：${Config.Fish_Repetition_Penalty} \n Temperature：${Config.Fish_Temperature}` : ''}${Config.ttsSpace?.includes("api.fish.audio") ? `以下为api.fish.audio参数：\n 模型：${Config.api_fish_audio_model} \n token：已隐藏  \n 指令：\n  #派蒙tts查看fish用量\n  #派蒙tts强制刷新fish账号` : ''}${Config.ttsSpace?.includes("hf.space") ? `以下为vits-uma参数：\n noiseScale：${Config.noiseScale} \n noiseScaleW：${Config.noiseScaleW} \n lengthScale：${Config.lengthScale}` : ''}`
 
         let msg1 = `tts语音帮助：\n` +
             ` #tts可选人物列表\n` +
@@ -637,25 +644,49 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     /** ^#派蒙tts查看fish用量$ */
     async paimon_tts_check_fish_audio_token_usage(e) {
         // 读取 redis
-        const api_fish_audio_tokenUsage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenUsage')) || {}
-        const api_fish_audio_tokenErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenErrorTimes')) || {}
-        // 把 Config.api_fish_audio_token 以 , 分割为数组
-        const api_fish_audio_tokenArray = Config.api_fish_audio_token.split(',') || []
+        const api_fish_audio_account_ID_Usage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_Usage')) || {}
+        const api_fish_audio_account_ID_ErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_ErrorTimes')) || {}
+
+        /** 把 Config.api_fish_audio_account_ID 分割为对象 */
+        const accounts = {};
+        Config.api_fish_audio_account_ID.split(',').forEach(item => {
+            const [accountId, password] = item.split(':');
+            accounts[accountId] = password;
+        });
+        /** 将 accounts 的 key 提出为数组 */
+        const accountIdArray = Object.keys(accounts);
 
         let msg1 = '当前api_fish_audio_token：'
         let msg2 = ''
-        for (let i = 0; i < api_fish_audio_tokenArray.length; i++) {
+        for (let i = 0; i < accountIdArray.length; i++) {
             msg2 += `┌ ${i + 1}. `
-            msg2 += api_fish_audio_tokenArray[i].replace(/(.{7}).{150}(.*)/, '$1****$2')
+            msg2 += accountIdArray[i]
             msg2 += '\n├ 今日用量：'
-            msg2 += (api_fish_audio_tokenUsage[api_fish_audio_tokenArray[i]] || 0)
+            msg2 += (api_fish_audio_account_ID_Usage[accountIdArray[i]] || 0)
             msg2 += '\n└ 今日出错：'
-            msg2 += (api_fish_audio_tokenErrorTimes[api_fish_audio_tokenArray[i]] || 0) + '\n\n'
+            msg2 += (api_fish_audio_account_ID_ErrorTimes[accountIdArray[i]] || 0) + '\n\n'
         }
         if (!msg2) msg2 = '当前未配置api_fish_audio_token，请使用锅巴设置。'
 
         const msgx = await common.makeForwardMsg(e, [msg1, msg2], '派蒙tts查看fish用量');
         e.reply(msgx);
+        return true
+    }
+
+    /** ^#派蒙tts强制刷新fish账号$ */
+    async paimon_tts_refresh_fish_account_token(e) {
+        const accounts = {};
+        Config.api_fish_audio_account.split(',').forEach(item => {
+            const [accountId, password] = item.split(':');
+            accounts[accountId] = password;
+        });
+
+        for (const accountId in accounts) {
+            const password = accounts[accountId];
+            await post_to_api_fish_audio_for_token(accountId, password);
+            await sleep_pai(10000)
+        }
+        e.reply("为防止触发人机验证，正在使用单进程刷新fish账号token，请稍等片刻。", true);
         return true
     }
 

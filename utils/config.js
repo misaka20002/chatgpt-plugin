@@ -120,7 +120,7 @@ const defaultConfig = {
   Fish_Repetition_Penalty: 1.5,
   Fish_Temperature: 0.7,
   api_fish_audio_model: "efc1ce3726a64bbc947d53a1465204aa",
-  api_fish_audio_token: "",
+  api_fish_audio_account_ID: "",
   api_fish_token_quota: 49,
   api_fish_control_defaultUseTTS: false,
   recognitionByGemini: false,

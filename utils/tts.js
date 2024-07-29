@@ -761,19 +761,31 @@ async function post_to_api_fish_audio_for_taskId(text) {
 
     // 拥有多个账号时，token用英文逗号分割，将自动负载均衡
     // 读取 redis
-    let api_fish_audio_tokenUsage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenUsage')) || {}
-    let api_fish_audio_tokenErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenErrorTimes')) || {}
-    // 把 Config.api_fish_audio_token 以 , 分割为数组
-    const api_fish_audio_tokenArray = Config.api_fish_audio_token.split(',') || []
+    let api_fish_audio_account_ID_Usage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_Usage')) || {}
+    let api_fish_audio_account_ID_ErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_ErrorTimes')) || {}
 
-    // 将对象 api_fish_audio_tokenUsage 的值赋给数组 api_fish_audio_tokenArray
-    const api_fish_audio_tokenArrayUsage = api_fish_audio_tokenArray.map(token => {
+    /** 把 Config.api_fish_audio_account_ID 分割为对象 */
+    const accounts = {};
+    Config.api_fish_audio_account_ID.split(',').forEach(item => {
+        const [accountId, password] = item.split(':');
+        accounts[accountId] = password;
+    });
+    /** 将 accounts 的 key 提出为数组 */
+    const accountIdArray = Object.keys(accounts);
+
+    /** 整合redis后的对象 */
+    const api_fish_audio_tokenArrayUsage = accountIdArray.map(async accountId => {
+        let token = await redis.get(`CHATGPT:api_fish_audio_redis_token:${accountId}`) || ""
         return {
+            accountId: accountId,
+            password: accounts[accountId],
             token: token,
-            usage: api_fish_audio_tokenUsage[token] || 0,
-            errorTimes: api_fish_audio_tokenErrorTimes[token] || 0
+            usage: api_fish_audio_account_ID_Usage[accountId] || 0,
+            errorTimes: api_fish_audio_account_ID_ErrorTimes[accountId] || 0
         };
     });
+
+    await Promise.all(api_fish_audio_tokenArrayUsage);
 
     // 查找最小值的索引
     const minIndex = api_fish_audio_tokenArrayUsage.reduce((minIndex, current, index, arr) => {
@@ -790,11 +802,13 @@ async function post_to_api_fish_audio_for_taskId(text) {
         throw { message: "[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token" }
     }
 
-    // 使用 token
+    /** 此次使用的最小值的 token */
     const api_fish_audio_token = api_fish_audio_tokenArrayUsage[minIndex]?.token
+    /** 此次使用的最小值的 accountId */
+    const api_fish_audio_accountId = api_fish_audio_tokenArrayUsage[minIndex]?.accountId
 
-    // 更新对象 api_fish_audio_tokenUsage 并重新写入 redis
-    api_fish_audio_tokenUsage[api_fish_audio_token] = (parseInt(api_fish_audio_tokenUsage[api_fish_audio_token]) + 1) || 1;
+    // 更新对象 api_fish_audio_account_ID_Usage 并重新写入 redis
+    api_fish_audio_account_ID_Usage[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_Usage[api_fish_audio_accountId]) + 1) || 1;
 
     // 计算从现在到明天凌晨0点的秒数
     const currentTime = new Date().getTime();
@@ -804,12 +818,12 @@ async function post_to_api_fish_audio_for_taskId(text) {
     const tomorrowTime = tomorrow.getTime();
     const secondsUntilTomorrow = Math.floor((tomorrowTime - currentTime) / 1000);
 
-    await redis.set("CHATGPT:api_fish_audio_tokenUsage", JSON.stringify(api_fish_audio_tokenUsage), {
+    await redis.set("CHATGPT:api_fish_audio_account_ID_Usage", JSON.stringify(api_fish_audio_account_ID_Usage), {
         EX: secondsUntilTomorrow,
     });
 
     if (Config.debug) {
-        console.log(`[tts-fish-audio]此次使用token：\n${api_fish_audio_token}\ntoken当日使用量：\n`, api_fish_audio_tokenArrayUsage, `\nbody:\n`, payload)
+        console.log(`[tts-fish-audio]此次使用账号：\n${api_fish_audio_accountId}\n当日使用量：\n`, api_fish_audio_tokenArrayUsage, `\nbody:\n`, payload)
     }
 
     // post
@@ -830,18 +844,57 @@ async function post_to_api_fish_audio_for_taskId(text) {
 
     // 判断 taskId
     if (!taskId) {
-        logger.error(`[tts-fish-audio]使用该token时出错：${minIndex}. ${api_fish_audio_token.replace(/(.{7}).{150}(.*)/, '$1****$2')}`);
-        // redis 记录出错 token
-        api_fish_audio_tokenErrorTimes[api_fish_audio_token] = (parseInt(api_fish_audio_tokenErrorTimes[api_fish_audio_token]) + 1) || 1;
-        await redis.set("CHATGPT:api_fish_audio_tokenErrorTimes", JSON.stringify(api_fish_audio_tokenErrorTimes), {
+        logger.error(`[tts-fish-audio]使用该账号时出错：${minIndex}. ${api_fish_audio_accountId}`);
+        // redis 记录出错 accountId
+        api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId]) + 1) || 1;
+        await redis.set("CHATGPT:api_fish_audio_account_ID_ErrorTimes", JSON.stringify(api_fish_audio_account_ID_ErrorTimes), {
             EX: secondsUntilTomorrow,
         });
+        // 更新 token
+        post_to_api_fish_audio_for_token(api_fish_audio_accountId, accounts[api_fish_audio_accountId])
     }
     return taskId
 }
 
+/** post to fish.audio 获取 token */
+export async function post_to_api_fish_audio_for_token(accountId, password) {
+    let token = null
+    for (let i = 0; !token && (i < 3); i++) {
+        const url = 'https://api.fish.audio/user/token';
+        const payload = {
+            email: accountId,
+            password: password
+        };
+
+        await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            timeout: 60000
+        })
+            .then(response => response?.json())
+            .then(data => {
+                token = data?.token;
+            })
+            .catch(error => {
+                logger.error(`[tts-fish-audio]获取token错误:\n  accountId:${accountId}\n  password:${password}`);
+            });
+        if (!token) await sleep_pai(5000)
+        else {
+            logger.mark(`[tts-fish-audio]成功获取token：accountId:${accountId}`);
+            await redis.set(`CHATGPT:api_fish_audio_redis_token:${accountId}`, token, {
+                EX: 172800,
+            });
+            break
+        }
+    }
+    return token
+}
+
 async function get_api_fish_audio_for_audioURL(url) {
-    let audioURL = false
+    let audioURL = null
     await fetch(url)
         .then(response => {
             if (response.ok) {
