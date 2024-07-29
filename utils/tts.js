@@ -850,7 +850,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
 
     // 判断 taskId
     if (!taskId) {
-        logger.error(`[tts-fish-audio]使用该账号时出错：${minIndex}. ${api_fish_audio_accountId}`);
+        logger.error(`[tts-fish-audio]使用该账号时出错：${minIndex + 1}. ${api_fish_audio_accountId}`);
         // redis 记录出错 accountId
         api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId]) + 1) || 1;
         await redis.set("CHATGPT:api_fish_audio_account_ID_ErrorTimes", JSON.stringify(api_fish_audio_account_ID_ErrorTimes), {

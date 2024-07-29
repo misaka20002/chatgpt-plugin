@@ -675,8 +675,9 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
     /** ^#派蒙tts强制刷新fish账号$ */
     async paimon_tts_refresh_fish_account_token(e) {
+        /** 把 Config.api_fish_audio_account_ID 分割为对象 */
         const accounts = {};
-        Config.api_fish_audio_account.split(',').forEach(item => {
+        Config.api_fish_audio_account_ID.split(',').forEach(item => {
             const [accountId, password] = item.split(':');
             accounts[accountId] = password;
         });
