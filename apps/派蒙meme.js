@@ -285,7 +285,20 @@ export class memes extends plugin {
             }
           }
         }
-      } else if (e.img) {
+      }
+      // 添加trss适配器
+      else if (e.reply_id) {
+        let reply = (await e.getReply(e.reply_id)).message;
+        if (reply) {
+          for (let val of reply) {
+            if (val.type === 'image') {
+              console.log(val)
+              imgUrls.push(val.url)
+            }
+          }
+        }
+      }
+      else if (e.img) {
         // 一起发的图
         imgUrls.push(...e.img)
       } else if (e.message.filter(m => m.type === 'at').length > 0) {
