@@ -1030,7 +1030,7 @@ export class chatgpt extends plugin {
         // 开始调用绘画插件
         if (jsonTags) {
           // 处理GPT Bug
-          if (Boolean(jsonMsg?.match(/Your reply matches your character settings|matches your character/i)))
+          if (Boolean(jsonMsg?.match(/Your reply matches your character settings in Chinese|matches your character/i)))
             jsonMsg = `这个太难了，${Config.tts_First_person}头有点晕`
           // gpt的回复语句
           response = jsonMsg

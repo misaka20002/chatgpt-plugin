@@ -642,7 +642,7 @@ class Core {
 
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
       }
 
       if (Config.smartMode) {
@@ -820,7 +820,7 @@ class Core {
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
       }
 
       if (Config.enableGroupContext && e.isGroup) {
@@ -873,7 +873,7 @@ class Core {
 
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings"}```.'
+        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
       }
 
       if (Config.enableChatSuno) {
