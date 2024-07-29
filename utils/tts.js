@@ -759,6 +759,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
     // 拥有多个账号时，token用英文逗号分割，将自动负载均衡
     // 读取 redis
     let api_fish_audio_tokenUsage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenUsage')) || {}
+    let api_fish_audio_tokenErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_tokenErrorTimes')) || {}
     // 把 Config.api_fish_audio_token 以 , 分割为数组
     const api_fish_audio_tokenArray = Config.api_fish_audio_token.split(',') || []
 
@@ -766,7 +767,8 @@ async function post_to_api_fish_audio_for_taskId(text) {
     const api_fish_audio_tokenArrayUsage = api_fish_audio_tokenArray.map(token => {
         return {
             token: token,
-            usage: api_fish_audio_tokenUsage[token] || 0
+            usage: api_fish_audio_tokenUsage[token] || 0,
+            errorTimes: api_fish_audio_tokenErrorTimes[token] || 0
         };
     });
 
@@ -775,6 +777,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
         return current.usage < arr[minIndex].usage ? index : minIndex;
     }, 0);
 
+    // 判断配额
     if (api_fish_audio_tokenArrayUsage[minIndex]?.usage >= Config.api_fish_token_quota) {
         logger.error(`[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token`)
         if (Config.api_fish_control_defaultUseTTS) {
@@ -784,6 +787,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
         throw { message: "[chatgpt-tts]Fish-TTS语音合成api今日使用量已达到上限；请扩充token" }
     }
 
+    // 使用 token
     const api_fish_audio_token = api_fish_audio_tokenArrayUsage[minIndex]?.token
 
     // 更新对象 api_fish_audio_tokenUsage 并重新写入 redis
@@ -802,7 +806,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
     });
 
     if (Config.debug) {
-        console.log(`[tts-fish-audio]此次使用token：\n${api_fish_audio_token}\ntoken当日使用量：\n`, api_fish_audio_tokenUsage, `\nbody:\n`, payload)
+        console.log(`[tts-fish-audio]此次使用token：\n${api_fish_audio_token}\ntoken当日使用量：\n`, api_fish_audio_tokenArrayUsage, `\nbody:\n`, payload)
     }
 
     // post
@@ -816,13 +820,20 @@ async function post_to_api_fish_audio_for_taskId(text) {
     })
         .then(response => {
             taskId = response.headers.get('Task-Id');
-            if (!taskId)
-                logger.error('[tts-fish-audio]使用该token时出错：', api_fish_audio_token.replace(/(.{7}).{150}(.*)/, '$1****$2'));
-            // console.log('Task ID:', taskId);
         })
         .catch(error => {
             logger.error('[tts-fish-audio]fetch-taskID内部错误', error);
         });
+
+    // 判断 taskId
+    if (!taskId) {
+        logger.error(`[tts-fish-audio]使用该token时出错：${minIndex}. ${api_fish_audio_token.replace(/(.{7}).{150}(.*)/, '$1****$2')}`);
+        // redis 记录出错 token
+        api_fish_audio_tokenErrorTimes[api_fish_audio_token] = (parseInt(api_fish_audio_tokenErrorTimes[api_fish_audio_token]) + 1) || 1;
+        await redis.set("CHATGPT:api_fish_audio_tokenErrorTimes", JSON.stringify(api_fish_audio_tokenErrorTimes), {
+            EX: secondsUntilTomorrow,
+        });
+    }
     return taskId
 }
 

@@ -1,3 +1,5 @@
+/** 该插件源码搬运自https://github.com/ikechan8370/yunzai-meme 遵从GPLv3 */
+
 import plugin from '../../../lib/plugins/plugin.js';
 import fetch, { File, FormData } from 'node-fetch'
 import fs from 'fs'
