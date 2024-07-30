@@ -782,8 +782,8 @@ async function post_to_api_fish_audio_for_taskId(text) {
             accountId: accountId,
             password: accounts[accountId],
             token: token_accountId || "",
-            usage: usage_accountId || 0,
-            errorTimes: errorTimes_accountId || 0
+            usage: (usage_accountId || 0) * 1,
+            errorTimes: (errorTimes_accountId || 0) * 1
         };
     });
 
@@ -844,7 +844,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
                 taskId = response.headers.get('Task-Id');
 
                 if (!taskId) {
-                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status: ${response.status == 401 ? "401错误，将刷新token" : response.status};`);
+                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status: ${response.status == 401 ? "401错误，将刷新token" : response.status};  response.json: ${response.json()}`);
                     if (response.status == 401)
                         needRefreshToken = true;
 
