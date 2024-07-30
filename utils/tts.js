@@ -844,7 +844,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
                 taskId = response.headers.get('Task-Id');
 
                 if (!taskId) {
-                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status: ${response.status == 401 ? "401错误，将刷新token" : response.status};  response.json: ${response.json()}`);
+                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status: ${response.status}${response.status == 401 ? " token过期，即将自动刷新token" : ""}${response.status == 400 ? " token配额不足，请添加更多账号" : ""};`);
                     if (response.status == 401)
                         needRefreshToken = true;
 
@@ -856,6 +856,15 @@ async function post_to_api_fish_audio_for_taskId(text) {
                 // 记录使用 redis
                 redis.incr(`CHATGPT:api_fish_audio_redis_usage:${api_fish_audio_accountId}`);
                 redis.expire(`CHATGPT:api_fish_audio_redis_usage:${api_fish_audio_accountId}`, secondsUntilTomorrow);
+
+                return response.json();
+            })
+            .then(json => {
+                if (!taskId)
+                    logger.error(`response.json: ${JSON.stringify(json)}`);
+
+                // if (Config.debug)
+                //     console.log(`[tts-fish-audio]获取taskId：response.json:\n`, JSON.stringify(json))
             })
             .catch(error => {
                 logger.error('[tts-fish-audio]fetch-taskID内部错误', error);
