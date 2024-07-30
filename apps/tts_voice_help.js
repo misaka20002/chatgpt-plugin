@@ -663,7 +663,8 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             msg2 += '\n├ 今日用量：'
             msg2 += await redis.get(`CHATGPT:api_fish_audio_redis_usage:${accountIdArray[i]}`) || 0
             msg2 += '\n└ 今日出错：'
-            msg2 += await redis.get(`CHATGPT:api_fish_audio_redis_errorTimes:${accountIdArray[i]}`) || 0 + '\n\n'
+            msg2 += await redis.get(`CHATGPT:api_fish_audio_redis_errorTimes:${accountIdArray[i]}`) || 0
+            msg2 += '\n\n'
         }
         if (!msg2) msg2 = '当前未配置api_fish_audio_token，请使用锅巴设置。'
 
