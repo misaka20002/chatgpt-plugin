@@ -764,11 +764,6 @@ async function post_to_api_fish_audio_for_taskId(text) {
         }
     };
 
-    // 拥有多个账号时，token用英文逗号分割，将自动负载均衡
-    // 读取 redis
-    let api_fish_audio_account_ID_Usage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_Usage')) || {}
-    let api_fish_audio_account_ID_ErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_ErrorTimes')) || {}
-
     /** 把 Config.api_fish_audio_account_ID 分割为对象 */
     const accounts = {};
     Config.api_fish_audio_account_ID.split(',').forEach(item => {
@@ -780,13 +775,15 @@ async function post_to_api_fish_audio_for_taskId(text) {
 
     /** 整合redis后的对象 */
     let api_fish_audio_tokenArrayUsage = accountIdArray.map(async accountId => {
-        let token = await redis.get(`CHATGPT:api_fish_audio_redis_token:${accountId}`) || ""
+        let token_accountId = await redis.get(`CHATGPT:api_fish_audio_redis_token:${accountId}`)
+        let usage_accountId = await redis.get(`CHATGPT:api_fish_audio_redis_usage:${accountId}`)
+        let errorTimes_accountId = await redis.get(`CHATGPT:api_fish_audio_redis_errorTimes:${accountId}`)
         return {
             accountId: accountId,
             password: accounts[accountId],
-            token: token,
-            usage: api_fish_audio_account_ID_Usage[accountId] || 0,
-            errorTimes: api_fish_audio_account_ID_ErrorTimes[accountId] || 0
+            token: token_accountId || "",
+            usage: usage_accountId || 0,
+            errorTimes: errorTimes_accountId || 0
         };
     });
 
@@ -852,17 +849,13 @@ async function post_to_api_fish_audio_for_taskId(text) {
                         needRefreshToken = true;
 
                     // 记录出错 redis
-                    api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_ErrorTimes[api_fish_audio_accountId]) + 1) || 1;
-                    redis.set("CHATGPT:api_fish_audio_account_ID_ErrorTimes", JSON.stringify(api_fish_audio_account_ID_ErrorTimes), {
-                        EX: secondsUntilTomorrow,
-                    });
+                    redis.incr(`CHATGPT:api_fish_audio_redis_errorTimes:${api_fish_audio_accountId}`);
+                    redis.expire(`CHATGPT:api_fish_audio_redis_errorTimes:${api_fish_audio_accountId}`, secondsUntilTomorrow);
                 }
 
                 // 记录使用 redis
-                api_fish_audio_account_ID_Usage[api_fish_audio_accountId] = (parseInt(api_fish_audio_account_ID_Usage[api_fish_audio_accountId]) + 1) || 1;
-                redis.set("CHATGPT:api_fish_audio_account_ID_Usage", JSON.stringify(api_fish_audio_account_ID_Usage), {
-                    EX: secondsUntilTomorrow,
-                });
+                redis.incr(`CHATGPT:api_fish_audio_redis_usage:${api_fish_audio_accountId}`);
+                redis.expire(`CHATGPT:api_fish_audio_redis_usage:${api_fish_audio_accountId}`, secondsUntilTomorrow);
             })
             .catch(error => {
                 logger.error('[tts-fish-audio]fetch-taskID内部错误', error);

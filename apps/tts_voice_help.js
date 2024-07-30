@@ -643,10 +643,6 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
     /** ^#派蒙tts查看fish用量$ */
     async paimon_tts_check_fish_audio_token_usage(e) {
-        // 读取 redis
-        const api_fish_audio_account_ID_Usage = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_Usage')) || {}
-        const api_fish_audio_account_ID_ErrorTimes = JSON.parse(await redis.get('CHATGPT:api_fish_audio_account_ID_ErrorTimes')) || {}
-
         /** 把 Config.api_fish_audio_account_ID 分割为对象 */
         const accounts = {};
         Config.api_fish_audio_account_ID.split(',').forEach(item => {
@@ -665,9 +661,9 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             msg2 += '\n├ token：'
             msg2 += token.replace(/(.{7}).{150}(.*)/, '$1****$2')
             msg2 += '\n├ 今日用量：'
-            msg2 += (api_fish_audio_account_ID_Usage[accountIdArray[i]] || 0)
+            msg2 += await redis.get(`CHATGPT:api_fish_audio_redis_usage:${accountIdArray[i]}`) || 0
             msg2 += '\n└ 今日出错：'
-            msg2 += (api_fish_audio_account_ID_ErrorTimes[accountIdArray[i]] || 0) + '\n\n'
+            msg2 += await redis.get(`CHATGPT:api_fish_audio_redis_errorTimes:${accountIdArray[i]}`) || 0 + '\n\n'
         }
         if (!msg2) msg2 = '当前未配置api_fish_audio_token，请使用锅巴设置。'
 
