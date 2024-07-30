@@ -364,7 +364,8 @@ export class PaimonChuo extends plugin {
                     case 8:
                         const randomPlayingMsg = await generate_msg_randomPlayingMsg()
                         const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
-                        // await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${usrinfo.card || usrinfo.nickname}","message":"${randomPlayingMsg}"}`))
+                        await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${usrinfo.card || usrinfo.nickname}","message":"${randomPlayingMsg}"}`))
+                        break;
                         // 上面的api获取不到用户头像了，改用 meme #我朋友说
                         try {
                             let { memes } = await import('./派蒙meme.js')
