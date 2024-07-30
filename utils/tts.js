@@ -857,11 +857,11 @@ async function post_to_api_fish_audio_for_taskId(text) {
                 redis.incr(`CHATGPT:api_fish_audio_redis_usage:${api_fish_audio_accountId}`);
                 redis.expire(`CHATGPT:api_fish_audio_redis_usage:${api_fish_audio_accountId}`, secondsUntilTomorrow);
 
-                return response.json();
+                return response.text();
             })
-            .then(json => {
+            .then(data => {
                 if (!taskId)
-                    logger.error(`response.json: ${JSON.stringify(json)}`);
+                    logger.error(`response.text: ${JSON.stringify(data)}`);
 
                 // if (Config.debug)
                 //     console.log(`[tts-fish-audio]获取taskId：response.json:\n`, JSON.stringify(json))
