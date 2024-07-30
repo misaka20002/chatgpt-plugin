@@ -204,31 +204,37 @@ export class PaimonChuo extends plugin {
                         // 匹配发音人物
                         let defaultTTSRole = Config.defaultTTSRole
                         let voice_lists
+
+                        // 匹配 AI的第一人称
+                        const tts_First_person = Config.tts_First_person
+                        if (tts_First_person.includes('派蒙') || tts_First_person.includes('白露')) {
+                            defaultTTSRole = '派蒙_ZH'
+                        } else if (tts_First_person.includes('可莉')) {
+                            defaultTTSRole = '可莉_ZH'
+                        } else if (tts_First_person.includes('纳西妲')) {
+                            defaultTTSRole = '纳西妲_ZH'
+                        } else if (tts_First_person.includes('心奈')) {
+                            defaultTTSRole = '春原心奈'
+                        } else if (tts_First_person.includes('小春')) {
+                            defaultTTSRole = '下江小春'
+                        }
+
                         switch (defaultTTSRole) {
                             case '可莉_ZH':
-                                // voice_lists = voice_list_klee_cn
+                            case '可莉_JP':
                                 voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
                                 break;
-                            case '可莉_JP':
-                                // voice_lists = voice_list_klee_jp
-                                voice_lists = voice_list_klee_jp.concat(voice_list_klee_cn);
-                                break;
                             case '纳西妲_ZH':
-                                // voice_lists = voice_list_nahida_cn
-                                voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
-                                break;
                             case '纳西妲_JP':
-                                // voice_lists = voice_list_nahida_jp
-                                voice_lists = voice_list_nahida_jp.concat(voice_list_nahida_cn);
+                                voice_lists = voice_list_nahida_cn.concat(voice_list_nahida_jp);
                                 break;
                             case '派蒙_ZH':
                             case '白露_ZH':
-                                voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn);
-                                break;
                             case '派蒙_JP':
-                                voice_lists = voice_list_paimon_jp;
+                                voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn, voice_list_paimon_jp);
                                 break;
                             case '春原心菜':
+                            case '春原心奈':
                                 voice_lists = voice_list_Sunohara_Kokona_jp;
                                 break;
                             case '下江小春':
