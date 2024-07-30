@@ -385,9 +385,9 @@ export class PaimonChuo extends plugin {
                                 },
                             ]
                             const chuoMeme = new memes();
-                            chuoMeme.randomMemes(e);
+                            chuoMeme.memes(e);
                         } catch (err) {
-                            logger.error('[派蒙戳一戳]调用随机meme出错:', err)
+                            logger.error('[派蒙戳一戳]调用meme #我朋友说 出错:', err)
                         }
                         break;
                     default:
