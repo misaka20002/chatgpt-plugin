@@ -988,6 +988,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'tts_ffmpeg_path',
+          label: 'FFMPEG路径',
+          bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
+          component: 'Input'
+        },
+        {
           label: 'fish.audio的设置',
           component: 'Divider'
         },

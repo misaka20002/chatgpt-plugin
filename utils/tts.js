@@ -851,6 +851,9 @@ async function post_to_api_fish_audio_for_taskId(text) {
                     // 记录出错 redis
                     redis.incr(`CHATGPT:api_fish_audio_redis_errorTimes:${api_fish_audio_accountId}`);
                     redis.expire(`CHATGPT:api_fish_audio_redis_errorTimes:${api_fish_audio_accountId}`, secondsUntilTomorrow);
+                    redis.set(`CHATGPT:api_fish_audio_redis_lastErrorStatus:${api_fish_audio_accountId}`, response.status, {
+                        EX: secondsUntilTomorrow,
+                    });
                 }
 
                 // 记录使用 redis
