@@ -741,17 +741,15 @@ class Core {
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId
       }
-      if (Config.geminiModel.includes('vision')) {
-        const image = await getImg(e)
-        let imageUrl = image ? image[0] : undefined
-        if (imageUrl) {
-          let md5 = imageUrl.split(/[/-]/).find(s => s.length === 32)?.toUpperCase()
-          let imageLoc = await getOrDownloadFile(`ocr/${md5}.png`, imageUrl)
-          let outputLoc = imageLoc.replace(`${md5}.png`, `${md5}_512.png`)
-          await resizeAndCropImage(imageLoc, outputLoc, 512)
-          let buffer = fs.readFileSync(outputLoc)
-          option.image = buffer.toString('base64')
-        }
+      const image = await getImg(e)
+      let imageUrl = image ? image[0] : undefined
+      if (imageUrl) {
+        let md5 = imageUrl.split(/[/-]/).find(s => s.length === 32)?.toUpperCase()
+        let imageLoc = await getOrDownloadFile(`ocr/${md5}.png`, imageUrl)
+        let outputLoc = imageLoc.replace(`${md5}.png`, `${md5}_512.png`)
+        await resizeAndCropImage(imageLoc, outputLoc, 512)
+        let buffer = fs.readFileSync(outputLoc)
+        option.image = buffer.toString('base64')
       }
       if (Config.smartMode) {
         /**
@@ -848,6 +846,11 @@ class Core {
         system += 'If I ask you to generate music or write songs, you need to reply with information suitable for Suno to generate music. Please use keywords such as Verse, Chorus, Bridge, Outro, and End to segment the lyrics, such as [Verse 1], The returned message is in JSON format, with a structure of ```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```.'
       }
       option.system = system
+      option.replyPureTextCallback = async (msg) => {
+        if (msg) {
+          await e.reply(msg, true)
+        }
+      }
       return await client.sendMessage(prompt, option)
     } else if (use === 'chatglm4') {
       const client = new ChatGLM4Client({
