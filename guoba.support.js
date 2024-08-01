@@ -598,7 +598,7 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-1.5-flash；gemini-1.5-flash-latest；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
+          bottomHelpMessage: '默认值：gemini-1.5-flash；可选（注意配额）：gemini-1.5-flash-latest；gemini-1.5-pro；gemma-2-9b-it；gemma-2-27b-it',
           component: 'Input'
         },
         {
@@ -629,6 +629,28 @@ export function supportGuoba() {
           label: 'Gemini反代',
           bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com （常见报错：500 Internal Server Error）',
           component: 'Input'
+        },
+        {
+          field: 'geminiTemperature',
+          label: 'gemini温度',
+          bottomHelpMessage: 'gemini温度',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 999999999,
+            step: 1
+          }
+        },
+        {
+          field: 'geminiMaxOutputTokens',
+          label: 'gemini最大输出token',
+          bottomHelpMessage: 'gemini最大输出token',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 999999999,
+            step: 1
+          }
         },
         {
           label: '以下为通用配置。',
@@ -1064,71 +1086,6 @@ export function supportGuoba() {
           }
         },
         {
-          label: 'Fish-VITS2的设置',
-          component: 'Divider'
-        },
-        {
-          field: 'exampleAudio',
-          label: 'exampleAudio',
-          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
-          component: 'Input'
-        },
-        {
-          field: 'Fish_Iterative_Prompt_Length',
-          label: 'Iterative Prompt Length',
-          bottomHelpMessage: '（仅限Fish-VITS2）Iterative Prompt Length, 0 means off',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 512,
-            step: 1,
-          },
-        },
-        {
-          field: 'Fish_Maximum_tokens_per_batch',
-          label: 'Maximum tokens per batch',
-          bottomHelpMessage: '（仅限Fish-VITS2）Maximum tokens per batch, 0 means no limit',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 4096,
-            step: 1,
-          },
-        },
-        {
-          field: 'Fish_Top_P',
-          label: 'Top-P',
-          bottomHelpMessage: '（仅限Fish-VITS2）Top-P',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 1,
-            step: 0.01,
-          },
-        },
-        {
-          field: 'Fish_Repetition_Penalty',
-          label: 'Repetition Penalty',
-          bottomHelpMessage: '（仅限Fish-VITS2）Repetition Penalty',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 2,
-            step: 0.01,
-          },
-        },
-        {
-          field: 'Fish_Temperature',
-          label: 'Temperature',
-          bottomHelpMessage: '（仅限Fish-VITS2）Temperature',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 2,
-            step: 0.01,
-          },
-        },
-        {
           label: 'Bert-VITS2的设置',
           component: 'Divider'
         },
@@ -1258,6 +1215,71 @@ export function supportGuoba() {
             min: 0,
             max: 5.0
           }
+        },
+        {
+          label: 'Fish-VITS2的设置',
+          component: 'Divider'
+        },
+        {
+          field: 'exampleAudio',
+          label: 'exampleAudio',
+          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
+          component: 'Input'
+        },
+        {
+          field: 'Fish_Iterative_Prompt_Length',
+          label: 'Iterative Prompt Length',
+          bottomHelpMessage: '（仅限Fish-VITS2）Iterative Prompt Length, 0 means off',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 512,
+            step: 1,
+          },
+        },
+        {
+          field: 'Fish_Maximum_tokens_per_batch',
+          label: 'Maximum tokens per batch',
+          bottomHelpMessage: '（仅限Fish-VITS2）Maximum tokens per batch, 0 means no limit',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 4096,
+            step: 1,
+          },
+        },
+        {
+          field: 'Fish_Top_P',
+          label: 'Top-P',
+          bottomHelpMessage: '（仅限Fish-VITS2）Top-P',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.01,
+          },
+        },
+        {
+          field: 'Fish_Repetition_Penalty',
+          label: 'Repetition Penalty',
+          bottomHelpMessage: '（仅限Fish-VITS2）Repetition Penalty',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 2,
+            step: 0.01,
+          },
+        },
+        {
+          field: 'Fish_Temperature',
+          label: 'Temperature',
+          bottomHelpMessage: '（仅限Fish-VITS2）Temperature',
+          component: "InputNumber",
+          componentProps: {
+            min: 0,
+            max: 2,
+            step: 0.01,
+          },
         },
         {
           label: '呆毛版 机器人cos设置',

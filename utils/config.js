@@ -226,7 +226,6 @@ const defaultConfig = {
   geminiBaseUrl: 'https://gemini.ikechan8370.com',
   geminiTemperature: 0.9,
   geminiMaxOutputTokens: 2000,
-
   chatglmRefreshToken: '',
   sunoSessToken: '',
   sunoClientToken: '',
