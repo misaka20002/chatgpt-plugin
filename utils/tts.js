@@ -844,7 +844,7 @@ async function post_to_api_fish_audio_for_taskId(text) {
                 taskId = response.headers.get('Task-Id');
 
                 if (!taskId) {
-                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status: ${response.status}${response.status == 401 ? " token过期，即将自动刷新token" : ""}${response.status == 400 ? " token配额不足，请添加更多账号" : ""};`);
+                    logger.error(`[tts-fish-audio]获取taskId出错：${minIndex + 1}. ${api_fish_audio_accountId}; response.status: ${response.status}${response.status == 401 ? " token过期，即将自动刷新token" : ""};`);
                     if (response.status == 401)
                         needRefreshToken = true;
 

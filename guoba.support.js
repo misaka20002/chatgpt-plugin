@@ -685,7 +685,7 @@ export function supportGuoba() {
         {
           field: 'smartMode',
           label: '智能模式',
-          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合开启读取群聊上下文效果更佳',
+          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合开启读取群聊上下文效果更佳',
           component: 'Switch'
         },
         {
@@ -1551,7 +1551,7 @@ export function supportGuoba() {
         {
           field: 'extraUrl',
           label: '智能模式url',
-          bottomHelpMessage: '（测试期间提供一个公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space）参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
+          bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
           component: 'Input'
         }
       ],
