@@ -975,7 +975,8 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits语音转换API地址',
-          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          // bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
           component: 'Input'
         },
         {
@@ -1009,45 +1010,45 @@ export function supportGuoba() {
           bottomHelpMessage: '开启本地SILK转码方案2后，NTQQ内核版本9.0.0-9.0.7将无法播放语音。此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
           component: 'Switch'
         },
-        {
-          field: 'tts_ffmpeg_path',
-          label: 'FFMPEG路径',
-          bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
-          component: 'Input'
-        },
-        {
-          label: 'fish.audio的设置',
-          component: 'Divider'
-        },
-        {
-          field: 'api_fish_audio_account_ID',
-          label: 'api_fish_audio_account_ID',
-          bottomHelpMessage: '（仅限api.fish.audio）填写账号密码，用英文冒号分割；拥有多个账号时用英文逗号分割，将自动负载均衡。例如accountId1:password1,accountId2:password2；可用指令（为防止封IP地址，不推荐使用该指令，目前遇到错误时会自动刷新该token，所以若配置了2个账号就等他自己错误2次就行了）：#派蒙tts强制刷新fish账号',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'api_fish_token_quota',
-          label: 'fish.audio每个token配额',
-          bottomHelpMessage: '为防止token失效，填入配额数-1；可用指令：#派蒙tts查看fish用量',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 999999999,
-            step: 1
-          }
-        },
-        {
-          field: 'api_fish_control_defaultUseTTS',
-          label: '自动全局语音模式',
-          bottomHelpMessage: 'fish.audio达到配额后关闭全局语音模式；次日 0:01 am 自动开启全局语音模式；',
-          component: 'Switch'
-        },
-        {
-          field: 'api_fish_audio_model',
-          label: 'api_fish_audio_model',
-          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
-          component: 'Input'
-        },
+        // {
+        //   field: 'tts_ffmpeg_path',
+        //   label: 'FFMPEG路径',
+        //   bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
+        //   component: 'Input'
+        // },
+        // {
+        //   label: 'fish.audio的设置',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'api_fish_audio_account_ID',
+        //   label: 'api_fish_audio_account_ID',
+        //   bottomHelpMessage: '（仅限api.fish.audio）填写账号密码，用英文冒号分割；拥有多个账号时用英文逗号分割，将自动负载均衡。例如accountId1:password1,accountId2:password2；可用指令（为防止封IP地址，不推荐使用该指令，目前遇到错误时会自动刷新该token，所以若配置了2个账号就等他自己错误2次就行了）：#派蒙tts强制刷新fish账号',
+        //   component: 'InputTextArea'
+        // },
+        // {
+        //   field: 'api_fish_token_quota',
+        //   label: 'fish.audio每个token配额',
+        //   bottomHelpMessage: '为防止token失效，填入配额数-1；可用指令：#派蒙tts查看fish用量',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 0,
+        //     max: 999999999,
+        //     step: 1
+        //   }
+        // },
+        // {
+        //   field: 'api_fish_control_defaultUseTTS',
+        //   label: '自动全局语音模式',
+        //   bottomHelpMessage: 'fish.audio达到配额后关闭全局语音模式；次日 0:01 am 自动开启全局语音模式；',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'api_fish_audio_model',
+        //   label: 'api_fish_audio_model',
+        //   bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
+        //   component: 'Input'
+        // },
         {
           label: 'vits-uma的设置',
           component: 'Divider'
@@ -1216,71 +1217,71 @@ export function supportGuoba() {
             max: 5.0
           }
         },
-        {
-          label: 'Fish-VITS2的设置',
-          component: 'Divider'
-        },
-        {
-          field: 'exampleAudio',
-          label: 'exampleAudio',
-          bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
-          component: 'Input'
-        },
-        {
-          field: 'Fish_Iterative_Prompt_Length',
-          label: 'Iterative Prompt Length',
-          bottomHelpMessage: '（仅限Fish-VITS2）Iterative Prompt Length, 0 means off',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 512,
-            step: 1,
-          },
-        },
-        {
-          field: 'Fish_Maximum_tokens_per_batch',
-          label: 'Maximum tokens per batch',
-          bottomHelpMessage: '（仅限Fish-VITS2）Maximum tokens per batch, 0 means no limit',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 4096,
-            step: 1,
-          },
-        },
-        {
-          field: 'Fish_Top_P',
-          label: 'Top-P',
-          bottomHelpMessage: '（仅限Fish-VITS2）Top-P',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 1,
-            step: 0.01,
-          },
-        },
-        {
-          field: 'Fish_Repetition_Penalty',
-          label: 'Repetition Penalty',
-          bottomHelpMessage: '（仅限Fish-VITS2）Repetition Penalty',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 2,
-            step: 0.01,
-          },
-        },
-        {
-          field: 'Fish_Temperature',
-          label: 'Temperature',
-          bottomHelpMessage: '（仅限Fish-VITS2）Temperature',
-          component: "InputNumber",
-          componentProps: {
-            min: 0,
-            max: 2,
-            step: 0.01,
-          },
-        },
+        // {
+        //   label: 'Fish-VITS2的设置',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'exampleAudio',
+        //   label: 'exampleAudio',
+        //   bottomHelpMessage: '（仅限Fish-VITS2）exampleAudio用于推理时指定一个音频作为情感的参考音频，若留空则每次随机一个语音角色的语音作为参考音频，否则使用指定参考音频，例子：sft_new/Genshin_ZH/派蒙/87b5906e055ccb91.wav_part2219',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'Fish_Iterative_Prompt_Length',
+        //   label: 'Iterative Prompt Length',
+        //   bottomHelpMessage: '（仅限Fish-VITS2）Iterative Prompt Length, 0 means off',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 512,
+        //     step: 1,
+        //   },
+        // },
+        // {
+        //   field: 'Fish_Maximum_tokens_per_batch',
+        //   label: 'Maximum tokens per batch',
+        //   bottomHelpMessage: '（仅限Fish-VITS2）Maximum tokens per batch, 0 means no limit',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 4096,
+        //     step: 1,
+        //   },
+        // },
+        // {
+        //   field: 'Fish_Top_P',
+        //   label: 'Top-P',
+        //   bottomHelpMessage: '（仅限Fish-VITS2）Top-P',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 1,
+        //     step: 0.01,
+        //   },
+        // },
+        // {
+        //   field: 'Fish_Repetition_Penalty',
+        //   label: 'Repetition Penalty',
+        //   bottomHelpMessage: '（仅限Fish-VITS2）Repetition Penalty',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 2,
+        //     step: 0.01,
+        //   },
+        // },
+        // {
+        //   field: 'Fish_Temperature',
+        //   label: 'Temperature',
+        //   bottomHelpMessage: '（仅限Fish-VITS2）Temperature',
+        //   component: "InputNumber",
+        //   componentProps: {
+        //     min: 0,
+        //     max: 2,
+        //     step: 0.01,
+        //   },
+        // },
         {
           label: '呆毛版 机器人cos设置',
           component: 'Divider'
