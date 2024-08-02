@@ -121,14 +121,14 @@ export class voicechangehelp extends plugin {
                 },
             ]
         })
-        this.task = [
-            {
-                // 每日 0:01 am
-                cron: '0 1 0 * * ?',
-                name: '派蒙tts自动任务',
-                fnc: this.paimon_tts_Auto_tasker.bind(this)
-            },
-        ]
+        // this.task = [
+        //     {
+        //         // 每日 0:01 am
+        //         cron: '0 1 0 * * ?',
+        //         name: '派蒙tts自动任务',
+        //         fnc: this.paimon_tts_Auto_tasker.bind(this)
+        //     },
+        // ]
     }
 
 

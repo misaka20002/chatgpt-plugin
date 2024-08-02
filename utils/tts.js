@@ -72,7 +72,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // #gpt翻日 硬编码替换部分角色名
     if (Config.autoJapanese)
-        text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|コーリ|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ')
+        text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|コーリ|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ').replace(/愛しい人/g, 'あなた')
 
 
     let space = Config.ttsSpace
@@ -80,17 +80,17 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     // 如果恰好删除[好感度100]后 text 长度是0；则返回纳西妲声音的“嘿”
     if (text.length === 0) return default_tts_url
 
-    // post到api.fish.audio获取音频
-    if (space.includes('api.fish.audio')) {
-        // 截取前 499 个UTF-8字节的字符串
-        text = truncateUtf8String(text, 499);
-        logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
-        let voiceUrl
-        let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
-        voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
-        if (!voiceUrl) throw { message: err_msg }
-        return voiceUrl
-    }
+    // // post到api.fish.audio获取音频
+    // if (space.includes('api.fish.audio')) {
+    //     // 截取前 499 个UTF-8字节的字符串
+    //     text = truncateUtf8String(text, 499);
+    //     logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
+    //     let voiceUrl
+    //     let err_msg = `[chatgpt-tts]api-fish-audio语音合成失败`
+    //     voiceUrl = await wait_for_get_api_fish_audio_for_audioURL(text)
+    //     if (!voiceUrl) throw { message: err_msg }
+    //     return voiceUrl
+    // }
 
     // 使用vits-uma ；post到hf.space/api/generate获取音频
     if (space.includes('hf.space')) {
@@ -177,26 +177,26 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         space = trimmedSpace
     }
 
-    // wss连接Fish-Vits站点
-    if (space == 'https://fs.firefly.matce.cn') {
-        text = text.substr(0, 299);
-        logger.info(`[chatgpt-tts]使用Fish-Vits生成语音，角色：${speaker}，文本：\n${text}`)
-        let voiceUrl
-        let err_msg = ''
-        for (let i = 0; i < 3; i++) {
-            try {
-                voiceUrl = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio, wsTimeout: 60 * (i + 1) });
-            } catch (error) {
-                if (Config.debug)
-                    logger.error(`[chatgpt-tts]共${i + 1}次尝试连接到Fish-Vits语音合成失败：${error.message}`)
-                if (i == 2)
-                    err_msg = `[chatgpt-tts]共${i + 1}次尝试连接到Fish-Vits语音合成失败`
-            }
-            if (voiceUrl) break;
-        }
-        if (!voiceUrl) throw { message: err_msg }
-        return voiceUrl
-    }
+    // // wss连接Fish-Vits站点
+    // if (space == 'https://fs.firefly.matce.cn') {
+    //     text = text.substr(0, 299);
+    //     logger.info(`[chatgpt-tts]使用Fish-Vits生成语音，角色：${speaker}，文本：\n${text}`)
+    //     let voiceUrl
+    //     let err_msg = ''
+    //     for (let i = 0; i < 3; i++) {
+    //         try {
+    //             voiceUrl = await connectToWss({ speaker: speaker, text: text, config_referenceAudioPath: Config.exampleAudio, wsTimeout: 60 * (i + 1) });
+    //         } catch (error) {
+    //             if (Config.debug)
+    //                 logger.error(`[chatgpt-tts]共${i + 1}次尝试连接到Fish-Vits语音合成失败：${error.message}`)
+    //             if (i == 2)
+    //                 err_msg = `[chatgpt-tts]共${i + 1}次尝试连接到Fish-Vits语音合成失败`
+    //         }
+    //         if (voiceUrl) break;
+    //     }
+    //     if (!voiceUrl) throw { message: err_msg }
+    //     return voiceUrl
+    // }
 
     // post连接Bert-Vits站点
     if (space == "https://bv2.firefly.matce.cn" || space == "https://ba.firefly.matce.cn") {
