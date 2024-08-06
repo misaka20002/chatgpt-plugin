@@ -644,7 +644,7 @@ export function supportGuoba() {
         {
           field: 'geminiMaxOutputTokens',
           label: 'gemini最大输出token',
-          bottomHelpMessage: 'gemini最大输出token',
+          bottomHelpMessage: '默认值2000，gemini最大输出token',
           component: 'InputNumber',
           componentProps: {
             min: 0,
