@@ -1030,33 +1030,39 @@ export class chatgpt extends plugin {
         // 开始调用绘画插件
         if (jsonTags) {
           // 处理GPT Bug
-          if (Boolean(jsonMsg?.match(/Your reply matches your character settings in Chinese|matches your character/i)))
+          if (Boolean(jsonMsg?.match(/matches your character/i)))
             jsonMsg = `这个太难了，${Config.tts_First_person}头有点晕`
           // gpt的回复语句
           response = jsonMsg
           // 硬编码为角色添加作品名
-          let charctersName = ""
-          charctersName = jsonTags.match(/nahida/igm) ? "{{nahida_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/klee/igm) ? "{{klee_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/paimon/igm) ? "{{paimon_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/bailu/igm) ? "{{bailu_(honkai:_star_rail)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/clara/igm) ? "{{clara_(honkai:_star_rail)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/last(_|\s)order|misaka/igm) ? "{{last_order(Toaru_Majutsu_no_Index)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/sayu/igm) ? "{{sayu_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/diona/igm) ? "{{diona_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/yaoyao/igm) ? "{{yaoyao_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/qiqi/igm) ? "{{qiqi_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/furina/igm) ? "{{furina_(genshin_impact)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/Mahiro/igm) ? "{{Oyama_Mahiro(Onichanhaoshimai)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/arona/igm) ? "{{arona_(blue_archive)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/sora/igm) ? "{{sora_(blue_archive)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/kokona/igm) ? "{{kokona_(blue_archive)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/hoshino/igm) ? "{{hoshino_(blue_archive)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/Koharu/igm) ? "{{Shimoe_Koharu_(Blue archive)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/Gura/igm) ? "{{Gawr_Gura_(Hololive)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/suzuran/igm) ? "{{suzuran_(arknights)}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/Anya/igm) ? "{{Anya_Forger(SPY×FAMILY) light pink hair}}" + ", " + charctersName : charctersName
-          charctersName = jsonTags.match(/Azusa/igm) ? "{{nakano_Azusa(K-ON)}}" + ", " + charctersName : charctersName
+          const charactersList = {
+            "nahida": "{{nahida_(genshin_impact)}}",
+            "klee": "{{klee_(genshin_impact)}}",
+            "paimon": "{{paimon_(genshin_impact)}}",
+            "bailu": "{{bailu_(honkai:_star_rail)}}",
+            "clara": "{{clara_(honkai:_star_rail)}}",
+            "last(_|\\s)order|misaka": "{{last_order(Toaru_Majutsu_no_Index)}}",
+            "sayu": "{{sayu_(genshin_impact)}}",
+            "diona": "{{diona_(genshin_impact)}}",
+            "yaoyao": "{{yaoyao_(genshin_impact)}}",
+            "qiqi": "{{qiqi_(genshin_impact)}}",
+            "furina": "{{furina_(genshin_impact)}}",
+            "Mahiro": "{{Oyama_Mahiro(Onichanhaoshimai)}}",
+            "arona": "{{arona_(blue_archive)}}",
+            "sora": "{{sora_(blue_archive)}}",
+            "kokona": "{{kokona_(blue_archive)}}",
+            "hoshino": "{{hoshino_(blue_archive)}}",
+            "Koharu": "{{Shimoe_Koharu_(Blue archive)}}",
+            "Gura": "{{Gawr_Gura_(Hololive)}}",
+            "suzuran": "{{suzuran_(arknights)}}",
+            "Anya": "{{Anya_Forger(SPY×FAMILY), light pink hair}}",
+            "Azusa": "{{nakano_Azusa(K-ON)}}",
+          }
+          let charactersName = ""
+          for (const key of Object.keys(charactersList)) {
+            const reg_characters = new RegExp(key, "im")
+            charactersName = jsonTags.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
+          }
 
           if (Config.enableNai3PluginToPaint) {
             // 使用nai插件
@@ -1077,7 +1083,7 @@ export class chatgpt extends plugin {
               else if (random_nai < 0.6) {
                 strPaint = '方图'
               }
-              e.msg = `#绘画${strPaint}${charctersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#绘画${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               if (e.img)
                 e.msg += ', Reference_Strength = 0.30';
               if (Math.random() < 0.5) {
