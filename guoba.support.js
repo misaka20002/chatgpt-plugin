@@ -1368,6 +1368,12 @@ export function supportGuoba() {
           },
         },
         {
+          field: 'nai3PluginCharactersList',
+          label: '绘画添加作品名',
+          bottomHelpMessage: '连接绘画插件时使作品角色添加作品名，请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"nahida":"{{nahida_(genshin_impact)}}","klee":"{{klee_(genshin_impact)}}"}',
+          component: 'InputTextArea'
+        },
+        {
           label: '以下为meme表情生成',
           component: 'Divider'
         },

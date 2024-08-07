@@ -1034,30 +1034,8 @@ export class chatgpt extends plugin {
             jsonMsg = `这个太难了，${Config.tts_First_person}头有点晕`
           // gpt的回复语句
           response = jsonMsg
-          // 硬编码为角色添加作品名
-          const charactersList = {
-            "nahida": "{{nahida_(genshin_impact)}}",
-            "klee": "{{klee_(genshin_impact)}}",
-            "paimon": "{{paimon_(genshin_impact)}}",
-            "bailu": "{{bailu_(honkai:_star_rail)}}",
-            "clara": "{{clara_(honkai:_star_rail)}}",
-            "last(_|\\s)order|misaka": "{{last_order(Toaru_Majutsu_no_Index)}}",
-            "sayu": "{{sayu_(genshin_impact)}}",
-            "diona": "{{diona_(genshin_impact)}}",
-            "yaoyao": "{{yaoyao_(genshin_impact)}}",
-            "qiqi": "{{qiqi_(genshin_impact)}}",
-            "furina": "{{furina_(genshin_impact)}}",
-            "Mahiro": "{{Oyama_Mahiro(Onichanhaoshimai)}}",
-            "arona": "{{arona_(blue_archive)}}",
-            "sora": "{{sora_(blue_archive)}}",
-            "kokona": "{{kokona_(blue_archive)}}",
-            "hoshino": "{{hoshino_(blue_archive)}}",
-            "Koharu": "{{Shimoe_Koharu_(Blue archive)}}",
-            "Gura": "{{Gawr_Gura_(Hololive)}}",
-            "suzuran": "{{suzuran_(arknights)}}",
-            "Anya": "{{Anya_Forger(SPY×FAMILY), light pink hair}}",
-            "Azusa": "{{nakano_Azusa(K-ON)}}",
-          }
+          // 为角色添加作品名
+          const charactersList = JSON.parse(Config.nai3PluginCharactersList)
           let charactersName = ""
           for (const key of Object.keys(charactersList)) {
             const reg_characters = new RegExp(key, "im")
