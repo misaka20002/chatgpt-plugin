@@ -967,7 +967,7 @@ export class chatgpt extends plugin {
       // 检索是否有屏蔽词
       const blockWord = Config.blockWords.find(word => response.toLowerCase().includes(word.toLowerCase()))
       if (blockWord) {
-        await this.reply(`返回内容存在敏感词，因为你甚至都不愿意叫人家一声“${Config.tts_First_person}”QAQ。多次触发建议#结束对话`, true)
+        await this.reply(`${Config.tts_First_person}不想回复你了QAQ哭哭，建议#结束对话`, true)
         return false
       }
       // 处理中断的代码区域
