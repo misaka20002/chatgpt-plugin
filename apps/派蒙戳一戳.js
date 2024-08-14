@@ -549,13 +549,13 @@ export class PaimonChuo extends plugin {
                     await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
                     break
                 }
-            case 10:
-                message = await get_msg_wyyrp()
-                if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始网抑云：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
-                }
+            // case 10:
+            //     message = await get_msg_wyyrp() // 句子的效果不好，禁用
+            //     if (message) {
+            //         chuo_text_generateAndSendAudio(message, e);
+            //         await e.reply((`“咳咳~”派蒙开始网抑云：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+            //         break
+            //     }
             case 11:
                 message = await get_msg_AWord()
                 if (message) {
