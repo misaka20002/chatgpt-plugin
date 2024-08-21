@@ -412,11 +412,19 @@ export class PaimonChuo extends plugin {
                                 },
                             ]
                             // 轮到派蒙撅你咯
-                            if (Math.random() < 0.5) {
+                            if (Math.random() < 0.1) {
                                 const botinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.self_id) || await e.bot.pickMember?.(e.group_id, e.self_id)
                                 e.sender = botinfo
                                 e.user_id = e.self_id
+                                e.message = [
+                                    {
+                                        "type": "text",
+                                        "text": "#撅"
+                                    },
+                                ]
                                 e.message.push({ type: 'at', qq: e.operator_id, text: usrinfo.card || usrinfo.nickname })
+                                chuoMeme.memes(e);
+                                return true
                             }
                             const chuoMeme = new memes();
                             chuoMeme.randomMemes(e, true);
