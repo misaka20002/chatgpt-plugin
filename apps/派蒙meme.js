@@ -231,8 +231,13 @@ export class memes extends plugin {
     return true
   }
 
-  async randomMemes (e) {
+  async randomMemes (e, isDeleteUnharmoniousKeys = false) {
     let keys = Object.keys(infos).filter(key => infos[key].params_type.min_images === 1 && infos[key].params_type.min_texts === 0)
+    if (isDeleteUnharmoniousKeys) {
+      /** 需要删除的不和谐的 keys */
+      const keys_delete = ['behead', 'tomb_yeah', 'shishilani', 'thump_wildly', 'clown', 'taunt', 'mourning', 'rise_dead'];
+      keys = keys.filter(key => !keys_delete.includes(key));
+    }
     let index = _.random(0, keys.length - 1, false)
     console.log(keys, index)
     e.msg = infos[keys[index]].keywords[0]

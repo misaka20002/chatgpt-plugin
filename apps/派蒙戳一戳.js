@@ -419,7 +419,7 @@ export class PaimonChuo extends plugin {
                                 e.message.push({ type: 'at', qq: e.operator_id, text: usrinfo.card || usrinfo.nickname })
                             }
                             const chuoMeme = new memes();
-                            chuoMeme.randomMemes(e);
+                            chuoMeme.randomMemes(e, true);
                         } catch (err) {
                             logger.error('[派蒙戳一戳]调用随机meme出错:', err)
                         }
