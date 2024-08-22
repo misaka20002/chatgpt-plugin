@@ -38,10 +38,14 @@ import Core from '../model/core.js'
 let version = Config.version
 let proxy = getProxy()
 const isTrss = Array.isArray(Bot.uin)
+const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 // 使机器人可以对其第一人称回应
 const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
-import { recognitionResultsByGemini } from '../utils/paimonFuction.js'
+import {
+  recognitionResultsByGemini,
+  convertSentenceToArray
+ } from '../utils/paimonFuction.js'
 import { PaimonChuo } from '../apps/派蒙戳一戳.js'
 
 /**
@@ -1167,7 +1171,21 @@ export class chatgpt extends plugin {
               prompt
             })
           }
-          await this.reply(responseText, e.isGroup)
+          if(!Config.isConvertSentenceToArrayReply)
+            await this.reply(responseText, e.isGroup, {
+            btnData: {
+              use,
+              suggested: chatMessage.suggestedResponses
+            }
+          })
+          else {
+            // 多次回复
+            const str_arr = convertSentenceToArray(responseText);
+            for (let i = 0; i < str_arr.length; i++) {
+              await this.reply(str_arr[i], e.isGroup);
+              sleep_zz(Math.random() * 2000 + 1000);
+            }
+          }
           if (quotemessage.length > 0) {
             this.reply(await makeForwardMsg(this.e, quotemessage.map(msg => `${msg.text} - ${msg.url}`)))
           }
@@ -1221,12 +1239,21 @@ export class chatgpt extends plugin {
             logger.debug('生成建议回复失败', err)
           }
         }
-        this.reply(responseText, e.isGroup, {
-          btnData: {
-            use,
-            suggested: chatMessage.suggestedResponses
+        if (!Config.isConvertSentenceToArrayReply)
+          this.reply(responseText, e.isGroup, {
+            btnData: {
+              use,
+              suggested: chatMessage.suggestedResponses
+            }
+          })
+        else {
+          // 多次回复
+          const str_arr = convertSentenceToArray(responseText);
+          for (let i = 0; i < str_arr.length; i++) {
+            await this.reply(str_arr[i], e.isGroup);
+            sleep_zz(Math.random() * 2000 + 1000);
           }
-        })
+        }
         if (Config.enableSuggestedResponses && chatMessage.suggestedResponses) {
           this.reply(`建议的回复：\n${chatMessage.suggestedResponses}`)
         }

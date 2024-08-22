@@ -37,3 +37,43 @@ export async function recognitionResultsByGemini(e, img) {
         }
     }
 }
+
+/**
+ * @description: 把句子转为不超过3个元素的数组
+ * @param {*} str
+ * @return {*} array
+ */
+export function convertSentenceToArray(str) {
+    // 用正则表达式来保留句号和问号符号
+    let arr = str.split(/([。？！~!?])/).filter(Boolean);
+    let newArr = [];
+    let tempSentence = '';
+    // 把分隔符号插回去
+    for (let i = 0; i < arr.length; i++) {
+        tempSentence += arr[i];
+        if (i % 2 !== 0) {
+            newArr.push(tempSentence);
+            tempSentence = '';
+        } else if (i === arr.length - 1) {
+            newArr.push(tempSentence);
+        }
+    }
+    // 重组为不超过3句话
+    while (newArr.length > 3) {
+        let index = 0;
+        for (let i = 0; i < newArr.length; i++) {
+            newArr[i] = newArr[index] + (newArr[index + 1] || "")
+            index += 2
+            if (newArr[i] == 'undefined') {
+                newArr.splice(i);
+                break
+            }
+        }
+    }
+    // 删除句末的句号
+    for (let i = 0; i < newArr.length; i++) {
+        newArr[i] = newArr[i].replace(/。$/, "")
+    }
+
+    return newArr;
+}

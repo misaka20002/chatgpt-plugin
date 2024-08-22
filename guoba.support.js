@@ -841,8 +841,7 @@ export function supportGuoba() {
         {
           field: 'ttsAutoFallbackThreshold',
           label: '语音转文字阈值',
-          helpMessage: '语音模式下，字数超过这个阈值就降级为文字。',
-          bottomHelpMessage: '语音转为文字的阈值',
+          bottomHelpMessage: '语音模式下，字数超过这个阈值就同时发送文字。',
           component: 'InputNumber',
           componentProps: {
             min: 0,
@@ -1296,6 +1295,12 @@ export function supportGuoba() {
           field: 'chat_for_First_person',
           label: 'AI回应第一人称呼叫',
           bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
+          component: 'Switch'
+        },
+        {
+          field: 'isConvertSentenceToArrayReply',
+          label: '多次回复',
+          bottomHelpMessage: '模拟真人行为，把ai回复分成1-3次回复；需要关闭：QQ开启markdown',
           component: 'Switch'
         },
         {
