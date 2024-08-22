@@ -1300,8 +1300,39 @@ export function supportGuoba() {
         {
           field: 'isConvertSentenceToArrayReply',
           label: '多次回复',
-          bottomHelpMessage: '模拟真人行为，把ai回复分成1-3次回复；需要关闭：QQ开启markdown',
+          bottomHelpMessage: '模拟真人行为，把ai回复分成1-3次回复。需要关闭选项 QQ开启markdown',
           component: 'Switch'
+        },
+        {
+          field: 'enableNai3PluginToPaint',
+          label: '连接nai插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；',
+          component: 'Switch'
+        },
+        {
+          field: 'enableApPluginToPaint',
+          label: '连接ap插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap',
+          component: 'Switch'
+        },
+        {
+          field: 'nai3PluginToPaintPrefix',
+          label: '连接绘画插件的前缀',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风等；ap/nai共用',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
+          },
+        },
+        {
+          field: 'nai3PluginCharactersList',
+          label: '绘画添加作品名',
+          bottomHelpMessage: '连接绘画插件时使作品角色添加作品名，请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"nahida":"{{nahida_(genshin_impact)}}","klee":"{{klee_(genshin_impact)}}"}',
+          component: 'InputTextArea'
+        },
+        {
+          label: '以下为戳一戳设置',
+          component: 'Divider'
         },
         {
           field: 'paimon_chuoyichuo_open',
@@ -1350,33 +1381,6 @@ export function supportGuoba() {
           label: '戳一戳使用涩图api',
           bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
           component: 'Switch'
-        },
-        {
-          field: 'enableNai3PluginToPaint',
-          label: '连接nai插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；',
-          component: 'Switch'
-        },
-        {
-          field: 'enableApPluginToPaint',
-          label: '连接ap插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap',
-          component: 'Switch'
-        },
-        {
-          field: 'nai3PluginToPaintPrefix',
-          label: '连接绘画插件的前缀',
-          bottomHelpMessage: '定义绘画前缀，例如画师、画风等；ap/nai共用',
-          component: 'Input',
-          componentProps: {
-            placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
-          },
-        },
-        {
-          field: 'nai3PluginCharactersList',
-          label: '绘画添加作品名',
-          bottomHelpMessage: '连接绘画插件时使作品角色添加作品名，请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"nahida":"{{nahida_(genshin_impact)}}","klee":"{{klee_(genshin_impact)}}"}',
-          component: 'InputTextArea'
         },
         {
           label: '以下为meme表情生成',

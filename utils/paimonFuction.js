@@ -45,7 +45,7 @@ export async function recognitionResultsByGemini(e, img) {
  */
 export function convertSentenceToArray(str) {
     // 用正则表达式来保留句号和问号符号
-    let arr = str.split(/([。？！~!?])/).filter(Boolean);
+    let arr = str.split(/([。？！~!?\n]+)/).filter(Boolean);
     let newArr = [];
     let tempSentence = '';
     // 把分隔符号插回去
@@ -60,17 +60,19 @@ export function convertSentenceToArray(str) {
     }
     // 重组为不超过3句话
     while (newArr.length > 3) {
-        let index = 0;
         for (let i = 0; i < newArr.length; i++) {
-            newArr[i] = newArr[index] + (newArr[index + 1] || "")
-            index += 2
-            if (newArr[i] == 'undefined') {
-                newArr.splice(i);
-                break
-            }
+            newArr[i] = newArr[i] + (newArr[i + 1] || "");
+            newArr.splice(i + 1, 1);
         }
     }
-    // 删除句末的句号
+    // 把长度小于5的元素合并
+    for (let i = 0; i < newArr.length; i++) {
+        if (newArr[i].length < 5 || newArr[i + 1]?.length < 5) {
+            newArr[i] = newArr[i] + (newArr[i + 1] || "");
+            newArr.splice(i + 1, 1);
+        }
+    }
+    // 删除句号
     for (let i = 0; i < newArr.length; i++) {
         newArr[i] = newArr[i].replace(/。$/, "")
     }
