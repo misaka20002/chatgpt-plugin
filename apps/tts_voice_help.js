@@ -411,7 +411,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         }
         else {
             Config.paimon_chou_cd = parseInt(match[2]);
-            return e.reply(`派蒙戳一戳CD已设置为${parseInt(match[2])}！`)
+            return e.reply(`派蒙戳一戳CD已设置为${parseInt(match[2])}秒`)
         }
     }
 

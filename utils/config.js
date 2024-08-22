@@ -126,6 +126,7 @@ const defaultConfig = {
   // api_fish_control_defaultUseTTS: false,
   recognitionByGemini: false,
   // tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
+  meme_turnOff: false,
   meme_baseUrl: "https://memes.ikechan8370.com",
   meme_reply: true,
   meme_forceSharp: true,

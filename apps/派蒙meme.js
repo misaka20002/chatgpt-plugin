@@ -248,7 +248,8 @@ export class memes extends plugin {
    * #memes
    * @param e oicq传递的事件参数e
    */
-  async memes (e) {
+  async memes(e) {
+    if (Config.meme_turnOff) return false;
     // console.log(e)
     let msg = e.msg.replace('#', '')
     let keys = Object.keys(keyMap).filter(k => msg.startsWith(k))

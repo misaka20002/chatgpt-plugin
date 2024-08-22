@@ -1378,6 +1378,12 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
+          field: 'meme_turnOff',
+          label: '关闭meme',
+          bottomHelpMessage: '关闭meme表情包制作功能；指令 #meme帮助',
+          component: 'Switch'
+        },
+        {
           field: 'meme_baseUrl',
           label: 'MEME api',
           bottomHelpMessage: '默认值：https://memes.ikechan8370.com，也可以duplicate大大的space：https://huggingface.co/spaces/ikechan8370/meme-generator 然后api填https://[username]-meme-generator.hf.space；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
