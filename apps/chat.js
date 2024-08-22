@@ -37,6 +37,7 @@ import Core from '../model/core.js'
 
 let version = Config.version
 let proxy = getProxy()
+const isTrss = Array.isArray(Bot.uin)
 
 // 使机器人可以对其第一人称回应
 const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
@@ -698,7 +699,7 @@ export class chatgpt extends plugin {
     let confirm = await redis.get('CHATGPT:CONFIRM')
     let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
     if (confirmOn) {
-      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: 8 })
+      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: isTrss ? 0 : 8 })
     }
 
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -1156,7 +1157,7 @@ export class chatgpt extends plugin {
         // 先把文字回复发出去，避免过久等待合成语音
         if (Config.alsoSendText || ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
-            await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: 30 })
+            await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: isTrss ? 0 : 30 })
           }
           let responseText = await convertFaces(response, Config.enableRobotAt, e)
           if (handler.has('chatgpt.markdown.convert')) {
@@ -1178,7 +1179,7 @@ export class chatgpt extends plugin {
         if (sendable) {
           await this.reply(sendable)
         } else {
-          await this.reply(`${Config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: 30 })
+          await this.reply(`${Config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: isTrss ? 0 : 30 })
         }
       } else if (userSetting.usePicture || (!Config.enableMd && Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         try {
@@ -1238,11 +1239,11 @@ export class chatgpt extends plugin {
       }
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)
-        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: e.isGroup ? 10 : 0 })
+        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: isTrss ? 0 : (e.isGroup ? 10 : 0) })
       } else {
         let errorMessage = err?.message || err?.data?.message || (typeof (err) === 'object' ? JSON.stringify(err) : err) || '未能确认错误类型！'
         if (errorMessage.length < 200) {
-          await this.reply(`出现错误：${errorMessage}`, true, { recallMsg: e.isGroup ? 10 : 0 })
+          await this.reply(`出现错误：${errorMessage}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 10 : 0) })
         } else {
           await this.renderImage(e, use, `出现异常,错误信息如下 \n \`\`\`${errorMessage}\`\`\``, prompt)
         }
