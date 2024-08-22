@@ -1183,7 +1183,7 @@ export class chatgpt extends plugin {
             const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
               await this.reply(str_arr[i], e.isGroup);
-              await sleep_zz(Math.random() * 7000 + 3000);
+              await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
           if (quotemessage.length > 0) {
@@ -1251,7 +1251,7 @@ export class chatgpt extends plugin {
           const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
             await this.reply(str_arr[i], e.isGroup);
-            await sleep_zz(Math.random() * 7000 + 3000);
+            await sleep_zz(Math.random() * 5000 + 2000);
           }
         }
         if (Config.enableSuggestedResponses && chatMessage.suggestedResponses) {
