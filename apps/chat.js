@@ -1180,7 +1180,7 @@ export class chatgpt extends plugin {
           })
           else {
             // 多次回复
-            const str_arr = convertSentenceToArray(responseText);
+            const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
               await this.reply(str_arr[i], e.isGroup);
               sleep_zz(Math.random() * 2000 + 1000);
@@ -1248,7 +1248,7 @@ export class chatgpt extends plugin {
           })
         else {
           // 多次回复
-          const str_arr = convertSentenceToArray(responseText);
+          const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
             await this.reply(str_arr[i], e.isGroup);
             sleep_zz(Math.random() * 2000 + 1000);
