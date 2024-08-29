@@ -697,7 +697,7 @@ export class chatgpt extends plugin {
     // 检索是否有屏蔽词
     const promtBlockWord = Config.promptBlockWords.find(word => prompt.toLowerCase().includes(word.toLowerCase()))
     if (promtBlockWord) {
-      await this.reply('主人不让我回答你这种问题，真是抱歉了呢', true)
+      await this.reply(`${Config.tts_First_person}不想回答你这个问题QAQ`, true)
       return false
     }
     let confirm = await redis.get('CHATGPT:CONFIRM')
