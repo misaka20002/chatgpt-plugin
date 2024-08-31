@@ -1005,8 +1005,14 @@ export function supportGuoba() {
         },
         {
           field: 'ttsHD',
-          label: '开启本地SILK转码方案2',
-          bottomHelpMessage: '开启本地SILK转码方案2后，NTQQ内核版本9.0.0-9.0.7将无法播放语音。此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
+          label: '本地SILK转码方案2',
+          bottomHelpMessage: '开启本地SILK转码方案2，此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
+          component: 'Switch'
+        },
+        {
+          field: 'focus_CloudTranscode',
+          label: '强制使用云转码',
+          bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
           component: 'Switch'
         },
         // {
