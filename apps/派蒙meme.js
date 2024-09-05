@@ -197,10 +197,12 @@ export class memes extends plugin {
   }
 
   async memesHelp (e) {
+    if (Config.meme_turnOff) return false;
     e.reply('【memes列表】：查看支持的memes列表\n【{表情名称}】：memes列表中的表情名称，根据提供的文字或图片制作表情包\n【随机meme】：随机制作一些表情包\n【meme搜索+关键词】：搜索表情包关键词\n【{表情名称}+详情】：查看该表情所支持的参数')
   }
 
   async memesSearch (e) {
+    if (Config.meme_turnOff) return false;
     let search = e.msg.replace(/^#?(meme(s)?|表情包)搜索/, '').trim()
     if (!search) {
       await e.reply('你要搜什么？')
@@ -219,6 +221,7 @@ export class memes extends plugin {
   }
 
   async memesList (e) {
+    if (Config.meme_turnOff) return false;
     let resultFileLoc = 'data/memes/render_list1.jpg'
     if (fs.existsSync(resultFileLoc)) {
       await e.reply(segment.image(`file://${resultFileLoc}`))
@@ -239,6 +242,7 @@ export class memes extends plugin {
   }
 
   async randomMemes (e, isDeleteUnharmoniousKeys = false) {
+    if (Config.meme_turnOff) return false;
     let keys = Object.keys(infos).filter(key => infos[key].params_type.min_images === 1 && infos[key].params_type.min_texts === 0)
     if (isDeleteUnharmoniousKeys) {
       /** 需要删除的不和谐的 keys */
