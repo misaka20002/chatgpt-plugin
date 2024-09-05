@@ -80,7 +80,8 @@ export class memes extends plugin {
           /** 命令正则匹配 */
           reg: '^#?(meme(s)?|表情包)更新',
           /** 执行方法 */
-          fnc: 'memesUpdate'
+          fnc: 'memesUpdate',
+          permission: 'master'
         }
 
       ]
