@@ -578,7 +578,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_AWord()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模别人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    await e.reply((`“咳咳~”派蒙开始模仿别人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
                     break
                 }
             case 12:
