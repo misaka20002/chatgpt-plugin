@@ -74,7 +74,7 @@ export function convertSentenceToArray(str) {
     }
     // 删除句号
     for (let i = 0; i < newArr.length; i++) {
-        newArr[i] = newArr[i].replace(/。$/, "")
+        newArr[i] = newArr[i].replace(/。|\n$/gm, "")
     }
 
     return newArr;

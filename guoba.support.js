@@ -1306,7 +1306,7 @@ export function supportGuoba() {
         {
           field: 'isConvertSentenceToArrayReply',
           label: '分多次回复',
-          bottomHelpMessage: '模拟真人行为，把ai回复分成1-3次回复。需要关闭选项 QQ开启markdown',
+          bottomHelpMessage: '模拟真人行为，自动分段，把ai回复分成1-3次回复。需要关闭选项 QQ开启markdown',
           component: 'Switch'
         },
         {
