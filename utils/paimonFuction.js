@@ -45,7 +45,8 @@ export async function recognitionResultsByGemini(e, img) {
  */
 export function convertSentenceToArray(str) {
     // 用正则表达式来保留句号和问号符号
-    let arr = str.split(/([。？！～~!?\n]+)/).filter(Boolean);
+    // let arr = str.split(/([。？！～~!?\n]+)/).filter(Boolean);
+    let arr = str.split(/([。？！!?”’\n]+)/).filter(Boolean);
     let newArr = [];
     let tempSentence = '';
     // 把分隔符号插回去
@@ -74,6 +75,7 @@ export function convertSentenceToArray(str) {
     }
     // 删除句号和大括号
     for (let i = 0; i < newArr.length; i++) {
+        // newArr[i] = newArr[i].replace(/。|\n$|^{|}$|(?<=.)\n|\n(?=.)/gm, "")
         newArr[i] = newArr[i].replace(/。|\n$|^{|}$/gm, "")
     }
 
