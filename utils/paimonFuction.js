@@ -72,9 +72,9 @@ export function convertSentenceToArray(str) {
             newArr.splice(i + 1, 1);
         }
     }
-    // 删除句号
+    // 删除句号和大括号
     for (let i = 0; i < newArr.length; i++) {
-        newArr[i] = newArr[i].replace(/。|\n$/gm, "")
+        newArr[i] = newArr[i].replace(/。|\n$|^{|}$/gm, "")
     }
 
     return newArr;
