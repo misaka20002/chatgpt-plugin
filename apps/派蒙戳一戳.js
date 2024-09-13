@@ -390,6 +390,7 @@ export class PaimonChuo extends plugin {
                             e.user_id = e.operator_id
                             e.msg = "#我朋友说" + randomPlayingMsg
                             e.at = e.operator_id
+                            e.isFromPaimonChuo = true;
                             e.message = [
                                 {
                                     "type": "text",
@@ -415,6 +416,7 @@ export class PaimonChuo extends plugin {
                             const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
                             e.sender = usrinfo
                             e.user_id = e.operator_id
+                            e.isFromPaimonChuo = true;
                             e.message = [
                                 {
                                     "type": "text",

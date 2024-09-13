@@ -241,6 +241,12 @@ export class memes extends plugin {
     return true
   }
 
+  /**
+   * @description: 
+   * @param {*} e
+   * @param {*} isDeleteUnharmoniousKeys 是否删除的不和谐的 keys，默认为 false;
+   * @return {*}
+   */
   async randomMemes (e, isDeleteUnharmoniousKeys = false) {
     if (Config.meme_turnOff) return false;
     let keys = Object.keys(infos).filter(key => infos[key].params_type.min_images === 1 && infos[key].params_type.min_texts === 0)
@@ -264,7 +270,7 @@ export class memes extends plugin {
 
     // meme响应CD
     let lastTime = await redis.get(`Yz:paimon_meme_cd:${e.group_id}:${e.sender.user_id || e.user_id}`);
-    if (lastTime) return false;
+    if (lastTime && !e.isFromPaimonChuo) return false;
     else {
       // 写入cd
       let meme_CD = Config.meme_CD
