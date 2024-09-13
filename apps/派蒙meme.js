@@ -261,6 +261,16 @@ export class memes extends plugin {
    */
   async memes(e) {
     if (Config.meme_turnOff) return false;
+
+    // meme响应CD
+    let lastTime = await redis.get(`Yz:paimon_meme_cd:${e.group_id}:${e.operator_id}`);
+    if (lastTime) return false;
+    else {
+      // 写入cd
+      let meme_CD = Config.meme_CD
+      if (meme_CD > 0) redis.set(`Yz:paimon_meme_cd:${e.group_id}:${e.operator_id}`, 1, { EX: meme_CD });
+    }
+    
     // console.log(e)
     let msg = e.msg.replace('#', '')
     let keys = Object.keys(keyMap).filter(k => msg.startsWith(k))

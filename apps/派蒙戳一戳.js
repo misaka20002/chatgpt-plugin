@@ -66,7 +66,7 @@ export class PaimonChuo extends plugin {
 
         // 戳一戳响应CD
         let lastTime = await redis.get(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`);
-        if (lastTime) return
+        if (lastTime) return false;
         else {
             // 写入cd
             let paimon_chou_cd = Config.paimon_chou_cd

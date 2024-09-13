@@ -1368,7 +1368,13 @@ export function supportGuoba() {
           field: 'paimon_chou_cd',
           label: '戳一戳响应CD',
           bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
-          component: 'InputNumber'
+          helpMessage: '单位：秒',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 999999999,
+            step: 1
+          }
         },
         {
           field: 'paimon_chou_text_generateAndSendAudio',
@@ -1406,6 +1412,18 @@ export function supportGuoba() {
           componentProps: {
             placeholder: 'https://memes.ikechan8370.com',
           },
+        },
+        {
+          field: 'meme_CD',
+          label: 'meme CD',
+          bottomHelpMessage: 'meme CD个人时间，建议填写大于1的整数。设置为0则禁用戳一戳响应CD',
+          helpMessage: '单位：秒',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 999999999,
+            step: 1
+          }
         },
         {
           field: 'meme_reply',

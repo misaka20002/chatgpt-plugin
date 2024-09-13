@@ -132,6 +132,7 @@ const defaultConfig = {
   meme_forceSharp: true,
   meme_masterProtectDo: true,
   meme_maxFileSize: 10,
+  meme_CD: 11,
   isConvertSentenceToArrayReply: false,
   gemini_vqa_model: "gemini-1.5-flash-latest",
   gemini_vqa_needMaster: true,
