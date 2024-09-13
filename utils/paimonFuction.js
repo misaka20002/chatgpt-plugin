@@ -76,7 +76,7 @@ export function convertSentenceToArray(str) {
     // 删除句号和大括号
     for (let i = 0; i < newArr.length; i++) {
         // newArr[i] = newArr[i].replace(/。|\n$|^{|}$|(?<=.)\n|\n(?=.)/gm, "")
-        newArr[i] = newArr[i].replace(/。|\n$|^{|}$/gm, "")
+        newArr[i] = newArr[i].replace(/。|\n$|^{|}$|^(，|,)/gm, "")
     }
 
     return newArr;
