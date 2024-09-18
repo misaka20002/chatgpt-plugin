@@ -61,6 +61,7 @@
   "enableApPluginToPaint": false,
   "nai3PluginToPaintPrefix": "toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
   "nai3PluginCharactersList": "",
+  "doNotCheckPaintPluginSuccess": false,
   "paimon_chuoyichuo_open": true,
   "paimon_chuoyichuo_ByMsgGroups": [],
   "paimon_chuoyichuo_Probability_ByMsgGroups": 5,

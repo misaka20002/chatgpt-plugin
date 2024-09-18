@@ -45,7 +45,7 @@ const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g"
 import {
   recognitionResultsByGemini,
   convertSentenceToArray
- } from '../utils/paimonFuction.js'
+} from '../utils/paimonFuction.js'
 import { PaimonChuo } from '../apps/派蒙戳一戳.js'
 
 /**
@@ -1073,14 +1073,18 @@ export class chatgpt extends plugin {
               const random_1 = Math.random()
               e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', smea, dynoff' : ', smea');
               console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
-              let isTrue = await nai.txt2img(e);
-              if (isTrue) {
-                if (!response)
-                  return true
-              }
-              else {
-                console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
-                response = `${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`;
+              if (Config.doNotCheckPaintPluginSuccess) {
+                nai.txt2img(e);
+              } else {
+                let isTrue = await nai.txt2img(e);
+                if (isTrue) {
+                  if (!response)
+                    return true
+                }
+                else {
+                  console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
+                  response = `${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`;
+                }
               }
             } catch (err) {
               console.log('[ChatGPT]调用nai插件错误：', err)
@@ -1104,15 +1108,19 @@ export class chatgpt extends plugin {
             try {
               e.msg = '#绘图' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用ap插件绘画：\nmsg: ', e.msg)
-              let isTrue = await ap.aiPainting(e);
-              if (isTrue) {
-                if (!response)
-                  return true
-              }
-              else {
-                console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
-                response = `${Config.tts_First_person}在这个群还不能使用#绘图 功能啦`;
-                // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
+              if (Config.doNotCheckPaintPluginSuccess) {
+                ap.aiPainting(e);
+              } else {
+                let isTrue = await ap.aiPainting(e);
+                if (isTrue) {
+                  if (!response)
+                    return true
+                }
+                else {
+                  console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
+                  response = `${Config.tts_First_person}在这个群还不能使用#绘图 功能啦`;
+                  // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
+                }
               }
             } catch (err) {
               console.log('[ChatGPT]调用ap插件错误：', err)
@@ -1171,13 +1179,13 @@ export class chatgpt extends plugin {
               prompt
             })
           }
-          if(!Config.isConvertSentenceToArrayReply)
+          if (!Config.isConvertSentenceToArrayReply)
             await this.reply(responseText, e.isGroup, {
-            btnData: {
-              use,
-              suggested: chatMessage.suggestedResponses
-            }
-          })
+              btnData: {
+                use,
+                suggested: chatMessage.suggestedResponses
+              }
+            })
           else {
             // 多次回复
             const str_arr = convertSentenceToArray(responseText.join(''));

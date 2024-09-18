@@ -1322,6 +1322,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'doNotCheckPaintPluginSuccess',
+          label: '不检测画图成功',
+          bottomHelpMessage: '检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 和 https://github.com/misaka20002/nai-plugin',
+          component: 'Switch'
+        },
+        {
           field: 'nai3PluginToPaintPrefix',
           label: '连接绘画插件的前缀',
           bottomHelpMessage: '定义绘画前缀，例如画师、画风等；ap/nai共用',
