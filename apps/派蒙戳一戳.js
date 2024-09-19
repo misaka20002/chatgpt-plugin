@@ -142,7 +142,7 @@ export class PaimonChuo extends plugin {
                 let url, msg, res
                 switch (mutetype) {
                     case 1:
-                        url = `https://www.loliapi.com/acg/`;
+                        url = `http://bjb.yunwj.top/php/tk/sj.php?mc=%22%E9%A3%8E%E6%99%AF%22`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
@@ -150,7 +150,8 @@ export class PaimonChuo extends plugin {
                         await e.reply(msg);
                         break;
                     case 2:
-                        url = `https://t.mwm.moe/mp`;
+                        // url = `https://t.mwm.moe/mp`;
+                        url = `https://api.btstu.cn/sjbz/api.php`; // 三次元
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
@@ -158,9 +159,9 @@ export class PaimonChuo extends plugin {
                         await e.reply(msg);
                         break;
                     case 3:
-                        // api.asxe.vip 似乎永久关闭了，先用 loliapi.com 代替
                         // url = `https://api.asxe.vip/random.php`;
-                        url = `https://www.loliapi.com/acg/`;
+                        // url = `https://www.loliapi.com/acg/`;
+                        url = `https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
@@ -169,28 +170,28 @@ export class PaimonChuo extends plugin {
                         break;
                     case 4:
                         // sex.nyan.xyz 似乎永久关闭了，先用 get_url_from_api_lolicon 代替
-                        url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
+                        url = await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
                         await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
-                        // let mutetype4 = Math.ceil(Math.random() * 2)
-                        // switch (mutetype4) {
-                        //     case 1:
-                        //         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=BlueArchive`;
-                        //         break;
-                        //     case 2:
-                        //         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=原神`;
-                        //         break;
-                        // }
-                        // res = await fetch(url).catch((err) => logger.error(err));
-                        // msg = [await segment.image(res.body)];
-                        // await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
-                        // await common.sleep(100)
-                        // await e.reply(msg);
-                        // break;
+                    // let mutetype4 = Math.ceil(Math.random() * 2)
+                    // switch (mutetype4) {
+                    //     case 1:
+                    //         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=BlueArchive`;
+                    //         break;
+                    //     case 2:
+                    //         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=原神`;
+                    //         break;
+                    // }
+                    // res = await fetch(url).catch((err) => logger.error(err));
+                    // msg = [await segment.image(res.body)];
+                    // await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
+                    // await common.sleep(100)
+                    // await e.reply(msg);
+                    // break;
                     case 5:
                         url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                         res = await fetch(url).catch((err) => logger.error(err));
