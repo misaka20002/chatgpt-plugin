@@ -578,7 +578,8 @@ ${translateLangLabels}
     return false
   }
 
-  async screenshotUrl (e) {
+  async screenshotUrl(e) {
+    if (!e.isMaster) return false;
     let url = e.msg.replace(/^#url(：|:)/, '')
     if (url.length === 0) { return false }
     try {
