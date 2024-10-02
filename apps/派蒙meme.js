@@ -193,7 +193,10 @@ export class memes extends plugin {
     } catch (err) {
       await e.reply('更新失败：' + err.message)
     }
-    await e.reply('更新完成')
+    if (fs.existsSync('data/memes/infos.json') && fs.existsSync('data/memes/keyMap.json'))
+      e.reply('更新完成\n重启生效')
+    else
+      e.reply('更新失败，连接meme服务器失败/错误');
   }
 
   async memesHelp (e) {

@@ -142,10 +142,7 @@ Node.js >= 18 / Node.js >= 14(with node-fetch)
 
 ```shell
 # github源
-git clone --depth=1 https://github.com/ikechan8370/chatgpt-plugin.git ./plugins/chatgpt-plugin/
-
-# 网络不好连不上github可以使用gitee源，但更新可能不如github及时
-git clone --depth=1 https://gitee.com/ikechan/chatgpt-plugin.git ./plugins/chatgpt-plugin/
+git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
 
 # 以上二选一后执行下面步骤进入目录安装依赖
 cd plugins/chatgpt-plugin
