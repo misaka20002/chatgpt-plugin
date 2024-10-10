@@ -237,6 +237,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'bingSFDraw',
+          label: '使用siliconflow插件代替Bing进行绘图',
+          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容；优先级：nai > ap > siliconflow > bing',
+          component: 'Switch'
+        },
+        {
           field: 'enableRobotAt',
           label: '是否允许机器人真at',
           bottomHelpMessage: '开启后机器人的回复如果at群友会真的at',
@@ -1322,9 +1328,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableSiliconflowPluginToPaint',
+          label: '连接sf插件绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap > siliconflow',
+          component: 'Switch'
+        },
+        {
           field: 'doNotCheckPaintPluginSuccess',
           label: '不检测画图成功',
-          bottomHelpMessage: '检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 和 https://github.com/misaka20002/nai-plugin',
+          bottomHelpMessage: '检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/nai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
           component: 'Switch'
         },
         {

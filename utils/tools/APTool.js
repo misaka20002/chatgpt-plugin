@@ -42,7 +42,7 @@ export class APTool extends AbstractTool {
     }
 
     // 使用ap插件
-    else {
+    else if (Config.bingAPDraw) {
       let ap
       try {
         // eslint-disable-next-line camelcase
@@ -61,6 +61,24 @@ export class APTool extends AbstractTool {
       try {
         e.msg = '#绘图' + prompt
         await ap.aiPainting(e)
+        return 'draw success, picture has been sent.'
+      } catch (err) {
+        return 'draw failed due to unknown error'
+      }
+    }
+
+    // 使用SF插件
+    else if (Config.bingSFDraw) {
+      let sf
+      try {
+        let { SF_Painting } = await import('../../../siliconflow-plugin/apps/main.js')
+        sf = new SF_Painting(e)
+      } catch (err) {
+        return 'the user didn\'t install siliconflow-plugin. suggest him to install'
+      }
+      try {
+        e.msg = '#sf绘图' + prompt
+        await sf.sf_draw(e)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'

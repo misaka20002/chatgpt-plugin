@@ -1006,7 +1006,7 @@ export class chatgpt extends plugin {
       }
 
       // 处理 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
         let jsonTags, jsonMsg
         if (json) {
@@ -1124,6 +1124,35 @@ export class chatgpt extends plugin {
               }
             } catch (err) {
               console.log('[ChatGPT]调用ap插件错误：', err)
+            }
+          }
+          else if (Config.enableSiliconflowPluginToPaint) {
+            // 使用ap插件
+            let sf
+            try {
+              let { SF_Painting } = await import('../../siliconflow-plugin/apps/main.js')
+              sf = new SF_Painting()
+            } catch (err) {
+              console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
+            }
+            try {
+              e.msg = '#sf绘图' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              console.log('[ChatGPT]开始调用sf插件绘画：\nmsg: ', e.msg)
+              if (Config.doNotCheckPaintPluginSuccess) {
+                sf.sf_draw(e);
+              } else {
+                let isTrue = await sf.sf_draw(e);
+                if (isTrue) {
+                  if (!response)
+                    return true
+                }
+                else {
+                  console.log('[ChatGPT]调用sf插件错误：请检查sf插件在当前群聊能否使用');
+                  response = `${Config.tts_First_person}在这个群还不能使用#sf绘图 功能啦`;
+                }
+              }
+            } catch (err) {
+              console.log('[ChatGPT]调用sf插件错误：', err)
             }
           }
         }

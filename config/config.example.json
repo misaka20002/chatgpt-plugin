@@ -59,6 +59,7 @@
   "switchToNai3PluginToPaint": false,
   "enableNai3PluginToPaint": false,
   "enableApPluginToPaint": false,
+  "enableSiliconflowPluginToPaint": false,
   "nai3PluginToPaintPrefix": "toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
   "nai3PluginCharactersList": "",
   "doNotCheckPaintPluginSuccess": false,
