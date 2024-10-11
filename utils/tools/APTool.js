@@ -71,7 +71,7 @@ export class APTool extends AbstractTool {
     else if (Config.bingSFDraw) {
       let sf
       try {
-        let { SF_Painting } = await import('../../../siliconflow-plugin/apps/main.js')
+        let { SF_Painting } = await import('../../../siliconflow-plugin/apps/SF_Painting.js')
         sf = new SF_Painting(e)
       } catch (err) {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'

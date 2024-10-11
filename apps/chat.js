@@ -1130,7 +1130,7 @@ export class chatgpt extends plugin {
             // 使用ap插件
             let sf
             try {
-              let { SF_Painting } = await import('../../siliconflow-plugin/apps/main.js')
+              let { SF_Painting } = await import('../../siliconflow-plugin/apps/SF_Painting.js')
               sf = new SF_Painting()
             } catch (err) {
               console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
