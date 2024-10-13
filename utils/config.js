@@ -116,6 +116,7 @@ const defaultConfig = {
   tts_slice_is_Split_by_sentence: false,
   tts_slice_pause_between_paragraphs_seconds: 0.2,
   tts_slice_pause_between_sentences_seconds: 0.2,
+  hailuoApiKey: "sk-xxxxxx",
   // exampleAudio: "",
   // Fish_Iterative_Prompt_Length: 90,
   // Fish_Maximum_tokens_per_batch: 0,
@@ -299,7 +300,7 @@ config.version = defaultConfig.version
 // config.version = latestTag
 
 export const Config = new Proxy(config, {
-  set (target, property, value) {
+  set(target, property, value) {
     target[property] = value
     const change = lodash.transform(target, function (result, value, key) {
       if (!lodash.isEqual(value, defaultConfig[key])) {
