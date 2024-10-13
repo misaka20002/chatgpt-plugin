@@ -84,43 +84,43 @@ export class chatgpt extends plugin {
       rule: [
         {
           /** 命令正则匹配 */
-          reg: '^#chat3[sS]*',
+          reg: '^#(图片)?chat3[sS]*',
           /** 执行方法 */
           fnc: 'chatgpt3'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#chat1[sS]*',
+          reg: '^#(图片)?chat1[sS]*',
           /** 执行方法 */
           fnc: 'chatgpt1'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#chatglm[sS]*',
+          reg: '^#(图片)?chatglm[sS]*',
           /** 执行方法 */
           fnc: 'chatglm'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#bing[sS]*',
+          reg: '^#(图片)?bing[sS]*',
           /** 执行方法 */
           fnc: 'bing'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#claude(2|3|.ai)[sS]*',
+          reg: '^#(图片)?claude(2|3|.ai)[sS]*',
           /** 执行方法 */
           fnc: 'claude2'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#claude[sS]*',
+          reg: '^#(图片)?claude[sS]*',
           /** 执行方法 */
           fnc: 'claude'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#xh[sS]*',
+          reg: '^#(图片)?xh[sS]*',
           /** 执行方法 */
           fnc: 'xh'
         },
@@ -134,25 +134,25 @@ export class chatgpt extends plugin {
         },
         {
           /** 命令正则匹配 */
-          reg: '^#glm4[sS]*',
+          reg: '^#(图片)?glm4[sS]*',
           /** 执行方法 */
           fnc: 'glm4'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#qwen[sS]*',
+          reg: '^#(图片)?qwen[sS]*',
           /** 执行方法 */
           fnc: 'qwen'
         },
         {
           /** 命令正则匹配 */
-          reg: '^#gemini[sS]*',
+          reg: '^#(图片)?gemini[sS]*',
           /** 执行方法 */
           fnc: 'gemini'
         },
         {
           /** 命令正则匹配 */
-          reg: toggleMode === 'at' ? '^[^#][sS]*' : '^#chat[^gpt][sS]*',
+          reg: toggleMode === 'at' ? '^[^#][sS]*' : '^#(图片)?chat[^gpt][sS]*',
           /** 执行方法 */
           fnc: 'chatgpt',
           log: false
@@ -500,6 +500,7 @@ export class chatgpt extends plugin {
   async chatgpt(e) {
     let msg = e.msg
     let prompt
+    let forcePictureMode = false
     if (this.toggleMode === 'at') {
       if (!msg || e.msg?.startsWith('#')) {
         return false
@@ -560,7 +561,10 @@ export class chatgpt extends plugin {
         }
         return false
       }
-      prompt = _.replace(e.msg.trimStart(), '#chat', '').trim()
+      if (e.msg.trimStart().startsWith('#图片chat')) {
+        forcePictureMode = true
+      }
+      prompt = _.replace(e.msg.trimStart(), /#(图片)?chat/, '').trim()
       if (prompt.length === 0) {
         return false
       }
@@ -575,7 +579,7 @@ export class chatgpt extends plugin {
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
     // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
     prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
-    await this.abstractChat(e, prompt, use)
+    await this.abstractChat(e, prompt, use, forcePictureMode)
   }
 
   /**
@@ -617,7 +621,7 @@ export class chatgpt extends plugin {
     await this.abstractChat(e, prompt, use)
   }
 
-  async abstractChat(e, prompt, use) {
+  async abstractChat(e, prompt, use, forcePictureMode = false) {
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
@@ -906,6 +910,17 @@ export class chatgpt extends plugin {
         }
       }
       let response = chatMessage?.text?.replace('\n\n\n', '\n')
+      
+      if (handler.has('chatgpt.response.post')) {
+        logger.debug('调用后处理器: chatgpt.response.post')
+        handler.call('chatgpt.response.post', this.e, {
+          content: response,
+          use,
+          prompt
+        }, true).catch(err => {
+          logger.error('后处理器出错', err)
+        })
+      }
       let mood = 'blandness'
       if (!response) {
         await this.reply('没有任何回复', true)
@@ -1236,7 +1251,7 @@ export class chatgpt extends plugin {
         } else {
           await this.reply(`${Config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: isTrss ? 0 : 30 })
         }
-      } else if (userSetting.usePicture || (!Config.enableMd && Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
+      } else if (forcePictureMode || userSetting.usePicture || (Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         try {
           await this.renderImage(e, use, response, prompt, quotemessage, mood, chatMessage.suggestedResponses, imgUrls)
         } catch (err) {
@@ -1315,44 +1330,44 @@ export class chatgpt extends plugin {
     }
   }
 
-  async chatgpt1(e) {
-    return await this.otherMode(e, 'api', '#chat1')
+  async chatgpt1 (e) {
+    return await this.otherMode(e, 'api', /#(图片)?chat1/)
   }
 
-  async chatgpt3(e) {
-    return await this.otherMode(e, 'api3', '#chat3')
+  async chatgpt3 (e) {
+    return await this.otherMode(e, 'api3', /#(图片)?chat3/)
   }
 
   async chatglm(e) {
     return await this.otherMode(e, 'chatglm')
   }
 
-  async bing(e) {
-    return await this.otherMode(e, 'bing')
+  async bing (e) {
+    return await this.otherMode(e, 'bing', /#(图片)?bing/)
   }
 
-  async claude2(e) {
-    return await this.otherMode(e, 'claude2', /^#claude(2|3|.ai)/)
+  async claude2 (e) {
+    return await this.otherMode(e, 'claude2', /^#(图片)?claude(2|3|.ai)/)
   }
 
-  async claude(e) {
-    return await this.otherMode(e, 'claude')
+  async claude (e) {
+    return await this.otherMode(e, 'claude', /#(图片)?claude/)
   }
 
-  async qwen(e) {
-    return await this.otherMode(e, 'qwen')
+  async qwen (e) {
+    return await this.otherMode(e, 'qwen', /#(图片)?qwen/)
   }
 
-  async glm4(e) {
-    return await this.otherMode(e, 'chatglm4', '#glm4')
+  async glm4 (e) {
+    return await this.otherMode(e, 'chatglm4', /#(图片)?glm4/)
   }
 
-  async gemini(e) {
-    return await this.otherMode(e, 'gemini')
+  async gemini (e) {
+    return await this.otherMode(e, 'gemini', /#(图片)?gemini/)
   }
 
-  async xh(e) {
-    return await this.otherMode(e, 'xh')
+  async xh (e) {
+    return await this.otherMode(e, 'xh', /#(图片)?xh/)
   }
 
   async cacheContent(e, use, content, prompt, quote = [], mood = '', suggest = '', imgUrls = []) {
@@ -1660,7 +1675,8 @@ export class chatgpt extends plugin {
     if (prompt.length === 0) {
       return false
     }
-    await this.abstractChat(e, prompt, mode)
+    let forcePictureMode = e.msg.trimStart().startsWith('#图片')
+    await this.abstractChat(e, prompt, mode, forcePictureMode)
     return true
   }
 }
