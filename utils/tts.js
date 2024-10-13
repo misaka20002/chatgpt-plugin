@@ -6,10 +6,6 @@ import { getProxy } from './proxy.js'
 let proxy = getProxy()
 import WebSocket from 'ws'
 
-import fs from 'fs'
-import { pipeline } from 'stream'
-const streamPipeline = promisify(pipeline)
-
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 const isTrss = Array.isArray(Bot.uin)
 /** 纳西妲声音的“嘿” */
