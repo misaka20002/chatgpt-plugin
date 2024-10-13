@@ -981,7 +981,7 @@ export function supportGuoba() {
           field: 'ttsSpace',
           label: 'vits语音转换API地址',
           // bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用Fish-VITS2请填入https://fs.firefly.matce.cn；使用新版fish请填入：https://api.fish.audio；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
-          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech （需要配置key）（自行搭建文档https://github.com/LLM-Red-Team/hailuo-free-api 请在域名中包含hailuo以便本插件识别）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          bottomHelpMessage: '大力感谢firefly.matce.cn提供的api支持——使用Bert-VITS2请填入https://bv2.firefly.matce.cn；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech （需要配置key且云转码设置为“文件”）（自行搭建文档https://github.com/LLM-Red-Team/hailuo-free-api 请在域名中包含hailuo以便本插件识别）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
           component: 'Input'
         },
         {

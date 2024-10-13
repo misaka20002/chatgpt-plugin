@@ -116,7 +116,7 @@ const defaultConfig = {
   tts_slice_is_Split_by_sentence: false,
   tts_slice_pause_between_paragraphs_seconds: 0.2,
   tts_slice_pause_between_sentences_seconds: 0.2,
-  hailuoApiKey: "sk-xxxxxx",
+  hailuoApiKey: "",
   // exampleAudio: "",
   // Fish_Iterative_Prompt_Length: 90,
   // Fish_Maximum_tokens_per_batch: 0,
