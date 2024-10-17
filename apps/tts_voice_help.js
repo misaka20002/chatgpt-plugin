@@ -119,6 +119,10 @@ export class voicechangehelp extends plugin {
                     fnc: 'paimon_tts_refresh_fish_account_token',
                     permission: 'master'
                 },
+                {
+                    reg: '^#搜索fish发音人(.*)$',
+                    fnc: 'searchFishVoices'
+                },
             ]
         })
         // this.task = [
@@ -144,6 +148,7 @@ export class voicechangehelp extends plugin {
             ` #tts语言设置帮助\n` +
             ` #ttslength设置帮助\n` +
             ` #tts语音切片生成帮助\n` +
+            ` #搜索fish发音人[名称]\n` +
             ` #chatgpt(开启|关闭)本地SILK转码` +
             // ` （2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
             ''
@@ -723,7 +728,30 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return true
     }
 
+    async searchFishVoices(e) {
+        const keyword = e.msg.replace(/^#搜索fish发音人/, '').trim();
+        const keywordURIComponent = encodeURIComponent(keyword)
 
+        const options = {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${Config.fishApiKey}` }
+        };
+
+        let optionMsg = "可用指令：#chatgpt设置全局vits语音角色"
+        let msgArr = [`Fish发音人：`];
+        fetch(`https://api.fish.audio/model?tag=${keywordURIComponent}`, options)
+            .then(response => response.json())
+            .then(response => {
+                for (let index = 0; index < response.total; index++) {
+                    if (0 == index) optionMsg += response.items[0]._id
+                    msgArr.push(`名称：${response.items[index].title}\n发音人ID：${response.items[index]._id}`)
+                }
+            })
+            .catch(err => logger.error(err));
+
+        msgArr.push(optionMsg)
+        await e.reply(msgArr, true);
+    }
 }
 
 

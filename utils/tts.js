@@ -96,8 +96,16 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     //     return voiceUrl
     // }
 
+    // 使用Fish API
+    if (space.includes('api.fish.audio')) {
+        // 截取前 499 个UTF-8字节的字符串
+        text = truncateUtf8String(text, 499);
+        logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
+        const audioBuffer = await fish_api_generateAudio(text, Config.fish_reference_id, Config.fishApiKey, mp3);
+        return audioBuffer
+    }
     // 使用vits-uma ；post到hf.space/api/generate获取音频
-    if (space.includes('hf.space')) {
+    else if (space.includes('hf.space')) {
         text = text.substr(0, 299);
         // 用<zh> or <jp>包裹句子
         text = wrapTextByLanguage(text)
@@ -168,6 +176,35 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             throw new Error('[chatgpt-tts]responseBody:', json)
         }
     }
+    // 生成 hailuo 下的 mp3 音频
+    else if (space.includes('hailuo')) {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 60000)
+
+        const response = await newFetch(space, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${Config.hailuoApiKey}`,
+                'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'hailuo',
+                input: text,
+                voice: speaker
+            }),
+            signal: controller.signal
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+            throw new Error(`[chatgpt-tts]无法从服务器获取音频数据：${response.statusText}`)
+        }
+
+        const hailuo_ResponseData = await response.arrayBuffer()
+        return Buffer.from(hailuo_ResponseData)
+    }
 
     //校正space
     if (space.endsWith('/run/predict')) {
@@ -202,37 +239,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     //     return voiceUrl
     // }
 
-    // 生成 hailuo 下的 mp3 音频
-    if (space.includes('hailuo')) {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 60000)
-
-        const response = await newFetch(space, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${Config.hailuoApiKey}`,
-                'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'hailuo',
-                input: text,
-                voice: speaker
-            }),
-            signal: controller.signal
-        })
-
-        clearTimeout(timeoutId)
-
-        if (!response.ok) {
-            throw new Error(`[chatgpt-tts]无法从服务器获取音频数据：${response.statusText}`)
-        }
-
-        const hailuo_ResponseData = await response.arrayBuffer()
-        return Buffer.from(hailuo_ResponseData)
-    }
     // post连接Bert-Vits站点
-    else if (space == "https://bv2.firefly.matce.cn" || space == "https://ba.firefly.matce.cn") {
+    if (space == "https://bv2.firefly.matce.cn" || space == "https://ba.firefly.matce.cn") {
         let sdp_ratio = parseFloat(Config.sdp_ratio), tts_language = Config.tts_language, style_text = Config.style_text, style_text_weights = parseFloat(Config.style_text_weights), tts_slice_is_slice_generation = Config.tts_slice_is_slice_generation, tts_slice_is_Split_by_sentence = Config.tts_slice_is_Split_by_sentence, tts_slice_pause_between_paragraphs_seconds = parseFloat(Config.tts_slice_pause_between_paragraphs_seconds), tts_slice_pause_between_sentences_seconds = parseFloat(Config.tts_slice_pause_between_sentences_seconds)
 
         // tts情感自动设置
@@ -1013,3 +1021,45 @@ const truncateUtf8String = (str, length) => {
         return buffer.subarray(0, length).toString('utf8');
     }
 };
+
+/**
+ * @description: Fish的API调用
+ * @param {*} text
+ * @param {*} reference_id ID of the reference model o be used for the speech
+ * @param {*} fishApiKey
+ * @param {*} res_format Available options: wav, pcm, mp3, opus 
+ * @return {buffer}
+ */
+async function fish_api_generateAudio(text, reference_id, fishApiKey, res_format) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+    try {
+        const response = await fetch('https://api.fish.audio/v1/tts', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${fishApiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                reference_id: reference_id,
+                format: res_format,
+                latency: 'normal'
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`[tts-fish-audio]无法从服务器获取音频数据：${response.statusText}`);
+        }
+
+        const audioBuffer = await response.arrayBuffer();
+        logger.info('[tts-fish-audio]音频生成成功');
+        return Buffer.from(audioBuffer);
+    } catch (error) {
+        throw { message: "[tts-fish-audio]获取taskID成功但等待音频生成超时失败" }
+    }
+}

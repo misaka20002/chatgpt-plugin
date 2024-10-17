@@ -127,6 +127,8 @@ const defaultConfig = {
   // api_fish_audio_account_ID: "",
   // api_fish_token_quota: 49,
   // api_fish_control_defaultUseTTS: false,
+  fishApiKey: "",
+  fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
   recognitionByGemini: false,
   // tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
