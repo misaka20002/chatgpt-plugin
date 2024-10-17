@@ -101,7 +101,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // 截取前 499 个UTF-8字节的字符串
         text = truncateUtf8String(text, 499);
         logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
-        const audioBuffer = await fish_api_generateAudio(text, Config.fish_reference_id, Config.fishApiKey, mp3);
+        const audioBuffer = await fish_api_generateAudio(text, Config.fish_reference_id, Config.fishApiKey, "mp3");
         return audioBuffer
     }
     // 使用vits-uma ；post到hf.space/api/generate获取音频
