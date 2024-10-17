@@ -741,7 +741,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         };
 
         let optionMsg = "可用指令：#chatgpt设置全局vits语音角色"
-        let msgArr = [`Fish发音人：`];
+        let msgArr = [`Fish发音人列表 ${keyword}：`];
         await fetch(`https://api.fish.audio/model?tag=${encodeURIComponent(keyword)}`, options)
             .then(response => response.json())
             .then(response => {
