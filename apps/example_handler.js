@@ -2,7 +2,7 @@
  * 示例后处理器。你可以在example下面写一个新的。默认会调用所有此key的处理器
  */
 export class ChatGPTResponsePostHandler extends plugin {
-  constructor () {
+  constructor() {
     super({
       name: 'chatgpt文本回复后处理器',
       priority: -100,
@@ -14,7 +14,9 @@ export class ChatGPTResponsePostHandler extends plugin {
     })
   }
 
-  async postHandler (e, options, reject) {
+  async postHandler(e, options, reject) {
+    logger.debug("chatgpt文本回复后处理器example")
+
     const { content, use, prompt } = options
     // 你可以在这里处理返回的文本，比如使用自定义的语音api来合成语音
 
