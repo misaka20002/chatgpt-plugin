@@ -754,7 +754,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
         msgArr.push(optionMsg)
         const msgx = await common.makeForwardMsg(e, msgArr, `Fish发音人`)
-        await e.reply(msgx, true);
+        await e.reply(msgx);
     }
 }
 
