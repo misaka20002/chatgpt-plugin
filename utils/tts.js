@@ -1060,6 +1060,6 @@ async function fish_api_generateAudio(text, reference_id, fishApiKey, res_format
         logger.info('[tts-fish-audio]音频生成成功');
         return Buffer.from(audioBuffer);
     } catch (error) {
-        throw { message: "[tts-fish-audio]获取taskID成功但等待音频生成超时失败" }
+        throw error
     }
 }

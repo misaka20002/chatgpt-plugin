@@ -729,8 +729,11 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     }
 
     async searchFishVoices(e) {
+        if (Config.fishApiKey.length == 0) {
+            e.reply("请先在锅巴中设置fish.audio的Api Key", true);
+            return
+        }
         const keyword = e.msg.replace(/^#搜索fish发音人/, '').trim();
-        const keywordURIComponent = encodeURIComponent(keyword)
 
         const options = {
             method: 'GET',
@@ -739,7 +742,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
         let optionMsg = "可用指令：#chatgpt设置全局vits语音角色"
         let msgArr = [`Fish发音人：`];
-        fetch(`https://api.fish.audio/model?tag=${keywordURIComponent}`, options)
+        await fetch(`https://api.fish.audio/model?tag=${encodeURIComponent(keyword)}`, options)
             .then(response => response.json())
             .then(response => {
                 for (let index = 0; index < response.total; index++) {
@@ -750,7 +753,8 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             .catch(err => logger.error(err));
 
         msgArr.push(optionMsg)
-        await e.reply(msgArr, true);
+        const msgx = await common.makeForwardMsg(e, msgArr, `Fish发音人`)
+        await e.reply(msgx, true);
     }
 }
 
