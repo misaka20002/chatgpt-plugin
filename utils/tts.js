@@ -179,7 +179,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     // 生成 hailuo 下的 mp3 音频
     else if (space.includes('hailuo')) {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 60000)
+        const timeoutId = setTimeout(() => controller.abort(), 300000)
 
         const response = await newFetch(space, {
             method: 'POST',
