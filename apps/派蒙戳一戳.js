@@ -17,6 +17,7 @@ import {
 } from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
+import sharp from 'sharp'
 
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -142,15 +143,15 @@ export class PaimonChuo extends plugin {
                 let url, msg, res
                 switch (mutetype) {
                     case 1:
-                        url = `http://bjb.yunwj.top/php/tk/sj.php?mc=%22%E9%A3%8E%E6%99%AF%22`;
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [await segment.image(res.body)];
+                        // url = `http://bjb.yunwj.top/php/tk/sj.php?mc=%22%E9%A3%8E%E6%99%AF%22`;
+                        url = `https://www.loliapi.com/acg/`;
+                        msg = [await segment.image(await convertWebpToPng(url))];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 2:
-                        // url = `https://t.mwm.moe/mp`;
+                        // url = `https://t.mwm.moe/mp`;  // 二次元，但图太少了
                         url = `https://api.btstu.cn/sjbz/api.php`; // 三次元
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
@@ -160,7 +161,6 @@ export class PaimonChuo extends plugin {
                         break;
                     case 3:
                         // url = `https://api.asxe.vip/random.php`;
-                        // url = `https://www.loliapi.com/acg/`;
                         url = `https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images`;
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
@@ -169,36 +169,20 @@ export class PaimonChuo extends plugin {
                         await e.reply(msg);
                         break;
                     case 4:
-                        // sex.nyan.xyz 似乎永久关闭了，先用 get_url_from_api_lolicon 代替
+                        url = await get_url_from_api_lolicon('ロリ|loli|萝莉|风景|壁纸', '');
+                        res = await fetch(url).catch((err) => logger.error(err));
+                        msg = [await segment.image(res.body)];
+                        await this.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`, false, { recallMsg: 100 })
+                        await common.sleep(100)
+                        await this.reply(msg, false, { recallMsg: 100 });
+                        break;
+                    case 5:
                         url = await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
-                        await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`, false, { recallMsg: 119 })
+                        await this.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`, false, { recallMsg: 100 })
                         await common.sleep(100)
-                        await e.reply(msg, false, { recallMsg: 119 });
-                        break;
-                    // let mutetype4 = Math.ceil(Math.random() * 2)
-                    // switch (mutetype4) {
-                    //     case 1:
-                    //         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=BlueArchive`;
-                    //         break;
-                    //     case 2:
-                    //         url = `https://sex.nyan.xyz/api/v2/img?size=regular&tag=ロリ&tag=原神`;
-                    //         break;
-                    // }
-                    // res = await fetch(url).catch((err) => logger.error(err));
-                    // msg = [await segment.image(res.body)];
-                    // await e.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`)
-                    // await common.sleep(100)
-                    // await e.reply(msg);
-                    // break;
-                    case 5:
-                        url = await get_url_from_api_lolicon('ロリ', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [await segment.image(res.body)];
-                        await e.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`, false, { recallMsg: 119 })
-                        await common.sleep(100)
-                        await e.reply(msg, false, { recallMsg: 119 });
+                        await this.reply(msg, false, { recallMsg: 100 });
                         break;
                 }
             }
@@ -653,7 +637,7 @@ export class PaimonChuo extends plugin {
 }
 
 /**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持2个tag参数，tag中支持20个或| */
-async function get_url_from_api_lolicon(tag1 = '萝莉|loli', tag2 = 'ロリ|loli|萝莉') {
+async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2 = '') {
     const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
     for (let i = 0; i < 3; i++) {
         try {
@@ -925,6 +909,28 @@ async function chuo_text_generateAndSendAudio(message, e) {
     if (sendable) await e.reply(sendable)
 }
 
+
+/**
+ * @description: 输入返回 webp 图片格式的 url，返回 png 格式的 buffer
+ * @param {*} url
+ * @return {*} pngBuffer
+ */
+async function convertWebpToPng(url) {
+    try {
+        // 从指定 URL 获取图像
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('[派蒙戳一戳][Webp图站]Network response was not ok');
+        // 将响应体转换为 Buffer
+        const webpBuffer = await res.buffer();
+        // 使用 sharp 将 WebP 转换为 PNG
+        const pngBuffer = await sharp(webpBuffer)
+            .png() // 转换为 PNG
+            .toBuffer(); // 返回 Buffer
+        return pngBuffer;
+    } catch (err) {
+        logger.error(err);
+    }
+}
 
 /**回复文字列表 */
 let paimon_word_list = [
