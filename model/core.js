@@ -66,6 +66,10 @@ const roleMap = {
 }
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
+/** 接入AP、Nai、SF绘画的prompt */
+const paintPropmtPrefix = 'If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}, {Reference Artist}, {High-Quality Keywords}. Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt", "msg": "Your response aligns with the character settings provided in Chinese."}```'
+// const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
+
 
 async function handleSystem (e, system) {
   if (Config.enableGroupContext) {
@@ -641,8 +645,8 @@ class Core {
       }
 
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+        system += paintPropmtPrefix
       }
 
       if (Config.smartMode) {
@@ -819,8 +823,8 @@ class Core {
         system = system.replace(/_sender_title_/igm, e.sender.title)
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+        system += paintPropmtPrefix
       }
 
       if (Config.enableGroupContext && e.isGroup) {
@@ -877,8 +881,8 @@ class Core {
       let system = await handleSystem(e, promptPrefix, maxModelTokens)
 
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint) {
-        system += 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+        system += paintPropmtPrefix
       }
 
       if (Config.enableChatSuno) {
