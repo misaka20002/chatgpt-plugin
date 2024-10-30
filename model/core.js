@@ -745,7 +745,7 @@ class Core {
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId
       }
-      if (!Config.recognitionByGemini) {
+      // if (!Config.recognitionByGemini) {
         const image = await getImg(e)
         let imageUrl = image ? image[0] : undefined
         if (imageUrl) {
@@ -756,7 +756,7 @@ class Core {
           let buffer = fs.readFileSync(outputLoc)
           option.image = buffer.toString('base64')
         }
-      }
+      // }
       if (Config.smartMode) {
         /**
          * @type {AbstractTool[]}

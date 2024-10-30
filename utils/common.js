@@ -751,7 +751,7 @@ export async function getImg(e, alsoGetAtAvatar = true, useOrigin = false) {
       }
       if (val.type == "file") {
         e.reply("不支持消息中的文件，请将该文件以图片发送...", true);
-        return;
+        return e.img;
       }
     }
     if (Boolean(i.length)) {
