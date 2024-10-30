@@ -745,7 +745,7 @@ class Core {
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId
       }
-      // if (!Config.recognitionByGemini) {
+      if (!Config.recognitionByGemini) {
         const image = await getImg(e)
         let imageUrl = image ? image[0] : undefined
         if (imageUrl) {
@@ -756,7 +756,11 @@ class Core {
           let buffer = fs.readFileSync(outputLoc)
           option.image = buffer.toString('base64')
         }
-      // }
+      }
+      // 呆毛版 不知道为什么 gemini-1.5 一定要传递图片，不然就报错参数错误
+      if (!option.image && Config.geminiModel.match(/1.5/)) {
+        option.image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAANSURBVBhXY2BgYPgPAAEEAQBwIGULAAAAAElFTkSuQmCC'
+      }
       if (Config.smartMode) {
         /**
          * @type {AbstractTool[]}
