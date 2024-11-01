@@ -106,9 +106,10 @@ var ChatGPTAPI = /** @class */ (function () {
                 store: new QuickLRU({ maxSize: 10000 })
             });
         }
-        if (!this._apiKey) {
-            throw new Error('OpenAI missing required apiKey');
-        }
+        // 呆毛版 禁用了openAPI的KEY检查
+        // if (!this._apiKey) {
+        //     throw new Error('OpenAI missing required apiKey');
+        // }
         if (!this._fetch) {
             throw new Error('Invalid environment; fetch is not defined');
         }
