@@ -644,6 +644,16 @@ class Core {
         option = Object.assign(option, conversation)
       }
 
+      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+      if (Config.isReplacePromptForSenderMsg) {
+        system = system.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+        system = system.replace(/_sender_id_/igm, e.sender.user_id)
+        system = system.replace(/_sender_gender_/igm, e.sender.sex)
+        system = system.replace(/_sender_age_/igm, e.sender.age)
+        system = system.replace(/_sender_area_/igm, e.sender.area)
+        system = system.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+        system = system.replace(/_sender_title_/igm, e.sender.title)
+      }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
         system += paintPropmtPrefix
@@ -884,6 +894,16 @@ class Core {
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, maxModelTokens)
 
+      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+      if (Config.isReplacePromptForSenderMsg) {
+        system = system.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+        system = system.replace(/_sender_id_/igm, e.sender.user_id)
+        system = system.replace(/_sender_gender_/igm, e.sender.sex)
+        system = system.replace(/_sender_age_/igm, e.sender.age)
+        system = system.replace(/_sender_area_/igm, e.sender.area)
+        system = system.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+        system = system.replace(/_sender_title_/igm, e.sender.title)
+      }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
         system += paintPropmtPrefix

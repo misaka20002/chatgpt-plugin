@@ -631,12 +631,6 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
-          field: 'isReplacePromptForSenderMsg',
-          label: '呆毛版 gemini设定拓展',
-          bottomHelpMessage: '（仅限gemini使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
-          component: 'Switch'
-        },
-        {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
           bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com （常见报错：500 Internal Server Error）',
@@ -1336,21 +1330,27 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'isReplacePromptForSenderMsg',
+          label: '呆毛版 设定拓展',
+          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
+          component: 'Switch'
+        },
+        {
           field: 'enableNai3PluginToPaint',
           label: '连接nai插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；',
           component: 'Switch'
         },
         {
           field: 'enableApPluginToPaint',
           label: '连接ap插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap',
           component: 'Switch'
         },
         {
           field: 'enableSiliconflowPluginToPaint',
           label: '连接sf插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持gemini、openai、通义千问；优先级：nai > ap > siliconflow',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
           component: 'Switch'
         },
         {
