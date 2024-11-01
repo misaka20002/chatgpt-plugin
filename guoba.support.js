@@ -135,14 +135,14 @@ export function supportGuoba() {
         },
         {
           field: 'openAiBaseUrl',
-          label: 'OpenAI API服务器地址',
+          label: 'OpenAI API/反代地址',
           bottomHelpMessage: 'OpenAI的API服务器地址。注意要带上/v1。默认为https://api.openai.com/v1',
           component: 'Input'
         },
         {
           field: 'openAiForceUseReverse',
-          label: '强制使用OpenAI反代',
-          bottomHelpMessage: '即使配置了proxy，依然使用OpenAI反代',
+          label: '强制使用OpenAI反代地址',
+          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接',
           component: 'Switch'
         },
         {
@@ -615,8 +615,8 @@ export function supportGuoba() {
         },
         {
           field: 'recognitionByGemini',
-          label: '对话中图片识别-gemini',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果；1、建议关闭“对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断，因此被中断时本插件会自行添加文本“附带了一张儿童不宜的涩图。”',
+          label: '对话中图片识别',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（对话时不必使用gemini模式）；1、建议关闭“对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断，因此被中断时本插件会自行添加文本“附带了一张儿童不宜的涩图。”',
           component: 'Switch'
         },
         {
