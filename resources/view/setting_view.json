@@ -822,7 +822,7 @@
               {
                 "type": "password",
                 "label": "API密钥",
-                "data": "geminiKey"
+                "data": "geminiKeyArr"
               },
               {
                 "type": "text",

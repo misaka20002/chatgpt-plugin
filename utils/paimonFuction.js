@@ -81,3 +81,33 @@ export function convertSentenceToArray(str) {
 
     return newArr;
 }
+
+/**
+ * @description: 轮替使用 gemini Keys
+ * @return {*}
+ */
+class gemini_KeyManager {
+    constructor() {
+        this.index = -1;
+        // 获取所有可用的keys
+        this.keys = Config.geminiKeyArr.split(/[,，;；|]/);
+    }
+
+    /** 轮替使用key */
+    getKey() {
+        if (this.keys.length === 0) {
+            logger.error("[chatgpt]未填写gemini的API密钥");
+            return null;
+        }
+
+        this.keys = Config.geminiKeyArr.split(/[,，]/);
+
+        this.index++;
+        if (this.index >= this.keys.length) {
+            this.index = 0;
+        }
+        return this.keys[this.index];
+    }
+}
+/** 轮替使用 gemini Keys 实例 */
+export const geminiKeyManager = new gemini_KeyManager(Config.geminiKeyArr);

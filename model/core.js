@@ -59,6 +59,7 @@ import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { newFetch } from '../utils/proxy.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
 import { QwenApi } from '../utils/alibaba/qwen-api.js'
+import { geminiKeyManager } from "../utils/paimonFuction.js";
 
 const roleMap = {
   owner: 'group owner',
@@ -737,10 +738,13 @@ class Core {
         return msg
       }
     } else if (use === 'gemini') {
+      // 获取秘钥
+      const gemini_Key = geminiKeyManager.getKey()
+      
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
-        key: Config.geminiKey,
+        key: gemini_Key,
         model: Config.geminiModel,
         baseUrl: Config.geminiBaseUrl,
         debug: Config.debug

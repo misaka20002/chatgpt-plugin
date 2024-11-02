@@ -6,6 +6,7 @@ import proxy from 'https-proxy-agent'
 import { getMaxModelTokens } from '../common.js'
 import { ChatGPTPuppeteer } from '../browser.js'
 import { CustomGoogleGeminiClient } from '../../client/CustomGoogleGeminiClient.js'
+import { geminiKeyManager } from "../../utils/paimonFuction.js";
 export class WebsiteTool extends AbstractTool {
   name = 'website'
 
@@ -62,10 +63,13 @@ export class WebsiteTool extends AbstractTool {
         .replace('<!DOCTYPE html>', '') // 去除<!DOCTYPE>声明
 
       if (mode === 'gemini') {
+        // 获取秘钥
+        const gemini_Key = geminiKeyManager.getKey()
+
         let client = new CustomGoogleGeminiClient({
           e,
           userId: e?.sender?.user_id,
-          key: Config.geminiKey,
+          key: gemini_Key,
           model: Config.geminiModel,
           baseUrl: Config.geminiBaseUrl,
           debug: Config.debug

@@ -13,6 +13,7 @@ import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import { URL } from 'node:url'
 import { getBots } from '../utils/bot.js'
 import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
+import { geminiKeyManager } from "../utils/paimonFuction.js";
 
 let useSilk = false
 try {
@@ -611,10 +612,14 @@ ${translateLangLabels}
     // 只有主人才可以用识图功能
     if (Config.gemini_vqa_needMaster && !e.isMaster) return false
 
-    if (!Config.geminiKey) {
+    if (!Config.geminiKeyArr.length) {
       e.reply('需要配置Gemini密钥以使用识图')
       return
     }
+
+    // 获取秘钥
+    const gemini_Key = geminiKeyManager.getKey()
+
     let img = await getImg(e)
     if (!img?.[0]) {
       await e.reply('请发送或引用一张图片', e.isGroup)
@@ -623,7 +628,7 @@ ${translateLangLabels}
     let client = new CustomGoogleGeminiClient({
       e,
       userId: e.sender.user_id,
-      key: Config.geminiKey,
+      key: gemini_Key,
       model: Config.gemini_vqa_model,
       baseUrl: Config.geminiBaseUrl,
       debug: Config.debug

@@ -141,7 +141,7 @@ export function supportGuoba() {
         },
         {
           field: 'openAiForceUseReverse',
-          label: '强制使用OpenAI反代地址',
+          label: '强制使用API地址',
           bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接',
           component: 'Switch'
         },
@@ -596,9 +596,9 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'geminiKey',
+          field: 'geminiKeyArr',
           label: 'API密钥',
-          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey 获取',
+          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey 获取，如果有多个用英文逗号隔开，Key将轮替使用',
           component: 'InputPassword'
         },
         {

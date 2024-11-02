@@ -231,6 +231,7 @@ const defaultConfig = {
   qwenTemperature: 1,
   qwenEnableSearch: true,
   geminiKey: '',
+  geminiKeyArr: '',
   geminiModel: 'gemini-pro',
   geminiPrompt: 'You are Gemini. Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   // origin: https://generativelanguage.googleapis.com
