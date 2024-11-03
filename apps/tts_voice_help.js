@@ -17,6 +17,7 @@ import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
 import fetch from 'node-fetch'
+import cfg from '../../../lib/config/config.js'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
@@ -125,14 +126,14 @@ export class voicechangehelp extends plugin {
                 },
             ]
         })
-        // this.task = [
-        //     {
-        //         // 每日 0:01 am
-        //         cron: '0 1 0 * * ?',
-        //         name: '派蒙tts自动任务',
-        //         fnc: this.paimon_tts_Auto_tasker.bind(this)
-        //     },
-        // ]
+        this.task = [
+            {
+                // 每日 0:01 am
+                cron: '0 1 0 * * ?',
+                name: '派蒙tts自动任务',
+                fnc: this.paimon_tts_Auto_tasker.bind(this)
+            },
+        ]
     }
 
 
@@ -711,6 +712,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         let chatgpt_user = await redis.keys('CHATGPT:USER:*')
         let deleted = 0
         for (let i = 0; i < chatgpt_user.length; i++) {
+            if(cfg.masterQQ?.includes(chatgpt_user[i]?.split(':')?.[2])) continue
             await redis.del(chatgpt_user[i])
             if (Config.debug) {
                 logger.info('delete chatgpt_user: ' + chatgpt_user[i])
@@ -720,10 +722,10 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         logger.mark(`[派蒙tts自动任务]已经重置${deleted}个用户的单独回复设置，所有用户将使用默认配置。`)
 
         // chatgpt-tts-自动全局语音模式
-        if (Config.api_fish_control_defaultUseTTS && Config.api_fish_audio_token.length && Config.ttsSpace?.includes('api.fish.audio')) {
-            Config.defaultUseTTS = true
-            logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已开启，将在fish.audio达到配额后自动关闭`)
-        }
+        // if (Config.api_fish_control_defaultUseTTS && Config.api_fish_audio_token.length && Config.ttsSpace?.includes('api.fish.audio')) {
+        //     Config.defaultUseTTS = true
+        //     logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已开启，将在fish.audio达到配额后自动关闭`)
+        // }
 
         return true
     }
