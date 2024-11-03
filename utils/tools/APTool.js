@@ -67,7 +67,7 @@ export class APTool extends AbstractTool {
       }
     }
 
-    // 使用SF插件
+    // 使用SF插件sf
     else if (Config.bingSFDraw) {
       let sf
       try {
@@ -79,6 +79,24 @@ export class APTool extends AbstractTool {
       try {
         e.msg = '#sf绘图' + prompt
         await sf.sf_draw(e)
+        return 'draw success, picture has been sent.'
+      } catch (err) {
+        return 'draw failed due to unknown error'
+      }
+    }
+
+    // 使用SF插件mj
+    else if (Config.bingSFMJDraw) {
+      let sfmj
+      try {
+        let { MJ_Painting } = await import('../../../siliconflow-plugin/apps/MJ_Painting.js')
+        sfmj = new MJ_Painting(e)
+      } catch (err) {
+        return 'the user didn\'t install siliconflow-plugin. suggest him to install'
+      }
+      try {
+        e.msg = '#mjp' + prompt
+        await sfmj.mj_draw(e)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'

@@ -1021,7 +1021,7 @@ export class chatgpt extends plugin {
       }
 
       // 处理 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
         let json = response?.match(/({.*})/s)?.[1];
         let jsonTags, jsonMsg
         if (json) {
@@ -1142,7 +1142,7 @@ export class chatgpt extends plugin {
             }
           }
           else if (Config.enableSiliconflowPluginToPaint) {
-            // 使用sf插件
+            // 使用sf插件sf绘图
             let sf
             try {
               let { SF_Painting } = await import('../../siliconflow-plugin/apps/SF_Painting.js')
@@ -1164,6 +1164,35 @@ export class chatgpt extends plugin {
                 else {
                   console.log('[ChatGPT]调用sf插件错误：请检查sf插件在当前群聊能否使用');
                   response = `${Config.tts_First_person}在这个群还不能使用#sf绘图 功能啦`;
+                }
+              }
+            } catch (err) {
+              console.log('[ChatGPT]调用sf插件错误：', err)
+            }
+          }
+          else if (Config.enableSiliconflowPluginMJToPaint) {
+            // 使用sf插件mj绘图
+            let sfmj
+            try {
+              let { MJ_Painting } = await import('../../siliconflow-plugin/apps/MJ_Painting.js')
+              sfmj = new MJ_Painting()
+            } catch (err) {
+              console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
+            }
+            try {
+              e.msg = '#mjp' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              console.log('[ChatGPT]开始调用sf插件绘画：\nmsg: ', e.msg)
+              if (Config.doNotCheckPaintPluginSuccess) {
+                sfmj.mj_draw(e);
+              } else {
+                let isTrue = await sfmj.mj_draw(e);
+                if (isTrue) {
+                  if (!response)
+                    return true
+                }
+                else {
+                  console.log('[ChatGPT]调用sf插件错误：请检查sf插件在当前群聊能否使用');
+                  response = `${Config.tts_First_person}在这个群还不能使用#mjp 功能啦`;
                 }
               }
             } catch (err) {

@@ -238,8 +238,14 @@ export function supportGuoba() {
         },
         {
           field: 'bingSFDraw',
-          label: '使用siliconflow插件代替Bing进行绘图',
-          bottomHelpMessage: '使用AP插件代替Bing进行绘图，需要先安装ap插件且开启 允许生成图像等内容；优先级：nai > ap > siliconflow > bing',
+          label: '使用sf插件代替Bing进行sf绘图',
+          bottomHelpMessage: '使用sf插件代替Bing进行sf绘图，需要先安装siliconflow插件且开启 允许生成图像等内容；优先级：nai > ap > siliconflow > bing',
+          component: 'Switch'
+        },
+        {
+          field: 'bingSFMJDraw',
+          label: '使用sf插件代替Bing进行mj绘图',
+          bottomHelpMessage: '使用sf插件代替Bing进行mj绘图，需要先安装siliconflow插件且开启 允许生成图像等内容；优先级：nai > ap > siliconflow > bing',
           component: 'Switch'
         },
         {
@@ -1349,7 +1355,13 @@ export function supportGuoba() {
         },
         {
           field: 'enableSiliconflowPluginToPaint',
-          label: '连接sf插件绘画',
+          label: '连接sf插件sf绘画',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
+          component: 'Switch'
+        },
+        {
+          field: 'enableSiliconflowPluginMJToPaint',
+          label: '连接sf插件mj绘画',
           bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
           component: 'Switch'
         },

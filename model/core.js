@@ -656,7 +656,7 @@ class Core {
         system = system.replace(/_sender_title_/igm, e.sender.title)
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
         system += paintPropmtPrefix
       }
 
@@ -841,7 +841,7 @@ class Core {
         system = system.replace(/_sender_title_/igm, e.sender.title)
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
         system += paintPropmtPrefix
       }
 
@@ -909,7 +909,7 @@ class Core {
         system = system.replace(/_sender_title_/igm, e.sender.title)
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint) {
+      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
         system += paintPropmtPrefix
       }
 

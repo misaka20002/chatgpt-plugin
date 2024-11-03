@@ -106,6 +106,7 @@ class gemini_KeyManager {
         if (this.index >= this.keys.length) {
             this.index = 0;
         }
+        logger.info(`[chatgpt]使用第${this.index + 1}个gemini Key: ${this.keys[this.index]}`);
         return this.keys[this.index];
     }
 }

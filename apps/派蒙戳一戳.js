@@ -919,7 +919,7 @@ async function convertWebpToPng(url) {
     try {
         // 从指定 URL 获取图像
         const res = await fetch(url);
-        if (!res.ok) throw new Error('[派蒙戳一戳][Webp图站]Network response was not ok');
+        // if (!res.ok) throw new Error('[派蒙戳一戳][Webp图站]Network response was not ok');
         // 将响应体转换为 Buffer
         const webpBuffer = await res.buffer();
         // 使用 sharp 将 WebP 转换为 PNG
