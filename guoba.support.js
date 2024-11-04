@@ -604,7 +604,7 @@ export function supportGuoba() {
         {
           field: 'geminiKeyArr',
           label: 'API密钥',
-          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey 获取，如果有多个用英文逗号隔开，Key将轮替使用',
+          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey 获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey',
           component: 'InputPassword'
         },
         {

@@ -10,19 +10,23 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
  * @return {*} recognitionResults
  */
 export async function recognitionResultsByGemini(e, img) {
-    if (Config.geminiKey) {
+    // 获取秘钥
+    const gemini_Key = geminiKeyManager.getKey()
+
+    if (gemini_Key) {
         if (img?.[0]) {
             let client = new CustomGoogleGeminiClient({
                 e,
                 userId: e.sender.user_id,
-                key: Config.geminiKey,
+                key: gemini_Key,
                 model: Config.gemini_vqa_model,
                 baseUrl: Config.geminiBaseUrl,
                 debug: Config.debug
             })
             const response = await fetch(img[0], { timeout: 60000 });
             const base64Image = Buffer.from(await response.arrayBuffer())
-            let msg = 'describe this image in Simplified Chinese'
+            const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
+            let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this image in Simplified Chinese'
             let recognitionResults = ''
             try {
                 let res = await client.sendMessage(msg, {
