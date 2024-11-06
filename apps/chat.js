@@ -701,6 +701,7 @@ export class chatgpt extends plugin {
     // 检索是否有屏蔽词
     const promtBlockWord = Config.promptBlockWords.find(word => prompt.toLowerCase().includes(word.toLowerCase()))
     if (promtBlockWord) {
+      logger.info(prompt + `\n检测到屏蔽词：${promtBlockWord}`)
       await this.reply(`${Config.tts_First_person}不想回答你这个问题QAQ`, true)
       return false
     }
@@ -910,7 +911,7 @@ export class chatgpt extends plugin {
         }
       }
       let response = chatMessage?.text?.replace('\n\n\n', '\n')
-      
+
       if (handler.has('chatgpt.response.post')) {
         logger.debug('调用后处理器: chatgpt.response.post')
         handler.call('chatgpt.response.post', this.e, {
@@ -1359,11 +1360,11 @@ export class chatgpt extends plugin {
     }
   }
 
-  async chatgpt1 (e) {
+  async chatgpt1(e) {
     return await this.otherMode(e, 'api', /#(图片)?chat1/)
   }
 
-  async chatgpt3 (e) {
+  async chatgpt3(e) {
     return await this.otherMode(e, 'api3', /#(图片)?chat3/)
   }
 
@@ -1371,31 +1372,31 @@ export class chatgpt extends plugin {
     return await this.otherMode(e, 'chatglm')
   }
 
-  async bing (e) {
+  async bing(e) {
     return await this.otherMode(e, 'bing', /#(图片)?bing/)
   }
 
-  async claude2 (e) {
+  async claude2(e) {
     return await this.otherMode(e, 'claude2', /^#(图片)?claude(2|3|.ai)/)
   }
 
-  async claude (e) {
+  async claude(e) {
     return await this.otherMode(e, 'claude', /#(图片)?claude/)
   }
 
-  async qwen (e) {
+  async qwen(e) {
     return await this.otherMode(e, 'qwen', /#(图片)?qwen/)
   }
 
-  async glm4 (e) {
+  async glm4(e) {
     return await this.otherMode(e, 'chatglm4', /#(图片)?glm4/)
   }
 
-  async gemini (e) {
+  async gemini(e) {
     return await this.otherMode(e, 'gemini', /#(图片)?gemini/)
   }
 
-  async xh (e) {
+  async xh(e) {
     return await this.otherMode(e, 'xh', /#(图片)?xh/)
   }
 
