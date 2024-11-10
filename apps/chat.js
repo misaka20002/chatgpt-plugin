@@ -698,7 +698,7 @@ export class chatgpt extends plugin {
       }
     }
 
-    // 检索是否有屏蔽词
+    // 检索是否有屏蔽词 输入黑名单
     const promtBlockWord = Config.promptBlockWords.find(word => prompt.toLowerCase().includes(word.toLowerCase()))
     if (promtBlockWord) {
       logger.info(prompt + `\n检测到屏蔽词：${promtBlockWord}`)
@@ -985,10 +985,11 @@ export class chatgpt extends plugin {
       } else {
         mood = ''
       }
-      // 检索是否有屏蔽词
+      // 检索是否有屏蔽词 输出黑名单
       const blockWord = Config.blockWords.find(word => response.toLowerCase().includes(word.toLowerCase()))
       if (blockWord) {
-        await this.reply(`${Config.tts_First_person}不想回复你了QAQ哭哭，建议#结束对话`, true)
+        logger.info(response + `\n检测到屏蔽词：${blockWord}`)
+        this.reply(`${Config.tts_First_person}不想回复你了QAQ哭哭，建议#结束对话`, true)
         return false
       }
       // 处理中断的代码区域
