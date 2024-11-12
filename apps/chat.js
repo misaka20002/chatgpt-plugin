@@ -1101,6 +1101,8 @@ export class chatgpt extends plugin {
                 else {
                   console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
                   response = `${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`;
+                  e.reply(`${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`, true)
+                  return false;
                 }
               }
             } catch (err) {
@@ -1136,6 +1138,8 @@ export class chatgpt extends plugin {
                 else {
                   console.log('[ChatGPT]调用ap插件错误：请检查ap插件在当前群聊能否使用');
                   response = `${Config.tts_First_person}在这个群还不能使用#绘图 功能啦`;
+                  e.reply(`${Config.tts_First_person}在这个群还不能使用#绘图 功能啦`, true)
+                  return false;
                   // TODO ap.aiPainting(e) 处于CD之类的也返回true，所以不会进入到这个else分支，有空改一改ap插件（It is forever)
                 }
               }
@@ -1166,6 +1170,8 @@ export class chatgpt extends plugin {
                 else {
                   console.log('[ChatGPT]调用sf插件错误：请检查sf插件在当前群聊能否使用');
                   response = `${Config.tts_First_person}在这个群还不能使用#sf绘图 功能啦`;
+                  e.reply(`${Config.tts_First_person}在这个群还不能使用#sf绘图 功能啦`, true)
+                  return false;
                 }
               }
             } catch (err) {
@@ -1195,6 +1201,8 @@ export class chatgpt extends plugin {
                 else {
                   console.log('[ChatGPT]调用sf插件错误：请检查sf插件在当前群聊能否使用');
                   response = `${Config.tts_First_person}在这个群还不能使用#mjp 功能啦`;
+                  e.reply(`${Config.tts_First_person}在这个群还不能使用#mjp 功能啦`, true)
+                  return false;
                 }
               }
             } catch (err) {
