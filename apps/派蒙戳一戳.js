@@ -143,16 +143,14 @@ export class PaimonChuo extends plugin {
                 let url, msg, res
                 switch (mutetype) {
                     case 1:
-                        // url = `http://bjb.yunwj.top/php/tk/sj.php?mc=%22%E9%A3%8E%E6%99%AF%22`;
-                        url = `https://www.loliapi.com/acg/`;
+                        url = getRandomUrl("ecywebp");
                         msg = [await segment.image(await convertWebpToPng(url))];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
                         await common.sleep(100)
                         await e.reply(msg);
                         break;
                     case 2:
-                        // url = `https://t.mwm.moe/mp`;  // 二次元，但图太少了
-                        url = `https://api.btstu.cn/sjbz/api.php`; // 三次元
+                        url = getRandomUrl("scy");
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
@@ -160,8 +158,7 @@ export class PaimonChuo extends plugin {
                         await e.reply(msg);
                         break;
                     case 3:
-                        // url = `https://api.asxe.vip/random.php`;
-                        url = `https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images`;
+                        url = getRandomUrl("ecy");
                         res = await fetch(url).catch((err) => logger.error(err));
                         msg = [await segment.image(res.body)];
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
@@ -341,7 +338,7 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机表情包生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 12)
+                let mutetype = Math.ceil(Math.random() * 14)
                 switch (mutetype) {
                     case 1:
                         await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
@@ -363,6 +360,10 @@ export class PaimonChuo extends plugin {
                         break;
                     case 7:
                     case 8:
+                        await e.reply(await segment.image(getRandomUrl("bq")))
+                        break;
+                    case 9:
+                    case 10:
                         const randomPlayingMsg = await generate_msg_randomPlayingMsg()
                         const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
                         await e.reply(await segment.image(`https://oiapi.net/API/QQ_quote/?message={"user_id":${e.operator_id},"user_nickname":"${usrinfo.card || usrinfo.nickname}","message":"${randomPlayingMsg}"}`))
@@ -1867,3 +1868,35 @@ let ciku = [
     "派蒙今天已经被戳了_num_次啦，再戳就坏了！",
 ];
 
+/**
+ * @description: 随机返回一个url
+ * @param {*} type 可选 ecy, scy, ecywebp, bq
+ * @return {*}
+ */
+function getRandomUrl(type) {
+    const urls = {
+        "ecy": [
+            "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
+            "http://api.zhilaohu.icu/huangdou",
+        ],
+        "scy": [
+            "https://api.btstu.cn/sjbz/api.php",
+            "http://api.zhilaohu.icu/cos",
+        ],
+        "ecywebp": [
+            "https://t.mwm.moe/mp",
+            "https://www.loliapi.com/acg",
+            "http://api.zhilaohu.icu/mm",
+            "http://api.zhilaohu.icu/BA",
+        ],
+        "scywebp": [
+            "",
+        ],
+        "bq": [
+            "http://api.zhilaohu.icu/xnn",
+            "http://api.zhilaohu.icu/chajun",
+        ],
+    };
+    const randomIndex = Math.floor(Math.random() * urls[type].length);
+    return urls[type][randomIndex];
+}
