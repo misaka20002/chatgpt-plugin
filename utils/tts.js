@@ -107,7 +107,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         let audioLink
         for (let post_times = 2; post_times <= 5; post_times++) {
             try {
-                audioLink = ai_hobbyist_getVoice(speaker, text)
+                audioLink = await ai_hobbyist_getVoice(speaker, text)
             } catch (err) {
                 logger.debug(`[chatgpt-tts]使用ai_hobbyist生成语音发生错误，准备重试第${post_times}次。` + err)
                 // 等待3000ms
@@ -1117,7 +1117,15 @@ async function ai_hobbyist_getVoice(speaker, text) {
             }
         });
 
-        const reader = response.body.getReader();
+        let reader
+        try {
+            reader = response.body.getReader();
+        } catch (err) {
+            response.text().then(text => {
+                logger.error(`[chatgpt-tts][ai_hobbyist]错误，response:\n${text}\n${err}`);
+            });
+        }
+
         const decoder = new TextDecoder('utf-8');
         let result = '';
 
