@@ -427,7 +427,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         logger.error(body)
         throw new Error('[chatgpt-tts]responseBody:', json)
     }
-    throw new Error('[chatgpt-tts]未正确填写“vits-uma-genshin-honkai语音转换API地址”，请详细阅读锅巴设置')
+    throw new Error('[chatgpt-tts]合成语音错误，请查看控制台。')
 }
 
 export function convertSpeaker(speaker) {
