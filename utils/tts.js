@@ -5,6 +5,7 @@ import { wrapTextByLanguage } from './common.js'
 import { getProxy } from './proxy.js'
 let proxy = getProxy()
 import WebSocket from 'ws'
+import crypto from 'crypto'
 
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 const isTrss = Array.isArray(Bot.uin)
@@ -105,15 +106,11 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         text = text.substr(0, 999);
         logger.info(`[chatgpt-tts]使用ai_hobbyist生成语音，文本：\n${text}`)
         let audioLink
-        for (let post_times = 2; post_times <= 5; post_times++) {
-            try {
-                audioLink = await ai_hobbyist_getVoice(speaker, text)
-            } catch (err) {
-                logger.debug(`[chatgpt-tts]使用ai_hobbyist生成语音发生错误，准备重试第${post_times}次。` + err)
-                // 等待3000ms
-                await sleep_zz(3000)
-            }
+        for (let i = 0; i < 5; i++) {
+            try { audioLink = await ai_hobbyist_getVoice(speaker, text) }
+            catch (err) { }
             if (audioLink) return audioLink
+            await sleep_pai(5000)
         }
     }
     // 使用 Fish API
@@ -1084,18 +1081,28 @@ async function fish_api_generateAudio(text, reference_id, fishApiKey, res_format
     }
 }
 
-async function ai_hobbyist_getVoice(speaker, text) {
-    let other_params = ["87442de131482429cf60a9c1e812b445", "", "中立", "", "多语种混合", 10, 1, 1, "按标点符号切", 0.3, 10, 0.75, true, 1, true, 1.35, null, "", "中文"];
+/**
+ * @description: post to https://gsv.acgnai.top/ 获取音频
+ * @param {*} speaker
+ * @param {*} text
+ * @param {*} language 可选：中文、英语、日语、粤语、韩语、中英混合、日英混合、粤英混合、韩英混合、多语种混合、多语种混合(粤语)
+ * @return {*}
+ */
+async function ai_hobbyist_getVoice(speaker, text, language = "多语种混合") {
+    const other_params = ["87442de131482429cf60a9c1e812b445", speaker, "中立", text, language, 10, 1, 1, "按标点符号切", 0.3, 10, 0.75, true, 1, true, 1.35, null, "", "中文"];
 
-    other_params[1] = speaker;
-    other_params[3] = text;
+    /** 生成 sessionHash */
+    const generateSessionHash = () => {
+        return crypto.randomBytes(8).toString('hex').substring(0, 11);
+    };
+    const sessionHash = generateSessionHash();
 
     const data = {
         "data": other_params,
         "event_data": null,
         "fn_index": 2,
         "trigger_id": 67,
-        "session_hash": Math.random().toString(36).substring(2, 12)
+        "session_hash": sessionHash
     };
 
     await fetch('https://gsv.acgnai.top/gradio_api/queue/join', {
@@ -1106,54 +1113,41 @@ async function ai_hobbyist_getVoice(speaker, text) {
         body: JSON.stringify(data)
     });
 
-    let hash = data.session_hash;
-
-    async function fetchStream() {
-        const url = `https://gsv.acgnai.top/gradio_api/queue/data?session_hash=${hash}`;
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'accept': 'text/event-stream'
-            }
-        });
-
-        let reader
+    // 获取音频生成结果结果
+    let result = {};
+    let isFailed = false;
+    const startTime = new Date().getTime();
+    const force_endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes from now
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    await sleep_pai(1000); // 等待1秒
+    while (new Date().getTime() < force_endTime) {
         try {
-            reader = response.body.getReader();
-        } catch (err) {
-            response.text().then(text => {
-                logger.error(`[chatgpt-tts][ai_hobbyist]错误，response:\n${text}\n${err}`);
-            });
-        }
-
-        const decoder = new TextDecoder('utf-8');
-        let result = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            result += decoder.decode(value, { stream: true });
-
-            const lines = result.split('\n');
-            for (let line of lines) {
-                if (line.startsWith('data: ')) {
-                    const jsonString = line.substring(6);
-                    try {
-                        const json = JSON.parse(jsonString);
-                        if (json.msg === "process_completed") {
-                            return json.output.data[0].url;
-                        }
-                    } catch (err) {
-                        console.error('JSON 解析错误:', err);
-                    }
-                }
+            logger.debug('[chatgpt-tts][ai_hobbyist]等待音频生成中...' + (Math.floor((new Date().getTime() - startTime) / 1000)) + '秒');
+            await sleep_pai(1000); // 等待1秒后重试
+            const response = await fetch(`https://gsv.acgnai.top/gradio_api/queue/data?session_hash=${sessionHash}`, {
+                method: 'GET',
+                signal: controller.signal
+            })
+                .finally(() => clearTimeout(timeoutId));
+            const jsonString = await response.text();
+            result.wavUrl = jsonString.match(/"url":"(.*?.wav)"/)?.[1];
+            // console.log(jsonString)
+            if (result.wavUrl) break;
+            if (jsonString.match(/"process_completed"|"close_stream"/)) {
+                logger.error('[chatgpt-tts][ai_hobbyist]音频生成出错\n' + jsonString);
+                isFailed = true;
+                break;
             }
-
-            result = lines.pop();
+            if (result.wavUrl || isFailed) break;
+        } catch (error) {
+            logger.error('[chatgpt-tts][ai_hobbyist]等待音频生成时出错，将继续等待...');
         }
     }
-
-    const url = await fetchStream();
-    return url;
+    if (!result.wavUrl) {
+        throw { message: `[chatgpt-tts][ai_hobbyist]${isFailed ? "生成音频错误请稍后再试" : "等待音频生成超时"}` };
+    }
+    result.waitTimes = (Math.floor((new Date().getTime() - startTime) / 1000))
+    logger.info(`[chatgpt-tts][ai_hobbyist]耗时${result.waitTimes}秒，音频地址为：` + result.wavUrl);
+    return result.wavUrl;
 }

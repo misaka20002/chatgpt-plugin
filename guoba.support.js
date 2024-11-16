@@ -639,7 +639,7 @@ export function supportGuoba() {
         {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
-          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com （常见报错：500 Internal Server Error）',
+          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliya.top （常见报错：500 Internal Server Error）',
           component: 'Input'
         },
         {
