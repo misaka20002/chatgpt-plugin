@@ -424,7 +424,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         logger.error(body)
         throw new Error('[chatgpt-tts]responseBody:', json)
     }
-    throw new Error('[chatgpt-tts]合成语音错误，请查看控制台。')
+    throw new Error('[chatgpt-tts]合成语音错误，请在锅巴设置中准确填写配置。')
 }
 
 export function convertSpeaker(speaker) {
