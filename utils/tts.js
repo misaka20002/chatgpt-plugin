@@ -106,11 +106,11 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         text = text.substr(0, 999);
         logger.info(`[chatgpt-tts]使用ai_hobbyist生成语音，文本：\n${text}`)
         let audioLink
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 2; i++) {
             try { audioLink = await ai_hobbyist_getVoice(speaker, text) }
             catch (err) { }
             if (audioLink) return audioLink
-            await sleep_pai(5000)
+            await sleep_pai(10000)
         }
     }
     // 使用 Fish API
@@ -1117,7 +1117,7 @@ async function ai_hobbyist_getVoice(speaker, text, language = "多语种混合")
     let result = {};
     let isFailed = false;
     const startTime = new Date().getTime();
-    const force_endTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutes from now
+    const force_endTime = new Date().getTime() + 3 * 60 * 1000; // 3 minutes from now
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 120000);
     await sleep_pai(1000); // 等待1秒
