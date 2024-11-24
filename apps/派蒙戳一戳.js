@@ -1885,6 +1885,7 @@ function getRandomUrl(type) {
         ],
         "ecywebp": [
             "https://t.mwm.moe/mp",
+            "https://t.alcy.cc/ycy",
             "https://www.loliapi.com/acg",
             "http://api.zhilaohu.icu/mm",
             "http://api.zhilaohu.icu/BA",
