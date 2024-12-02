@@ -59,6 +59,7 @@ import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { newFetch } from '../utils/proxy.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
 import { QwenApi } from '../utils/alibaba/qwen-api.js'
+import OpenAI from 'openai';
 import { geminiKeyManager } from "../utils/paimonFuction.js";
 
 const roleMap = {
@@ -934,6 +935,12 @@ class Core {
         // 如果配了proxy(或者不在国内)，而且有反代，但是没开启强制反代,将baseurl删掉
         delete opts.apiBaseUrl
       }
+      // const client = new OpenAI({
+      //   apiKey: Config.apiKey,
+      //   baseURL: opts.apiBaseUrl,
+      //   fetch: newFetch
+      // })
+
       this.chatGPTApi = new ChatGPTAPI(opts)
       let option = {
         timeoutMs: 600000,
@@ -1116,7 +1123,7 @@ async function collectTools (e) {
     tools.push(...[new EliMusicTool(), new EliMovieTool()])
   } catch (err) {
     tools.push(...[new SendMusicTool(), new SearchMusicTool()])
-    logger.debug(logger.green('【ChatGPT-Plugin】插件avocado-plugin未安装') + '，安装后可查看最近热映电影与体验可玩性更高的点歌工具。\n可前往 https://github.com/Qz-Sean/avocado-plugin 获取')
+    // logger.debug(logger.green('【ChatGPT-Plugin】插件avocado-plugin未安装') + '，安装后可查看最近热映电影与体验可玩性更高的点歌工具。\n可前往 https://github.com/Qz-Sean/avocado-plugin 获取')
   }
   let systemAddition = ''
   if (e.isGroup) {

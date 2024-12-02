@@ -7,9 +7,9 @@ import * as tokenizer from './tokenizer'
 import * as types from './types'
 import globalFetch from 'node-fetch'
 import { fetchSSE } from './fetch-sse'
-import {ChatCompletionRequestMessage, openai, Role} from "./types";
+import {openai, Role} from "./types";
 
-const CHATGPT_MODEL = 'gpt-3.5-turbo-0613'
+const CHATGPT_MODEL = 'gpt-4o-mini'
 
 const USER_LABEL_DEFAULT = 'User'
 const ASSISTANT_LABEL_DEFAULT = 'ChatGPT'
@@ -183,6 +183,7 @@ export class ChatGPTAPI {
             parentMessageId: messageId,
             text: '',
             functionCall: undefined,
+            toolCalls: undefined,
             conversation: []
         }
 
@@ -247,7 +248,16 @@ export class ChatGPTAPI {
                                             } else {
                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments
                                             }
-
+                                        } else if (delta.tool_calls) {
+                                          let fc = delta.tool_calls[0].function
+                                          if (fc.name) {
+                                            result.functionCall = {
+                                              name: fc.name,
+                                              arguments: fc.arguments
+                                            }
+                                          } else {
+                                            result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments
+                                          }
                                         } else {
                                             result.delta = delta.content
                                             if (delta?.content) result.text += delta.content
@@ -255,7 +265,6 @@ export class ChatGPTAPI {
                                         if (delta.role) {
                                             result.role = delta.role
                                         }
-
                                         result.detail = response
                                         onProgress?.(result)
                                     }
@@ -303,6 +312,8 @@ export class ChatGPTAPI {
                                 result.text = message.content
                             } else if (message.function_call) {
                                 result.functionCall = message.function_call
+                            } else if (message.tool_calls) {
+                                result.functionCall = message.tool_calls.map(tool => tool.function)[0]
                             }
                             if (message.role) {
                                 result.role = message.role
@@ -417,46 +428,47 @@ export class ChatGPTAPI {
         let functionToken = 0
 
         let numTokens = functionToken
-        if (completionParams.functions) {
-            for (const func of completionParams.functions) {
-                functionToken += await this._getTokenCount(func?.name)
-                functionToken += await this._getTokenCount(func?.description)
-                if (func?.parameters?.properties) {
-                    for (let key of Object.keys(func.parameters.properties)) {
-                        functionToken += await this._getTokenCount(key)
-                        let property = func.parameters.properties[key]
-                        for (let field of Object.keys(property)) {
-                            switch (field) {
-                                case 'type': {
-                                    functionToken += 2
-                                    functionToken += await this._getTokenCount(property?.type)
-                                    break
-                                }
-                                case 'description': {
-                                    functionToken += 2
-                                    functionToken += await this._getTokenCount(property?.description)
-                                    break
-                                }
-                                case 'enum': {
-                                    functionToken -= 3
-                                    for (let enumElement of property?.enum) {
-                                        functionToken += 3
-                                        functionToken += await this._getTokenCount(enumElement)
-                                    }
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-                if (func?.parameters?.required) {
-                    for (let string of func.parameters.required) {
-                        functionToken += 2
-                        functionToken += await this._getTokenCount(string)
-                    }
-                }
-            }
-        }
+        // deprecated function call token calculation due to low efficiency
+        // if (completionParams.functions) {
+        //     for (const func of completionParams.functions) {
+        //         functionToken += await this._getTokenCount(func?.name)
+        //         functionToken += await this._getTokenCount(func?.description)
+        //         if (func?.parameters?.properties) {
+        //             for (let key of Object.keys(func.parameters.properties)) {
+        //                 functionToken += await this._getTokenCount(key)
+        //                 let property = func.parameters.properties[key]
+        //                 for (let field of Object.keys(property)) {
+        //                     switch (field) {
+        //                         case 'type': {
+        //                             functionToken += 2
+        //                             functionToken += await this._getTokenCount(property?.type)
+        //                             break
+        //                         }
+        //                         case 'description': {
+        //                             functionToken += 2
+        //                             functionToken += await this._getTokenCount(property?.description)
+        //                             break
+        //                         }
+        //                         case 'enum': {
+        //                             functionToken -= 3
+        //                             for (let enumElement of property?.enum) {
+        //                                 functionToken += 3
+        //                                 functionToken += await this._getTokenCount(enumElement)
+        //                             }
+        //                             break
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         if (func?.parameters?.required) {
+        //             for (let string of func.parameters.required) {
+        //                 functionToken += 2
+        //                 functionToken += await this._getTokenCount(string)
+        //             }
+        //         }
+        //     }
+        // }
 
         do {
             const prompt = nextMessages
@@ -467,7 +479,9 @@ export class ChatGPTAPI {
                         case 'user':
                             return prompt.concat([`${userLabel}:\n${message.content}`])
                         case 'function':
-                            // leave befind
+                            // leave behind
+                            return prompt
+                        case 'assistant':
                             return prompt
                         default:
                             return message.content ? prompt.concat([`${assistantLabel}:\n${message.content}`]) : prompt
@@ -510,7 +524,8 @@ export class ChatGPTAPI {
                     role: parentMessageRole,
                     content: parentMessage.text,
                     name: parentMessage.name,
-                    function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined
+                    function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
+                    tools: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
                 },
                 ...nextMessages.slice(systemMessageOffset)
             ])

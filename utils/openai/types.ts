@@ -79,7 +79,8 @@ export interface ChatMessage {
 
     // only relevant for ChatGPTUnofficialProxyAPI (optional for ChatGPTAPI)
     conversationId?: string
-    functionCall?: openai.FunctionCall
+    functionCall?: openai.FunctionCall,
+    toolCalls?: openai.ToolCall[],
 }
 
 export class ChatGPTError extends Error {
@@ -203,7 +204,8 @@ export namespace openai {
                 delta: {
                     role: Role
                     content?: string,
-                    function_call?: {name: string, arguments: string}
+                    function_call?: FunctionCall,
+                    tool_calls: ToolCall[]
                 }
                 index: number
                 finish_reason: string | null
@@ -236,12 +238,25 @@ export namespace openai {
          */
         name?: string
         function_call?: FunctionCall
-
+        tool_calls?: ToolCall,
+        // required todo
+        // tool_choice?: 'none' | 'auto' | 'required'
     }
 
     export interface FunctionCall {
         name: string
         arguments: string
+    }
+
+    export interface ToolCall {
+      id: string
+      type: "function"
+      function: FunctionCall
+    }
+
+    export interface Tools {
+      type: "function" | string,
+      function: Function
     }
 
     export declare const ChatCompletionRequestMessageRoleEnum: {
@@ -271,7 +286,8 @@ export namespace openai {
          */
         content: string
 
-        function_call: FunctionCall
+        function_call: FunctionCall,
+        tool_calls: ToolCall[]
     }
     export declare const ChatCompletionResponseMessageRoleEnum: {
         readonly System: 'system'
@@ -360,6 +376,8 @@ export namespace openai {
         user?: string
 
         functions?: Function[]
+
+        tools?: Tools[]
     }
     export interface Function {
         name: string
