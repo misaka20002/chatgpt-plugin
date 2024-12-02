@@ -773,9 +773,9 @@ class Core {
         }
       }
       // 呆毛版 不知道为什么 gemini-1.5 一定要传递图片，不然就报错参数错误
-      if (!option.image && Config.geminiModel.match(/1.5/)) {
-        option.image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAANSURBVBhXY2BgYPgPAAEEAQBwIGULAAAAAElFTkSuQmCC'
-      }
+      // if (!option.image && Config.geminiModel.match(/1.5/)) {
+      //   option.image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAANSURBVBhXY2BgYPgPAAEEAQBwIGULAAAAAElFTkSuQmCC'
+      // } // 原版已修复
       if (Config.smartMode) {
         /**
          * @type {AbstractTool[]}
