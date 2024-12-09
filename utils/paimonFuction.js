@@ -30,7 +30,8 @@ export async function recognitionResultsByGemini(e, img) {
             let recognitionResults = ''
             try {
                 let res = await client.sendMessage(msg, {
-                    image: base64Image.toString('base64')
+                    image: base64Image.toString('base64'),
+                    system: '你是一个专业的图像识别和分析助手。请仔细、详细、准确地观察和描述图像，并尽可能提供精确的信息。分析图像时需要注意以下几点：；1. 逐步、系统地扫描图像的每个区域；2. 准确识别图像中的主要对象、人物、场景；3. 描述图像的细节特征；4. 如有不确定的地方，说明可能性和置信度；5. 避免主观臆测，只描述实际看到的内容；6.请使用中文描述；请使用清晰、客观、专业的语言进行图像分析。'
                 })
                 recognitionResults = res.text
             } catch (err) {
