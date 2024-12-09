@@ -69,7 +69,7 @@ const roleMap = {
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
 /** 接入AP、Nai、SF绘画的prompt */
-const paintPropmtPrefix = 'If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
+const paintPropmtPrefix = 'It is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
 // const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
 
 
@@ -648,17 +648,17 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        system = system.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
-        system = system.replace(/_sender_id_/igm, e.sender.user_id)
-        system = system.replace(/_sender_gender_/igm, e.sender.sex)
-        system = system.replace(/_sender_age_/igm, e.sender.age)
-        system = system.replace(/_sender_area_/igm, e.sender.area)
-        system = system.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
-        system = system.replace(/_sender_title_/igm, e.sender.title)
+        option.systemMessage = option.systemMessage.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+        option.systemMessage = option.systemMessage.replace(/_sender_id_/igm, e.sender.user_id)
+        option.systemMessage = option.systemMessage.replace(/_sender_gender_/igm, e.sender.sex)
+        option.systemMessage = option.systemMessage.replace(/_sender_age_/igm, e.sender.age)
+        option.systemMessage = option.systemMessage.replace(/_sender_area_/igm, e.sender.area)
+        option.systemMessage = option.systemMessage.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+        option.systemMessage = option.systemMessage.replace(/_sender_title_/igm, e.sender.title)
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
-        system += paintPropmtPrefix
+        option.systemMessage += paintPropmtPrefix
       }
 
       if (Config.smartMode) {

@@ -610,7 +610,7 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-1.5-flash；gemini-1.5-flash-002；gemini-1.5-flash-8b；gemini-1.5-flash-latest；gemini-1.5-pro；gemini-1.5-pro-002；gemini-1.5-pro-latest；gemma-2-2b-it；gemma-2-9b-it；gemma-2-27b-it',
+          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-1.5-flash；gemini-1.5-flash-002；gemini-1.5-flash-8b；gemini-1.5-flash-latest；learnlm-1.5-pro-experimental；gemini-exp-1121；gemini-exp-1206；gemma-2-2b-it；gemma-2-9b-it；gemma-2-27b-it',
           component: 'Input'
         },
         {
