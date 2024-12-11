@@ -531,7 +531,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
 
     const prompts = []
     for (const plugin of commandSet) {
-      const commands = plugin.rule.map(v => v.reg.includes('[#*0-9]') ? '表情合成功能只需要发送两个emoji表情即可' : v.reg)
+      const commands = plugin.rule.map(v => v.reg?.includes('[#*0-9]') ? '表情合成功能只需要发送两个emoji表情即可' : v.reg)
       const category = getCategory(e, plugin)
       if (category || (!e.msg.includes('对话') && !e.msg.includes('管理') && !e.msg.includes('娱乐') && !e.msg.includes('绘图') && !e.msg.includes('人物设定') && !e.msg.includes('聊天记录'))) {
         prompts.push(generatePrompt(plugin, commands))
