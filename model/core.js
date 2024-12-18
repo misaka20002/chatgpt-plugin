@@ -758,7 +758,9 @@ class Core {
           }
         },
         parentMessageId: conversation.parentMessageId,
-        conversationId: conversation.conversationId
+        conversationId: conversation.conversationId,
+        search: Config.geminiEnableGoogleSearch,
+        codeExecution: Config.geminiEnableCodeExecution
       }
       if (!Config.recognitionByGemini) {
         const image = await getImg(e)
