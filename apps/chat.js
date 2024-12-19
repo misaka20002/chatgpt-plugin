@@ -1279,7 +1279,7 @@ export class chatgpt extends plugin {
             // sf版图片模式
             try {
               const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-              const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText);
+              const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText[0]);
               this.reply({ ...img, origin: true }, true)
             } catch (err) {
               logger.error('[ChatGPT]sf版图片模式错误\n' + err)
@@ -1358,7 +1358,7 @@ export class chatgpt extends plugin {
           // sf版图片模式
           try {
             const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-            const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText);
+            const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText[0]);
             this.reply({ ...img, origin: true }, true)
           } catch (err) {
             logger.error('[ChatGPT]sf版图片模式错误\n' + err)
