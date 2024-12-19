@@ -622,6 +622,8 @@ export class chatgpt extends plugin {
   }
 
   async abstractChat(e, prompt, use, forcePictureMode = false) {
+    /** 备份用户最初的 e.msg */
+    const msg_bak = e.msg
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
@@ -1252,7 +1254,7 @@ export class chatgpt extends plugin {
         }
         // 处理多行回复有时候只会读第一行和azure语音会读出一些标点符号的问题
         ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')
-        // 先把文字回复发出去，避免过久等待合成语音
+        // 先把“xx知道哦”回复发出去，避免过久等待合成语音
         if (Config.alsoSendText || ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
             await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: isTrss ? 0 : 30 })
@@ -1265,20 +1267,31 @@ export class chatgpt extends plugin {
               prompt
             })
           }
-          if (!Config.isConvertSentenceToArrayReply)
-            await this.reply(responseText, e.isGroup, {
-              btnData: {
-                use,
-                suggested: chatMessage.suggestedResponses
-              }
-            })
-          else {
+          if (Config.isConvertSentenceToArrayReply) {
             // 多次回复
             const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
               await this.reply(str_arr[i], e.isGroup);
               await sleep_zz(Math.random() * 5000 + 2000);
             }
+          }
+          else if (Config.sf_markdownPic) {
+            // sf版图片模式
+            try {
+              const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
+              const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText);
+              this.reply({ ...img, origin: true }, true)
+            } catch (err) {
+              logger.error('[ChatGPT]sf版图片模式错误\n' + err)
+            }
+          }
+          else {
+            await this.reply(responseText, e.isGroup, {
+              btnData: {
+                use,
+                suggested: chatMessage.suggestedResponses
+              }
+            })
           }
           if (quotemessage.length > 0) {
             this.reply(await makeForwardMsg(this.e, quotemessage.map(msg => `${msg.text} - ${msg.url}`)))
@@ -1333,20 +1346,31 @@ export class chatgpt extends plugin {
             logger.debug('生成建议回复失败', err)
           }
         }
-        if (!Config.isConvertSentenceToArrayReply)
-          this.reply(responseText, e.isGroup, {
-            btnData: {
-              use,
-              suggested: chatMessage.suggestedResponses
-            }
-          })
-        else {
+        if (Config.isConvertSentenceToArrayReply) {
           // 多次回复
           const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
             await this.reply(str_arr[i], e.isGroup);
             await sleep_zz(Math.random() * 5000 + 2000);
           }
+        }
+        else if (Config.sf_markdownPic) {
+          // sf版图片模式
+          try {
+            const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
+            const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText);
+            this.reply({ ...img, origin: true }, true)
+          } catch (err) {
+            logger.error('[ChatGPT]sf版图片模式错误\n' + err)
+          }
+        }
+        else {
+          this.reply(responseText, e.isGroup, {
+            btnData: {
+              use,
+              suggested: chatMessage.suggestedResponses
+            }
+          })
         }
         if (Config.enableSuggestedResponses && chatMessage.suggestedResponses) {
           this.reply(`建议的回复：\n${chatMessage.suggestedResponses}`)
