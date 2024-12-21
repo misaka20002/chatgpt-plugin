@@ -1284,6 +1284,7 @@ export class chatgpt extends plugin {
             // sf版图片模式
             try {
               /** 添加引用图片 */
+              logger.info("[ChatGPT]" + responseText)
               const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + msg_bak : msg_bak;
               const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
               const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
@@ -1365,6 +1366,7 @@ export class chatgpt extends plugin {
           // sf版图片模式
           try {
             /** 添加引用图片 */
+            logger.info("[ChatGPT]" + responseText)
             const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + msg_bak : msg_bak;
             const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
             const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
