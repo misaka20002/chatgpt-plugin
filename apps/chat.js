@@ -1076,7 +1076,12 @@ export class chatgpt extends plugin {
               let { txt2img } = await import('../../nai-plugin/apps/Txt2img.js')
               nai = new txt2img();
             } catch (err) {
-              console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
+              try {
+                let { txt2img } = await import('../../paimonnai-plugin/apps/Txt2img.js')
+                nai = new txt2img();
+              } catch (err) {
+                console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
+              }
             }
             try {
               // 随机使用宽图或竖图
@@ -1278,8 +1283,10 @@ export class chatgpt extends plugin {
           else if (Config.sf_markdownPic) {
             // sf版图片模式
             try {
+              /** 添加引用图片 */
+              const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + msg_bak : msg_bak;
               const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-              const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText.join(''));
+              const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
               this.reply({ ...img, origin: true }, true)
             } catch (err) {
               logger.error('[ChatGPT]sf版图片模式错误\n' + err)
@@ -1357,8 +1364,10 @@ export class chatgpt extends plugin {
         else if (Config.sf_markdownPic) {
           // sf版图片模式
           try {
+            /** 添加引用图片 */
+            const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + msg_bak : msg_bak;
             const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-            const img = await markdown_screenshot(e.user_id, e.self_id, msg_bak, responseText.join(''));
+            const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
             this.reply({ ...img, origin: true }, true)
           } catch (err) {
             logger.error('[ChatGPT]sf版图片模式错误\n' + err)

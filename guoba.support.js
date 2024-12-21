@@ -1380,7 +1380,7 @@ export function supportGuoba() {
         {
           field: 'doNotCheckPaintPluginSuccess',
           label: '不检测画图成功',
-          bottomHelpMessage: '检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/nai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
+          bottomHelpMessage: '检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/paimonnai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
           component: 'Switch'
         },
         {

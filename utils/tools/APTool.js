@@ -26,11 +26,15 @@ export class APTool extends AbstractTool {
     if (Config.switchToNai3PluginToPaint) {
       let nai
       try {
-        // eslint-disable-next-line camelcase
         let { txt2img } = await import('../../../nai-plugin/apps/Txt2img.js')
-        nai = new txt2img()
+        nai = new txt2img();
       } catch (err) {
-        return 'the user didn\'t install nai-plugin. suggest him to install'
+        try {
+          let { txt2img } = await import('../../../paimonnai-plugin/apps/Txt2img.js')
+          nai = new txt2img();
+        } catch (err) {
+          console.log('[ChatGPT][APTool]调用nai插件错误-未安装nai插件')
+        }
       }
       try {
         e.msg = '#绘画artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ' + prompt + 'best quality, amazing quality, very aesthetic, absurdres'
