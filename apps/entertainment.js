@@ -595,7 +595,7 @@ ${translateLangLabels}
             retType: 'base64',
             Viewport: {
               width: Config.chatViewWidth,
-              height: parseInt(Config.chatViewWidth * 1.78)
+              height: parseInt(Config.chatViewWidth * 0.56)
             },
             deviceScaleFactor: parseFloat(Config.cloudDPR)
           }

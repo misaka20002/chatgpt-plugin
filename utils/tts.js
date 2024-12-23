@@ -85,7 +85,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         .replace(/[๑•.̫³ω/∇´`˃̵ᴗ˂̵و ⊙⁄●｀╯°□）︵┻━┻･ั﹏_*￣3ε^▽≧≦o｡◕‿Őдﻭˇ∀♡♪♥ㅂ✧ڡ]|[\(\)]づ/g, '') // 替换发音不了的字符
         .replace(/，，，|，，|。。。|，。|。。|。，/g, '。') // 处理多余的，。
         .replace(/[\[|【].*好感度.*\d+[\]|】|）]/g, '') // 删除中括号好感度
-        .replace(/```[\s\S]*?```$/, '') // 删除最底部的代码块
+        .replace(/\s*```[\s\S]*?```\s*$/g, '') // 删除最底部的代码块
 
     // #gpt翻日 硬编码替换部分角色名
     if (Config.autoJapanese)
