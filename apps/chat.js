@@ -1034,7 +1034,7 @@ export class chatgpt extends plugin {
         if (json) {
           try {
             json = JSON.parse(json);
-            if (!Boolean(json?.Tools.match(/Stable_Diffusion/i)))
+            if (!Boolean(json?.Tools.match(/Stable(_|\s)Diffusion/i)))
               throw new Error("[ChatGPT]未返回绘画用JSON")
             jsonTags = json?.tags
             jsonMsg = json?.msg || `${Config.tts_First_person}头有点晕`
@@ -1046,8 +1046,8 @@ export class chatgpt extends plugin {
         // 处理 response 太长了以至于少了最后的 } 的情况
         if (!jsonTags) {
           let json2
-          if (Boolean(response?.match(/"Tools": "Stable_Diffusion"/i))) {
-            json2 = response?.match(/"tags": "(.*)/si)?.[1] || response?.replace(/"Tools": "Stable_Diffusion"|\`\`\`(json)?|"tags":?/ig, "")
+          if (Boolean(response?.match(/"Tools": "Stable(_|\s)Diffusion"/i))) {
+            json2 = response?.match(/"tags": "(.*)/si)?.[1] || response?.replace(/"Tools": "Stable(_|\s)Diffusion"|\`\`\`(json)?|"tags":?/ig, "")
             if (json2) {
               jsonTags = json2;
               jsonMsg = `这个太难了，${Config.tts_First_person}头晕晕了`;
@@ -1057,7 +1057,7 @@ export class chatgpt extends plugin {
         // 开始调用绘画插件
         if (jsonTags) {
           // 处理GPT Bug // 处理 gemini 各种奇怪的回复
-          if (Boolean(jsonMsg?.match(/matches your character/i)) || Boolean(jsonMsg?.match(/"Tools": "Stable_Diffusion"/i)))
+          if (Boolean(jsonMsg?.match(/matches your character/i)) || Boolean(jsonMsg?.match(/"Tools": "Stable(_|\s)Diffusion"/i)))
             jsonMsg = `这个太难了，${Config.tts_First_person}头有点晕`
           // gpt的回复语句
           response = jsonMsg
