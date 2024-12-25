@@ -1037,7 +1037,7 @@ export class chatgpt extends plugin {
             if (!Boolean(json?.Tools.match(/Stable(_|\s)Diffusion/i)))
               throw new Error("[ChatGPT]未返回绘画用JSON")
             jsonTags = json?.tags
-            jsonMsg = json?.msg || `${Config.tts_First_person}头有点晕`
+            jsonMsg = json?.msg || `${Config.tts_First_person}画给你啦`
           }
           catch (err) {
             jsonTags = false
@@ -1050,7 +1050,7 @@ export class chatgpt extends plugin {
             json2 = response?.match(/"tags": "(.*)/si)?.[1] || response?.replace(/"Tools": "Stable(_|\s)Diffusion"|\`\`\`(json)?|"tags":?/ig, "")
             if (json2) {
               jsonTags = json2;
-              jsonMsg = `这个太难了，${Config.tts_First_person}头晕晕了`;
+              jsonMsg = `这个太难了，${Config.tts_First_person}给你画啦`;
             }
           }
         }
@@ -1058,7 +1058,7 @@ export class chatgpt extends plugin {
         if (jsonTags) {
           // 处理GPT Bug // 处理 gemini 各种奇怪的回复
           if (Boolean(jsonMsg?.match(/matches your character/i)) || Boolean(jsonMsg?.match(/"Tools": "Stable(_|\s)Diffusion"/i)))
-            jsonMsg = `这个太难了，${Config.tts_First_person}头有点晕`
+            jsonMsg = `这个太难了，${Config.tts_First_person}画给你啦`
           // gpt的回复语句
           response = jsonMsg
           // 为角色添加作品名
