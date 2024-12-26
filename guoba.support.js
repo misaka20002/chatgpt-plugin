@@ -1337,7 +1337,7 @@ export function supportGuoba() {
         },
         {
           field: 'sf_markdownPic',
-          label: 'sf版图片模式',
+          label: 'sf图片模式',
           bottomHelpMessage: '调用sf插件的图片回复功能，需要先安装siliconflow插件；与分多次回复冲突；与chatgpt插件图片模式冲突；',
           component: 'Switch'
         },
