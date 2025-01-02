@@ -1362,25 +1362,25 @@ export function supportGuoba() {
         {
           field: 'enableNai3PluginToPaint',
           label: '连接nai插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；',
           component: 'Switch'
         },
         {
           field: 'enableApPluginToPaint',
           label: '连接ap插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap',
           component: 'Switch'
         },
         {
           field: 'enableSiliconflowPluginToPaint',
           label: '连接sf插件sf绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
           component: 'Switch'
         },
         {
           field: 'enableSiliconflowPluginMJToPaint',
           label: '连接sf插件mj绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭读取群聊上下文、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
           component: 'Switch'
         },
         {
