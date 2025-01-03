@@ -328,6 +328,7 @@ config.version = defaultConfig.version
 export const Config = new Proxy(config, {
   get(target, property) {
     if (property === 'geminiKey') {
+      // 随机选择一个Gemini Key，但是这种获取方式导致在锅巴中每次仅显示一个Key，不符合预期
       if (typeof target[property] === 'string' && target[property].includes(',')) {
         const keys = target[property].split(',').map(key => key.trim()).filter(Boolean)
         const selectedKey = keys[Math.floor(Math.random() * keys.length)]

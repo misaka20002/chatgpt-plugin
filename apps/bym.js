@@ -18,6 +18,7 @@ import { KickOutTool } from '../utils/tools/KickOutTool.js'
 import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpTool } from '../utils/tools/SerpTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
+import { geminiKeyManager } from "../utils/paimonFuction.js";
 
 export class bym extends plugin {
   constructor () {
@@ -96,11 +97,14 @@ export class bym extends plugin {
           })
           .join('\n') +
         `\n你的回复应该尽可能简练，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式（比如${Config.assistantLabel}：），禁止重复聊天记录。`
+      
+      // 获取秘钥
+      const gemini_Key = geminiKeyManager.getKey()
 
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
-        key: Config.geminiKey,
+        key: gemini_Key,
         model: Config.geminiModel,
         baseUrl: Config.geminiBaseUrl,
         debug: Config.debug

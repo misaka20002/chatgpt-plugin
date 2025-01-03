@@ -91,31 +91,34 @@ export function convertSentenceToArray(str) {
 }
 
 /**
- * @description: 轮替使用 gemini Keys
+ * @description: 随机提取 gemini Keys，注意要把 Config.geminiKey 都替换为 
+ * 
+import { geminiKeyManager } from "../utils/paimonFuction.js";  
+const gemini_Key = geminiKeyManager.getKey()
+ * 
  * @return {*}
  */
 class gemini_KeyManager {
     constructor() {
-        this.index = -1;
         // 获取所有可用的keys
         this.keys = Config.geminiKeyArr.split(/[,，;；|]/);
     }
 
-    /** 轮替使用key */
+    /** 随机获取一个key */
     getKey() {
         if (this.keys.length === 0) {
             logger.error("[chatgpt]未填写gemini的API密钥");
             return null;
         }
 
+        // 重新获取keys列表
         this.keys = Config.geminiKeyArr.split(/[,，]/);
 
-        this.index++;
-        if (this.index >= this.keys.length) {
-            this.index = 0;
-        }
-        logger.info(`[chatgpt]使用第${this.index + 1}个gemini Key: ${this.keys[this.index]}`);
-        return this.keys[this.index];
+        // 随机获取一个索引
+        const randomIndex = Math.floor(Math.random() * this.keys.length);
+
+        logger.info(`[chatgpt]随机使用第${randomIndex + 1}个gemini Key: ${this.keys[randomIndex]}`);
+        return this.keys[randomIndex];
     }
 }
 /** 轮替使用 gemini Keys 实例 */
