@@ -63,7 +63,7 @@ export class SendVideoTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you are allowed to send a video. You must use searchVideo to get search result and choose one video and get its id'
+  description = 'Useful when you are allowed to send a video. You must use searchVideo to get search result and choose one video and get its id.  If no extra description needed, just reply <EMPTY> at the next turn'
 }
 
 export async function getBilibili (bvid) {

@@ -56,5 +56,5 @@ export class SendPictureTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to send one or more pictures.'
+  description = 'Useful when you want to send one or more pictures.  If no extra description needed, just reply <EMPTY> at the next turn'
 }

@@ -1578,6 +1578,26 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'bymFuckList',
+          label: '伪人模式反击的触发词',
+          bottomHelpMessage: '请输入用于伪人模式下骂人反击的触发词，每个词组将被单独处理',
+          component: "GTags",
+          componentProps: {
+            placeholder: '请输入反击触发词',
+            allowAdd: true,
+            allowDel: true,
+            showPrompt: true,
+            promptProps: {
+              content: '添加新的反击触发词',
+              okText: '添加',
+              rules: [
+                { required: true, message: '触发词不能为空' },
+              ],
+            },
+                    valueParser: ((value) => value.split(',') || []),
+          },
+        },
+        {
           label: '以下为Azure chatGPT的配置',
           component: 'Divider'
         },

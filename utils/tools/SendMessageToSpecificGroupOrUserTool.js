@@ -46,5 +46,5 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to send a text message to specific user or group'
+  description = 'Useful when you want to send a text message to specific user or group.  If no extra description needed, just reply <EMPTY> at the next turn'
 }

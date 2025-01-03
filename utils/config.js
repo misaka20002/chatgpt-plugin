@@ -326,7 +326,18 @@ config.version = defaultConfig.version
 // config.version = latestTag
 
 export const Config = new Proxy(config, {
-  set(target, property, value) {
+  get(target, property) {
+    if (property === 'geminiKey') {
+      if (typeof target[property] === 'string' && target[property].includes(',')) {
+        const keys = target[property].split(',').map(key => key.trim()).filter(Boolean)
+        const selectedKey = keys[Math.floor(Math.random() * keys.length)]
+        console.log(`[ChatGPT-Plugin] 当前使用的Gemini Key: ${selectedKey.slice(0, 8)}...`) 
+        return selectedKey
+      }
+    }
+    return target[property]
+  },
+  set (target, property, value) {
     target[property] = value
     const change = lodash.transform(target, function (result, value, key) {
       if (!lodash.isEqual(value, defaultConfig[key])) {

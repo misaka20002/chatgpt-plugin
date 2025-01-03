@@ -34,5 +34,5 @@ export class SendMusicTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to share music. You must use searchMusic first to get the music id'
+  description = 'Useful when you want to share music. You must use searchMusic first to get the music id.  If no extra description needed, just reply <EMPTY> at the next turn'
 }

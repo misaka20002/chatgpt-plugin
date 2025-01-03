@@ -41,5 +41,5 @@ export class SendAvatarTool extends AbstractTool {
     return `the ${pictures.length > 1 ? 'users: ' + qq + '\'s avatar' : 'avatar'} has been sent to group ${target}`
   }
 
-  description = 'Useful when you want to send the user avatar to the group. Note that if you want to process user\'s avatar, it is advisable to utilize the ProcessPictureTool and input the qq of target user.'
+  description = 'Useful when you want to send the user avatar to the group. Note that if you want to process user\'s avatar, it is advisable to utilize the ProcessPictureTool and input the qq of target user. If no extra description needed, just reply <EMPTY> at the next turn'
 }
