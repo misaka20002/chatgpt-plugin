@@ -854,7 +854,7 @@
               {
                 "type": "password",
                 "label": "API密钥",
-                "data": "geminiKeyArr"
+                "data": "geminiKey"
               },
               {
                 "type": "text",

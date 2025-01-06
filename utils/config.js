@@ -235,8 +235,8 @@ const defaultConfig = {
   qwenSeed: 0,
   qwenTemperature: 1,
   qwenEnableSearch: true,
-  // geminiKey: '',
-  geminiKeyArr: '',
+  geminiKey: '',
+  // geminiKeyArr: '',
   geminiModel: 'gemini-pro',
   geminiPrompt: 'You are Gemini. Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   // origin: https://generativelanguage.googleapis.com
@@ -328,18 +328,21 @@ config.version = defaultConfig.version
 
 export const Config = new Proxy(config, {
   get(target, property) {
-    if (property === 'geminiKey') {
-      // 随机选择一个Gemini Key，但是这种获取方式导致在锅巴中每次仅显示一个Key，不符合预期
-      if (typeof target[property] === 'string' && target[property].includes(',')) {
-        const keys = target[property].split(',').map(key => key.trim()).filter(Boolean)
-        const selectedKey = keys[Math.floor(Math.random() * keys.length)]
-        console.log(`[ChatGPT-Plugin] 当前使用的Gemini Key: ${selectedKey.slice(0, 8)}...`) 
-        return selectedKey
+    if (property === 'getGeminiKey') {
+      return function () {
+        if (target["geminiKey"]?.length === 0) {
+          return "";
+        }
+        const geminiKeyArr = target["geminiKey"]?.trim().split(/[,，]/);
+        const randomIndex = Math.floor(Math.random() * geminiKeyArr.length);
+        logger.info(`[chatgpt]随机使用第${randomIndex + 1}个gemini Key: ${geminiKeyArr[randomIndex].replace(/(.{7}).*(.{10})/, '$1****$2')}`);
+        return geminiKeyArr[randomIndex];
       }
     }
+
     return target[property]
   },
-  set (target, property, value) {
+  set(target, property, value) {
     target[property] = value
     const change = lodash.transform(target, function (result, value, key) {
       if (!lodash.isEqual(value, defaultConfig[key])) {

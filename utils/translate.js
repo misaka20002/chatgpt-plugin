@@ -6,7 +6,6 @@ import { newFetch } from './proxy.js'
 import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
 import XinghuoClient from './xinghuo/xinghuo.js'
 import { QwenApi } from './alibaba/qwen-api.js'
-import { geminiKeyManager } from "../utils/paimonFuction.js";
 
 // 代码参考：https://github.com/yeyang52/yenai-plugin/blob/b50b11338adfa5a4ef93912eefd2f1f704e8b990/model/api/funApi.js#L25
 export const translateLangSupports = [
@@ -146,11 +145,8 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
         return res.text
       }
       case 'gemini': {
-        // 获取秘钥
-        const gemini_Key = geminiKeyManager.getKey()
-
         let client = new CustomGoogleGeminiClient({
-          key: gemini_Key,
+          key: Config.getGeminiKey(),
           model: Config.geminiModel,
           baseUrl: Config.geminiBaseUrl,
           debug: Config.debug

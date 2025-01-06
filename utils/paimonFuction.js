@@ -10,15 +10,12 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
  * @return {*} recognitionResults
  */
 export async function recognitionResultsByGemini(e, img) {
-    // 获取秘钥
-    const gemini_Key = geminiKeyManager.getKey()
-
-    if (gemini_Key) {
+    if (Config.geminiKey) {
         if (img?.[0]) {
             let client = new CustomGoogleGeminiClient({
                 e,
                 userId: e.sender.user_id,
-                key: gemini_Key,
+                key: Config.getGeminiKey(),
                 model: Config.gemini_vqa_model,
                 baseUrl: Config.geminiBaseUrl,
                 debug: Config.debug
@@ -89,37 +86,3 @@ export function convertSentenceToArray(str) {
 
     return newArr;
 }
-
-/**
- * @description: 随机提取 gemini Keys，注意要把 Config.geminiKey 都替换为 
- * 
-import { geminiKeyManager } from "../utils/paimonFuction.js";  
-const gemini_Key = geminiKeyManager.getKey()
- * 
- * @return {*}
- */
-class gemini_KeyManager {
-    constructor() {
-        // 获取所有可用的keys
-        this.keys = Config.geminiKeyArr.split(/[,，;；|]/);
-    }
-
-    /** 随机获取一个key */
-    getKey() {
-        if (this.keys.length === 0) {
-            logger.error("[chatgpt]未填写gemini的API密钥");
-            return null;
-        }
-
-        // 重新获取keys列表
-        this.keys = Config.geminiKeyArr.split(/[,，]/);
-
-        // 随机获取一个索引
-        const randomIndex = Math.floor(Math.random() * this.keys.length);
-
-        logger.info(`[chatgpt]随机使用第${randomIndex + 1}个gemini Key: ${this.keys[randomIndex]}`);
-        return this.keys[randomIndex];
-    }
-}
-/** 轮替使用 gemini Keys 实例 */
-export const geminiKeyManager = new gemini_KeyManager(Config.geminiKeyArr);

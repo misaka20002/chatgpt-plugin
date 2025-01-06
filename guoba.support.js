@@ -608,9 +608,9 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'geminiKeyArr',
+          field: 'geminiKey',
           label: 'API密钥',
-          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey 获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey',
+          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey',
           component: 'InputPassword'
         },
         {
@@ -633,7 +633,7 @@ export function supportGuoba() {
         },
         {
           field: 'offImageZoom',
-          label: '关闭图片缩小',
+          // label: '关闭图片缩小',
           bottomHelpMessage: '当关闭 呆毛版 对话中图片识别后，可选择时候关闭图片缩小，以获得更精确的识别结果',
           component: 'Switch'
         },

@@ -60,7 +60,6 @@ import { newFetch } from '../utils/proxy.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
 import { QwenApi } from '../utils/alibaba/qwen-api.js'
 import OpenAI from 'openai';
-import { geminiKeyManager } from "../utils/paimonFuction.js";
 
 const roleMap = {
   owner: 'group owner',
@@ -739,13 +738,10 @@ class Core {
         return msg
       }
     } else if (use === 'gemini') {
-      // 获取秘钥
-      const gemini_Key = geminiKeyManager.getKey()
-      
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
-        key: gemini_Key,
+        key: Config.getGeminiKey(),
         model: Config.geminiModel,
         baseUrl: Config.geminiBaseUrl,
         debug: Config.debug

@@ -1295,18 +1295,18 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   }
 
   async setGeminiKey(e) {
-    this.setContext('saveGeminiKeyArr')
+    this.setContext('saveGeminiKey')
     await this.reply('请发送Gemini API Key，如果有多个用英文逗号隔开；获取地址：https://makersuite.google.com/app/apikey', true)
     return false
   }
 
-  async saveGeminiKeyArr() {
+  async saveGeminiKey() {
     if (!this.e.msg) return
     let token = this.e.msg
     // todo
-    Config.geminiKeyArr = token
+    Config.geminiKey = token
     await this.reply('请发送Gemini API Key设置成功', true)
-    this.finish('saveGeminiKeyArr')
+    this.finish('saveGeminiKey')
   }
 
   async setXinghuoToken() {

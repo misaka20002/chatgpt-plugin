@@ -177,7 +177,7 @@ export class ChatGPTButtonHandler extends plugin {
     if (await redis.get('CHATGPT:BING_TOKENS')) {
       buttons[0].push(createButtonBase('Copilot', '#bing', false))
     }
-    if (Config.geminiKeyArr.length) {
+    if (Config.geminiKey.length) {
       buttons[0].push(createButtonBase('Gemini', '#gemini', false))
     }
     if (Config.xhAPIKey) {
