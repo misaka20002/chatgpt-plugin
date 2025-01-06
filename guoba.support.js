@@ -633,7 +633,7 @@ export function supportGuoba() {
         },
         {
           field: 'offImageZoom',
-          // label: '关闭图片缩小',
+          label: '关闭图片缩小',
           bottomHelpMessage: '当关闭 呆毛版 对话中图片识别后，可选择时候关闭图片缩小，以获得更精确的识别结果',
           component: 'Switch'
         },

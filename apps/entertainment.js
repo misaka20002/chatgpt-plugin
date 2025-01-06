@@ -624,7 +624,7 @@ ${translateLangLabels}
       e,
       userId: e.sender.user_id,
       key: Config.getGeminiKey(),
-      model: 'gemini-1.5-flash-latest',
+      model: Config.gemini_vqa_model,
       baseUrl: Config.geminiBaseUrl,
       debug: Config.debug
     })
