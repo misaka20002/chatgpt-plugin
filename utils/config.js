@@ -133,7 +133,6 @@ const defaultConfig = {
   fishApiKey: "",
   fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
   recognitionByGemini: false,
-  offImageZoom: false,
   // tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
   meme_baseUrl: "https://memes.ikechan8370.com",
