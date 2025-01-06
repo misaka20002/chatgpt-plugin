@@ -632,6 +632,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'offImageZoom',
+          label: '关闭图片缩小',
+          bottomHelpMessage: '当关闭 呆毛版 对话中图片识别后，可选择时候关闭图片缩小，以获得更精确的识别结果',
+          component: 'Switch'
+        },
+        {
           field: 'gemini_vqa_needMaster',
           label: '只有主人才能#识图',
           bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”',

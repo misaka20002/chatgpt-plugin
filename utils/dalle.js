@@ -80,7 +80,11 @@ export async function imageVariation (imageUrl, n = 1, size = '512x512') {
   return response.data.data?.map(pic => pic.b64_json)
 }
 
-export async function resizeAndCropImage (inputFilePath, outputFilePath, size = 512) {
+export async function resizeAndCropImage(inputFilePath, outputFilePath, size = 512) {
+  // 关闭图片缩小
+  if (Config.offImageZoom)
+    return
+
   // Determine the maximum dimension of the input image
   let sharp
   try {
@@ -107,7 +111,7 @@ export async function resizeAndCropImage (inputFilePath, outputFilePath, size = 
     .toFile(outputFilePath)
   console.log('Image resized successfully!')
 
-  console.log('Image resized and cropped successfully!')
+  // console.log('Image resized and cropped successfully!')
 }
 
 export async function editImage (originalImage, mask = [], prompt, num = 1, size = '512x512') {
