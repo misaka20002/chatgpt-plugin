@@ -675,8 +675,8 @@ export class chatgpt extends plugin {
     const isImg = await getImg(e)
 
     // 导入 引用消息 msg
-    if (e.msg) {
-      e.msg = e.sourceMsg ? e.sourceMsg + '\n\n' : '' +    e.msg 
+    if (e.sourceMsg) {
+      prompt = e.sourceMsg + '\n\n' + prompt;
     }
 
     if (Config.imgOcr && !!isImg) {
