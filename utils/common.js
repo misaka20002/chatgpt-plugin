@@ -713,9 +713,9 @@ export async function getUserReplySetting (e) {
  * @param {*} e
  * @param {*} alsoGetAtAvatar 开启使用At用户头像作为图片，默认 true
  * @param {*} useOrigin 是否使用原图，默认 false
- * @return {*} e.img 和 e.theImgIsGetFromSource ，当图片是从引用中获取的则 e.theImgIsGetFromSource 为 true
+ * @return {*} e.img e.sourceMsg 和 e.theImgIsGetFromSource ，当图片是从引用中获取的则 e.theImgIsGetFromSource 为 true
  */
-export async function getImg(e, alsoGetAtAvatar = true, useOrigin = false) {
+export async function getImg(e, alsoGetAtAvatar = true) {
   if (Boolean(e.img?.length))
     e.theImgIsGetFromSource = true;
   let reply;
@@ -740,15 +740,50 @@ export async function getImg(e, alsoGetAtAvatar = true, useOrigin = false) {
       reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
     }
   }
-  // 添加trss适配器
+  // 添加OneBotv11适配器
   else if (e.reply_id) {
     reply = (await e.getReply(e.reply_id)).message;
   }
+
   if (reply) {
     let i = []
+    let text = [] // 用于存储文本消息
+    let senderNickname = '' // 存储发送者昵称
+
+    // 获取发送者昵称
+    if (e.source) {
+      if (e.isGroup) {
+        try {
+          const sender = await e.group.pickMember(e.source.user_id)
+          senderNickname = sender.card || sender.nickname
+        } catch (error) {
+          logger.error('[派蒙chatgpt插件]获取群成员信息失败:', error)
+        }
+      } else {
+        try {
+          const friend = e.bot.fl.get(e.source.user_id)
+          senderNickname = friend?.nickname
+        } catch (error) {
+          logger.error('[派蒙chatgpt插件]获取好友信息失败:', error)
+        }
+      }
+    }
+    // 添加OneBotv11适配器的处理
+    else if (e.reply_id) {
+      try {
+        const reply = await e.getReply(e.reply_id)
+        senderNickname = reply.sender?.card || reply.sender?.nickname
+      } catch (error) {
+        logger.error('[派蒙chatgpt插件]获取回复消息发送者信息失败:', error)
+      }
+    }
+
     for (const val of reply) {
       if (val.type == 'image') {
         i.push(val.url)
+      }
+      if (val.type == 'text') {
+        text.push(val.text) // 收集文本消息
       }
       if (val.type == "file") {
         e.reply("不支持消息中的文件，请将该文件以图片发送...", true);
@@ -759,14 +794,13 @@ export async function getImg(e, alsoGetAtAvatar = true, useOrigin = false) {
       e.img = i;
       e.theImgIsGetFromSource = true;
     }
-  }
-  // 如果不是主人，e.img 数组参考图片和以图画图使用小图而不是原图大图
-  // if (!e.isMaster && !useOrigin && e.img) {
-  // 所有人都用小图
-  if (!useOrigin && e.img) {
-    for (let i = 0; i < e.img.length; i++) {
-      e.img[i] = e.img[i].replace(/is_origin=\d$/, 'is_origin=0')// 匹配qq聊天中的原图
-      // TODO 匹配wechat、tg聊天中的原图
+    if (text.length > 0) {
+      // 如果有发送者昵称,添加到引用文本前,使用markdown引用格式
+      const lines = text.join('\n').split('\n');
+      const quotedLines = lines.map(line => `> ${line}`).join('\n');
+      e.sourceMsg = senderNickname ? 
+        `> ##### ${senderNickname}：\n> ---\n${quotedLines}` : 
+        quotedLines;
     }
   }
   return e.img;

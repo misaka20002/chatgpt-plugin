@@ -673,6 +673,12 @@ export class chatgpt extends plugin {
 
     /** 呆毛版：对话获取At用户头像 ocr/识图 */
     const isImg = await getImg(e)
+
+    // 导入 引用消息 msg
+    if (e.msg) {
+      e.msg = e.sourceMsg ? e.sourceMsg + '\n\n' : '' +    e.msg 
+    }
+
     if (Config.imgOcr && !!isImg) {
       let imgOcrText = await getImageOcrText(e)
       if (imgOcrText) {

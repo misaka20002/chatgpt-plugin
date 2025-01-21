@@ -50,6 +50,12 @@ export class bym extends plugin {
       replyPureTextCallback: e.reply
     }
     let imgs = await getImg(e)
+    
+    // 导入 引用消息 msg
+    if (e.msg) {
+      e.msg = e.sourceMsg ? e.sourceMsg + '\n\n' : '' +    e.msg 
+    }
+    
     if (!e.msg) {
       if (imgs && imgs.length > 0) {
         let image = imgs[0]
