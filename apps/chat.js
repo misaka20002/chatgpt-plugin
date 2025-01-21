@@ -623,7 +623,7 @@ export class chatgpt extends plugin {
 
   async abstractChat(e, prompt, use, forcePictureMode = false) {
     /** 备份用户最初的 e.msg */
-    const msg_bak = e.msg
+    let msg_bak = e.msg
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
@@ -677,6 +677,7 @@ export class chatgpt extends plugin {
     // 导入 引用消息 msg
     if (e.sourceMsg) {
       prompt = e.sourceMsg + '\n\n' + prompt;
+      msg_bak = e.sourceMsg + '\n\n' + msg_bak;
     }
 
     if (Config.imgOcr && !!isImg) {
