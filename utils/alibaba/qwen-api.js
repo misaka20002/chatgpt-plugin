@@ -75,6 +75,7 @@ var QwenApi = /** @class */ (function () {
         this._apiKey = apiKey;
         this._apiBaseUrl = apiBaseUrl;
         this._debug = !!debug;
+        // @ts-ignore
         this._fetch = fetch;
         this._completionParams = __assign({ model: CHATGPT_MODEL, parameters: __assign({ top_p: 0.5, top_k: 50, temperature: 1.0, seed: 114514, enable_search: true, result_format: "message", incremental_output: false }, parameters) }, completionParams);
         this._systemMessage = systemMessage;
@@ -167,9 +168,9 @@ var QwenApi = /** @class */ (function () {
                         completionParams.input = { messages: messages };
                         responseP = new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
                             var url, headers, body, res, reason, msg, error, response, err_1;
-                            var _a, _b, _c, _d, _e;
-                            return __generator(this, function (_f) {
-                                switch (_f.label) {
+                            var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+                            return __generator(this, function (_k) {
+                                switch (_k.label) {
                                     case 0:
                                         url = "".concat(this._apiBaseUrl, "/services/aigc/text-generation/generation");
                                         headers = {
@@ -183,9 +184,9 @@ var QwenApi = /** @class */ (function () {
                                         if (this._debug) {
                                             console.log("sendMessage (".concat(numTokens, " tokens)"), body);
                                         }
-                                        _f.label = 1;
+                                        _k.label = 1;
                                     case 1:
-                                        _f.trys.push([1, 6, , 7]);
+                                        _k.trys.push([1, 6, , 7]);
                                         return [4 /*yield*/, this._fetch(url, {
                                                 method: 'POST',
                                                 headers: headers,
@@ -193,25 +194,26 @@ var QwenApi = /** @class */ (function () {
                                                 signal: abortSignal
                                             })];
                                     case 2:
-                                        res = _f.sent();
+                                        res = _k.sent();
                                         if (!!res.ok) return [3 /*break*/, 4];
                                         return [4 /*yield*/, res.text()];
                                     case 3:
-                                        reason = _f.sent();
+                                        reason = _k.sent();
                                         msg = "Qwen error ".concat(res.status || res.statusText, ": ").concat(reason);
-                                        error = new types.ChatGPTError(msg, { cause: res });
+                                        error = new types.ChatGPTError(msg);
                                         error.statusCode = res.status;
                                         error.statusText = res.statusText;
                                         return [2 /*return*/, reject(error)];
                                     case 4: return [4 /*yield*/, res.json()];
                                     case 5:
-                                        response = _f.sent();
+                                        response = _k.sent();
                                         if (this._debug) {
                                             console.log(response);
                                         }
                                         if (((_e = (_d = (_c = (_b = (_a = response.output) === null || _a === void 0 ? void 0 : _a.choices) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message) === null || _d === void 0 ? void 0 : _d.tool_calls) === null || _e === void 0 ? void 0 : _e.length) > 0) {
                                             // function call result
                                             result.functionCall = response.output.choices[0].message.tool_calls[0].function;
+                                            result.toolCalls = (_j = (_h = (_g = (_f = response.output) === null || _f === void 0 ? void 0 : _f.choices) === null || _g === void 0 ? void 0 : _g[0]) === null || _h === void 0 ? void 0 : _h.message) === null || _j === void 0 ? void 0 : _j.tool_calls;
                                         }
                                         if (response === null || response === void 0 ? void 0 : response.request_id) {
                                             result.id = response.request_id;
@@ -221,7 +223,7 @@ var QwenApi = /** @class */ (function () {
                                         result.conversation = messages;
                                         return [2 /*return*/, resolve(result)];
                                     case 6:
-                                        err_1 = _f.sent();
+                                        err_1 = _k.sent();
                                         return [2 /*return*/, reject(err_1)];
                                     case 7: return [2 /*return*/];
                                 }
@@ -257,9 +259,11 @@ var QwenApi = /** @class */ (function () {
         });
     };
     Object.defineProperty(QwenApi.prototype, "apiKey", {
+        // @ts-ignore
         get: function () {
             return this._apiKey;
         },
+        // @ts-ignore
         set: function (apiKey) {
             this._apiKey = apiKey;
         },
@@ -276,7 +280,7 @@ var QwenApi = /** @class */ (function () {
                         parentMessageId = opts.parentMessageId;
                         userLabel = USER_LABEL_DEFAULT;
                         assistantLabel = ASSISTANT_LABEL_DEFAULT;
-                        maxNumTokens = 6000;
+                        maxNumTokens = 32000;
                         messages = [];
                         if (systemMessage) {
                             messages.push({
@@ -350,7 +354,8 @@ var QwenApi = /** @class */ (function () {
                             {
                                 role: parentMessageRole,
                                 content: parentMessage.functionCall ? parentMessage.functionCall.arguments : parentMessage.text,
-                                name: parentMessage.functionCall ? parentMessage.functionCall.name : undefined
+                                name: parentMessage.functionCall ? parentMessage.functionCall.name : undefined,
+                                tool_calls: parentMessage.toolCalls
                             }
                         ], nextMessages.slice(systemMessageOffset), true));
                         parentMessageId = parentMessage.parentMessageId;
@@ -394,7 +399,7 @@ var QwenApi = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this._messageStore.set(message.request_id, message)];
+                    case 0: return [4 /*yield*/, this._messageStore.set(message.id, message)];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];

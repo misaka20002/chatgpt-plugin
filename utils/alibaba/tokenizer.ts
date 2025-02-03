@@ -1,3 +1,4 @@
+// @ts-ignore
 import { getEncoding } from 'js-tiktoken'
 
 // TODO: make this configurable

@@ -62,7 +62,7 @@ import * as tokenizer from './tokenizer.js';
 import * as types from './types.js';
 import globalFetch from 'node-fetch';
 import { fetchSSE } from './fetch-sse.js';
-var CHATGPT_MODEL = 'gpt-3.5-turbo-0613';
+var CHATGPT_MODEL = 'gpt-4o-mini';
 var USER_LABEL_DEFAULT = 'User';
 var ASSISTANT_LABEL_DEFAULT = 'ChatGPT';
 var ChatGPTAPI = /** @class */ (function () {
@@ -173,7 +173,9 @@ var ChatGPTAPI = /** @class */ (function () {
                             conversationId: conversationId,
                             parentMessageId: messageId,
                             text: '',
+                            thinking_text: '',
                             functionCall: undefined,
+                            toolCalls: undefined,
                             conversation: []
                         };
                         responseP = new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
@@ -230,10 +232,24 @@ var ChatGPTAPI = /** @class */ (function () {
                                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments;
                                                             }
                                                         }
+                                                        else if (delta.tool_calls) {
+                                                            var fc = delta.tool_calls[0].function;
+                                                            if (fc.name) {
+                                                                result.functionCall = {
+                                                                    name: fc.name,
+                                                                    arguments: fc.arguments
+                                                                };
+                                                            }
+                                                            else {
+                                                                result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments;
+                                                            }
+                                                        }
                                                         else {
                                                             result.delta = delta.content;
                                                             if (delta === null || delta === void 0 ? void 0 : delta.content)
                                                                 result.text += delta.content;
+                                                            if (delta === null || delta === void 0 ? void 0 : delta.reasoning_content)
+                                                                result.thinking_text += delta.reasoning_content;
                                                         }
                                                         if (delta.role) {
                                                             result.role = delta.role;
@@ -264,13 +280,13 @@ var ChatGPTAPI = /** @class */ (function () {
                                     case 3:
                                         reason = _c.sent();
                                         msg = "OpenAI error ".concat(res.status || res.statusText, ": ").concat(reason);
-                                        error = new types.ChatGPTError(msg, { cause: res });
+                                        error = new types.ChatGPTError(msg);
                                         error.statusCode = res.status;
                                         error.statusText = res.statusText;
                                         return [2 /*return*/, reject(error)];
                                     case 4: return [4 /*yield*/, res.json()];
                                     case 5:
-                                        response = _c.sent();
+                                        response = (_c.sent());
                                         if (this._debug) {
                                             console.log(response);
                                         }
@@ -285,6 +301,10 @@ var ChatGPTAPI = /** @class */ (function () {
                                             else if (message_1.function_call) {
                                                 result.functionCall = message_1.function_call;
                                             }
+                                            else if (message_1.tool_calls) {
+                                                result.functionCall = message_1.tool_calls.map(function (tool) { return tool.function; })[0];
+                                            }
+                                            result.thinking_text = message_1.reasoning_content;
                                             if (message_1.role) {
                                                 result.role = message_1.role;
                                             }
@@ -356,9 +376,11 @@ var ChatGPTAPI = /** @class */ (function () {
         });
     };
     Object.defineProperty(ChatGPTAPI.prototype, "apiKey", {
+        // @ts-ignore
         get: function () {
             return this._apiKey;
         },
+        // @ts-ignore
         set: function (apiKey) {
             this._apiKey = apiKey;
         },
@@ -366,9 +388,11 @@ var ChatGPTAPI = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(ChatGPTAPI.prototype, "apiOrg", {
+        // @ts-ignore
         get: function () {
             return this._apiOrg;
         },
+        // @ts-ignore
         set: function (apiOrg) {
             this._apiOrg = apiOrg;
         },
@@ -376,13 +400,12 @@ var ChatGPTAPI = /** @class */ (function () {
         configurable: true
     });
     ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function () {
-            var _c, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, nextMessages, functionToken, numTokens, _i, _d, func, _e, _f, _g, _h, key, _j, property, _k, _l, field, _m, _o, _p, _q, _r, enumElement, _s, _t, _u, string, _v, prompt_1, nextNumTokensEstimate, _w, _x, m1, _y, isValidPrompt, parentMessage, parentMessageRole, maxTokens;
-            return __generator(this, function (_z) {
-                switch (_z.label) {
+            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, maxTokens;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
-                        _c = opts.systemMessage, systemMessage = _c === void 0 ? this._systemMessage : _c;
+                        _a = opts.systemMessage, systemMessage = _a === void 0 ? this._systemMessage : _a;
                         parentMessageId = opts.parentMessageId;
                         userLabel = USER_LABEL_DEFAULT;
                         assistantLabel = ASSISTANT_LABEL_DEFAULT;
@@ -406,100 +429,8 @@ var ChatGPTAPI = /** @class */ (function () {
                             : messages;
                         functionToken = 0;
                         numTokens = functionToken;
-                        if (!completionParams.functions) return [3 /*break*/, 23];
-                        _i = 0, _d = completionParams.functions;
-                        _z.label = 1;
+                        _d.label = 1;
                     case 1:
-                        if (!(_i < _d.length)) return [3 /*break*/, 23];
-                        func = _d[_i];
-                        _e = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(func === null || func === void 0 ? void 0 : func.name)];
-                    case 2:
-                        functionToken = _e + _z.sent();
-                        _f = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(func === null || func === void 0 ? void 0 : func.description)];
-                    case 3:
-                        functionToken = _f + _z.sent();
-                        if (!((_a = func === null || func === void 0 ? void 0 : func.parameters) === null || _a === void 0 ? void 0 : _a.properties)) return [3 /*break*/, 18];
-                        _g = 0, _h = Object.keys(func.parameters.properties);
-                        _z.label = 4;
-                    case 4:
-                        if (!(_g < _h.length)) return [3 /*break*/, 18];
-                        key = _h[_g];
-                        _j = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(key)];
-                    case 5:
-                        functionToken = _j + _z.sent();
-                        property = func.parameters.properties[key];
-                        _k = 0, _l = Object.keys(property);
-                        _z.label = 6;
-                    case 6:
-                        if (!(_k < _l.length)) return [3 /*break*/, 17];
-                        field = _l[_k];
-                        _m = field;
-                        switch (_m) {
-                            case 'type': return [3 /*break*/, 7];
-                            case 'description': return [3 /*break*/, 9];
-                            case 'enum': return [3 /*break*/, 11];
-                        }
-                        return [3 /*break*/, 16];
-                    case 7:
-                        functionToken += 2;
-                        _o = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(property === null || property === void 0 ? void 0 : property.type)];
-                    case 8:
-                        functionToken = _o + _z.sent();
-                        return [3 /*break*/, 16];
-                    case 9:
-                        functionToken += 2;
-                        _p = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(property === null || property === void 0 ? void 0 : property.description)];
-                    case 10:
-                        functionToken = _p + _z.sent();
-                        return [3 /*break*/, 16];
-                    case 11:
-                        functionToken -= 3;
-                        _q = 0, _r = property === null || property === void 0 ? void 0 : property.enum;
-                        _z.label = 12;
-                    case 12:
-                        if (!(_q < _r.length)) return [3 /*break*/, 15];
-                        enumElement = _r[_q];
-                        functionToken += 3;
-                        _s = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(enumElement)];
-                    case 13:
-                        functionToken = _s + _z.sent();
-                        _z.label = 14;
-                    case 14:
-                        _q++;
-                        return [3 /*break*/, 12];
-                    case 15: return [3 /*break*/, 16];
-                    case 16:
-                        _k++;
-                        return [3 /*break*/, 6];
-                    case 17:
-                        _g++;
-                        return [3 /*break*/, 4];
-                    case 18:
-                        if (!((_b = func === null || func === void 0 ? void 0 : func.parameters) === null || _b === void 0 ? void 0 : _b.required)) return [3 /*break*/, 22];
-                        _t = 0, _u = func.parameters.required;
-                        _z.label = 19;
-                    case 19:
-                        if (!(_t < _u.length)) return [3 /*break*/, 22];
-                        string = _u[_t];
-                        functionToken += 2;
-                        _v = functionToken;
-                        return [4 /*yield*/, this._getTokenCount(string)];
-                    case 20:
-                        functionToken = _v + _z.sent();
-                        _z.label = 21;
-                    case 21:
-                        _t++;
-                        return [3 /*break*/, 19];
-                    case 22:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 23:
                         prompt_1 = nextMessages
                             .reduce(function (prompt, message) {
                             switch (message.role) {
@@ -508,7 +439,9 @@ var ChatGPTAPI = /** @class */ (function () {
                                 case 'user':
                                     return prompt.concat(["".concat(userLabel, ":\n").concat(message.content)]);
                                 case 'function':
-                                    // leave befind
+                                    // leave behind
+                                    return prompt;
+                                case 'assistant':
                                     return prompt;
                                 default:
                                     return message.content ? prompt.concat(["".concat(assistantLabel, ":\n").concat(message.content)]) : prompt;
@@ -516,40 +449,40 @@ var ChatGPTAPI = /** @class */ (function () {
                         }, [])
                             .join('\n\n');
                         return [4 /*yield*/, this._getTokenCount(prompt_1)];
-                    case 24:
-                        nextNumTokensEstimate = _z.sent();
-                        _w = 0, _x = nextMessages
+                    case 2:
+                        nextNumTokensEstimate = _d.sent();
+                        _i = 0, _b = nextMessages
                             .filter(function (m) { return m.function_call; });
-                        _z.label = 25;
-                    case 25:
-                        if (!(_w < _x.length)) return [3 /*break*/, 28];
-                        m1 = _x[_w];
-                        _y = nextNumTokensEstimate;
+                        _d.label = 3;
+                    case 3:
+                        if (!(_i < _b.length)) return [3 /*break*/, 6];
+                        m1 = _b[_i];
+                        _c = nextNumTokensEstimate;
                         return [4 /*yield*/, this._getTokenCount(JSON.stringify(m1.function_call) || '')];
-                    case 26:
-                        nextNumTokensEstimate = _y + _z.sent();
-                        _z.label = 27;
-                    case 27:
-                        _w++;
-                        return [3 /*break*/, 25];
-                    case 28:
+                    case 4:
+                        nextNumTokensEstimate = _c + _d.sent();
+                        _d.label = 5;
+                    case 5:
+                        _i++;
+                        return [3 /*break*/, 3];
+                    case 6:
                         isValidPrompt = nextNumTokensEstimate + functionToken <= maxNumTokens;
                         if (prompt_1 && !isValidPrompt) {
-                            return [3 /*break*/, 31];
+                            return [3 /*break*/, 9];
                         }
                         messages = nextMessages;
                         numTokens = nextNumTokensEstimate + functionToken;
                         if (!isValidPrompt) {
-                            return [3 /*break*/, 31];
+                            return [3 /*break*/, 9];
                         }
                         if (!parentMessageId) {
-                            return [3 /*break*/, 31];
+                            return [3 /*break*/, 9];
                         }
                         return [4 /*yield*/, this._getMessageById(parentMessageId)];
-                    case 29:
-                        parentMessage = _z.sent();
+                    case 7:
+                        parentMessage = _d.sent();
                         if (!parentMessage) {
-                            return [3 /*break*/, 31];
+                            return [3 /*break*/, 9];
                         }
                         parentMessageRole = parentMessage.role || 'user';
                         nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
@@ -557,15 +490,16 @@ var ChatGPTAPI = /** @class */ (function () {
                                 role: parentMessageRole,
                                 content: parentMessage.text,
                                 name: parentMessage.name,
-                                function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined
+                                function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
+                                // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
                             }
                         ], nextMessages.slice(systemMessageOffset), true));
                         parentMessageId = parentMessage.parentMessageId;
-                        _z.label = 30;
-                    case 30:
-                        if (true) return [3 /*break*/, 23];
-                        _z.label = 31;
-                    case 31:
+                        _d.label = 8;
+                    case 8:
+                        if (true) return [3 /*break*/, 1];
+                        _d.label = 9;
+                    case 9:
                         maxTokens = Math.max(1, Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens));
                         return [2 /*return*/, { messages: messages, maxTokens: maxTokens, numTokens: numTokens }];
                 }

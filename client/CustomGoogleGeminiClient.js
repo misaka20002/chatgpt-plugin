@@ -116,26 +116,26 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
   async sendMessage (text, opt = {}) {
     let history = await this.getHistory(opt.parentMessageId)
     let systemMessage = opt.system
-    if (systemMessage) {
-      history = history.reverse()
-      history.push({
-        role: 'model',
-        parts: [
-          {
-            text: 'ok'
-          }
-        ]
-      })
-      history.push({
-        role: 'user',
-        parts: [
-          {
-            text: systemMessage
-          }
-        ]
-      })
-      history = history.reverse()
-    }
+    // if (systemMessage) {
+    //   history = history.reverse()
+    //   history.push({
+    //     role: 'model',
+    //     parts: [
+    //       {
+    //         text: 'ok'
+    //       }
+    //     ]
+    //   })
+    //   history.push({
+    //     role: 'user',
+    //     parts: [
+    //       {
+    //         text: systemMessage
+    //       }
+    //     ]
+    //   })
+    //   history = history.reverse()
+    // }
     const idThis = crypto.randomUUID()
     const idModel = crypto.randomUUID()
     const thisMessage = opt.functionResponse
@@ -169,6 +169,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
        * @type Array<Content>
        */
       contents: history,
+      system_instruction: {
+        parts: {
+          text: systemMessage
+        }
+      },
       safetySettings: [
         {
           category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,

@@ -19,6 +19,7 @@ import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpTool } from '../utils/tools/SerpTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { customSplitRegex, filterResponseChunk } from '../utils/text.js'
+import core from '../model/core.js'
 
 export class bym extends plugin {
   constructor () {
@@ -44,35 +45,6 @@ export class bym extends plugin {
     if (!Config.enableBYM) {
       return false
     }
-    let opt = {
-      maxOutputTokens: 500,
-      temperature: 1,
-      replyPureTextCallback: e.reply
-    }
-    let imgs = await getImg(e)
-
-    // 导入 引用消息 msg
-    if (e.sourceMsg) {
-      e.msg = e.sourceMsg + '\n\n' + e.msg;
-    }
-
-    if (!e.msg) {
-      if (imgs && imgs.length > 0) {
-        let image = imgs[0]
-        const response = await fetch(image)
-        const base64Image = Buffer.from(await response.arrayBuffer())
-        opt.image = base64Image.toString('base64')
-        e.msg = '[图片]'
-      } else {
-        return
-      }
-    }
-    if (!opt.image && imgs && imgs.length > 0) {
-      let image = imgs[0]
-      const response = await fetch(image)
-      const base64Image = Buffer.from(await response.arrayBuffer())
-      opt.image = base64Image.toString('base64')
-    }
     let sender = e.sender.user_id
     let card = e.sender.card || e.sender.nickname
     let group = e.group_id
@@ -87,14 +59,14 @@ export class bym extends plugin {
 
     let fuck = false
     let candidate = Config.bymPreset
-    if (Config.bymFuckList?.find(i => e.msg.includes(i))) {
+    if (Config.bymFuckList?.find(i => e.msg?.includes(i))) {
       fuck = true
       candidate = candidate + Config.bymFuckPrompt
     }
     if (prop < Config.bymRate) {
       logger.info('random chat hit')
       let chats = await getChatHistoryGroup(e, 20)
-      opt.system = `你的名字是“${Config.assistantLabel}”，你在一个qq群里，群号是${group},当前和你说话的人群名片是${card}, qq号是${sender}, 请你结合用户的发言和聊天记录作出回应，要求表现得随性一点，最好参与讨论，混入其中。不要过分插科打诨，不知道说什么可以复读群友的话。要求你做搜索、发图、发视频和音乐等操作时要使用工具。不可以直接发[图片]这样蒙混过关。要求优先使用中文进行对话。如果此时不需要自己说话，可以只回复<EMPTY>` +
+      let system = `你的名字是“${Config.assistantLabel}”，你在一个qq群里，群号是${group},当前和你说话的人群名片是${card}, qq号是${sender}, 请你结合用户的发言和聊天记录作出回应，要求表现得随性一点，最好参与讨论，混入其中。不要过分插科打诨，不知道说什么可以复读群友的话。要求你做搜索、发图、发视频和音乐等操作时要使用工具。不可以直接发[图片]这样蒙混过关。要求优先使用中文进行对话。如果此时不需要自己说话，可以只回复<EMPTY>` +
         candidate +
         '以下是聊天记录:' + chats
           .map(chat => {
@@ -104,44 +76,25 @@ export class bym extends plugin {
           .join('\n') +
         `\n你的回复应该尽可能简练，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式（比如${Config.assistantLabel}：），禁止重复聊天记录。`
 
-      let client = new CustomGoogleGeminiClient({
-        e,
-        userId: e.sender.user_id,
-        key: Config.getGeminiKey(),
-        model: Config.geminiModel,
-        baseUrl: Config.geminiBaseUrl,
-        debug: Config.debug
+      let rsp = await core.sendMessage(e.msg, {}, Config.bymMode, e, {
+        enableSmart: true,
+        system: {
+          api: system,
+          qwen: system,
+          bing: system,
+          claude: system,
+          claude2: system,
+          gemini: system,
+          xh: system
+        },
+        settings: {
+          replyPureTextCallback: msg => {
+            msg = filterResponseChunk(msg)
+            msg && e.reply(msg)
+          }
+        }
       })
-      /**
-       * tools
-       * @type {(AbstractTool)[]}
-       */
-      const tools = [
-        new SearchVideoTool(),
-        new SerpImageTool(),
-        new SearchMusicTool(),
-        new SendAvatarTool(),
-        new SendVideoTool(),
-        new SendMusicTool(),
-        new SendPictureTool(),
-        new WebsiteTool(),
-        new WeatherTool(),
-        new SendMessageToSpecificGroupOrUserTool()
-      ]
-      if (Config.azSerpKey) {
-        tools.push(new SerpTool())
-      }
-      if (e.group.is_admin || e.group.is_owner) {
-        tools.push(new EditCardTool())
-        tools.push(new JinyanTool())
-        tools.push(new KickOutTool())
-      }
-      if (e.group.is_owner) {
-        tools.push(new SetTitleTool())
-      }
-      client.addTools(tools)
-      // console.log(JSON.stringify(opt))
-      let rsp = await client.sendMessage(e.msg, opt)
+      // let rsp = await client.sendMessage(e.msg, opt)
       let text = rsp.text
       let texts = customSplitRegex(text, /(?<!\?)[。？\n](?!\?)/, 3)
       // let texts = text.split(/(?<!\?)[。？\n](?!\?)/, 3)

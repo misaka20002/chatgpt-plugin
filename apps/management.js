@@ -357,6 +357,11 @@ export class ChatgptManagement extends plugin {
           reg: '^#chatgpt(开启|关闭)gemini(搜索|代码执行)$',
           fnc: 'geminiOpenSearchCE',
           permission: 'master'
+        },
+        {
+          reg: '^#chatgpt(伪人|bym)切换',
+          fnc: 'switchBYMModel',
+          permission: 'master'
         }
       ]
     })
@@ -1877,6 +1882,54 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       Config.enableBYM = false
       await this.reply('好的，已经关闭bym模式')
     }
+  }
+
+  async switchBYMModel(e) {
+    let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
+    if (['api', 'Api', 'API'].includes(model)) {
+      Config.bymMode = 'api'
+    } else if (['gemini', '双子星'].includes(model.toLowerCase())) {
+      Config.bymMode = 'gemini'
+    } else if (['qwen', '通义千问'].includes(model.toLowerCase())) {
+      Config.bymMode = 'qwen'
+    } else if (['xh', '星火'].includes(model.toLowerCase())) {
+      Config.bymMode = 'xh'
+    } else if (['claude', '克劳德'].includes(model.toLowerCase())) {
+      Config.bymMode = 'claude'
+    }
+    await this.reply('切换成功')
+  }
+
+  async switchBYMModel(e) {
+    let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
+    if (['api', 'Api', 'API'].includes(model)) {
+      Config.bymMode = 'api'
+    } else if (['gemini', '双子星'].includes(model.toLowerCase())) {
+      Config.bymMode = 'gemini'
+    } else if (['qwen', '通义千问'].includes(model.toLowerCase())) {
+      Config.bymMode = 'qwen'
+    } else if (['xh', '星火'].includes(model.toLowerCase())) {
+      Config.bymMode = 'xh'
+    } else if (['claude', '克劳德'].includes(model.toLowerCase())) {
+      Config.bymMode = 'claude'
+    }
+    await this.reply('切换成功')
+  }
+
+  async switchBYMModel(e) {
+    let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
+    if (['api', 'Api', 'API'].includes(model)) {
+      Config.bymMode = 'api'
+    } else if (['gemini', '双子星'].includes(model.toLowerCase())) {
+      Config.bymMode = 'gemini'
+    } else if (['qwen', '通义千问'].includes(model.toLowerCase())) {
+      Config.bymMode = 'qwen'
+    } else if (['xh', '星火'].includes(model.toLowerCase())) {
+      Config.bymMode = 'xh'
+    } else if (['claude', '克劳德'].includes(model.toLowerCase())) {
+      Config.bymMode = 'claude'
+    }
+    await this.reply('切换成功')
   }
 
   async geminiOpenSearchCE(e) {

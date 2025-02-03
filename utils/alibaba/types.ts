@@ -1,6 +1,8 @@
+// @ts-ignore
 import Keyv from 'keyv'
 import {openai} from "../openai/types";
 
+// @ts-ignore
 export type Role = 'user' | 'assistant' | 'system' | 'tool'
 
 export type FetchFn = typeof fetch
@@ -70,6 +72,7 @@ export interface ChatMessage {
     | qwen.CreateChatCompletionResponse
     | CreateChatCompletionStreamResponse
   functionCall?: qwen.FunctionCall
+  toolCalls?: qwen.ToolCall[]
 }
 
 export class ChatGPTError extends Error {
@@ -224,6 +227,8 @@ export namespace qwen {
      * role为tool表示当前message为function_call的调用结果，name是function的名称，需要和上轮response中的tool_calls[i].function.name参数保持一致，content为function的输出。
      */
     name?: string
+
+    tool_calls?: ToolCall[]
   }
 
   export interface FunctionCall {

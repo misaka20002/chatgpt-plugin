@@ -244,7 +244,7 @@ export class help extends plugin {
   async removeSharePrompt (e) {
     let master = (await getMasterQQ())[0]
     let name = e.msg.replace(/^#(chatgpt|ChatGPT)(删除|取消|撤销)共享设定/, '')
-    let response = await fetch(`https://chatgpt.roki.best/prompt?name=${name}&qq=${master || (getUin(e) + '')}`, {
+    let response = await fetch(`https://prompt.ikechan8370.com/prompt?name=${name}&qq=${master || (getUin(e) + '')}`, {
       method: 'DELETE',
       headers: {
         'FROM-CHATGPT': 'ikechan8370'
@@ -363,7 +363,7 @@ export class help extends plugin {
       examples
     }
     logger.info(toUploadBody)
-    let response = await fetch('https://chatgpt.roki.best/prompt', {
+    let response = await fetch('https://prompt.ikechan8370.com/prompt', {
       method: 'POST',
       body: JSON.stringify(toUploadBody),
       headers: {
@@ -387,7 +387,7 @@ export class help extends plugin {
 
   async detailCloudPrompt (e) {
     let name = e.msg.replace(/^#(chatgpt|ChatGPT)(在线)?预览设定详情/, '')
-    let response = await fetch('https://chatgpt.roki.best/prompt?name=' + name, {
+    let response = await fetch('https://prompt.ikechan8370.com/prompt?name=' + name, {
       method: 'GET',
       headers: {
         'FROM-CHATGPT': 'ikechan8370'
@@ -414,7 +414,7 @@ export class help extends plugin {
       search = split[0]
       page = parseInt(split[1])
     }
-    let response = await fetch('https://chatgpt.roki.best/prompt/list?search=' + search + `&page=${page - 1}`, {
+    let response = await fetch('https://prompt.ikechan8370.com/prompt/list?search=' + search + `&page=${page - 1}`, {
       method: 'GET',
       headers: {
         'FROM-CHATGPT': 'ikechan8370'
@@ -442,7 +442,7 @@ export class help extends plugin {
       await e.reply('设定名字呢？', true)
       return true
     }
-    let response = await fetch('https://chatgpt.roki.best/prompt?name=' + promptName, {
+    let response = await fetch('https://prompt.ikechan8370.com/prompt?name=' + promptName, {
       method: 'GET',
       headers: {
         'FROM-CHATGPT': 'ikechan8370'

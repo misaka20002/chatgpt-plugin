@@ -182,6 +182,7 @@ export class ChatGPTAPI {
             conversationId,
             parentMessageId: messageId,
             text: '',
+            thinking_text: '',
             functionCall: undefined,
             toolCalls: undefined,
             conversation: []
@@ -261,6 +262,7 @@ export class ChatGPTAPI {
                                         } else {
                                             result.delta = delta.content
                                             if (delta?.content) result.text += delta.content
+                                            if (delta?.reasoning_content) result.thinking_text += delta.reasoning_content
                                         }
                                         if (delta.role) {
                                             result.role = delta.role
@@ -290,14 +292,14 @@ export class ChatGPTAPI {
                             const msg = `OpenAI error ${
                                 res.status || res.statusText
                             }: ${reason}`
-                            const error = new types.ChatGPTError(msg, { cause: res })
+                            const error = new types.ChatGPTError(msg)
                             error.statusCode = res.status
                             error.statusText = res.statusText
                             return reject(error)
                         }
 
                         const response: types.openai.CreateChatCompletionResponse =
-                            await res.json()
+                          (await res.json()) as types.openai.CreateChatCompletionResponse
                         if (this._debug) {
                             console.log(response)
                         }
@@ -315,6 +317,7 @@ export class ChatGPTAPI {
                             } else if (message.tool_calls) {
                                 result.functionCall = message.tool_calls.map(tool => tool.function)[0]
                             }
+                            result.thinking_text = message.reasoning_content
                             if (message.role) {
                                 result.role = message.role
                             }
@@ -379,19 +382,23 @@ export class ChatGPTAPI {
         }
     }
 
-    get apiKey(): string {
+    // @ts-ignore
+  get apiKey(): string {
         return this._apiKey
     }
 
-    set apiKey(apiKey: string) {
+    // @ts-ignore
+  set apiKey(apiKey: string) {
         this._apiKey = apiKey
     }
 
-    get apiOrg(): string {
+    // @ts-ignore
+  get apiOrg(): string {
         return this._apiOrg
     }
 
-    set apiOrg(apiOrg: string) {
+    // @ts-ignore
+  set apiOrg(apiOrg: string) {
         this._apiOrg = apiOrg
     }
 
@@ -525,7 +532,7 @@ export class ChatGPTAPI {
                     content: parentMessage.text,
                     name: parentMessage.name,
                     function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                    tools: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
+                  // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
                 },
                 ...nextMessages.slice(systemMessageOffset)
             ])
