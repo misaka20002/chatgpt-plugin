@@ -362,6 +362,10 @@ export class ChatgptManagement extends plugin {
           reg: '^#chatgpt(伪人|bym)切换',
           fnc: 'switchBYMModel',
           permission: 'master'
+        },
+        {
+          reg: '^#(chatgpt)?(Copilot|Bing|必应)配置方法',
+          fnc: 'copilotSetting'
         }
       ]
     })
@@ -1900,39 +1904,26 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply('切换成功')
   }
 
-  async switchBYMModel(e) {
-    let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
-    if (['api', 'Api', 'API'].includes(model)) {
-      Config.bymMode = 'api'
-    } else if (['gemini', '双子星'].includes(model.toLowerCase())) {
-      Config.bymMode = 'gemini'
-    } else if (['qwen', '通义千问'].includes(model.toLowerCase())) {
-      Config.bymMode = 'qwen'
-    } else if (['xh', '星火'].includes(model.toLowerCase())) {
-      Config.bymMode = 'xh'
-    } else if (['claude', '克劳德'].includes(model.toLowerCase())) {
-      Config.bymMode = 'claude'
-    }
-    await this.reply('切换成功')
+  async copilotSetting (e) {
+    const code = 'let results = []\n' +
+      'Object.keys(localStorage).forEach(key => {\n' +
+      '    try {\n' +
+      '        let value = JSON.parse(localStorage[key])\n' +
+      '        if (key.includes(\'accesstoken\') && value.target?.includes(\'ChatAI\')) {\n' +
+      '            results[\'accessToken\'] = value.secret\n' +
+      '            results[\'clientId\'] = value.clientId\n' +
+      '            results[\'scope\'] = value.target + \' openid profile offline_access\'\n' +
+      '        } else if (key.includes(\'refreshtoken\')) {\n' +
+      '            results[\'oid\'] = value.homeAccountId\n' +
+      '            results[\'refreshToken\'] = value.secret\n' +
+      '        }\n' +
+      '    } catch (err) {}\n' +
+      '})\n' +
+      'console.log(results)'
+    e.reply(`可以在浏览器控制台使用以下代码获取相关配置。\n\`\`\`javacript\n${code}\n\`\`\``)
   }
 
-  async switchBYMModel(e) {
-    let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
-    if (['api', 'Api', 'API'].includes(model)) {
-      Config.bymMode = 'api'
-    } else if (['gemini', '双子星'].includes(model.toLowerCase())) {
-      Config.bymMode = 'gemini'
-    } else if (['qwen', '通义千问'].includes(model.toLowerCase())) {
-      Config.bymMode = 'qwen'
-    } else if (['xh', '星火'].includes(model.toLowerCase())) {
-      Config.bymMode = 'xh'
-    } else if (['claude', '克劳德'].includes(model.toLowerCase())) {
-      Config.bymMode = 'claude'
-    }
-    await this.reply('切换成功')
-  }
-
-  async geminiOpenSearchCE(e) {
+  async geminiOpenSearchCE (e) {
     let msg = e.msg
     let open = msg.includes('开启')
     if (msg.includes('搜索')) {

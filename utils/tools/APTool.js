@@ -23,7 +23,7 @@ export class APTool extends AbstractTool {
     }
     e.atBot = false
     // 使用nai插件
-    if (Config.switchToNai3PluginToPaint) {
+    if (Config.bingNaiDraw) {
       let nai
       try {
         let { txt2img } = await import('../../../nai-plugin/apps/Txt2img.js')

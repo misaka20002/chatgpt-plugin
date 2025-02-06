@@ -59,7 +59,7 @@ export class ChatGPTAPI {
             completionParams,
             systemMessage,
             maxModelTokens = 4000,
-            maxResponseTokens = 1000,
+            maxResponseTokens = 8192,
             getMessageById,
             upsertMessage,
             fetch = globalFetch

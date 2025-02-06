@@ -89,7 +89,7 @@ const defaultConfig = {
   chat_for_First_person: true,
   isReplacePromptForSenderMsg: true,
   paimon_globalLimitBreak: "",
-  switchToNai3PluginToPaint: false,
+  bingNaiDraw: false,
   enableNai3PluginToPaint: false,
   enableApPluginToPaint: false,
   enableSiliconflowPluginToPaint: false,
@@ -216,7 +216,6 @@ const defaultConfig = {
   serpSource: 'ikechan8370',
   extraUrl: 'https://cpe.ikechan8370.com',
   smartMode: false,
-  bingCaptchaOneShotUrl: '',
   // claude2
   claudeAIOrganizationId: '',
   claudeAISessionKey: '',
@@ -279,6 +278,14 @@ const defaultConfig = {
   forwardReasoning: true,
   geminiEnableGoogleSearch: false,
   geminiEnableCodeExecution: false,
+  bingAiToken: '', // copilot.microsoft.com accessToken
+  bingAiClientId: '',
+  bingAiScope: '140e65af-45d1-4427-bf08-3e7295db6836/ChatAI.ReadWrite openid profile offline_access',
+  bingAiRefreshToken: '',
+  bingAiOid: '',
+  _2captchaKey: '',
+  bingReasoning: false, // 是否深度思考
+
   version: 'v2.8.3'
 }
 const _path = process.cwd()

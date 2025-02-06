@@ -1,10 +1,16 @@
 import WebSocket from 'ws'
 import common from '../../../lib/common/common.js'
+import _ from 'lodash'
+import { pTimeout } from '../utils/common.js'
+import {Config} from '../utils/config.js'
 
 export class BingAIClient {
-  constructor (accessToken, baseUrl = 'wss://copilot.microsoft.com/c/api/chat', debug, _2captchaKey, clientId, scope, refreshToken, oid) {
+  constructor (accessToken, baseUrl = 'wss://copilot.microsoft.com', debug, _2captchaKey, clientId, scope, refreshToken, oid, reasoning = false) {
     this.accessToken = accessToken
     this.baseUrl = baseUrl
+    if (this.baseUrl.endsWith('/')) {
+      this.baseUrl = _.trimEnd(baseUrl, '/')
+    }
     this.ws = null
     this.conversationId = null
     this.partialMessages = new Map()
@@ -14,6 +20,7 @@ export class BingAIClient {
     this.scope = scope
     this.refreshToken = refreshToken
     this.oid = oid
+    this.reasoning = reasoning
   }
 
   async sendMessage (text, options = {}) {
@@ -21,7 +28,7 @@ export class BingAIClient {
     if (options.conversationId) {
       this.conversationId = options.conversationId
     } else {
-      this.conversationId = this._generateConversationId()
+      this.conversationId = await this._generateConversationId()
     }
 
     // 建立 WebSocket 连接
@@ -31,16 +38,32 @@ export class BingAIClient {
     await this.sendInitialMessage(text)
 
     // 等待并收集服务器的回复
-    const responseText = await this.collectResponse()
-    return responseText
+    try {
+      const responseText = await pTimeout(await this.collectResponse(), {
+        milliseconds: 1000 * 60 * 5
+      })
+      return responseText
+    } catch (err) {
+      if (this.partialMessages.get(this.currentMessageId)) {
+        return this.partialMessages.get(this.currentMessageId).text
+      } else {
+        throw err
+      }
+    }
   }
 
   async connectWebSocket () {
     return new Promise((resolve, reject) => {
-      let url = `${this.baseUrl}?api-version=2`
+      let wsUrl = this.baseUrl
+      if (wsUrl.startsWith('http')) {
+        wsUrl = wsUrl.replace('https://', 'wss://')
+          .replace('http://', 'ws://')
+      }
+      let url = `${wsUrl}/c/api/chat?api-version=2`
       if (this.accessToken) {
         url += '&accessToken=' + this.accessToken
       }
+      logger.info('ws url: ' + url)
       this.ws = new WebSocket(url)
 
       this.ws.on('open', () => {
@@ -50,16 +73,15 @@ export class BingAIClient {
 
       if (this.debug) {
         this.ws.on('message', (message) => {
-          logger.info(JSON.stringify(message))
+          logger.info('received message', String(message))
         })
       }
-      this.ws.on('close', (code, reason) => {
+      this.ws.on('close', async (code, reason) => {
         console.log('WebSocket connection closed. Code:', code, 'Reason:', reason)
 
-        // 401 错误码通常是未授权，可以根据实际情况修改
         if (code === 401) {
           logger.error('token expired. try to refresh with refresh token')
-          this.doRefreshToken(this.clientId, this.scope, this.refreshToken, this.oid)
+          await this.doRefreshToken(this.clientId, this.scope, this.refreshToken, this.oid)
         }
       })
 
@@ -71,33 +93,44 @@ export class BingAIClient {
 
   async sendInitialMessage (text) {
     return new Promise((resolve, reject) => {
+      const initMgs = { event: 'setOptions', supportedCards: ['image'], ads: null }
+      this.ws.send(JSON.stringify(initMgs))
+      if (this.debug) {
+        logger.info('send msg: ', JSON.stringify(initMgs))
+      }
       const messagePayload = {
         event: 'send',
         conversationId: this.conversationId,
         content: [{ type: 'text', text }],
-        mode: 'chat',
+        mode: this.reasoning ? 'reasoning' : 'chat',
         context: { edge: 'NonContextual' }
       }
 
       // 直接发送消息
       this.ws.send(JSON.stringify(messagePayload))
-
+      if (this.debug) {
+        logger.info('send msg: ', JSON.stringify(messagePayload))
+      }
+      let _this = this
       // 设置超时机制，防止长时间未收到消息
       const timeout = setTimeout(() => {
         reject(new Error('No response from server within timeout period.'))
       }, 5000) // 设置 5 秒的超时时间
-
       // 一旦收到消息，处理逻辑
       this.ws.once('message', (data) => {
         clearTimeout(timeout) // 清除超时定时器
         const message = JSON.parse(data)
-
+        logger.info(data)
         if (message.event === 'challenge') {
-          logger.info(JSON.stringify(message))
           logger.warn('遇到turnstile验证码，尝试使用2captcha解决')
           // 如果收到 challenge，处理挑战
           this.handleChallenge(message)
-            .then(resolve)
+            .then(() => {
+              setTimeout(() => {
+                _this.ws.send(JSON.stringify(messagePayload))
+                resolve()
+              }, 500)
+            })
             .catch(reject)
         } else {
           // 否则直接进入对话
@@ -152,14 +185,15 @@ export class BingAIClient {
             this.partialMessages.get(message.messageId).text += message.text
 
             // 如果是最后一部分，标记为完成
-            if (message.partId === '0') {
-              this.partialMessages.get(message.messageId).done = true
-            }
+            // if (message.partId === '0') {
+            //   this.partialMessages.get(message.messageId).done = true
+            // }
 
             checkMessageComplete(message.messageId)
             break
 
           case 'partCompleted':
+            this.partialMessages.get(message.messageId).done = true
             break
 
           case 'done':
@@ -167,7 +201,7 @@ export class BingAIClient {
             break
 
           default:
-            console.warn('Unexpected event:', message.event)
+            // console.warn('Unexpected event:', message.event)
             break
         }
       })
@@ -203,6 +237,7 @@ export class BingAIClient {
       taskId,
       clientKey: this._2captchaKey
     })
+
     async function getTaskResult () {
       const requestOptions2 = {
         method: 'POST',
@@ -213,12 +248,11 @@ export class BingAIClient {
 
       const response2 = await fetch('https://api.2captcha.com/getTaskResult', requestOptions2)
       const taskResponse = await response2.json()
-      if (this.debug) {
-        logger.info(JSON.stringify(taskResponse))
-      }
+      logger.info(JSON.stringify(taskResponse))
       const token = taskResponse?.solution?.token
       return token
     }
+
     let retry = 90
     let token = await getTaskResult()
     while (retry > 0 && !token) {
@@ -232,8 +266,47 @@ export class BingAIClient {
     return token
   }
 
-  _generateConversationId () {
-    return 'conversation-' + Math.random().toString(36).substring(2, 15)
+  async _generateConversationId (times = 3) {
+    if (times < 0) {
+      throw new Error('max retry exceed, maybe refresh token error')
+    }
+    const url = `${this.baseUrl}/c/api/conversations`
+    const createConversationRsp = await fetch(url, {
+      headers: {
+        authorization: `Bearer ${this.accessToken}`,
+        'content-type': 'application/json',
+        origin: 'https://copilot.microsoft.com',
+        referer: 'https://copilot.microsoft.com/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0'
+      },
+      method: 'POST'
+    })
+    if (createConversationRsp.status === 401) {
+      await this.doRefreshToken(this.clientId, this.scope, this.refreshToken, this.oid)
+      return await this._generateConversationId(times - 1)
+    }
+    const conversation = await createConversationRsp.json()
+    return conversation.id
+  }
+
+  async _getCurrentConversationId () {
+    const url = `${this.baseUrl}/c/api/start`
+    const createConversationRsp = await fetch(url, {
+      headers: {
+        authorization: `Bearer ${this.accessToken}`,
+        'content-type': 'application/json',
+        origin: 'https://copilot.microsoft.com',
+        referer: 'https://copilot.microsoft.com/',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0'
+      },
+      method: 'POST',
+      body: JSON.stringify({
+        timeZone: 'Asia/Shanghai',
+        teenSupportEnabled: true
+      })
+    })
+    const conversation = await createConversationRsp.json()
+    return conversation.currentConversationId
   }
 
   /**
@@ -270,7 +343,7 @@ export class BingAIClient {
     urlencoded.append('x-ms-lib-capability', 'retry-after, h429')
     urlencoded.append('x-client-current-telemetry', '5|61,0,,,|,')
     urlencoded.append('x-client-last-telemetry', '5|3|||0,0')
-    urlencoded.append('client-request-id', '0193875c-0737-703c-a2e7-6730dd56aa4a')
+    urlencoded.append('client-request-id', crypto.randomUUID())
     urlencoded.append('refresh_token', refreshToken)
     urlencoded.append('X-AnchorMailbox', 'Oid:' + oid)
 
@@ -286,6 +359,13 @@ export class BingAIClient {
     if (this.debug) {
       logger.info(JSON.stringify(tokenJson))
     }
+    this.accessToken = tokenJson.access_token
+    Config.bingAiToken = this.accessToken
+    if (tokenJson.refresh_token) {
+      this.refreshToken = tokenJson.refresh_token
+      Config.bingAiRefreshToken = this.refreshToken
+    }
+
     return tokenJson
   }
 }

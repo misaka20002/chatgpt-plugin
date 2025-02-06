@@ -149,7 +149,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         }
       : {
           role: 'user',
-          parts: [{ text }],
+          parts: text ? [{ text }] : [],
           id: idThis,
           parentMessageId: opt.parentMessageId || undefined
         }
@@ -169,11 +169,6 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
        * @type Array<Content>
        */
       contents: history,
-      system_instruction: {
-        parts: {
-          text: systemMessage
-        }
-      },
       safetySettings: [
         {
           category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
@@ -203,6 +198,13 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         topK: opt.tokK || 16
       },
       tools: []
+    }
+    if (systemMessage) {
+      body.system_instruction = {
+        parts: {
+          text: systemMessage
+        }
+      }
     }
     if (this.tools?.length > 0) {
       body.tools.push({
