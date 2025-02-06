@@ -74,7 +74,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')
     /*处理文本：*/
-    text = text.replace(/\#|(\[..\])|(\[.\])/g, '') // 删除[？？]和[？]
+    text = text
+        .replace(/\s*```[\s\S]*?```\s*$/, '') // 删除最底部的代码块
+        .replace(/\#|(\[..\])|(\[.\])/g, '') // 删除[？？]和[？]
         .replace(/派蒒/g, '派蒙') // 替换派蒒
         .replace(/\(?\^([0-9])\^\)?/g, '') // 删除bing (^1^)的注释
         .replace(/\n(:|：).*|\n$/g, '') // 删除bing ":"开头的注释
@@ -85,7 +87,6 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         .replace(/[๑•.̫³ω/∇´`˃̵ᴗ˂̵و ⊙⁄●｀╯°□）︵┻━┻･ั﹏_*￣3ε^▽≧≦o｡◕‿Őдﻭˇ∀♡♪♥ㅂ✧ڡ]|[\(\)]づ/g, '') // 替换发音不了的字符
         .replace(/，，，|，，|。。。|，。|。。|。，/g, '。') // 处理多余的，。
         .replace(/[\[|【].*好感度.*\d+[\]|】|）]/g, '') // 删除中括号好感度
-        .replace(/\s*```[\s\S]*?```\s*$/g, '') // 删除最底部的代码块
 
     // #gpt翻日 硬编码替换部分角色名
     if (Config.autoJapanese)
