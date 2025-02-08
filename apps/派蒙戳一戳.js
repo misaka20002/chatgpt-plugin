@@ -360,7 +360,7 @@ export class PaimonChuo extends plugin {
                         break;
                     case 7:
                     case 8:
-                        await e.reply(await segment.image(getRandomUrl("bq")))
+                        await e.reply(await segment.image(await convertWebpToPng(getRandomUrl("bqwebp"))))
                         break;
                     case 9:
                     case 10:
@@ -1876,27 +1876,35 @@ let ciku = [
  */
 function getRandomUrl(type) {
     const urls = {
-        "ecy": [
+        "ecy": [ // 二次元
             "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
-            "http://api.zhilaohu.icu/huangdou",
+            "https://api.fuchenboke.cn/api/dongman.php",
         ],
-        "scy": [
+        "scy": [ // 三次元
             "https://api.btstu.cn/sjbz/api.php",
-            "http://api.zhilaohu.icu/cos",
         ],
-        "ecywebp": [
+        "ecywebp": [ // 二次元 webp格式
             "https://t.mwm.moe/mp",
             "https://t.alcy.cc/ycy",
+            "https://t.alcy.cc/moez",
+            "https://t.alcy.cc/ysz", // 原神
+            "https://t.alcy.cc/mp",
+            "https://t.alcy.cc/moemp",
+            "https://t.alcy.cc/ysmp",
             "https://www.loliapi.com/acg",
-            "http://api.zhilaohu.icu/mm",
-            "http://api.zhilaohu.icu/BA",
+            "http://api.mysqil.com/pc.php",
+            "http://api.mysqil.com/pe.php",
         ],
-        "scywebp": [
+        "scywebp": [ // 三次元 webp格式
             "",
         ],
-        "bq": [
-            "http://api.zhilaohu.icu/xnn",
-            "http://api.zhilaohu.icu/chajun",
+        "bq_img": [ // 表情
+            // "http://api.zhilaohu.icu/xnn",
+            // "http://api.zhilaohu.icu/chajun",
+        ],
+        "bqwebp": [
+            "https://t.alcy.cc/xhl",
+            "https://t.alcy.cc/lai",
         ],
     };
     const randomIndex = Math.floor(Math.random() * urls[type].length);
