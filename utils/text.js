@@ -15,7 +15,7 @@ export function filterResponseChunk (msg) {
   if (msg.trim() === '<EMPTY>') {
     return false
   }
-  msg = trimSpecific(msg, '<EMPTY')
+  msg = trimSpecific(msg, '<EMPTY>')
   return msg
 }
 

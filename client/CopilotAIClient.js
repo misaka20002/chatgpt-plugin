@@ -2,7 +2,7 @@ import WebSocket from 'ws'
 import common from '../../../lib/common/common.js'
 import _ from 'lodash'
 import { pTimeout } from '../utils/common.js'
-import {Config} from '../utils/config.js'
+import { Config } from '../utils/config.js'
 
 export class BingAIClient {
   constructor (accessToken, baseUrl = 'wss://copilot.microsoft.com', debug, _2captchaKey, clientId, scope, refreshToken, oid, reasoning = false) {
@@ -81,7 +81,7 @@ export class BingAIClient {
 
         if (code === 401) {
           logger.error('token expired. try to refresh with refresh token')
-          await this.doRefreshToken(this.clientId, this.scope, this.refreshToken, this.oid)
+          await this.doRefreshToken()
         }
       })
 
@@ -282,7 +282,7 @@ export class BingAIClient {
       method: 'POST'
     })
     if (createConversationRsp.status === 401) {
-      await this.doRefreshToken(this.clientId, this.scope, this.refreshToken, this.oid)
+      await this.doRefreshToken()
       return await this._generateConversationId(times - 1)
     }
     const conversation = await createConversationRsp.json()
@@ -324,7 +324,7 @@ export class BingAIClient {
    *   refresh_token: string
    * }>}
    */
-  async doRefreshToken (clientId, scope, refreshToken, oid) {
+  async doRefreshToken (clientId = this.clientId, scope = this.scope, refreshToken = this.refreshToken, oid = this.oid) {
     const myHeaders = new Headers()
     myHeaders.append('user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0')
     myHeaders.append('priority', 'u=1, i')

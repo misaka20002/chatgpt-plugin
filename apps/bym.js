@@ -1,23 +1,6 @@
-import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
 import { Config } from '../utils/config.js'
-import { getImg } from '../utils/common.js'
 import { getChatHistoryGroup } from '../utils/chat.js'
-import { SearchVideoTool } from '../utils/tools/SearchBilibiliTool.js'
-import { SerpImageTool } from '../utils/tools/SearchImageTool.js'
-import { SearchMusicTool } from '../utils/tools/SearchMusicTool.js'
-import { SendAvatarTool } from '../utils/tools/SendAvatarTool.js'
-import { SendVideoTool } from '../utils/tools/SendBilibiliTool.js'
-import { SendMusicTool } from '../utils/tools/SendMusicTool.js'
-import { SendPictureTool } from '../utils/tools/SendPictureTool.js'
-import { WebsiteTool } from '../utils/tools/WebsiteTool.js'
 import { convertFaces } from '../utils/face.js'
-import { WeatherTool } from '../utils/tools/WeatherTool.js'
-import { EditCardTool } from '../utils/tools/EditCardTool.js'
-import { JinyanTool } from '../utils/tools/JinyanTool.js'
-import { KickOutTool } from '../utils/tools/KickOutTool.js'
-import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
-import { SerpTool } from '../utils/tools/SerpTool.js'
-import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { customSplitRegex, filterResponseChunk } from '../utils/text.js'
 import core from '../model/core.js'
 
@@ -45,6 +28,12 @@ export class bym extends plugin {
     if (!Config.enableBYM) {
       return false
     }
+
+    // 伪人禁用群
+    if (Config.bymDisableGroup?.includes(e.group_id?.toString())) {
+      return false
+    }
+
     let sender = e.sender.user_id
     let card = e.sender.card || e.sender.nickname
     let group = e.group_id

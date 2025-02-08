@@ -54,7 +54,7 @@ export function supportGuoba() {
         {
           field: 'enableBYM',
           label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。目前仅支持gemini，会使用gemini的配置。发言包括AI名字会必定触发回复。暂不支持分群管理，可在不同群禁用或启动“ChatGPT-Plugin 伪人bym”功能',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。目前仅支持gemini，会使用gemini的配置。发言包括AI名字会必定触发回复。',
           component: 'Switch'
         },
         {
@@ -1474,7 +1474,6 @@ export function supportGuoba() {
           label: '合成emoji的API地址，默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
           component: 'Input'
         },
-
         {
           field: 'bymRate',
           label: '伪人模式触发概率，单位为%',
@@ -1483,6 +1482,18 @@ export function supportGuoba() {
             min: 0,
             max: 100
           }
+        },
+        {
+          field: 'bymDisableGroup',
+          label: '伪人禁用群',
+          bottomHelpMessage: '设置在该群禁用伪人模式',
+          component: "GTags",
+          componentProps: {
+            placeholder: '请输入群号',
+            allowAdd: true,
+            allowDel: true,
+            valueParser: ((value) => value.split(',') || []),
+          },
         },
         {
           field: 'bymMode',
