@@ -922,14 +922,16 @@ async function convertWebpToPng(url) {
         const res = await fetch(url);
         // if (!res.ok) throw new Error('[派蒙戳一戳][Webp图站]Network response was not ok');
         // 将响应体转换为 Buffer
-        const webpBuffer = await res.buffer();
+        const arrayBuffer = await res.arrayBuffer();
+        const webpBuffer = Buffer.from(arrayBuffer);
         // 使用 sharp 将 WebP 转换为 PNG
         const pngBuffer = await sharp(webpBuffer)
             .png() // 转换为 PNG
             .toBuffer(); // 返回 Buffer
         return pngBuffer;
     } catch (err) {
-        logger.error(err);
+        logger.error("[派蒙戳一戳][下载webp]" + err);
+        throw new Error("[派蒙戳一戳][下载webp]" + err);
     }
 }
 
