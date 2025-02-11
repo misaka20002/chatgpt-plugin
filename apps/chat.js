@@ -703,7 +703,7 @@ export class chatgpt extends plugin {
     if (Config.recognitionByGemini && !!isImg) {
       let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, isImg)
       if (imgRecognitionByGeminiText) {
-        prompt = '拿出了一张照片："' + imgRecognitionByGeminiText + '"' + prompt
+        prompt = '拿出了一张照片，上面的内容是："' + imgRecognitionByGeminiText + '"' + prompt
       }
     }
 
