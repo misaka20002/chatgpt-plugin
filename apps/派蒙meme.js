@@ -45,9 +45,9 @@ export class memes extends plugin {
   constructor() {
     let option = {
       /** 功能名称 */
-      name: '表情包',
+      name: '派蒙meme表情制作',
       /** 功能描述 */
-      dsc: '表情包制作',
+      dsc: '派蒙meme表情制作',
       /** https://oicqjs.github.io/oicq/#events */
       event: 'message',
       /** 优先级，数字越小等级越高 */
