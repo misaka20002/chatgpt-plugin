@@ -431,7 +431,7 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        opts.systemMessage = replacePromptForSenderMsg(opts.systemMessage);
+        opts.systemMessage = replacePromptForSenderMsg(e, opts.systemMessage);
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
@@ -604,7 +604,7 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        system = replacePromptForSenderMsg(system);
+        system = replacePromptForSenderMsg(e, system);
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
@@ -666,7 +666,7 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        system = replacePromptForSenderMsg(system);
+        system = replacePromptForSenderMsg(e, system);
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
@@ -929,7 +929,7 @@ async function collectTools (e) {
 }
 
 /** 呆毛版 在 prompt 中替换文本使用 e.sender 信息 */
-function replacePromptForSenderMsg(systemMsg = "") {
+function replacePromptForSenderMsg(e, systemMsg = "") {
   const getCurrentDate = () => {
     const date = new Date();
     const year = date.getFullYear();
