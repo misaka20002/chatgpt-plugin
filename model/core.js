@@ -428,17 +428,11 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        option.systemMessage = option.systemMessage.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
-        option.systemMessage = option.systemMessage.replace(/_sender_id_/igm, e.sender.user_id)
-        option.systemMessage = option.systemMessage.replace(/_sender_gender_/igm, e.sender.sex)
-        option.systemMessage = option.systemMessage.replace(/_sender_age_/igm, e.sender.age)
-        option.systemMessage = option.systemMessage.replace(/_sender_area_/igm, e.sender.area)
-        option.systemMessage = option.systemMessage.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
-        option.systemMessage = option.systemMessage.replace(/_sender_title_/igm, e.sender.title)
+        opts.systemMessage = replacePromptForSenderMsg(opts.systemMessage);
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
-        option.systemMessage += paintPropmtPrefix
+        opts.systemMessage += paintPropmtPrefix
       }
 
       if (opt.enableSmart) {
@@ -607,13 +601,7 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        system = system.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
-        system = system.replace(/_sender_id_/igm, e.sender.user_id)
-        system = system.replace(/_sender_gender_/igm, e.sender.sex)
-        system = system.replace(/_sender_age_/igm, e.sender.age)
-        system = system.replace(/_sender_area_/igm, e.sender.area)
-        system = system.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
-        system = system.replace(/_sender_title_/igm, e.sender.title)
+        system = replacePromptForSenderMsg(system);
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
@@ -675,13 +663,7 @@ class Core {
 
       // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
       if (Config.isReplacePromptForSenderMsg) {
-        system = system.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
-        system = system.replace(/_sender_id_/igm, e.sender.user_id)
-        system = system.replace(/_sender_gender_/igm, e.sender.sex)
-        system = system.replace(/_sender_age_/igm, e.sender.age)
-        system = system.replace(/_sender_area_/igm, e.sender.area)
-        system = system.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
-        system = system.replace(/_sender_title_/igm, e.sender.title)
+        system = replacePromptForSenderMsg(system);
       }
       // 呆毛版 连接画图插件
       if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
@@ -998,6 +980,33 @@ async function getAvailableBingToken (conversation, throttled = []) {
     bingToken,
     allThrottled
   }
+}
+
+/** 呆毛版 在 prompt 中替换文本使用 e.sender 信息 */
+function replacePromptForSenderMsg(systemMsg = "") {
+  const getCurrentDate = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const getCurrentTime = () => {
+    const date = new Date();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+  systemMsg = systemMsg.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+  systemMsg = systemMsg.replace(/_sender_id_/igm, e.sender.user_id)
+  systemMsg = systemMsg.replace(/_sender_gender_/igm, e.sender.sex)
+  systemMsg = systemMsg.replace(/_sender_age_/igm, e.sender.age)
+  systemMsg = systemMsg.replace(/_sender_area_/igm, e.sender.area)
+  systemMsg = systemMsg.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+  systemMsg = systemMsg.replace(/_sender_title_/igm, e.sender.title)
+  systemMsg = systemMsg.replace(/_date_/igm, getCurrentDate())
+  systemMsg = systemMsg.replace(/_time_/igm, getCurrentTime())
+  return systemMsg;
 }
 
 export default new Core()

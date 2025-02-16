@@ -902,7 +902,7 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits语音转换API地址',
-          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 或 https://misaka20001-paimon-is-not-a-food.hf.space/api/generate 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
           component: 'Input'
         },
         {
@@ -1266,7 +1266,7 @@ export function supportGuoba() {
         {
           field: 'isReplacePromptForSenderMsg',
           label: '呆毛版 设定拓展',
-          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
+          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
           component: 'Switch'
         },
         {
