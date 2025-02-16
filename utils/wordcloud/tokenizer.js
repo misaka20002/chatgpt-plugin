@@ -8,7 +8,7 @@ class Tokenizer {
       throw new Error('no valid group id')
     }
     let group = e.bot.pickGroup(groupId, true)
-    let latestChat = await group.getChatHistory(0, 1)
+    let latestChat = await group.getChatHistory(undefined, 1)
     let seq = latestChat[0].seq
     let chats = latestChat
     function compareByTime (a, b) {

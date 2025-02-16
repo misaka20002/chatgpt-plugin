@@ -41,15 +41,32 @@ export class SendPictureTool extends AbstractTool {
     } catch (err) {
       groupList = e.bot.gl
     }
+    let errs = []
     try {
       if (groupList.get(target)) {
         let group = await e.bot.pickGroup(target)
-        await group.sendMsg(pictures)
-        return 'picture has been sent to group' + target
+        for (let pic of pictures) {
+          try {
+            await group.sendMsg(pic)
+          } catch (err) {
+            errs.push(pic.url)
+          }
+        }
+        // await group.sendMsg(pictures)
+        return 'picture has been sent to group' + target + (errs.length > 0 ? `, but some pictures failed to send (${errs.join('、')})` : '')
       } else {
-        let user = await e.bot.pickFriend(target)
-        await user.sendMsg(pictures)
-        return 'picture has been sent to user' + target
+        let user = e.bot.pickUser(target)
+        if (e.group_id) {
+          user = user.asMember(e.group_id)
+        }
+        for (let pic of pictures) {
+          try {
+            await user.sendMsg(pic)
+          } catch (err) {
+            errs.push(pic.url)
+          }
+        }
+        return 'picture has been sent to user' + target + (errs.length > 0 ? `, but some pictures failed to send (${errs.join('、')})` : '')
       }
     } catch (err) {
       return `failed to send pictures, error: ${JSON.stringify(err)}`

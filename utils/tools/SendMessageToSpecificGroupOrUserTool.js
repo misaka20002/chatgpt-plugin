@@ -37,7 +37,11 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
         await group.sendMsg(await convertFaces(msg, true, e))
         return 'msg has been sent to group' + target
       } else {
-        let user = await e.bot.pickFriend(target)
+        let user = e.bot.pickUser(target)
+        if (e.group_id) {
+          user = user.asMember(e.group_id)
+        }
+        // let user = await e.bot.pickFriend(target)
         await user.sendMsg(msg)
         return 'msg has been sent to user' + target
       }

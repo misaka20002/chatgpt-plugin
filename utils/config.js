@@ -286,7 +286,7 @@ const defaultConfig = {
   bingAiOid: '',
   _2captchaKey: '',
   bingReasoning: false, // 是否深度思考
-
+  apiMaxToken: 4096,
   version: 'v2.8.3'
 }
 const _path = process.cwd()

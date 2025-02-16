@@ -99,7 +99,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     parentMessageId: string?,
    *     stream: boolean?,
    *     onProgress: function?,
-   *     functionResponse: FunctionResponse?,
+   *     functionResponse?: FunctionResponse | FunctionResponse[],
    *     system: string?,
    *     image: string?,
    *     maxOutputTokens: number?,
@@ -109,7 +109,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     replyPureTextCallback: Function,
    *     toolMode: 'AUTO' | 'ANY' | 'NONE'
    *     search: boolean,
-   *     codeExecution: boolean
+   *     codeExecution: boolean,
    * }} opt
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
@@ -138,12 +138,20 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     // }
     const idThis = crypto.randomUUID()
     const idModel = crypto.randomUUID()
-    const thisMessage = opt.functionResponse
+    if (opt.functionResponse && !typeof Array.isArray(opt.functionResponse)) {
+      opt.functionResponse = [opt.functionResponse]
+    }
+    const thisMessage = opt.functionResponse?.length > 0
       ? {
           role: 'user',
-          parts: [{
-            functionResponse: opt.functionResponse
-          }],
+          // parts: [{
+          //   functionResponse: opt.functionResponse
+          // }],
+          parts: opt.functionResponse.map(i => {
+            return {
+              functionResponse: i
+            }
+          }),
           id: idThis,
           parentMessageId: opt.parentMessageId || undefined
         }
@@ -241,7 +249,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       delete content.parentMessageId
       delete content.conversationId
     })
-    // logger.info(JSON.stringify(body))
+    if (this.debug) {
+      logger.debug(JSON.stringify(body))
+    }
     let result = await newFetch(url, {
       method: 'POST',
       body: JSON.stringify(body),
@@ -265,19 +275,19 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     responseContent = response.candidates[0].content
     let groundingMetadata = response.candidates[0].groundingMetadata
-    if (responseContent.parts.find(i => i.functionCall)) {
+    if (responseContent.parts.filter(i => i.functionCall).length > 0) {
       // functionCall
-      const functionCall = responseContent.parts.find(i => i.functionCall).functionCall
+      const functionCall = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall)
       const text = responseContent.parts.find(i => i.text)?.text
       if (text) {
         // send reply first
         logger.info('send message: ' + text)
         opt.replyPureTextCallback && await opt.replyPureTextCallback(text)
       }
-      // Gemini有时候只回复一个空的functionCall,无语死了
-      if (functionCall.name) {
-        logger.info(JSON.stringify(functionCall))
-        const funcName = functionCall.name
+      let /** @type {FunctionResponse[]} **/ fcResults = []
+      for (let fc of functionCall) {
+        logger.info(JSON.stringify(fc))
+        const funcName = fc.name
         let chosenTool = this.tools.find(t => t.name === funcName)
         /**
          * @type {FunctionResponse}
@@ -299,7 +309,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           try {
             let isAdmin = ['admin', 'owner'].includes(this.e.sender.role) || (this.e.group?.is_admin && this.e.isMaster)
             let isOwner = ['owner'].includes(this.e.sender.role) || (this.e.group?.is_owner && this.e.isMaster)
-            let args = Object.assign(functionCall.args, {
+            let args = Object.assign(fc.args, {
               isAdmin,
               isOwner,
               sender: this.e.sender,
@@ -316,29 +326,21 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             }
           }
         }
-        let responseOpt = _.cloneDeep(opt)
-        responseOpt.parentMessageId = idModel
-        responseOpt.functionResponse = functionResponse
-        // 递归直到返回text
-        // 先把这轮的消息存下来
-        await this.upsertMessage(thisMessage)
-        responseContent = handleSearchResponse(responseContent).responseContent
-        const respMessage = Object.assign(responseContent, {
-          id: idModel,
-          parentMessageId: idThis
-        })
-        await this.upsertMessage(respMessage)
-        return await this.sendMessage('', responseOpt)
-      } else {
-        // 谷歌抽风了，瞎调函数，不保存这轮，直接返回
-        return {
-          text: '',
-          conversationId: '',
-          parentMessageId: opt.parentMessageId,
-          id: '',
-          error: true
-        }
+        fcResults.push(functionResponse)
       }
+      let responseOpt = _.cloneDeep(opt)
+      responseOpt.parentMessageId = idModel
+      responseOpt.functionResponse = fcResults
+      // 递归直到返回text
+      // 先把这轮的消息存下来
+      await this.upsertMessage(thisMessage)
+      responseContent = handleSearchResponse(responseContent).responseContent
+      const respMessage = Object.assign(responseContent, {
+        id: idModel,
+        parentMessageId: idThis
+      })
+      await this.upsertMessage(respMessage)
+      return await this.sendMessage('', responseOpt)
     }
     if (responseContent) {
       await this.upsertMessage(thisMessage)

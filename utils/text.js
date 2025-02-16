@@ -3,8 +3,11 @@
  * @param msg
  */
 export function filterResponseChunk (msg) {
-  if (!msg || typeof msg !== 'string') {
+  if (!msg) {
     return false
+  }
+  if (typeof msg !== 'string') {
+    return msg
   }
   if (!msg.trim()) {
     return false

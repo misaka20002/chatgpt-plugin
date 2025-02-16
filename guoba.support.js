@@ -142,19 +142,25 @@ export function supportGuoba() {
         {
           field: 'model',
           label: 'OpenAI 模型',
-          bottomHelpMessage: 'gpt-4, gpt-4-0613, gpt-4-1106, gpt-4-32k, gpt-4-32k-0613, gpt-3.5-turbo, gpt-3.5-turbo-0613, gpt-3.5-turbo-1106, gpt-3.5-turbo-16k-0613。默认为gpt-3.5-turbo，gpt-4需账户支持',
+          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。',
           component: 'Input'
+        },
+        {
+          field: 'apiMaxToken',
+          label: 'max token',
+          bottomHelpMessage: '默认4096',
+          component: 'InputNumber'
         },
         {
           field: 'forwardReasoning',
           label: '是否转发思考过程',
-          bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。默认开启',
+          bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。仅适配reasoning_content。默认开启。',
           component: 'Switch'
         },
         {
           field: 'openAiBaseUrl',
           label: 'OpenAI API/反代地址',
-          bottomHelpMessage: 'OpenAI的API服务器地址。注意要带上/v1。默认为https://api.openai.com/v1',
+          bottomHelpMessage: 'OpenAI兼容API服务器地址。注意要带上/v1。默认为https://api.openai.com/v1',
           component: 'Input'
         },
         {

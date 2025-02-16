@@ -37,8 +37,11 @@ export class SendDiceTool extends AbstractTool {
         await group.sendMsg(segment.dice())
       }
     } else {
-      let friend = await e.bot.pickFriend(target)
-      await friend.sendMsg(segment.dice())
+      let user = e.bot.pickUser(target)
+      if (e.group_id) {
+        user = user.asMember(e.group_id)
+      }
+      await user.sendMsg(segment.dice())
     }
     if (num === 5) {
       logger.warn(1)

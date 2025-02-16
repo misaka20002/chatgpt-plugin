@@ -1,4 +1,5 @@
 import WebSocket from 'ws'
+import crypto from 'crypto'
 import common from '../../../lib/common/common.js'
 import _ from 'lodash'
 import { pTimeout } from '../utils/common.js'
@@ -120,7 +121,9 @@ export class BingAIClient {
       this.ws.once('message', (data) => {
         clearTimeout(timeout) // 清除超时定时器
         const message = JSON.parse(data)
-        logger.info(data)
+        if (this.debug) {
+          logger.info(data)
+        }
         if (message.event === 'challenge') {
           logger.warn('遇到turnstile验证码，尝试使用2captcha解决')
           // 如果收到 challenge，处理挑战
@@ -271,19 +274,27 @@ export class BingAIClient {
       throw new Error('max retry exceed, maybe refresh token error')
     }
     const url = `${this.baseUrl}/c/api/conversations`
+    const headers = {
+      // authorization: `Bearer ${this.accessToken}`,
+      'content-type': 'application/json',
+      origin: 'https://copilot.microsoft.com',
+      referer: 'https://copilot.microsoft.com/',
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0'
+    }
+    if (this.accessToken) {
+      headers.authorization = `Bearer ${this.accessToken}`
+    }
     const createConversationRsp = await fetch(url, {
-      headers: {
-        authorization: `Bearer ${this.accessToken}`,
-        'content-type': 'application/json',
-        origin: 'https://copilot.microsoft.com',
-        referer: 'https://copilot.microsoft.com/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 Edg/132.0.0.0'
-      },
+      headers,
       method: 'POST'
     })
     if (createConversationRsp.status === 401) {
-      await this.doRefreshToken()
-      return await this._generateConversationId(times - 1)
+      if (this.refreshToken) {
+        await this.doRefreshToken()
+        return await this._generateConversationId(times - 1)
+      } else {
+        this.accessToken = null
+      }
     }
     const conversation = await createConversationRsp.json()
     return conversation.id

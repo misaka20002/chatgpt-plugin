@@ -30,8 +30,11 @@ export class SendRPSTool extends AbstractTool {
       let group = await e.bot.pickGroup(target, true)
       await group.sendMsg(segment.rps(num))
     } else {
-      let friend = await e.bot.pickFriend(target)
-      await friend.sendMsg(segment.rps(num))
+      let user = e.bot.pickUser(target)
+      if (e.group_id) {
+        user = user.asMember(e.group_id)
+      }
+      await user.sendMsg(segment.rps(num))
     }
   }
 

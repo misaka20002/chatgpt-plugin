@@ -5,7 +5,7 @@ export async function getChatHistoryGroup (e, num) {
   // if (e.adapter === 'shamrock') {
   //  return await e.group.getChatHistory(0, num, false)
   // } else {
-  let latestChats = await e.group.getChatHistory(0, 1)
+  let latestChats = await e.group.getChatHistory(e.seq || e.message_id, 1)
   if (latestChats.length > 0) {
     let latestChat = latestChats[0]
     if (latestChat) {
@@ -16,13 +16,13 @@ export async function getChatHistoryGroup (e, num) {
         if (!chatHistory || chatHistory.length === 0) {
           break
         }
-        chats.push(...chatHistory)
-        if (seq === chatHistory[0].seq || seq === chatHistory[0].message_id) {
+        chats.push(...chatHistory.reverse())
+        if (seq === chatHistory[chatHistory.length - 1].seq || seq === chatHistory[chatHistory.length - 1].message_id) {
           break
         }
-        seq = chatHistory[0].seq || chatHistory[0].message_id
+        seq = chatHistory[chatHistory.length - 1].seq || chatHistory[chatHistory.length - 1].message_id
       }
-      chats = chats.slice(0, num)
+      chats = chats.slice(0, num).reverse()
       try {
         let mm = await e.bot.gml
         for (const chat of chats) {
