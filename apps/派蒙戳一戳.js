@@ -214,6 +214,7 @@ export class PaimonChuo extends plugin {
                         switch (defaultTTSRole) {
                             case '可莉_ZH':
                             case '可莉_JP':
+                            case 'keli_hailuo':
                                 voice_lists = voice_list_klee_cn.concat(voice_list_klee_jp);
                                 break;
                             case '纳西妲_ZH':
@@ -223,6 +224,7 @@ export class PaimonChuo extends plugin {
                             case '派蒙_ZH':
                             case '白露_ZH':
                             case '派蒙_JP':
+                            case 'Paimeng_hailuo':
                                 voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn, voice_list_paimon_jp);
                                 break;
                             case '春原心菜':
