@@ -5,11 +5,7 @@ import {
     getUserReplySetting
 } from '../utils/common.js'
 import {
-    speakers_ZH,
-    speakers_JP,
-    speakers_EN,
-    speakers_BA,
-    speakers_vits_uma_genshin_honkai,
+    get_matce_cn_speaker,
     speakers,
     vits_emotion_map,
     post_to_api_fish_audio_for_token
@@ -228,11 +224,11 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         if (Config.ttsSpace.includes('matce.cn')) {
             strs.push(`` +
                 `其中BA角色集仅支持日语语言，若#tts语音转日语关闭 则自动使用网址api的转日语功能（已失效），若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能（需要设置翻译源）。`)
-            let batchSpeakersNum = speakers_ZH.length / 50
+            let batchSpeakersNum = get_matce_cn_speaker("ZH").length / 50
             let speakersSliced
             let strsLenght = strs.length
             for (let i = 0; i < batchSpeakersNum; i++) {
-                speakersSliced = speakers_ZH.slice(i * 50, (i + 1) * 50)
+                speakersSliced = get_matce_cn_speaker("ZH").slice(i * 50, (i + 1) * 50)
                 strs[i + strsLenght] = '中文ZH角色：\n'
                 for (let j = 0; j < speakersSliced.length; j++) {
                     if (j % 2 == 0) {
@@ -244,10 +240,10 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 }
             }
 
-            batchSpeakersNum = speakers_JP.length / 50
+            batchSpeakersNum = get_matce_cn_speaker("JP").length / 50
             strsLenght = strs.length
             for (let i = 0; i < batchSpeakersNum; i++) {
-                speakersSliced = speakers_JP.slice(i * 50, (i + 1) * 50)
+                speakersSliced = get_matce_cn_speaker("JP").slice(i * 50, (i + 1) * 50)
                 strs[i + strsLenght] = '日文JP角色：\n'
                 for (let j = 0; j < speakersSliced.length; j++) {
                     if (j % 2 == 0) {
@@ -259,10 +255,10 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 }
             }
 
-            batchSpeakersNum = speakers_EN.length / 50
+            batchSpeakersNum = get_matce_cn_speaker("EN").length / 50
             strsLenght = strs.length
             for (let i = 0; i < batchSpeakersNum; i++) {
-                speakersSliced = speakers_EN.slice(i * 50, (i + 1) * 50)
+                speakersSliced = get_matce_cn_speaker("EN").slice(i * 50, (i + 1) * 50)
                 strs[i + strsLenght] = '英文EN角色：\n'
                 for (let j = 0; j < speakersSliced.length; j++) {
                     if (j % 2 == 0) {
@@ -274,10 +270,10 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
                 }
             }
 
-            batchSpeakersNum = speakers_BA.length / 50
+            batchSpeakersNum = get_matce_cn_speaker("BA").length / 50
             strsLenght = strs.length
             for (let i = 0; i < batchSpeakersNum; i++) {
-                speakersSliced = speakers_BA.slice(i * 50, (i + 1) * 50)
+                speakersSliced = get_matce_cn_speaker("BA").slice(i * 50, (i + 1) * 50)
                 strs[i + strsLenght] = 'BA角色：\n'
                 for (let j = 0; j < speakersSliced.length; j++) {
                     if (j % 2 == 0) {

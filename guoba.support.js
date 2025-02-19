@@ -28,6 +28,10 @@ export function supportGuoba() {
       // 配置项 schemas
       schemas: [
         {
+          label: '全局',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
           field: 'toggleMode',
           label: '触发方式',
           bottomHelpMessage: 'at模式下只有at机器人才会回复。#chat模式下不需要at，但需要添加前缀#chat',
@@ -128,6 +132,40 @@ export function supportGuoba() {
           componentProps: {
             min: 15000
           }
+        },
+        {
+          field: 'amapKey',
+          label: '高德APIKey',
+          bottomHelpMessage: '用于查询天气',
+          component: 'Input'
+        },
+        {
+          field: 'azSerpKey',
+          label: 'Azure search key',
+          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api',
+          component: 'Input'
+        },
+        {
+          field: 'serpSource',
+          label: '搜索来源，azure需填写key，ikechan8370为作者自备源',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: 'Azure', value: 'azure' },
+              { label: 'ikechan8370', value: 'ikechan8370' }
+              // { label: '数据', value: 'buffer' }
+            ]
+          }
+        },
+        {
+          field: 'extraUrl',
+          label: '智能模式url',
+          bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
+          component: 'Input'
+        },
+        {
+          label: '对话',
+          component: 'SOFT_GROUP_BEGIN'
         },
         {
           label: '以下为API方式(默认)的配置',
@@ -593,6 +631,10 @@ export function supportGuoba() {
           }
         },
         {
+          label: '通用',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
           label: '以下为通用配置。',
           component: 'Divider'
         },
@@ -756,6 +798,10 @@ export function supportGuoba() {
             min: 0
           }
         },
+        {
+          label: '语音',
+          component: 'SOFT_GROUP_BEGIN'
+        },
         // {
         //   field: '2captchaToken',
         //   label: '验证码平台Token',
@@ -908,7 +954,7 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits语音转换API地址',
-          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 或 https://misaka20001-paimon-is-not-a-food.hf.space/api/generate 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 或 https://misaka20001-paimon-is-not-a-food.hf.space/api/generate 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech；使用 hf_Bert-VITS2 填入： https://huggingface.co/spaces/TLME/Bert-VITS-Umamusume-Genshin-HonkaiSR ；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
           component: 'Input'
         },
         {
@@ -1009,44 +1055,7 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
-          label: 'vits-uma的设置',
-          component: 'Divider'
-        },
-        {
-          field: 'noiseScale',
-          label: 'noise',
-          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制情感变化程度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.1,
-            max: 2,
-            step: 0.1
-          }
-        },
-        {
-          field: 'noiseScaleW',
-          label: 'noiseScaleW',
-          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制音素发音长度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.1,
-            max: 2,
-            step: 0.001
-          }
-        },
-        {
-          field: 'lengthScale',
-          label: 'lengthScale',
-          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制整体语速，范围0.1-2.0',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.1,
-            max: 2,
-            step: 0.1
-          }
-        },
-        {
-          label: 'Bert-VITS2的设置',
+          label: 'VITS的设置',
           component: 'Divider'
         },
         {
@@ -1089,7 +1098,7 @@ export function supportGuoba() {
         {
           field: 'sdp_ratio',
           label: 'SDP ratio',
-          bottomHelpMessage: '（仅限Bert-VITS2）控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和hf_Bert-VITS2）控制语气波动的强度，该值越大则语气波动越强烈，但可能偶发出现语调奇怪，范围0.0-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0,
@@ -1099,7 +1108,7 @@ export function supportGuoba() {
         {
           field: 'noiseScale',
           label: 'noise',
-          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制情感变化程度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和hf_Bert-VITS2和vits-uma）控制情感变化程度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
@@ -1110,7 +1119,7 @@ export function supportGuoba() {
         {
           field: 'noiseScaleW',
           label: 'noiseScaleW',
-          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制音素发音长度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和hf_Bert-VITS2和vits-uma）控制音素发音长度；Bert-VITS2范围0.1-2.0，vits-uma范围0.1-1.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
@@ -1121,7 +1130,7 @@ export function supportGuoba() {
         {
           field: 'lengthScale',
           label: 'lengthScale',
-          bottomHelpMessage: '（仅限Bert-VITS2和vits-uma）控制整体语速，范围0.1-2.0',
+          bottomHelpMessage: '（仅限Bert-VITS2和hf_Bert-VITS2和vits-uma）控制整体语速，范围0.1-2.0',
           component: 'InputNumber',
           componentProps: {
             min: 0.1,
@@ -1132,7 +1141,7 @@ export function supportGuoba() {
         {
           field: 'tts_language',
           label: 'TTS语音使用的语言',
-          bottomHelpMessage: '（仅限Bert-VITS2）可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了',
+          bottomHelpMessage: '（仅限Bert-VITS2和hf_Bert-VITS2(ZH/JP)）可选ZH, JP, EN, mix(api暂不支持), auto(支持中日英自动,但api目前罗马数字会用英文)\n注意：（2024年3月31日）api仍不支持多语种切换，为适配碧蓝档案人物仅有JP语言，故而本插件改为根据角色自动判断语言，可以暂时无视该设置了',
           component: 'Select',
           componentProps: {
             options: [
@@ -1241,6 +1250,10 @@ export function supportGuoba() {
         //     step: 0.01,
         //   },
         // },
+        {
+          label: '小功能',
+          component: 'SOFT_GROUP_BEGIN'
+        },
         {
           label: '呆毛版 机器人cos设置',
           component: 'Divider'
@@ -1546,6 +1559,10 @@ export function supportGuoba() {
           }
         },
         {
+          label: '杂项',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
           label: '以下为Azure chatGPT的配置',
           component: 'Divider'
         },
@@ -1625,36 +1642,6 @@ export function supportGuoba() {
           bottomHelpMessage: '选择Live2D使用的模型',
           component: 'Input'
         },
-        {
-          field: 'amapKey',
-          label: '高德APIKey',
-          bottomHelpMessage: '用于查询天气',
-          component: 'Input'
-        },
-        {
-          field: 'azSerpKey',
-          label: 'Azure search key',
-          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api',
-          component: 'Input'
-        },
-        {
-          field: 'serpSource',
-          label: '搜索来源，azure需填写key，ikechan8370为作者自备源',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: 'Azure', value: 'azure' },
-              { label: 'ikechan8370', value: 'ikechan8370' }
-              // { label: '数据', value: 'buffer' }
-            ]
-          }
-        },
-        {
-          field: 'extraUrl',
-          label: '智能模式url',
-          bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
-          component: 'Input'
-        }
       ],
       // 获取配置数据方法（用于前端填充显示数据）
       getConfigData() {
