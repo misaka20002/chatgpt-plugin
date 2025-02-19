@@ -228,6 +228,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // 生成 hailuo 下的 mp3 音频
     else if (space.includes('hailuo')) {
+        logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 300000)
 
