@@ -257,7 +257,7 @@ export class memes extends plugin {
       keys = keys.filter(key => !keys_delete.includes(key));
     }
     let index = _.random(0, keys.length - 1, false)
-    console.log(keys, index)
+    logger.debug(keys, index)
     e.msg = infos[keys[index]].keywords[0]
     return await this.memes(e)
   }
