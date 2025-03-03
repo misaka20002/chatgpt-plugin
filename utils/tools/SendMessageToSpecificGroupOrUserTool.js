@@ -1,5 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { convertFaces } from '../face.js'
+import {getMasterQQ} from '../common.js'
+import {Config} from '../config.js'
 
 export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
   name = 'sendMessage'
@@ -19,7 +21,7 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
   }
 
   func = async function (opt, e) {
-    let { msg, targetGroupIdOrQQNumber } = opt
+    let { msg, sender, targetGroupIdOrQQNumber } = opt
     const defaultTarget = e.isGroup ? e.group_id : e.sender.user_id
     const target = isNaN(targetGroupIdOrQQNumber) || !targetGroupIdOrQQNumber
       ? defaultTarget
@@ -37,6 +39,10 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
         await group.sendMsg(await convertFaces(msg, true, e))
         return 'msg has been sent to group' + target
       } else {
+        let masters = (await getMasterQQ())
+        if (!Config.enableToolPrivateSend && !masters.includes(sender + '')) {
+          return 'you are not allowed to pm other group members'
+        }
         let user = e.bot.pickUser(target)
         if (e.group_id) {
           user = user.asMember(e.group_id)

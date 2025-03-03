@@ -111,9 +111,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     search: boolean,
    *     codeExecution: boolean,
    * }} opt
+   * @param {number} retryTime 重试次数
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
-  async sendMessage (text, opt = {}) {
+  async sendMessage (text, opt = {}, retryTime = 3) {
     let history = await this.getHistory(opt.parentMessageId)
     let systemMessage = opt.system
     // if (systemMessage) {
@@ -200,7 +201,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         }
       ],
       generationConfig: {
-        maxOutputTokens: opt.maxOutputTokens || 1000,
+        maxOutputTokens: opt.maxOutputTokens || 4096,
         temperature: opt.temperature || 0.9,
         topP: opt.topP || 0.95,
         topK: opt.tokK || 16
@@ -222,13 +223,15 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
       // ANY要笑死人的效果
       let mode = opt.toolMode || 'AUTO'
-      let lastFuncName = opt.functionResponse?.name
+      let lastFuncName = (/** @type {FunctionResponse[] | undefined}**/ opt.functionResponse)?.map(rsp => rsp.name)
       const mustSendNextTurn = [
         'searchImage', 'searchMusic', 'searchVideo'
       ]
-      if (lastFuncName && mustSendNextTurn.includes(lastFuncName)) {
+      if (lastFuncName && lastFuncName?.find(name => mustSendNextTurn.includes(name))) {
         mode = 'ANY'
       }
+      // 防止死循环。
+      delete opt.toolMode
       body.tool_config = {
         function_calling_config: {
           mode
@@ -267,7 +270,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
      */
     let responseContent
     /**
-     * @type {{candidates: Array<{content: Content, groundingMetadata: GroundingMetadata}>}}
+     * @type {{candidates: Array<{content: Content, groundingMetadata: GroundingMetadata, finishReason: string}>}}
      */
     let response = await result.json()
     if (this.debug) {
@@ -275,14 +278,19 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     responseContent = response.candidates[0].content
     let groundingMetadata = response.candidates[0].groundingMetadata
+    if (response.candidates[0].finishReason === 'MALFORMED_FUNCTION_CALL') {
+      logger.warn('遇到MALFORMED_FUNCTION_CALL，进行重试。')
+      return this.sendMessage(text, opt, retryTime--)
+    }
+    // todo 空回复也可以重试
     if (responseContent.parts.filter(i => i.functionCall).length > 0) {
       // functionCall
       const functionCall = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall)
       const text = responseContent.parts.find(i => i.text)?.text
-      if (text) {
+      if (text && text.trim()) {
         // send reply first
-        logger.info('send message: ' + text)
-        opt.replyPureTextCallback && await opt.replyPureTextCallback(text)
+        logger.info('send message: ' + text.trim())
+        opt.replyPureTextCallback && await opt.replyPureTextCallback(text.trim())
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
       for (let fc of functionCall) {
@@ -312,7 +320,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             let args = Object.assign(fc.args, {
               isAdmin,
               isOwner,
-              sender: this.e.sender,
+              sender: this.e.sender.user_id,
               mode: 'gemini'
             })
             functionResponse.response.content = await chosenTool.func(args, this.e)

@@ -81,7 +81,7 @@ export class help extends plugin {
     prompts.push(...[defaultPrompt, defaultSydneyPrompt])
     prompts.push(...readPrompts())
     console.log(prompts)
-    e.reply(await makeForwardMsg(e, prompts.map(p => `《${p.name}》\n${limitString(p.content, 500)}`), '设定列表'))
+    e.reply(await makeForwardMsg(e, prompts.map(p => `《${p.name}》\n${limitString(p.content, 100)}`), '设定列表'))
   }
 
   async detailPrompt (e) {

@@ -287,7 +287,11 @@ const defaultConfig = {
   _2captchaKey: '',
   bingReasoning: false, // 是否深度思考
   apiMaxToken: 4096,
-  version: 'v2.8.3'
+  enableToolPrivateSend: true, // 是否允许智能模式下私聊骚扰其他群友。主人不受影响。
+  geminiForceToolKeywords: [],
+  githubAPI: 'https://api.github.com',
+  githubAPIKey: '',
+  version: 'v2.8.4'
 }
 const _path = process.cwd()
 let config = {}

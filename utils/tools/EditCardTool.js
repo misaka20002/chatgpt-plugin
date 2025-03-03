@@ -24,7 +24,7 @@ export class EditCardTool extends AbstractTool {
   description = 'Useful when you want to edit someone\'s card in the group(群名片)'
 
   func = async function (opts, e) {
-    let { qq, card, groupId, isAdmin } = opts
+    let { qq, card, groupId, sender, isAdmin } = opts
     qq = isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
     groupId = isNaN(groupId) || !groupId ? e.group_id : parseInt(groupId.trim())
 
@@ -41,7 +41,7 @@ export class EditCardTool extends AbstractTool {
       logger.error('获取群信息失败，可能使用的底层协议不完善')
     }
     logger.info('edit card: ', groupId, qq)
-    if (isAdmin) {
+    if (isAdmin || sender == qq) {
       await group.setCard(qq, card)
     } else {
       return 'the user is not admin, he can\'t edit card of other people.'

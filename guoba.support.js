@@ -79,12 +79,12 @@ export function supportGuoba() {
           bottomHelpMessage: '独立的后台管理面板（默认3321端口），与锅巴类似。工具箱会有额外占用，启动速度稍慢，酌情开启。修改后需重启生效！！！',
           component: 'Switch'
         },
-        // {
-        //   field: 'enableMd',
-        //   label: 'QQ开启markdown',
-        //   bottomHelpMessage: 'qq的第三方md，非QQBot。需要适配器实现segment.markdown和segment.button方可使用，否则不建议开启，会造成各种错误。默认关闭',
-        //   component: 'Switch'
-        // },
+        {
+          field: 'enableToolPrivateSend',
+          label: '允许智能模式私聊',
+          bottomHelpMessage: '是否允许智能模式下发起临时对话骚扰其他群友。默认开启，如果怕Bot乱骚扰其他人可以关闭。主人不受影响。',
+          component: 'Switch'
+        },
         {
           field: 'translateSource',
           label: '翻译来源',
@@ -161,6 +161,12 @@ export function supportGuoba() {
           field: 'extraUrl',
           label: '智能模式url',
           bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
+          component: 'Input'
+        },
+        {
+          field: 'githubAPIKey',
+          label: 'github Access Token',
+          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。用于提高AI调用github工具的Rate Limit',
           component: 'Input'
         },
         {
@@ -609,25 +615,43 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
-          field: 'geminiTemperature',
-          label: 'gemini温度',
-          bottomHelpMessage: 'gemini温度',
-          component: 'InputNumber',
+          field: 'geminiForceToolKeywords',
+          label: 'gemini强制工具关键词',
+          bottomHelpMessage: 'gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
+          component: 'GTags',
           componentProps: {
-            min: 0,
-            max: 999999999,
-            step: 1
+            placeholder: '请输入强制工具关键词',
+            allowAdd: true,
+            allowDel: true,
+            showPrompt: true,
+            promptProps: {
+              content: '添加新的强制工具关键词',
+              okText: '添加',
+              rules: [
+                { required: true, message: '强制工具关键词不能为空' }
+              ]
+            },
+            valueParser: (value) => value.split(',') || []
           }
         },
         {
-          field: 'geminiMaxOutputTokens',
-          label: 'gemini最大输出token',
-          bottomHelpMessage: '默认值2000，gemini最大输出token',
-          component: 'InputNumber',
+          field: 'geminiForceToolKeywords',
+          label: 'gemini强制工具关键词',
+          bottomHelpMessage: 'gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
+          component: 'GTags',
           componentProps: {
-            min: 0,
-            max: 999999999,
-            step: 1
+            placeholder: '请输入强制工具关键词',
+            allowAdd: true,
+            allowDel: true,
+            showPrompt: true,
+            promptProps: {
+              content: '添加新的强制工具关键词',
+              okText: '添加',
+              rules: [
+                { required: true, message: '强制工具关键词不能为空' }
+              ]
+            },
+            valueParser: (value) => value.split(',') || []
           }
         },
         {
@@ -1642,6 +1666,8 @@ export function supportGuoba() {
           bottomHelpMessage: '选择Live2D使用的模型',
           component: 'Input'
         },
+
+
       ],
       // 获取配置数据方法（用于前端填充显示数据）
       getConfigData() {
