@@ -140,46 +140,32 @@ export class PaimonChuo extends plugin {
                 let mutetype
                 if (Config.paimon_chou_IsUseLoliconApi) mutetype = Math.ceil(Math.random() * 5)
                 else mutetype = Math.ceil(Math.random() * 3)
-                let url, msg, res
+                let url
                 switch (mutetype) {
                     case 1:
                         url = getRandomUrl("ecywebp");
-                        msg = [await segment.image(await convertWebpToPng(url))];
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
-                        await common.sleep(100)
-                        await e.reply(msg);
+                        await e.reply([await segment.image(await convertWebpToPng(url))]);
                         break;
                     case 2:
                         url = getRandomUrl("scy");
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [await segment.image(res.body)];
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
-                        await common.sleep(100)
-                        await e.reply(msg);
+                        await e.reply([await segment.image(await convertWebpToPng(url))]);
                         break;
                     case 3:
                         url = getRandomUrl("ecy");
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [await segment.image(res.body)];
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
-                        await common.sleep(100)
-                        await e.reply(msg);
+                        await e.reply([await segment.image(await convertWebpToPng(url))]);
                         break;
                     case 4:
                         url = await get_url_from_api_lolicon('ロリ|loli|萝莉|风景|壁纸', '');
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [await segment.image(res.body)];
                         await this.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`, false, { recallMsg: 100 })
-                        await common.sleep(100)
-                        await this.reply(msg, false, { recallMsg: 100 });
+                        await this.reply([await segment.image(await convertWebpToPng(url))], false, { recallMsg: 100 });
                         break;
                     case 5:
                         url = await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
-                        res = await fetch(url).catch((err) => logger.error(err));
-                        msg = [await segment.image(res.body)];
                         await this.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`, false, { recallMsg: 100 })
-                        await common.sleep(100)
-                        await this.reply(msg, false, { recallMsg: 100 });
+                        await this.reply([await segment.image(await convertWebpToPng(url))], false, { recallMsg: 100 });
                         break;
                 }
             }
