@@ -117,7 +117,7 @@ export function supportGuoba() {
         {
           field: 'imgOcr',
           label: '对话中图片OCR',
-          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；呆毛版 如果识别出文字会添加文本“拿出了一张图片上面写着:"xxxx"”',
+          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；建议关闭这个，开启对话-gemini-呆毛版 对话中图片识别',
           component: 'Switch'
         },
         {
@@ -688,7 +688,7 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-1.5-flash；gemini-1.5-pro；gemini-1.5-flash-8b；learnlm-1.5-pro-experimental；gemini-2.0-flash-exp；gemini-exp-1206；gemini-2.0-flash-thinking-exp-01-21；gemma-2-2b-it；gemma-2-9b-it；gemma-2-27b-it',
+          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-1.5-flash；gemini-1.5-pro；gemini-1.5-flash-8b；gemini-2.0-flash；gemini-2.0-flash-lite；gemini-exp-1206；gemini-2.0-flash-thinking-exp-01-21；gemini-2.0-pro-exp-02-05；gemma-2-2b-it；gemma-2-9b-it；gemma-2-27b-it',
           component: 'Input'
         },
         {
@@ -1524,6 +1524,10 @@ export function supportGuoba() {
         {
           label: '杂项',
           component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          label: 'emoji合成',
+          component: 'Divider'
         },
         {
           field: 'emojiBaseURL',

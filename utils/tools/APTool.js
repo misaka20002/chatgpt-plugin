@@ -8,7 +8,7 @@ export class APTool extends AbstractTool {
     properties: {
       prompt: {
         type: 'string',
-        description: 'draw prompt of StableDiffusion, prefer to be in English. should be many keywords split by comma.'
+        description: "draw prompt of StableDiffusion, prefer to be in English. should be many keywords split by comma."
       }
     },
     required: []
@@ -28,7 +28,7 @@ export class APTool extends AbstractTool {
     let charactersName = ""
     for (const key of Object.keys(charactersList)) {
       const reg_characters = new RegExp(key, "im")
-      charactersName = jsonTags.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
+      charactersName = prompt.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
     }
 
     // 使用nai插件
@@ -88,7 +88,7 @@ export class APTool extends AbstractTool {
         else if (random_nai < 0.6) {
           strPaint = '--width 1024 --height 1024'
         }
-        e.msg = `#draw${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#draw${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         if (e.img)
           e.msg += ', --reference_strength 0.3';
         // 随机 smea

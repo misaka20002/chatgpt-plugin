@@ -139,7 +139,7 @@ const defaultConfig = {
   meme_maxFileSize: 10,
   meme_CD: 11,
   isConvertSentenceToArrayReply: false,
-  gemini_vqa_model: "gemini-1.5-flash-latest",
+  gemini_vqa_model: "gemini-2.0-flash",
   gemini_vqa_needMaster: true,
   ttsHD: false,
   focus_CloudTranscode: false,
@@ -230,7 +230,7 @@ const defaultConfig = {
   qwenEnableSearch: true,
   geminiKey: '',
   // geminiKeyArr: '',
-  geminiModel: 'gemini-pro',
+  geminiModel: 'gemini-2.0-flash',
   geminiPrompt: 'You are Gemini. Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   // origin: https://generativelanguage.googleapis.com
   geminiBaseUrl: 'https://gemini.ikechan8370.com',
