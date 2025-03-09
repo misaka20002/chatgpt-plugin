@@ -120,7 +120,7 @@ export class APTool extends AbstractTool {
         }
       }
       try {
-        e.msg = '#绘图' + prompt
+        e.msg = '#绘图' + charactersName + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         await ap.aiPainting(e)
         console.log('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
@@ -139,7 +139,7 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = '#sf绘图' + prompt
+        e.msg = '#sf绘图' + charactersName + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         await sf.sf_draw(e)
         console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
@@ -158,7 +158,7 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = '#mjp' + prompt
+        e.msg = '#mjp' + charactersName + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         await sfmj.mj_draw(e)
         console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'

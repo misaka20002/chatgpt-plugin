@@ -82,7 +82,7 @@ export function supportGuoba() {
         {
           field: 'smartMode',
           label: '智能模式',
-          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
+          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳；需要设置“智能模式url”',
           component: 'Switch'
         },
         {
@@ -1238,14 +1238,14 @@ export function supportGuoba() {
         },
         {
           field: 'drawByJsonToPlugin',
-          label: '连接绘画插件',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；',
+          label: '绘画prompt模式',
+          bottomHelpMessage: '绘画prompt模式 适用于不支持调用函数的大模型；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。',
           component: "Select",
           componentProps: {
             options: [
               { label: "关闭", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
-              { label: "nai-plugin（#draw）", value: "nai-plugin-4" },
+              { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
               { label: "ap-plugin（#绘图）", value: "ap-plugin" },
               { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
@@ -1256,13 +1256,13 @@ export function supportGuoba() {
         {
           field: 'drawToolS',
           label: '智能模式绘画',
-          bottomHelpMessage: '在智能模式中切换绘画时使用的插件，若使用Gemini可设置gemini强制工具关键词',
+          bottomHelpMessage: '智能模式绘画 适用于支持调用函数的大模型，需要开启 全局-智能模式，在智能模式下控制使用的绘画插件；若使用Gemini可设置gemini强制工具关键词。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
           component: "Select",
           componentProps: {
             options: [
               { label: "关闭", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
-              { label: "nai-plugin（#draw）", value: "nai-plugin-4" },
+              { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
               { label: "ap-plugin（#绘图）", value: "ap-plugin" },
               { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
