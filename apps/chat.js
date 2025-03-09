@@ -885,7 +885,7 @@ export class chatgpt extends plugin {
       }
       let response = chatMessage?.text?.replace('\n\n\n', '\n')
       let postProcessors = await collectProcessors('post')
-let thinking = chatMessage.thinking_text
+      let thinking = chatMessage.thinking_text
       for (let processor of postProcessors) {
         let output = await processor.processInner({
           text: response, thinking_text: thinking
@@ -1005,7 +1005,7 @@ let thinking = chatMessage.thinking_text
       }
 
       // 处理 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
+      if (Config.drawByJsonToPlugin) {
         let json = response?.match(/({.*})/s)?.[1];
         let jsonTags, jsonMsg
         if (json) {
@@ -1046,7 +1046,7 @@ let thinking = chatMessage.thinking_text
             charactersName = jsonTags.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
           }
 
-          if (Config.enableNai3PluginToPaint) {
+          if (Config.drawByJsonToPlugin === 'nai-plugin-1' || Config.drawByJsonToPlugin === 'paimonnai-plugin') {
             // 使用nai插件
             let nai
             try {
@@ -1096,7 +1096,52 @@ let thinking = chatMessage.thinking_text
               console.log('[ChatGPT]调用nai插件错误：', err)
             }
           }
-          else if (Config.enableApPluginToPaint) {
+          else if (Config.drawByJsonToPlugin === 'nai-plugin-4') {
+            // 使用nai插件
+            let nai
+            try {
+              let { Text } = await import('../../nai-plugin/apps/Text.js')
+              nai = new Text();
+            } catch (err) {
+              console.log('[ChatGPT]调用nai插件错误-未安装nai插件')
+            }
+            try {
+              // 随机使用宽图或竖图
+              let strPaint = ''
+              const random_nai = Math.random();
+              if (random_nai < 0.3) {
+                strPaint = '--width 1216 --height 832'
+              }
+              else if (random_nai < 0.6) {
+                strPaint = '--width 1024 --height 1024'
+              }
+              e.msg = `#draw${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              if (e.img)
+                e.msg += ', --reference_strength 0.3';
+              // 随机 smea
+              const random_1 = Math.random()
+              e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', --sm true --sm_dyn false' : ', --sm true --sm_dyn true');
+              console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
+              if (Config.doNotCheckPaintPluginSuccess) {
+                nai.text(e);
+              } else {
+                let isTrue = await nai.text(e);
+                if (isTrue) {
+                  if (!response)
+                    return true
+                }
+                else {
+                  console.log('[ChatGPT]调用nai插件错误：请检查nai插件在当前群聊能否使用');
+                  response = `${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`;
+                  e.reply(`${Config.tts_First_person}在这个群还不能使用#绘画 功能啦`, true)
+                  return false;
+                }
+              }
+            } catch (err) {
+              console.log('[ChatGPT]调用nai插件错误：', err)
+            }
+          }
+          else if (Config.drawByJsonToPlugin === 'ap-plugin') {
             // 使用ap插件
             let ap
             try {
@@ -1134,7 +1179,7 @@ let thinking = chatMessage.thinking_text
               console.log('[ChatGPT]调用ap插件错误：', err)
             }
           }
-          else if (Config.enableSiliconflowPluginToPaint) {
+          else if (Config.drawByJsonToPlugin === 'siliconflow-plugin-sf') {
             // 使用sf插件sf绘图
             let sf
             try {
@@ -1165,7 +1210,7 @@ let thinking = chatMessage.thinking_text
               console.log('[ChatGPT]调用sf插件错误：', err)
             }
           }
-          else if (Config.enableSiliconflowPluginMJToPaint) {
+          else if (Config.drawByJsonToPlugin === 'siliconflow-plugin-mj') {
             // 使用sf插件mj绘图
             let sfmj
             try {

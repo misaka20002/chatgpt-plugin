@@ -50,16 +50,134 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'assistantLabel',
-          label: 'AI名字',
-          bottomHelpMessage: 'AI认为的自己的名字，当你问他你是谁是他会回答这里的名字',
+          label: '通用配置',
+          component: 'Divider'
+        },
+        {
+          field: 'blockWords',
+          label: '输出黑名单',
+          bottomHelpMessage: '检查输出结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'promptBlockWords',
+          label: '输入黑名单',
+          bottomHelpMessage: '检查输入结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'whitelist',
+          label: '对话白名单',
+          bottomHelpMessage: '呆毛版白名单优先方案：群号用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。说明：1、全局白名单模式，即除白名单以外的都不能使用插件对话；2、可在白名单的基础上指定黑名单；3、若什么都不填则关闭白名单功能仅使用黑名单功能。' +
+            '白名单优先级：群号^qq > qq > 群号。\n' +
+            '黑名单优先级: 群号 > qq > 群号^qq。',
           component: 'Input'
         },
         {
-          field: 'enableBYM',
-          label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。目前仅支持gemini，会使用gemini的配置。发言包括AI名字会必定触发回复。',
+          field: 'blacklist',
+          label: '对话黑名单',
+          bottomHelpMessage: '参考白名单设置规则。',
+          component: 'Input'
+        },
+        {
+          field: 'smartMode',
+          label: '智能模式',
+          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
           component: 'Switch'
+        },
+        {
+          field: 'enableToolPrivateSend',
+          label: '允许智能模式私聊',
+          bottomHelpMessage: '是否允许智能模式下发起临时对话骚扰其他群友。默认开启，如果怕Bot乱骚扰其他人可以关闭。主人不受影响。',
+          component: 'Switch'
+        },
+        {
+          field: 'extraUrl',
+          label: '智能模式url',
+          bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
+          component: 'Input'
+        },
+        {
+          field: 'enableGroupContext',
+          label: '是否允许机器人读取近期的群聊聊天记录',
+          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
+          component: 'Switch'
+        },
+        {
+          field: 'groupContextTip',
+          label: '机器人读取聊天记录时的后台prompt',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'groupContextLength',
+          label: '允许机器人读取近期的最多群聊聊天记录条数。',
+          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
+          component: 'InputNumber'
+        },
+        {
+          field: 'imgOcr',
+          label: '对话中图片OCR',
+          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；呆毛版 如果识别出文字会添加文本“拿出了一张图片上面写着:"xxxx"”',
+          component: 'Switch'
+        },
+        {
+          field: 'enablePrivateChat',
+          label: '是否允许私聊机器人',
+          component: 'Switch'
+        },
+        {
+          field: 'defaultUsePicture',
+          label: '全局图片模式',
+          bottomHelpMessage: '全局默认以图片形式回复',
+          component: 'Switch'
+        },
+        {
+          field: 'autoUsePicture',
+          label: '长文本自动转图片',
+          bottomHelpMessage: '字数大于阈值会自动用图片发送，即使是文本模式',
+          component: 'Switch'
+        },
+        {
+          field: 'autoUsePictureThreshold',
+          label: '自动转图片阈值',
+          helpMessage: '长文本自动转图片开启后才生效',
+          bottomHelpMessage: '自动转图片的字数阈值',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
+        {
+          field: 'conversationPreserveTime',
+          label: '对话保留时长',
+          helpMessage: '单位：秒',
+          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
+        {
+          field: 'groupMerge',
+          label: '群组消息合并',
+          bottomHelpMessage: '开启后，群聊消息将被视为同一对话',
+          component: 'Switch'
+        },
+        {
+          field: 'quoteReply',
+          label: '图片引用消息',
+          bottomHelpMessage: '在回复图片时引用原始消息',
+          component: 'Switch'
+        },
+        {
+          field: 'showQRCode',
+          label: '启用二维码',
+          bottomHelpMessage: '在图片模式中启用二维码。该对话内容将被发送至第三方服务器以进行渲染展示，如果不希望对话内容被上传到第三方服务器请关闭此功能',
+          component: 'Switch'
+        },
+        {
+          label: '系统配置',
+          component: 'Divider'
         },
         {
           field: 'proxy',
@@ -77,12 +195,6 @@ export function supportGuoba() {
           field: 'enableToolbox',
           label: '开启工具箱',
           bottomHelpMessage: '独立的后台管理面板（默认3321端口），与锅巴类似。工具箱会有额外占用，启动速度稍慢，酌情开启。修改后需重启生效！！！',
-          component: 'Switch'
-        },
-        {
-          field: 'enableToolPrivateSend',
-          label: '允许智能模式私聊',
-          bottomHelpMessage: '是否允许智能模式下发起临时对话骚扰其他群友。默认开启，如果怕Bot乱骚扰其他人可以关闭。主人不受影响。',
           component: 'Switch'
         },
         {
@@ -156,12 +268,6 @@ export function supportGuoba() {
               // { label: '数据', value: 'buffer' }
             ]
           }
-        },
-        {
-          field: 'extraUrl',
-          label: '智能模式url',
-          bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
-          component: 'Input'
         },
         {
           field: 'githubAPIKey',
@@ -635,194 +741,6 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'geminiForceToolKeywords',
-          label: 'gemini强制工具关键词',
-          bottomHelpMessage: 'gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
-          component: 'GTags',
-          componentProps: {
-            placeholder: '请输入强制工具关键词',
-            allowAdd: true,
-            allowDel: true,
-            showPrompt: true,
-            promptProps: {
-              content: '添加新的强制工具关键词',
-              okText: '添加',
-              rules: [
-                { required: true, message: '强制工具关键词不能为空' }
-              ]
-            },
-            valueParser: (value) => value.split(',') || []
-          }
-        },
-        {
-          label: '通用',
-          component: 'SOFT_GROUP_BEGIN'
-        },
-        {
-          label: '以下为通用配置。',
-          component: 'Divider'
-        },
-        {
-          field: 'blockWords',
-          label: '输出黑名单',
-          bottomHelpMessage: '检查输出结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'promptBlockWords',
-          label: '输入黑名单',
-          bottomHelpMessage: '检查输入结果中是否有违禁词，如果存在黑名单中的违禁词则不输出。英文逗号隔开',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'whitelist',
-          label: '对话白名单',
-          bottomHelpMessage: '呆毛版白名单优先方案：群号用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。说明：1、全局白名单模式，即除白名单以外的都不能使用插件对话；2、可在白名单的基础上指定黑名单；3、若什么都不填则关闭白名单功能仅使用黑名单功能。' +
-            '白名单优先级：群号^qq > qq > 群号。\n' +
-            '黑名单优先级: 群号 > qq > 群号^qq。',
-          component: 'Input'
-        },
-        {
-          field: 'blacklist',
-          label: '对话黑名单',
-          bottomHelpMessage: '参考白名单设置规则。',
-          component: 'Input'
-        },
-        {
-          field: 'smartMode',
-          label: '智能模式',
-          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
-          component: 'Switch'
-        },
-        {
-          field: 'enableGroupContext',
-          label: '是否允许机器人读取近期的群聊聊天记录',
-          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
-          component: 'Switch'
-        },
-        {
-          field: 'groupContextTip',
-          label: '机器人读取聊天记录时的后台prompt',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'groupContextLength',
-          label: '允许机器人读取近期的最多群聊聊天记录条数。',
-          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
-          component: 'InputNumber'
-        },
-        {
-          field: 'imgOcr',
-          label: '对话中图片OCR',
-          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；呆毛版 如果识别出文字会添加文本“拿出了一张图片上面写着:"xxxx"”',
-          component: 'Switch'
-        },
-        {
-          field: 'enablePrivateChat',
-          label: '是否允许私聊机器人',
-          component: 'Switch'
-        },
-        {
-          field: 'defaultUsePicture',
-          label: '全局图片模式',
-          bottomHelpMessage: '全局默认以图片形式回复',
-          component: 'Switch'
-        },
-        {
-          field: 'autoUsePicture',
-          label: '长文本自动转图片',
-          bottomHelpMessage: '字数大于阈值会自动用图片发送，即使是文本模式',
-          component: 'Switch'
-        },
-        {
-          field: 'autoUsePictureThreshold',
-          label: '自动转图片阈值',
-          helpMessage: '长文本自动转图片开启后才生效',
-          bottomHelpMessage: '自动转图片的字数阈值',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'conversationPreserveTime',
-          label: '对话保留时长',
-          helpMessage: '单位：秒',
-          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'groupMerge',
-          label: '群组消息合并',
-          bottomHelpMessage: '开启后，群聊消息将被视为同一对话',
-          component: 'Switch'
-        },
-        {
-          field: 'quoteReply',
-          label: '图片引用消息',
-          bottomHelpMessage: '在回复图片时引用原始消息',
-          component: 'Switch'
-        },
-        {
-          field: 'showQRCode',
-          label: '启用二维码',
-          bottomHelpMessage: '在图片模式中启用二维码。该对话内容将被发送至第三方服务器以进行渲染展示，如果不希望对话内容被上传到第三方服务器请关闭此功能',
-          component: 'Switch'
-        },
-        {
-          label: '以下为Suno音乐合成的配置。',
-          component: 'Divider'
-        },
-        {
-          field: 'sunoSessToken',
-          label: 'sunoSessToken',
-          bottomHelpMessage: 'suno的__sess token，需要与sunoClientToken一一对应数量相同，多个用逗号隔开',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'sunoClientToken',
-          label: 'sunoClientToken',
-          bottomHelpMessage: 'suno的__client token，需要与sunoSessToken一一对应数量相同，多个用逗号隔开',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'enableChatSuno',
-          label: '允许聊天指令声音音乐',
-          bottomHelpMessage: '允许聊天指令声音音乐',
-          component: 'Switch'
-        },
-        {
-          field: 'SunoModel',
-          label: '调用模式',
-          bottomHelpMessage: '调用模式',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: '本地', value: 'local' },
-              { label: '第三方', value: 'api' }
-            ]
-          }
-        },
-        {
-          field: 'bingSunoApi',
-          label: '第三方歌曲生成API地址',
-          bottomHelpMessage: 'https://github.com/gcui-art/suno-api的api地址',
-          component: 'Input'
-        },
-        {
-          field: 'sunoApiTimeout',
-          label: 'SunoApi获取超时时间',
-          helpMessage: '单位：秒',
-          bottomHelpMessage: '使用sunoApi获取数据时超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
           label: '语音',
           component: 'SOFT_GROUP_BEGIN'
         },
@@ -1285,7 +1203,7 @@ export function supportGuoba() {
         {
           field: 'tts_First_person',
           label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称。',
+          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫',
           component: 'Input'
         },
         {
@@ -1319,28 +1237,38 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
-          field: 'enableNai3PluginToPaint',
-          label: '连接nai插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装nai插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；',
-          component: 'Switch'
+          field: 'drawByJsonToPlugin',
+          label: '连接绘画插件',
+          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；',
+          component: "Select",
+          componentProps: {
+            options: [
+              { label: "关闭", value: false },
+              { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
+              { label: "nai-plugin（#draw）", value: "nai-plugin-4" },
+              { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
+              { label: "ap-plugin（#绘图）", value: "ap-plugin" },
+              { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
+              { label: "siliconflow-plugin（#mjp'）", value: "siliconflow-plugin-mj" },
+            ],
+          },
         },
         {
-          field: 'enableApPluginToPaint',
-          label: '连接ap插件绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装ap插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap',
-          component: 'Switch'
-        },
-        {
-          field: 'enableSiliconflowPluginToPaint',
-          label: '连接sf插件sf绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
-          component: 'Switch'
-        },
-        {
-          field: 'enableSiliconflowPluginMJToPaint',
-          label: '连接sf插件mj绘画',
-          bottomHelpMessage: '用法：直接告知你想要画画的内容，需要先安装siliconflow插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问；优先级：nai > ap > siliconflow',
-          component: 'Switch'
+          field: 'drawToolS',
+          label: '智能模式绘画',
+          bottomHelpMessage: '在智能模式中切换绘画时使用的插件，若使用Gemini可设置gemini强制工具关键词',
+          component: "Select",
+          componentProps: {
+            options: [
+              { label: "关闭", value: false },
+              { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
+              { label: "nai-plugin（#draw）", value: "nai-plugin-4" },
+              { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
+              { label: "ap-plugin（#绘图）", value: "ap-plugin" },
+              { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
+              { label: "siliconflow-plugin（#mjp'）", value: "siliconflow-plugin-mj" },
+            ],
+          },
         },
         {
           field: 'doNotCheckPaintPluginSuccess',
@@ -1478,44 +1406,20 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
-          label: '以下为杂七杂八的配置',
-          component: 'Divider'
+          label: '伪人',
+          component: 'SOFT_GROUP_BEGIN'
         },
         {
-          field: 'initiativeChatGroups',
-          label: '主动发起聊天群聊的群号',
-          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛版-经测试喵崽无法使用',
+          field: 'assistantLabel',
+          label: 'AI名字',
+          bottomHelpMessage: 'AI认为的自己的名字，当你问他你是谁是他会回答这里的名字，用于伪人模式',
           component: 'Input'
         },
         {
-          field: 'helloPrompt',
-          label: '打招呼prompt',
-          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
-          component: 'Input'
-        },
-        {
-          field: 'helloInterval',
-          label: '打招呼间隔(小时)',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            max: 24
-          }
-        },
-        {
-          field: 'helloProbability',
-          label: '打招呼的触发概率(%)',
-          bottomHelpMessage: '设置为100则每次经过间隔时间必定触发主动打招呼事件。',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 100
-          }
-        },
-        {
-          field: 'emojiBaseURL',
-          label: '合成emoji的API地址，默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
-          component: 'Input'
+          field: 'enableBYM',
+          label: '开启伪人模式',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。目前仅支持gemini，会使用gemini的配置。发言包括AI名字会必定触发回复。',
+          component: 'Switch'
         },
         {
           field: 'bymRate',
@@ -1583,8 +1487,48 @@ export function supportGuoba() {
           }
         },
         {
+          label: '以下为杂七杂八的配置',
+          component: 'Divider'
+        },
+        {
+          field: 'initiativeChatGroups',
+          label: '主动发起聊天群聊的群号',
+          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛版-经测试喵崽无法使用',
+          component: 'Input'
+        },
+        {
+          field: 'helloPrompt',
+          label: '打招呼prompt',
+          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
+          component: 'Input'
+        },
+        {
+          field: 'helloInterval',
+          label: '打招呼间隔(小时)',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 24
+          }
+        },
+        {
+          field: 'helloProbability',
+          label: '打招呼的触发概率(%)',
+          bottomHelpMessage: '设置为100则每次经过间隔时间必定触发主动打招呼事件。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 100
+          }
+        },
+        {
           label: '杂项',
           component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          field: 'emojiBaseURL',
+          label: '合成emoji的API地址，默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
+          component: 'Input'
         },
         {
           label: '以下为Azure chatGPT的配置',
@@ -1645,7 +1589,7 @@ export function supportGuoba() {
         {
           field: 'chatViewBotName',
           label: 'Bot命名',
-          bottomHelpMessage: '新渲染模式强制修改Bot命名',
+          bottomHelpMessage: '新渲染模式强制修改Bot命名，用于图片模式渲染显示的bot名称',
           component: 'Input'
         },
         {
@@ -1665,6 +1609,56 @@ export function supportGuoba() {
           label: 'Live2D模型',
           bottomHelpMessage: '选择Live2D使用的模型',
           component: 'Input'
+        },
+        {
+          label: '以下为Suno音乐合成的配置。',
+          component: 'Divider'
+        },
+        {
+          field: 'sunoSessToken',
+          label: 'sunoSessToken',
+          bottomHelpMessage: 'suno的__sess token，需要与sunoClientToken一一对应数量相同，多个用逗号隔开',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'sunoClientToken',
+          label: 'sunoClientToken',
+          bottomHelpMessage: 'suno的__client token，需要与sunoSessToken一一对应数量相同，多个用逗号隔开',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'enableChatSuno',
+          label: '允许聊天指令声音音乐',
+          bottomHelpMessage: '允许聊天指令声音音乐',
+          component: 'Switch'
+        },
+        {
+          field: 'SunoModel',
+          label: '调用模式',
+          bottomHelpMessage: '调用模式',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '本地', value: 'local' },
+              { label: '第三方', value: 'api' }
+            ]
+          }
+        },
+        {
+          field: 'bingSunoApi',
+          label: '第三方歌曲生成API地址',
+          bottomHelpMessage: 'https://github.com/gcui-art/suno-api的api地址',
+          component: 'Input'
+        },
+        {
+          field: 'sunoApiTimeout',
+          label: 'SunoApi获取超时时间',
+          helpMessage: '单位：秒',
+          bottomHelpMessage: '使用sunoApi获取数据时超时时间',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
         },
 
 

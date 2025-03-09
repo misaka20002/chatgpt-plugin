@@ -458,7 +458,7 @@ class Core {
         opts.systemMessage = replacePromptForSenderMsg(e, opts.systemMessage);
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
+      if (Config.drawByJsonToPlugin) {
         opts.systemMessage += paintPropmtPrefix
       }
 
@@ -585,7 +585,7 @@ class Core {
         system = replacePromptForSenderMsg(e, system);
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
+      if (Config.drawByJsonToPlugin) {
         system += paintPropmtPrefix
       }
 
@@ -648,7 +648,7 @@ class Core {
         system = replacePromptForSenderMsg(e, system);
       }
       // 呆毛版 连接画图插件
-      if (Config.enableNai3PluginToPaint || Config.enableApPluginToPaint || Config.enableSiliconflowPluginToPaint || Config.enableSiliconflowPluginMJToPaint) {
+      if (Config.drawByJsonToPlugin) {
         system += paintPropmtPrefix
       }
 
