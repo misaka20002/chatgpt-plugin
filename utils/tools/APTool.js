@@ -24,7 +24,7 @@ export class APTool extends AbstractTool {
     e.atBot = false
 
     // 为角色添加作品名
-    const charactersList = JSON.parse(Config.nai3PluginCharactersList)
+    const charactersList = Config.get_draw_PluginCharactersList();
     let charactersName = ""
     for (const key of Object.keys(charactersList)) {
       const reg_characters = new RegExp(key, "im")

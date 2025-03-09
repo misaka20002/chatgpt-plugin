@@ -1243,7 +1243,7 @@ export function supportGuoba() {
           component: "Select",
           componentProps: {
             options: [
-              { label: "关闭", value: false },
+              { label: "关闭绘画prompt模式", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
               { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
@@ -1260,7 +1260,7 @@ export function supportGuoba() {
           component: "Select",
           componentProps: {
             options: [
-              { label: "关闭", value: false },
+              { label: "关闭智能模式绘画", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
               { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
@@ -1278,18 +1278,18 @@ export function supportGuoba() {
         },
         {
           field: 'nai3PluginToPaintPrefix',
-          label: '连接绘画插件的前缀',
-          bottomHelpMessage: '定义绘画前缀，例如画师、画风等；ap/nai共用',
+          label: '绘画前缀',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、采样器等；ap/nai/sf共用',
           component: 'Input',
           componentProps: {
             placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
           },
         },
         {
-          field: 'nai3PluginCharactersList',
+          field: 'draw_PluginCharactersList',
           label: '绘画添加作品名',
-          bottomHelpMessage: '连接绘画插件时使作品角色添加作品名，请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"nahida":"{{nahida_(genshin_impact)}}","klee":"{{klee_(genshin_impact)}}"}',
-          component: 'InputTextArea'
+          bottomHelpMessage: '连接绘画插件时使作品角色添加*更多*作品名（只需要添加你的新角色即可），请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"last(_|\\\\s)order|misaka":"last order (Toaru Majutsu no Index), toddler","nahida":"nahida (genshin impact), toddler"}',
+          component: 'Input'
         },
         {
           label: '以下为戳一戳设置',

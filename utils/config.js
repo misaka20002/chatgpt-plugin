@@ -93,7 +93,7 @@ const defaultConfig = {
   drawToolS: false,
   sf_markdownPic: false,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
-  nai3PluginCharactersList: '{"nahida":"{{nahida_(genshin_impact), toddler}}","klee":"{{klee_(genshin_impact), toddler}}","paimon":"{{paimon_(genshin_impact), toddler}}","bailu":"{{bailu_(honkai:_star_rail), toddler}}","clara":"{{clara_(honkai:_star_rail), toddler}}","last(_|\s)order|misaka":"{{last_order(Toaru_Majutsu_no_Index), toddler}}","sayu":"{{sayu_(genshin_impact), toddler}}","diona":"{{diona_(genshin_impact), toddler}}","yaoyao":"{{yaoyao_(genshin_impact), toddler}}","qiqi":"{{qiqi_(genshin_impact), toddler}}","furina":"{{furina_(genshin_impact), toddler}}","Mahiro":"{{Oyama_Mahiro(Onichanhaoshimai), toddler}}","arona":"{{arona_(blue_archive), toddler}}","sora":"{{sora_(blue_archive), toddler}}","kokona":"{{kokona_(blue_archive), toddler}}","hoshino":"{{hoshino_(blue_archive), toddler}}","Koharu":"{{Shimoe_Koharu_(Blue archive), toddler}}","Gura":"{{Gawr_Gura_(Hololive), toddler}}","suzuran":"{{suzuran_(arknights), toddler}}","Anya":"{{Anya_Forger(SPY×FAMILY), light pink hair, toddler}}","Azusa":"{{nakano_Azusa(K-ON), toddler}}","laffey":"{{laffey (azur_lane), toddler}}","nachoneko":"{{nachoneko (indie virtual youtuber), toddler}}","hutao":"{{hu tao (genshin_impact), toddler}}","Azusa":"{{nakano_Azusa(K-ON), toddler}}","ibuki":"{{tanga ibuki (blue_archive), blond hair, toddler}}","shun":"{{shun (small) (blue archive), toddler}}"}',
+  draw_PluginCharactersList: '',
   doNotCheckPaintPluginSuccess: false,
   paimon_chuoyichuo_open: true,
   // paimon_chuoyichuo_ByMsgGroups: [],
@@ -336,7 +336,7 @@ config.version = defaultConfig.version
 // config.version = latestTag
 
 export const Config = new Proxy(config, {
-  get (target, property) {
+  get(target, property) {
     if (property === 'getGeminiKey') {
       return function () {
         if (target.geminiKey?.length === 0) {
@@ -348,10 +348,24 @@ export const Config = new Proxy(config, {
         return geminiKeyArr[randomIndex]
       }
     }
+    else if (property === 'get_draw_PluginCharactersList') {
+      return function () {
+        const defaultJson = { "nahida": "nahida (genshin impact), toddler", "klee": "klee (genshin impact), toddler", "paimon": "paimon (genshin impact), toddler", "bailu": "bailu (honkai: star rail), toddler", "clara": "clara (honkai: star rail), toddler", "last(_|\\s)order|misaka": "last order(Toaru Majutsu no Index), toddler", "sayu": "sayu (genshin impact), toddler", "diona": "diona (genshin impact), toddler", "yaoyao": "yaoyao (genshin impact), toddler", "qiqi": "qiqi (genshin impact), toddler", "furina": "furina (genshin impact), toddler", "Mahiro": "Oyama Mahiro(Onichanhaoshimai), toddler", "arona": "arona (blue archive), toddler", "sora": "sora (blue archive), toddler", "kokona": "kokona (blue archive), toddler", "hoshino": "hoshino (blue archive), toddler", "Koharu": "Shimoe Koharu (Blue archive), toddler", "Gura": "Gawr Gura (Hololive), toddler", "suzuran": "suzuran (arknights), toddler", "Anya": "Anya Forger(SPY×FAMILY), light pink hair, toddler", "AzusaNya": "nakano Azusa(K-ON), toddler", "Azusa": "azusa (blue archive), toddler", "laffey": "laffey (azur lane), toddler", "nachoneko": "nachoneko (indie virtual youtuber), toddler", "ibuki": "tanga ibuki (blue archive), blond hair, toddler", "shun": "shun (small) (blue archive), toddler", "hu(_|\\s)tao": "hu tao (genshin impact), toddler", "Platelet": "girl Platelet (Hataraku Saibou), toddler", "chino": "kafuu chino (gochuumon wa usagi desu ka?), toddler", "shuvi": "shuvi (no game no life), purple hair, long hair, hair_ornament, toddler", "plana": "plana (blue archive), toddler", "kinako": "kinako (40hara), cat girl, cat ear, toddler" }
+        let userJson = {};
+        if (target.draw_PluginCharactersList && target.draw_PluginCharactersList.trim()) {
+          try {
+            userJson = JSON.parse(target.draw_PluginCharactersList);
+          } catch (e) {
+            logger.error(`[chatgpt]解析“绘画添加作品名”失败，请重新配置: ${e.message}`);
+          }
+        }
+        return { ...defaultJson, ...userJson };
+      }
+    }
 
     return target[property]
   },
-  set (target, property, value) {
+  set(target, property, value) {
     target[property] = value
     const change = lodash.transform(target, function (result, value, key) {
       if (!lodash.isEqual(value, defaultConfig[key])) {
