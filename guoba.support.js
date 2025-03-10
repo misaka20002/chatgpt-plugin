@@ -1412,7 +1412,7 @@ export function supportGuoba() {
         {
           field: 'assistantLabel',
           label: 'AI名字',
-          bottomHelpMessage: 'AI认为的自己的名字，当你问他你是谁是他会回答这里的名字，用于伪人模式',
+          bottomHelpMessage: 'AI认为的自己的名字，在api模式时，你问他你是谁是他会回答这里的名字；也用于伪人模式的触发',
           component: 'Input'
         },
         {
