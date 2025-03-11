@@ -151,7 +151,7 @@ export class ClaudeAPIClient extends BaseClient {
     let messages = history.map(h => { return { role: h.role, content: h.content } })
     body = Object.assign(body, {
       model: opt.model || this.model || 'claude-3-opus-20240229',
-      max_tokens: opt.max_tokens || 1024,
+      max_tokens: opt.max_tokens || 4096,
       messages,
       stream: false
     })

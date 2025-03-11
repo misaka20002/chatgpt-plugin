@@ -43,7 +43,7 @@ export class QueryStarRailTool extends AbstractTool {
         e.user_id = qq
         e.isSr = true
         await ProfileList.render(e)
-        return 'the player panel of genshin impact has been sent to group. you don\'t need text version'
+        return 'the player panel of star rail has been sent to group. you don\'t need text version'
       }
     } catch (err) {
       return `failed to query, error: ${err.toString()}`

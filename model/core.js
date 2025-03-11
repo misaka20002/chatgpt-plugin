@@ -259,7 +259,29 @@ class Core {
           stream: false,
           parentMessageId: conversation.parentMessageId,
           conversationId: conversation.conversationId,
-          system: opt.system.claude
+          system: opt.system.claude,
+          max_tokens: Config.apiMaxToken
+        }
+        if (opt.settings.enableGroupContext && e.isGroup) {
+          let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+          const namePlaceholder = '[name]'
+          const defaultBotName = 'GeminiPro'
+          const groupContextTip = Config.groupContextTip
+          let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
+          option.system = option.system.replaceAll(namePlaceholder, botName || defaultBotName) +
+            ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
+          option.system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
+          option.system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
+          option.system += `Your nickname is ${botName} in the group,`
+          if (chats) {
+            option.system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
+            option.system += chats
+              .map(chat => {
+                let sender = chat.sender || {}
+                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+              })
+              .join('\n')
+          }
         }
         let img = await getImg(e)
         if (img && img.length > 0) {
@@ -569,7 +591,7 @@ class Core {
           await e.reply(msg, true)
         }
       })
-      option.toolMode = (opt.settings.forceTool || Config.geminiForceToolKeywords?.find(k => prompt.includes(k))) ? 'ANY' : 'AUTO'
+      option.toolMode = (opt.settings.forceTool || Config.geminiForceToolKeywords?.find(k => prompt?.includes(k))) ? 'ANY' : 'AUTO'
       return await client.sendMessage(prompt, option)
     } else if (use === 'chatglm4') {
       const client = new ChatGLM4Client({
