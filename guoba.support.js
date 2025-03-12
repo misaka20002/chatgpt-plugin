@@ -1280,7 +1280,7 @@ export function supportGuoba() {
           field: 'nai3PluginToPaintPrefix',
           label: '绘画前缀',
           bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、采样器等；ap/nai/sf共用',
-          component: 'Input',
+          component: 'InputTextArea',
           componentProps: {
             placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
           },
@@ -1289,7 +1289,7 @@ export function supportGuoba() {
           field: 'draw_PluginCharactersList',
           label: '绘画添加作品名',
           bottomHelpMessage: '连接绘画插件时使作品角色添加*更多*作品名（只需要添加你的新角色即可），请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"last(_|\\\\s)order|misaka":"last order (Toaru Majutsu no Index), toddler","nahida":"nahida (genshin impact), toddler"}',
-          component: 'Input'
+          component: 'InputTextArea'
         },
         {
           label: '以下为戳一戳设置',

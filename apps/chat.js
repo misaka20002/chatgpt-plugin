@@ -1303,7 +1303,7 @@ export class chatgpt extends plugin {
             }
           }
           else if (Config.sf_markdownPic) {
-            // sf版图片模式
+            // sf图片模式
             try {
               /** 添加引用图片 */
               logger.info("[ChatGPT]" + responseText)
@@ -1312,7 +1312,7 @@ export class chatgpt extends plugin {
               const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
               this.reply({ ...img, origin: true }, true)
             } catch (err) {
-              logger.error('[ChatGPT]sf版图片模式错误\n' + err)
+              logger.error('[ChatGPT]sf图片模式错误\n' + err)
             }
           }
           else {
@@ -1385,7 +1385,7 @@ export class chatgpt extends plugin {
           }
         }
         else if (Config.sf_markdownPic) {
-          // sf版图片模式
+          // sf图片模式
           try {
             /** 添加引用图片 */
             logger.info("[ChatGPT]" + responseText)
@@ -1394,7 +1394,7 @@ export class chatgpt extends plugin {
             const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
             this.reply({ ...img, origin: true }, true)
           } catch (err) {
-            logger.error('[ChatGPT]sf版图片模式错误\n' + err)
+            logger.error('[ChatGPT]sf图片模式错误\n' + err)
           }
         }
         else {
