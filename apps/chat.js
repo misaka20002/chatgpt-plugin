@@ -1115,12 +1115,12 @@ export class chatgpt extends plugin {
               else if (random_nai < 0.6) {
                 strPaint = '--width 1024 --height 1024'
               }
-              e.msg = `#draw${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#draw${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres' + strPaint;
               if (e.img)
                 e.msg += ', --reference_strength 0.3';
               // 随机 smea
-              const random_1 = Math.random()
-              e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', --sm true --sm_dyn false' : ', --sm true --sm_dyn true');
+              // const random_1 = Math.random()
+              // e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', --sm true --sm_dyn false' : ', --sm true --sm_dyn true');
               console.log('[ChatGPT]开始调用nai插件绘画：\nmsg: ', e.msg)
               if (Config.doNotCheckPaintPluginSuccess) {
                 nai.text(e);

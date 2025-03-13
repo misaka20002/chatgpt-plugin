@@ -88,12 +88,12 @@ export class APTool extends AbstractTool {
         else if (random_nai < 0.6) {
           strPaint = '--width 1024 --height 1024'
         }
-        e.msg = `#draw${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#draw${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres ' + strPaint
         if (e.img)
           e.msg += ', --reference_strength 0.3';
-        // 随机 smea
-        const random_1 = Math.random()
-        e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', --sm true --sm_dyn false' : ', --sm true --sm_dyn true');
+        // 随机 smea （nai4不支持smea 关闭这个功能）
+        // const random_1 = Math.random()
+        // e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', --sm true --sm_dyn false' : ', --sm true --sm_dyn true');
         console.log('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', e.msg)
         await nai.text(e)
         return 'draw success, picture has been sent.'
