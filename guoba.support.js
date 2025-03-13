@@ -117,7 +117,7 @@ export function supportGuoba() {
         {
           field: 'imgOcr',
           label: '对话中图片OCR',
-          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；建议关闭这个，开启对话-gemini-呆毛版 对话中图片识别',
+          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；该项效果不好，建议关闭，去开启“对话-gemini-呆毛版 对话中图片识别”',
           component: 'Switch'
         },
         {
@@ -700,7 +700,7 @@ export function supportGuoba() {
         {
           field: 'recognitionByGemini',
           label: '对话中图片识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（对话时不必使用gemini模式）；1、建议关闭“对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断，因此被中断时本插件会自行添加文本“附带了一张儿童不宜的涩图。”',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（对话时不必使用gemini模式）；1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
           component: 'Switch'
         },
         {
@@ -723,7 +723,7 @@ export function supportGuoba() {
         {
           field: 'geminiForceToolKeywords',
           label: 'gemini强制工具关键词',
-          bottomHelpMessage: 'gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
+          bottomHelpMessage: '智能模式中，gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
           component: 'GTags',
           componentProps: {
             placeholder: '请输入强制工具关键词',
