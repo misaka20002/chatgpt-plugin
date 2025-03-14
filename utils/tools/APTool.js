@@ -30,6 +30,10 @@ export class APTool extends AbstractTool {
       const reg_characters = new RegExp(key, "im")
       charactersName = prompt.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
     }
+    // 如果没有匹配到角色的话就把 prompt 的第一段作为角色名
+    if (!charactersName) {
+      charactersName = prompt.split(',')[0].trim();
+    }
 
     // 使用nai插件
     if (Config.drawToolS === 'nai-plugin-1' || Config.drawToolS === 'paimonnai-plugin') {
