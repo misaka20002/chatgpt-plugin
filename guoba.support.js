@@ -688,14 +688,20 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-pro；可选（注意配额）：gemini-1.5-flash；gemini-1.5-pro；gemini-1.5-flash-8b；gemini-2.0-flash；gemini-2.0-flash-lite；gemini-exp-1206；gemini-2.0-flash-thinking-exp-01-21；gemini-2.0-pro-exp-02-05；gemma-2-2b-it；gemma-2-9b-it；gemma-2-27b-it',
-          component: 'Input'
+          bottomHelpMessage: '默认值：gemini-2.0-flash；推荐：gemini-exp-1206,gemini-2.0-flash-thinking-exp-01-21,gemini-2.0-pro-exp-02-05',
+          component: 'Select',
+          componentProps: {
+            options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
+          }
         },
         {
           field: 'gemini_vqa_model',
           label: 'gemini识图模型',
-          bottomHelpMessage: '用于#识图 和 对话中图片识别-gemini；默认值：gemini-1.5-flash；可选值同上',
-          component: 'Input'
+          bottomHelpMessage: '用于#识图 和 对话中图片识别-gemini；默认值：gemini-2.0-flash',
+          component: 'Select',
+          componentProps: {
+            options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
+          }
         },
         {
           field: 'recognitionByGemini',

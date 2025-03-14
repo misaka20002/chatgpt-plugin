@@ -93,6 +93,7 @@ const defaultConfig = {
   drawToolS: false,
   sf_markdownPic: false,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
+  geminiModelsByFetch: [],
   draw_PluginCharactersList: '',
   doNotCheckPaintPluginSuccess: false,
   paimon_chuoyichuo_open: true,
@@ -360,6 +361,18 @@ export const Config = new Proxy(config, {
           }
         }
         return { ...defaultJson, ...userJson };
+      }
+    }
+    else if (property === 'get_geminiModels') {
+      return function () {
+        const defaultArr = ['gemini-2.0-flash']
+        try {
+          const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
+          return lodash.uniq([...defaultArr, ...fetchModels]);
+        } catch (e) {
+          logger.warn(`[chatgpt]Failed to get Gemini models: ${e.message}`);
+          return defaultArr;
+        }
       }
     }
 

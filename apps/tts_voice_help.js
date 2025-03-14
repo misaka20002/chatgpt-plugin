@@ -15,6 +15,7 @@ import path from 'path'
 import fs from 'fs'
 import fetch from 'node-fetch'
 import cfg from '../../../lib/config/config.js'
+import { getGeminiModelsByFetch } from '../utils/paimonFuction.js'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
@@ -724,6 +725,13 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         //     Config.defaultUseTTS = true
         //     logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已开启，将在fish.audio达到配额后自动关闭`)
         // }
+
+        // 更新 gemini model
+        try {
+            Config.geminiModelsByFetch = await getGeminiModelsByFetch();
+        } catch (err) {
+            logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
+        }
 
         return true
     }
