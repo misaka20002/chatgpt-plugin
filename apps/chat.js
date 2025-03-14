@@ -42,7 +42,8 @@ const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
 import {
   recognitionResultsByGemini,
-  convertSentenceToArray
+  convertSentenceToArray,
+  extractCharacterName,
 } from '../utils/paimonFuction.js'
 import { PaimonChuo } from '../apps/派蒙戳一戳.js'
 
@@ -1039,17 +1040,8 @@ export class chatgpt extends plugin {
           // gpt的回复语句
           response = jsonMsg
           // 为角色添加作品名
-          const charactersList = Config.get_draw_PluginCharactersList();
-          let charactersName = ""
-          for (const key of Object.keys(charactersList)) {
-            const reg_characters = new RegExp(key, "im")
-            charactersName = jsonTags.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
-          }
-          // 如果没有匹配到角色的话就把 jsonTags 的第一段作为角色名
-          if (!charactersName) {
-            charactersName = jsonTags.split(',')?.[0]?.trim() + ", " || "";
-            jsonTags = jsonTags.replace(charactersName, "");
-          }
+          const { charactersName, processedTags } = extractCharacterName(jsonTags);
+          jsonTags = processedTags;
 
           if (Config.drawByJsonToPlugin === 'nai-plugin-1' || Config.drawByJsonToPlugin === 'paimonnai-plugin') {
             // 使用nai插件
@@ -1075,7 +1067,7 @@ export class chatgpt extends plugin {
               else if (random_nai < 0.6) {
                 strPaint = '方图'
               }
-              e.msg = `#绘画${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#绘画${strPaint} ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               if (e.img)
                 e.msg += ', Reference_Strength = 0.30';
               // 随机 smea
@@ -1120,7 +1112,7 @@ export class chatgpt extends plugin {
               else if (random_nai < 0.6) {
                 strPaint = '--width 1024 --height 1024'
               }
-              e.msg = `#draw${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres' + strPaint;
+              e.msg = `#draw ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres' + strPaint;
               if (e.img)
                 e.msg += ', --reference_strength 0.3';
               // 随机 smea
@@ -1162,7 +1154,7 @@ export class chatgpt extends plugin {
               }
             }
             try {
-              e.msg = '#绘图' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用ap插件绘画：\nmsg: ', e.msg)
               if (Config.doNotCheckPaintPluginSuccess) {
                 ap.aiPainting(e);
@@ -1194,7 +1186,7 @@ export class chatgpt extends plugin {
               console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
             }
             try {
-              e.msg = '#sf绘图' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#sf绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用sf插件绘画：\nmsg: ', e.msg)
               if (Config.doNotCheckPaintPluginSuccess) {
                 sf.sf_draw(e);
@@ -1225,7 +1217,7 @@ export class chatgpt extends plugin {
               console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
             }
             try {
-              e.msg = '#mjp' + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#mjp ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用sf插件绘画：\nmsg: ', e.msg)
               if (Config.doNotCheckPaintPluginSuccess) {
                 sfmj.mj_draw(e);

@@ -1,5 +1,8 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../../utils/config.js'
+import {
+  extractCharacterName,
+} from '../../utils/paimonFuction.js'
 
 export class APTool extends AbstractTool {
   name = 'draw'
@@ -24,17 +27,8 @@ export class APTool extends AbstractTool {
     e.atBot = false
 
     // 为角色添加作品名
-    const charactersList = Config.get_draw_PluginCharactersList();
-    let charactersName = ""
-    for (const key of Object.keys(charactersList)) {
-      const reg_characters = new RegExp(key, "im")
-      charactersName = prompt.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
-    }
-    // 如果没有匹配到角色的话就把 prompt 的第一段作为角色名
-    if (!charactersName) {
-      charactersName = prompt.split(',')?.[0]?.trim() + ", " || "";
-      prompt = prompt.replace(charactersName, "");
-    }
+    const { charactersName, processedTags } = extractCharacterName(prompt);
+    prompt = processedTags;
 
     // 使用nai插件
     if (Config.drawToolS === 'nai-plugin-1' || Config.drawToolS === 'paimonnai-plugin') {
@@ -60,7 +54,7 @@ export class APTool extends AbstractTool {
         else if (random_nai < 0.6) {
           strPaint = '方图'
         }
-        e.msg = `#绘画${strPaint}${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#绘画${strPaint} ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         if (e.img)
           e.msg += ', Reference_Strength = 0.30';
         // 随机 smea
@@ -93,7 +87,7 @@ export class APTool extends AbstractTool {
         else if (random_nai < 0.6) {
           strPaint = '--width 1024 --height 1024'
         }
-        e.msg = `#draw${charactersName}` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres ' + strPaint
+        e.msg = `#draw ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + prompt + ', best quality, amazing quality, very aesthetic, absurdres ' + strPaint
         if (e.img)
           e.msg += ', --reference_strength 0.3';
         // 随机 smea （nai4不支持smea 关闭这个功能）
@@ -125,7 +119,7 @@ export class APTool extends AbstractTool {
         }
       }
       try {
-        e.msg = '#绘图' + charactersName + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         await ap.aiPainting(e)
         console.log('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
@@ -144,7 +138,7 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = '#sf绘图' + charactersName + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#sf绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         await sf.sf_draw(e)
         console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
@@ -163,7 +157,7 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = '#mjp' + charactersName + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#mjp ${charactersName}, ` + Config.nai3PluginToPaintPrefix + prompt + ', best quality, amazing quality, very aesthetic, absurdres'
         await sfmj.mj_draw(e)
         console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'

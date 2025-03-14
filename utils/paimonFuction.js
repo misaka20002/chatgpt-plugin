@@ -124,3 +124,42 @@ export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey()) {
     // Extract model names from the models array and return them
     return (data.models || []).map(model => model.name?.replace(/models\//g, '').trim()).filter(Boolean);
 }
+
+/**
+ * @description: 从标签中提取角色名称
+ * @param {string} tags - 需要处理的标签字符串
+ * @return {object} 包含角色名和处理后的标签
+ */
+export function extractCharacterName(tags) {
+    // 为角色添加作品名
+    const charactersList = Config.get_draw_PluginCharactersList();
+    let charactersName = "";
+    let processedTags = tags;
+
+    // 从配置的角色列表中查找匹配
+    for (const key of Object.keys(charactersList)) {
+        const reg_characters = new RegExp(key, "im");
+        charactersName = processedTags.match(reg_characters) ?
+            charactersList[key] + ", " + charactersName : charactersName;
+    }
+
+    // 如果没有匹配到角色的话就把 tags 的第一段作为角色名
+    if (!charactersName) {
+        const firstPart = processedTags.split(',')?.[0]?.trim();
+        if (firstPart) {
+            charactersName = firstPart;
+            // 把 charactersName 按 from 切割，把 from 后面的部分作为作品名
+            const [char_name, ...extraInfo] = charactersName.split(/from/i);
+            charactersName = char_name + (extraInfo.length ? "(" + extraInfo.map(m => m.trim()).join("") + ")" : "")
+            // 从原始标签中移除第一部分
+            processedTags = processedTags.replace(firstPart, "").replace(/^,\s*/, "");
+        } else {
+            charactersName = "";
+        }
+    }
+
+    return {
+        charactersName,
+        processedTags
+    };
+}
