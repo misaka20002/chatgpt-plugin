@@ -1048,6 +1048,7 @@ export class chatgpt extends plugin {
           // 如果没有匹配到角色的话就把 jsonTags 的第一段作为角色名
           if (!charactersName) {
             charactersName = jsonTags.split(',')?.[0]?.trim() + ", " || "";
+            jsonTags = jsonTags.replace(charactersName, "");
           }
 
           if (Config.drawByJsonToPlugin === 'nai-plugin-1' || Config.drawByJsonToPlugin === 'paimonnai-plugin') {
