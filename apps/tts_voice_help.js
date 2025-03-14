@@ -122,6 +122,11 @@ export class voicechangehelp extends plugin {
                     reg: '^#搜索fish发音人(.*)$',
                     fnc: 'searchFishVoices'
                 },
+                {
+                    reg: '^#派蒙tts测试$',
+                    fnc: 'paimon_tts_test',
+                    permission: 'master'
+                },
             ]
         })
         this.task = [
@@ -763,6 +768,15 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msgArr.push(optionMsg)
         const msgx = await common.makeForwardMsg(e, msgArr, `Fish发音人`)
         await e.reply(msgx);
+    }
+
+    async paimon_tts_test(e) {
+        // 更新 gemini model
+        try {
+            Config.geminiModelsByFetch = await getGeminiModelsByFetch();
+        } catch (err) {
+            logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
+        }
     }
 }
 
