@@ -32,7 +32,7 @@ export class APTool extends AbstractTool {
     }
     // 如果没有匹配到角色的话就把 prompt 的第一段作为角色名
     if (!charactersName) {
-      charactersName = prompt.split(',')[0].trim();
+      charactersName = prompt.split(',')?.[0]?.trim() + ", " || "";
     }
 
     // 使用nai插件

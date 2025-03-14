@@ -1045,6 +1045,10 @@ export class chatgpt extends plugin {
             const reg_characters = new RegExp(key, "im")
             charactersName = jsonTags.match(reg_characters) ? charactersList[key] + ", " + charactersName : charactersName
           }
+          // 如果没有匹配到角色的话就把 jsonTags 的第一段作为角色名
+          if (!charactersName) {
+            charactersName = jsonTags.split(',')?.[0]?.trim() + ", " || "";
+          }
 
           if (Config.drawByJsonToPlugin === 'nai-plugin-1' || Config.drawByJsonToPlugin === 'paimonnai-plugin') {
             // 使用nai插件
