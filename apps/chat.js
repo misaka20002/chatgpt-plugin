@@ -1027,16 +1027,19 @@ export class chatgpt extends plugin {
           if (Boolean(response?.match(/"Tools": "Stable(_|\s)Diffusion"/i))) {
             json2 = response?.match(/"tags": "(.*)/si)?.[1] || response?.replace(/"Tools": "Stable(_|\s)Diffusion"|\`\`\`(json)?|"tags":?/ig, "")
             if (json2) {
-              jsonTags = json2;
-              jsonMsg = `这个太难了，${Config.tts_First_person}给你画啦`;
+              const matchMsg = json2.match(/"msg":\s*"([\s\S]*)/)?.[1]
+              if (matchMsg) {
+                jsonTags = json2.replace(/"msg":\s*"([\s\S]*)/, "")
+                jsonMsg = matchMsg
+              } else {
+                jsonTags = json2;
+                jsonMsg = `这个太难了，${Config.tts_First_person}给你画啦`;
+              }
             }
           }
         }
         // 开始调用绘画插件
         if (jsonTags) {
-          // 处理GPT Bug // 处理 gemini 各种奇怪的回复
-          if (Boolean(jsonMsg?.match(/matches your character/i)) || Boolean(jsonMsg?.match(/"Tools": "Stable(_|\s)Diffusion"/i)))
-            jsonMsg = `这个太难了，${Config.tts_First_person}画给你啦`
           // gpt的回复语句
           response = jsonMsg
           // 为角色添加作品名
