@@ -1007,18 +1007,21 @@ export class chatgpt extends plugin {
 
       // 处理 呆毛版 连接画图插件
       if (Config.drawByJsonToPlugin) {
-        let json = response?.match(/({.*})/s)?.[1];
+        let json1 = response?.match(/({.*})/s)?.[1];
         let jsonTags, jsonMsg
-        if (json) {
+        if (json1) {
           try {
-            json = JSON.parse(json);
-            if (!Boolean(json?.Tools.match(/Stable(_|\s)Diffusion/i)))
+            json1 = JSON.parse(json1);
+            if (!Boolean(json1?.Tools.match(/Stable(_|\s)Diffusion/i)))
               throw new Error("[ChatGPT]未返回绘画用JSON")
-            jsonTags = json?.tags
-            jsonMsg = json?.msg || `${Config.tts_First_person}画给你啦`
-            delete json.Tools
-            delete json.tags
-            jsonMsg += "\n```\n" + JSON.stringify(json, null, 2) + "\n```";
+            jsonTags = json1?.tags
+            jsonMsg = json1?.msg || `${Config.tts_First_person}画给你啦`
+            delete json1.Tools
+            delete json1.tags
+            delete json1.msg
+            // 如果 json1 里还有key的话
+            if (Object.keys(json1).length > 0)
+              jsonMsg += "\n```\n" + JSON.stringify(json1, null, 2) + "\n```";
           }
           catch (err) {
             jsonTags = false

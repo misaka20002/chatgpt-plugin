@@ -140,7 +140,7 @@ export function supportGuoba() {
         {
           field: 'autoUsePictureThreshold',
           label: '自动转图片阈值',
-          helpMessage: '长文本自动转图片开启后才生效',
+          helpMessage: '长文本自动转图片开启后才生效，当报错“error happened while uploading content to the cache server. QR Code will not be showed in this picture”时请关闭该选项',
           bottomHelpMessage: '自动转图片的字数阈值',
           component: 'InputNumber',
           componentProps: {
