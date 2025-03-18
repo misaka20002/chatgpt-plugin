@@ -1016,6 +1016,9 @@ export class chatgpt extends plugin {
               throw new Error("[ChatGPT]未返回绘画用JSON")
             jsonTags = json?.tags
             jsonMsg = json?.msg || `${Config.tts_First_person}画给你啦`
+            delete json.Tools
+            delete json.tags
+            jsonMsg += "\n```\n" + JSON.stringify(json, null, 2) + "\n```";
           }
           catch (err) {
             jsonTags = false
