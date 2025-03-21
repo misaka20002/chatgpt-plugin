@@ -1931,7 +1931,7 @@ function getRandomUrl(type) {
             "https://api.btstu.cn/sjbz/api.php",
         ],
         "ecywebp": [ // 二次元 webp格式
-            "https://t.mwm.moe/mp",
+            // "https://t.mwm.moe/mp",
             "https://t.alcy.cc/ycy",
             "https://t.alcy.cc/moez",
             "https://t.alcy.cc/ysz", // 原神
