@@ -195,6 +195,8 @@ export class PaimonChuo extends plugin {
                             defaultTTSRole = '春原心奈'
                         } else if (tts_First_person.includes('小春')) {
                             defaultTTSRole = '下江小春'
+                        } else if (/缇宝|缇安|缇宁|缇里西庇俄丝/.test(tts_First_person)) {
+                            defaultTTSRole = '缇宝'
                         }
 
                         switch (defaultTTSRole) {
@@ -219,6 +221,9 @@ export class PaimonChuo extends plugin {
                                 break;
                             case '下江小春':
                                 voice_lists = voice_list_Shimoe_Koharu_jp;
+                                break;
+                            case '缇宝':
+                                voice_lists = voice_list_Tribbie_cn;
                                 break;
                             // 缺省时将返回随机音频替换为返回随机文本
                             default:
@@ -1440,6 +1445,58 @@ let voice_list_bailu_cn = [
     "https://act-upload.mihoyo.com/sr-wiki/2023/10/27/91130434/ac08bae0cf7055a6c76ea4f08e92b7cf_5421791002661457153.wav",
     "https://act-upload.mihoyo.com/sr-wiki/2023/10/27/91130434/2df1ac60bcebcbe5612418a875abb184_6124695680650475449.wav",
     "https://act-upload.mihoyo.com/sr-wiki/2023/10/27/91130434/2be8130cb759f846b4d03e7b8ce6591e_8305224628666172284.wav"
+]
+
+/**缇宝中文语音 */
+let voice_list_Tribbie_cn = [
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/1e3a1a02be551f5035ce9c5c1700e5db_6132564444120771118.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/a36ab02b3b7ac70dbbb68d9997e20dbb_3075161167343807957.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/7e23b0505384f585c14d26403e8d4618_5081190738792815955.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/7eadeede9c1bf2b85314ff77ec78befb_4571608880270931195.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/0f8090aa813a156dda2727a8155e82fb_9002856490172492651.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/b1850f38912f80eca4ee44e4fa438a6c_6790872117599038339.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/363f487bd4f95d1c91e0bb421f3a1728_3096856195209116009.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/e8efa72ff894eeecb03897e12d72ed25_1559011616637252566.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/39dee3f598d0b9600ed1930dec19c288_821746775899255088.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/b1acf6576ab33103e4f9acd26b983f22_6149792204257135801.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/2e382cb0ea16c7d30a42ae07c7b4dcb4_7592635929507684728.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/e2b7d0638948fa2bc7afe2951e4ef2b8_6390771589727405436.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/5687e3f71a7106d6fe5def10b00497ef_2197947232427554574.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/b7933c3fd4539f1b335d45864d0fa520_4717552987335605343.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/2aa102322c6f014c2bfbf45350a53d67_7660845552926602397.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/b98b97a364937231397988d720d1ab85_2543452923927475694.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/0e28c93c60af6d77480da93be68d05c3_4704814195311582291.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/d3cfb0067c1b5daa13a78e3cdfd22609_4387931694985449286.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/50cf9f8805ea50f859e9df7d8bf99ff9_4793528303806266944.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/567eac69fb85ce2e866d48bed697faa7_1667578589904249634.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/0e6f1d4d7e635f32b1cf97fa159de0fd_8742940288068537425.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/a8f0d3d00779fa1ad341c7579163337e_8588069127170961266.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/21/197948068/ed6a8927882a7eeac4b7b0f85c013519_5949499166827370302.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/21/197948068/bf403f2d0c2b46ce5f86c0aefd7fdf5f_8412080517624197406.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/be7e5bf0f4cbcda7bb03fd34c09534f5_8149520212864577236.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/76800602770e3998349625d36eddf212_1662231015746978761.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/fb0e9622464b70c3212ddc45ab22329b_4410288340421110937.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/13526449b8ee42700f6dd02425488c5e_3022395483473158317.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/f4f0a05daf01beeeaf8db83cb41dc785_1610923450175865711.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/755a33c96d0d8b85381b700f1cecae8b_1430827915176056448.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/9f41e7af35c11e40ee58531c0d062635_6082287336374711005.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/cac7952d9e3e385011046aa03717ed70_1640895933038068955.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/bc86ee62666fc97138d0339bf9713147_5068767237324810759.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/7bdb483b318b4372487256cf5d981e6c_7463532586678843717.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/1e0c987a92fd6807a5d08135a8d8ed99_7361862765616956846.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/e3e42dabdf43aeb9c028a5437fff7897_2611192716446224545.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/89a543d735541ae69eafa0fa3a3f2054_577453379214524158.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/7bd5b3528bf223681d7346df92e039ff_3176931041805124353.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/896cf0a62cd10176ceef1e99c32d97dc_6474921546524430787.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/d9a155dff4fe696e791ef0b0b13b3bcd_1681075715811604831.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/889ec570149a99c73a0783be637b3c21_2896560917847261639.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/bc63e47acf2c33bf06416b3882b7dede_4693809548889135611.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/a1587016d891cb2cc7307aa724a0f8f8_8648855704806725318.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/de246ffb1535acc817c270c434a3b823_8638426626621550564.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/eff272106e61e40061e6f4f267f255ef_936698611352252734.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/4df3dd86e00427441178fed4b597ec02_6576786000613249443.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/c921b887f40267bac6a9d2b90ceb8364_6076243768051285891.wav",
+    "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/7aef1a91f1b1cb0225b8392c75519935_605341951674668166.wav",
 ]
 
 /**派蒙和荧中文语音  来自：https://wiki.biligame.com/ys/%E6%97%85%E8%A1%8C%E8%80%85%E8%AF%AD%E9%9F%B3/%E8%8D%A7 注意这个网站会导出很多重复项，自行删除；中文缺少：关于求签…  （2024年1月8日）*/
