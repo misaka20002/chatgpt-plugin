@@ -128,7 +128,7 @@ export function supportGuoba() {
         {
           field: 'defaultUsePicture',
           label: '全局图片模式',
-          bottomHelpMessage: '全局默认以图片形式回复',
+          bottomHelpMessage: '全局默认以图片形式回复，需要开启工具箱',
           component: 'Switch'
         },
         {
@@ -1354,6 +1354,93 @@ export function supportGuoba() {
           label: '戳一戳使用涩图api',
           bottomHelpMessage: '开启后戳一戳会随机出16+，但不是18+的涩图',
           component: 'Switch'
+        },
+        {
+          field: 'paimon_chou_reply_text',
+          label: '回复文字概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_reply_img',
+          label: '图片回复概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_reply_voice',
+          label: '语音回复概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_mutepick',
+          label: '禁言概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_paimonChuoMeme',
+          label: '随机meme概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_randowLocalPic',
+          label: '随机本地图片概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_dailyEnglish',
+          label: '每日英语概率',
+          bottomHelpMessage: '戳一戳响应概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.001
+          }
+        },
+        {
+          field: 'paimon_chou_Fighting_Back',
+          label: '反击概率',
+          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率',
+          component: 'InputNumber',
+          componentProps: {
+            readonly: true,
+            defaultValue: '0.100'
+          }
         },
         {
           label: '以下为meme表情生成',

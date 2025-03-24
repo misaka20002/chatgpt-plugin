@@ -100,6 +100,13 @@ const defaultConfig = {
   // paimon_chuoyichuo_ByMsgGroups: [],
   // paimon_chuoyichuo_Probability_ByMsgGroups: 5,
   paimon_chou_cd: 14,
+  paimon_chou_reply_text: 0.455,
+  paimon_chou_reply_img: 0.12,
+  paimon_chou_reply_voice: 0.12,
+  paimon_chou_mutepick: 0.03,
+  paimon_chou_paimonChuoMeme: 0.05,
+  paimon_chou_randowLocalPic: 0.12,
+  paimon_chou_dailyEnglish: 0.005,
   paimon_chou_IsSendLocalpic: true,
   paimon_chou_IsUseLoliconApi: false,
   paimon_chou_text_generateAndSendAudio: true,
@@ -374,6 +381,9 @@ export const Config = new Proxy(config, {
           return defaultArr;
         }
       }
+    }
+    else if (property === 'paimon_chou_Fighting_Back') {
+      return (1 - target.paimon_chou_reply_text - target.paimon_chou_reply_img - target.paimon_chou_reply_voice - target.paimon_chou_mutepick - target.paimon_chou_paimonChuoMeme - target.paimon_chou_randowLocalPic - target.paimon_chou_dailyEnglish).toFixed(3)
     }
 
     return target[property]

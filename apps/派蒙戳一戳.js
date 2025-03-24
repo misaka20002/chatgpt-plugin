@@ -22,23 +22,12 @@ import sharp from 'sharp'
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
 
-// 支持信息详见文件最下方
-// 在这里设置事件概率,请保证概率加起来小于1，少于1的部分会触发反击
-let reply_text = 0.455 //文字回复概率
-let reply_img = 0.12 //图片回复概率
-let reply_voice = 0.12 //语音回复概率
-let mutepick = 0.03 //禁言概率
-let paimonChuoMeme = 0.05 //随机meme表情
-let randowLocalPic = 0.12 //随机本地图片
-let dailyEnglish = 0.005 //每日英语
-// 剩下的0.10概率就是反击
-
 // 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
 const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 if (!Config.paimon_chou_IsSendLocalpic) {
-    reply_text += randowLocalPic
-    randowLocalPic = 0
+    Config.paimon_chou_reply_text += Config.paimon_chou_randowLocalPic
+    Config.paimon_chou_randowLocalPic = 0
 }
 // 初始化
 redis.del(`Yz:PaimongChuoLocalPicIndex`);
@@ -125,7 +114,7 @@ export class PaimonChuo extends plugin {
             let random_type = Math.random()
 
             /**回复随机文字 */
-            if (random_type < reply_text) {
+            if (random_type < Config.paimon_chou_reply_text) {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
@@ -133,7 +122,7 @@ export class PaimonChuo extends plugin {
             }
 
             /**回复随机图片 */
-            else if (random_type < (reply_text + reply_img)) {
+            else if (random_type < (Config.paimon_chou_reply_text + Config.paimon_chou_reply_img)) {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
@@ -171,7 +160,7 @@ export class PaimonChuo extends plugin {
             }
 
             /**返回随机音频 */
-            else if (random_type < (reply_text + reply_img + reply_voice)) {
+            else if (random_type < (Config.paimon_chou_reply_text + Config.paimon_chou_reply_img + Config.paimon_chou_reply_voice)) {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机语音生效]')
                 }
@@ -242,7 +231,7 @@ export class PaimonChuo extends plugin {
                 }
             }
             /**禁言 */
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick)) {
+            else if (random_type < (Config.paimon_chou_reply_text + Config.paimon_chou_reply_img + Config.paimon_chou_reply_voice + Config.paimon_chou_mutepick)) {
                 if (Config.debug) {
                     logger.mark('[戳一戳禁言生效]')
                 }
@@ -327,7 +316,7 @@ export class PaimonChuo extends plugin {
             }
 
             //随机meme表情包api
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme)) {
+            else if (random_type < (Config.paimon_chou_reply_text + Config.paimon_chou_reply_img + Config.paimon_chou_reply_voice + Config.paimon_chou_mutepick + Config.paimon_chou_paimonChuoMeme)) {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机表情包生效]')
                 }
@@ -427,7 +416,7 @@ export class PaimonChuo extends plugin {
             }
 
             //随机本地图片
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic)) {
+            else if (random_type < (Config.paimon_chou_reply_text + Config.paimon_chou_reply_img + Config.paimon_chou_reply_voice + Config.paimon_chou_mutepick + Config.paimon_chou_paimonChuoMeme + Config.paimon_chou_randowLocalPic)) {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
@@ -440,7 +429,7 @@ export class PaimonChuo extends plugin {
             }
 
             //触发每日英语
-            else if (random_type < (reply_text + reply_img + reply_voice + mutepick + paimonChuoMeme + randowLocalPic + dailyEnglish)) {
+            else if (random_type < (Config.paimon_chou_reply_text + Config.paimon_chou_reply_img + Config.paimon_chou_reply_voice + Config.paimon_chou_mutepick + Config.paimon_chou_paimonChuoMeme + Config.paimon_chou_randowLocalPic + Config.paimon_chou_dailyEnglish)) {
                 if (Config.debug) {
                     logger.mark('[戳一戳每日英语生效]')
                 }
