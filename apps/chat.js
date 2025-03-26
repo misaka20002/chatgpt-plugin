@@ -507,16 +507,6 @@ export class chatgpt extends plugin {
       if ((e.isGroup || e.group_id) && !(e.atme || e.atBot || (e.at === e.self_id))) {
         return false
       }
-
-      // if (!msg) { // 发现崽根本就不传递At空msg，用不了，改 戳
-      if (Boolean(e.msg.match(/^#?戳$/))) {
-        e.operator_id = e.user_id
-        e.target_id = getUin(e)
-        const chatgptPaimonChuo = new PaimonChuo();
-        chatgptPaimonChuo.chuoyichuo(e);
-        return true
-      }
-
       if (e.user_id == getUin(e)) return false
       prompt = msg.trim()
       try {
@@ -1322,12 +1312,7 @@ export class chatgpt extends plugin {
             }
           }
           else {
-            await this.reply(responseText, e.isGroup, {
-              btnData: {
-                use,
-                suggested: chatMessage.suggestedResponses
-              }
-            })
+            await this.reply(responseText, e.isGroup)
           }
           if (quotemessage.length > 0) {
             this.reply(await makeForwardMsg(this.e, quotemessage.map(msg => `${msg.text} - ${msg.url}`)))
