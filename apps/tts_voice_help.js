@@ -123,6 +123,11 @@ export class voicechangehelp extends plugin {
                     fnc: 'searchFishVoices'
                 },
                 {
+                    reg: '^#派蒙chatgpt立即执行每日自动任务$',
+                    fnc: 'paimon_tts_Auto_tasker',
+                    permission: 'master'
+                },
+                {
                     reg: '^#派蒙tts测试$',
                     fnc: 'paimon_tts_test',
                     permission: 'master'
@@ -186,6 +191,7 @@ export class voicechangehelp extends plugin {
             ` #chatgpt[开启|关闭]回复确认\n` +
             ` #chatgpt[对话|管理|娱乐|绘图|人物设定|聊天记录]?指令表[帮助|搜索]?\n` +
             ` #派蒙戳一戳保存表情` +
+            ` #派蒙chatgpt立即执行每日自动任务` +
             ''
 
         let msg_for_master2 = `Chatgpt管理杂项：\n` +
