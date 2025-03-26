@@ -717,7 +717,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     }
 
     /** task任务: 派蒙tts自动任务 */
-    async paimon_tts_Auto_tasker() {
+    async paimon_tts_Auto_tasker(e = null) {
         /** ^#tts(删除|重置)所有(chatgpt)?用户(回复|单独)设置 */
         let chatgpt_user = await redis.keys('CHATGPT:USER:*')
         let deleted = 0
@@ -740,8 +740,11 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         // 更新 gemini model
         try {
             Config.geminiModelsByFetch = await getGeminiModelsByFetch();
+            logger.info('[sf插件自动任务] 成功更新 Gemini 模型列表');
+            if (e?.reply) e.reply('[派蒙chatgpt自动任务] 成功更新 Gemini 模型列表');
         } catch (err) {
             logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
+            if (e?.reply) e.reply('[派蒙chatgpt自动任务] 每日获取Gemini模型错误')
         }
 
         return true
