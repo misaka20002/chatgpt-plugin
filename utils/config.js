@@ -15,7 +15,7 @@ const defaultConfig = {
   defaultUseTTS: false,
   defaultTTSRole: '派蒙_ZH',
   alsoSendText: false,
-  autoUsePicture: true,
+  autoUsePicture: false,
   autoUsePictureThreshold: 1200,
   ttsAutoFallbackThreshold: 299,
   conversationPreserveTime: 0,
@@ -92,14 +92,21 @@ const defaultConfig = {
   drawByJsonToPlugin: false,
   drawToolS: false,
   sf_markdownPic: false,
-  nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
+  nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
   geminiModelsByFetch: [],
   draw_PluginCharactersList: '',
   doNotCheckPaintPluginSuccess: false,
   paimon_chuoyichuo_open: true,
   // paimon_chuoyichuo_ByMsgGroups: [],
   // paimon_chuoyichuo_Probability_ByMsgGroups: 5,
-  paimon_chou_cd: 20,
+  paimon_chou_cd: 14,
+  paimon_chou_reply_text: 0.455,
+  paimon_chou_reply_img: 0.12,
+  paimon_chou_reply_voice: 0.12,
+  paimon_chou_mutepick: 0.03,
+  paimon_chou_paimonChuoMeme: 0.05,
+  paimon_chou_randowLocalPic: 0.12,
+  paimon_chou_dailyEnglish: 0.005,
   paimon_chou_IsSendLocalpic: true,
   paimon_chou_IsUseLoliconApi: false,
   paimon_chou_text_generateAndSendAudio: true,
@@ -138,7 +145,7 @@ const defaultConfig = {
   meme_forceSharp: true,
   meme_masterProtectDo: true,
   meme_maxFileSize: 10,
-  meme_CD: 11,
+  meme_CD: 19,
   isConvertSentenceToArrayReply: false,
   gemini_vqa_model: "gemini-2.0-flash",
   gemini_vqa_needMaster: true,
@@ -365,7 +372,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-2.0-flash', 'gemini-exp-1206', 'gemini-2.0-flash-thinking-exp-01-21']
+        const defaultArr = ['gemini-2.0-flash', 'gemini-exp-1206', 'gemini-2.0-flash-thinking-exp-01-21', 'gemini-2.0-pro-exp']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);
@@ -374,6 +381,9 @@ export const Config = new Proxy(config, {
           return defaultArr;
         }
       }
+    }
+    else if (property === 'paimon_chou_Fighting_Back') {
+      return (1 - target.paimon_chou_reply_text - target.paimon_chou_reply_img - target.paimon_chou_reply_voice - target.paimon_chou_mutepick - target.paimon_chou_paimonChuoMeme - target.paimon_chou_randowLocalPic - target.paimon_chou_dailyEnglish).toFixed(3)
     }
 
     return target[property]

@@ -212,40 +212,6 @@ export function supportGuoba() {
           }
         },
         {
-          label: '以下为服务超时配置。',
-          component: 'Divider'
-        },
-        {
-          field: 'defaultTimeoutMs',
-          label: '默认超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '各个地方的默认超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'chromeTimeoutMS',
-          label: '浏览器超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '浏览器默认超时，浏览器可能需要更高的超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'sydneyFirstMessageTimeout',
-          label: 'Sydney模式接受首条信息超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '超过该时间阈值未收到Bing的任何消息，则断开本次连接并重试（最多重试3次，失败后将返回timeout waiting for first message）',
-          component: 'InputNumber',
-          componentProps: {
-            min: 15000
-          }
-        },
-        {
           field: 'amapKey',
           label: '高德APIKey',
           bottomHelpMessage: '用于查询天气',
@@ -674,6 +640,28 @@ export function supportGuoba() {
           label: '通义千问允许搜索',
           bottomHelpMessage: '生成时，是否参考夸克搜索的结果。注意：打开搜索并不意味着一定会使用搜索结果；如果打开搜索，模型会将搜索结果作为prompt，进而“自行判断”是否生成结合搜索结果的文本，默认为false',
           component: 'Switch'
+        },
+        {
+          label: '以下为Azure chatGPT的配置',
+          component: 'Divider'
+        },
+        {
+          field: 'azApiKey',
+          label: 'Azure API Key',
+          bottomHelpMessage: '管理密钥，用于访问Azure的API接口',
+          component: 'InputPassword'
+        },
+        {
+          field: 'azureUrl',
+          label: '端点地址',
+          bottomHelpMessage: 'https://xxxx.openai.azure.com/',
+          component: 'Input'
+        },
+        {
+          field: 'azureDeploymentName',
+          label: '部署名称',
+          bottomHelpMessage: '创建部署时输入的名称',
+          component: 'Input'
         },
         {
           label: '以下为Gemini方式的配置',
@@ -1619,34 +1607,46 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
+          label: '以下为服务超时配置。',
+          component: 'Divider'
+        },
+        {
+          field: 'defaultTimeoutMs',
+          label: '默认超时时间',
+          helpMessage: '单位：毫秒',
+          bottomHelpMessage: '各个地方的默认超时时间',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
+        {
+          field: 'chromeTimeoutMS',
+          label: '浏览器超时时间',
+          helpMessage: '单位：毫秒',
+          bottomHelpMessage: '浏览器默认超时，浏览器可能需要更高的超时时间',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
+        {
+          field: 'sydneyFirstMessageTimeout',
+          label: 'Sydney模式接受首条信息超时时间',
+          helpMessage: '单位：毫秒',
+          bottomHelpMessage: '超过该时间阈值未收到Bing的任何消息，则断开本次连接并重试（最多重试3次，失败后将返回timeout waiting for first message）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 15000
+          }
+        },
+        {
           label: 'emoji合成',
           component: 'Divider'
         },
         {
           field: 'emojiBaseURL',
           label: '合成emoji的API地址，默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
-          component: 'Input'
-        },
-        {
-          label: '以下为Azure chatGPT的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'azApiKey',
-          label: 'Azure API Key',
-          bottomHelpMessage: '管理密钥，用于访问Azure的API接口',
-          component: 'InputPassword'
-        },
-        {
-          field: 'azureUrl',
-          label: '端点地址',
-          bottomHelpMessage: 'https://xxxx.openai.azure.com/',
-          component: 'Input'
-        },
-        {
-          field: 'azureDeploymentName',
-          label: '部署名称',
-          bottomHelpMessage: '创建部署时输入的名称',
           component: 'Input'
         },
         {
