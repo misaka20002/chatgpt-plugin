@@ -108,6 +108,7 @@ const defaultConfig = {
   paimon_chou_paimonChuoMeme: 0.05,
   paimon_chou_randowLocalPic: 0.12,
   paimon_chou_dailyEnglish: 0.005,
+  paimon_chou_Fighting_Back: "",
   paimon_chou_IsSendLocalpic: true,
   paimon_chou_IsUseLoliconApi: false,
   paimon_chou_text_generateAndSendAudio: true,
