@@ -832,7 +832,7 @@ async function collectTools (e) {
     new QueryUserinfoTool(),
     // new EliMusicTool(),
     // new EliMovieTool(),
-    new SendMessageToSpecificGroupOrUserTool(),
+    Config.disable_sendMessage ? undefined : new SendMessageToSpecificGroupOrUserTool(),
     new SendDiceTool(),
     new QueryGenshinTool(),
     new SetTitleTool(),
@@ -842,7 +842,7 @@ async function collectTools (e) {
   let /** @type{AbstractTool[]} **/ tools = [
     new SendAvatarTool(),
     new SendDiceTool(),
-    new SendMessageToSpecificGroupOrUserTool(),
+    Config.disable_sendMessage ? undefined : new SendMessageToSpecificGroupOrUserTool(),
     // new EditCardTool(),
     new QueryStarRailTool(),
     new QueryGenshinTool(),
@@ -935,6 +935,7 @@ function replacePromptForSenderMsg(e, systemMsg = "") {
   systemMsg = systemMsg.replace(/_sender_title_/igm, e.sender.title)
   systemMsg = systemMsg.replace(/_date_/igm, getCurrentDate())
   systemMsg = systemMsg.replace(/_time_/igm, getCurrentTime())
+  systemMsg = systemMsg.replace(/_sender_groupid_/igm, e.group_id || e.sender.user_id)
   return systemMsg;
 }
 

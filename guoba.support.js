@@ -1219,9 +1219,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'disable_sendMessage',
+          label: '禁用文字工具',
+          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊工具”，适用于sf图片模式、伪人重复发送相同文本等问题。',
+          component: 'Switch'
+        },
+        {
           field: 'isReplacePromptForSenderMsg',
           label: '呆毛版 设定拓展',
-          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
+          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_groupid_ 替换为 当前群号或私聊； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
           component: 'Switch'
         },
         {
@@ -1267,7 +1273,7 @@ export function supportGuoba() {
         {
           field: 'doNotCheckPaintPluginSuccess',
           label: '不检测画图成功',
-          bottomHelpMessage: '检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/paimonnai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
+          bottomHelpMessage: '绘画prompt模式时检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/paimonnai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
           component: 'Switch'
         },
         {
@@ -1607,7 +1613,7 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
-          label: '以下为服务超时配置。',
+          label: '以下为服务超时配置',
           component: 'Divider'
         },
         {

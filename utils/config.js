@@ -92,6 +92,7 @@ const defaultConfig = {
   drawByJsonToPlugin: false,
   drawToolS: false,
   sf_markdownPic: false,
+  disable_sendMessage: false,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
   geminiModelsByFetch: [],
   draw_PluginCharactersList: '',
