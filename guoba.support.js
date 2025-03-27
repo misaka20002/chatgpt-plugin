@@ -1219,7 +1219,7 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'disable_sendMessage',
+          field: 'disable_sendMessage_tool',
           label: '禁用文字工具',
           bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊工具”，适用于sf图片模式、伪人重复发送相同文本等问题。',
           component: 'Switch'

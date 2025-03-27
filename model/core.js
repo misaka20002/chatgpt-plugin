@@ -832,7 +832,7 @@ async function collectTools (e) {
     new QueryUserinfoTool(),
     // new EliMusicTool(),
     // new EliMovieTool(),
-    Config.disable_sendMessage ? undefined : new SendMessageToSpecificGroupOrUserTool(),
+    new SendMessageToSpecificGroupOrUserTool(),
     new SendDiceTool(),
     new QueryGenshinTool(),
     new SetTitleTool(),
@@ -842,7 +842,7 @@ async function collectTools (e) {
   let /** @type{AbstractTool[]} **/ tools = [
     new SendAvatarTool(),
     new SendDiceTool(),
-    Config.disable_sendMessage ? undefined : new SendMessageToSpecificGroupOrUserTool(),
+    new SendMessageToSpecificGroupOrUserTool(),
     // new EditCardTool(),
     new QueryStarRailTool(),
     new QueryGenshinTool(),
@@ -861,6 +861,12 @@ async function collectTools (e) {
     new QueryUserinfoTool(),
     new GithubAPITool()
   ]
+
+  if (Config.disable_sendMessage_tool) {
+    tools = tools.filter(tool => tool?.name !== 'SendMessageToSpecificGroupOrUserTool')
+    fullTools = fullTools.filter(tool => tool?.name !== 'SendMessageToSpecificGroupOrUserTool')
+  }
+
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e), true) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e), true)
