@@ -13,7 +13,8 @@ import {
 } from '../utils/randomMessage.js'
 import {
     generateAudio,
-    getUin
+    getUin,
+    getUserReplySetting,
 } from '../utils/common.js'
 import fs from 'fs'
 import path from 'path'
@@ -165,7 +166,8 @@ export class PaimonChuo extends plugin {
                     logger.mark('[戳一戳回复随机语音生效]')
                 }
                 let mutetype = 1
-                if (Config.paimon_chou_text_generateAndSendAudio) mutetype = Math.ceil(Math.random() * 2)
+                const userSetting = await getUserReplySetting({ sender: { user_id: e.operator_id } })
+                if (Config.paimon_chou_text_generateAndSendAudio && userSetting.useTTS) mutetype = Math.ceil(Math.random() * 2)
                 switch (mutetype) {
                     case 1:
                         // 匹配发音人物

@@ -111,7 +111,7 @@ const defaultConfig = {
   paimon_chou_Fighting_Back: "",
   paimon_chou_IsSendLocalpic: true,
   paimon_chou_IsUseLoliconApi: false,
-  paimon_chou_text_generateAndSendAudio: true,
+  paimon_chou_text_generateAndSendAudio: false,
   vits_emotion: 'Happy',
   vits_auto_emotion: false,
   style_text: '',
