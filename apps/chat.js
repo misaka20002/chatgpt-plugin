@@ -612,7 +612,7 @@ export class chatgpt extends plugin {
 
   async abstractChat(e, prompt, use, forcePictureMode = false) {
     /** 备份用户最初的 e.msg */
-    let msg_bak = e.msg
+    e.msg_bak_2 = e.msg
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
@@ -666,7 +666,7 @@ export class chatgpt extends plugin {
     // 导入 引用消息 msg
     if (e.sourceMsg) {
       prompt = e.sourceMsg + '\n\n' + prompt;
-      msg_bak = e.sourceMsg + '\n\n' + msg_bak;
+      e.msg_bak_2 = e.sourceMsg + '\n\n' + e.msg_bak_2;
     }
 
     if (Config.imgOcr && !!isImg) {
@@ -1303,7 +1303,7 @@ export class chatgpt extends plugin {
             try {
               /** 添加引用图片 */
               logger.info("[ChatGPT]" + responseText)
-              const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + msg_bak : msg_bak;
+              const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + e.msg_bak_2 : e.msg_bak_2;
               const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
               const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
               this.reply({ ...img, origin: true }, true)
@@ -1380,7 +1380,7 @@ export class chatgpt extends plugin {
           try {
             /** 添加引用图片 */
             logger.info("[ChatGPT]" + responseText)
-            const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + msg_bak : msg_bak;
+            const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + e.msg_bak_2 : e.msg_bak_2;
             const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
             const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
             this.reply({ ...img, origin: true }, true)

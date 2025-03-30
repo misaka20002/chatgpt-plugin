@@ -22,6 +22,9 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
 
   func = async function (opt, e) {
     let { msg, sender, targetGroupIdOrQQNumber } = opt
+    
+    logger.info('[chatgpt][sendMessage工具]' + msg)
+
     const defaultTarget = e.isGroup ? e.group_id : e.sender.user_id
     const target = isNaN(targetGroupIdOrQQNumber) || !targetGroupIdOrQQNumber
       ? defaultTarget
