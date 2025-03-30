@@ -863,8 +863,8 @@ async function collectTools (e) {
   ]
 
   if (Config.disable_sendMessage_tool) {
-    tools = tools.filter(tool => tool?.name !== 'SendMessageToSpecificGroupOrUserTool')
-    fullTools = fullTools.filter(tool => tool?.name !== 'SendMessageToSpecificGroupOrUserTool')
+    tools = tools.filter(tool => tool?.name !== 'sendMessage')
+    fullTools = fullTools.filter(tool => tool?.name !== 'sendMessage')
   }
 
   let systemAddition = ''
