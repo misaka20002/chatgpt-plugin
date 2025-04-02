@@ -1,4 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
+import { getGroupList } from '../common.js'
 
 export class SendDiceTool extends AbstractTool {
   name = 'sendDice'
@@ -24,12 +25,7 @@ export class SendDiceTool extends AbstractTool {
     const target = isNaN(targetGroupIdOrQQNumber) || !targetGroupIdOrQQNumber
       ? defaultTarget
       : parseInt(targetGroupIdOrQQNumber) === e.bot.uin ? defaultTarget : parseInt(targetGroupIdOrQQNumber)
-    let groupList
-    try {
-      groupList = await e.bot.getGroupList()
-    } catch (err) {
-      groupList = e.bot.gl
-    }
+    let groupList = await getGroupList(e)
     num = isNaN(num) || !num ? 1 : num > 5 ? 5 : num
     if (groupList.get(target)) {
       let group = await e.bot.pickGroup(target, true)

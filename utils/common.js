@@ -832,6 +832,21 @@ export function getUin (e) {
   } else return Bot.uin
 }
 
+export async function getGroupList (e) {
+  let groupList
+  try {
+    groupList = await e.bot.getGroupList()
+  } catch (err) {
+    groupList = e.bot.gl
+  }
+  //onebot getGroupList方法返回的array，需要转换为map 等同于e.bot.gl
+  if (Array.isArray(groupList)) {
+    return e.bot.gl
+  } else {
+    return groupList
+  }
+}
+
 /**
  * 生成当前语音模式下可发送的音频信息
  * @param e - 上下文对象
