@@ -839,8 +839,9 @@ export async function getGroupList (e) {
   } catch (err) {
     groupList = e.bot.gl
   }
+  //onebot getGroupList方法返回的array，需要转换为map 等同于e.bot.gl
   if (Array.isArray(groupList)) {
-    return groupList.map(group => group.group_id)
+    return e.bot.gl
   } else {
     return groupList
   }
