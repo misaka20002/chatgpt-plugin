@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { convertFaces } from '../face.js'
-import {getMasterQQ} from '../common.js'
+import {getMasterQQ, getGroupList} from '../common.js'
 import {Config} from '../config.js'
 
 export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
@@ -27,12 +27,7 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
       ? defaultTarget
       : parseInt(targetGroupIdOrQQNumber) === e.bot.uin ? defaultTarget : parseInt(targetGroupIdOrQQNumber)
 
-    let groupList
-    try {
-      groupList = await e.bot.getGroupList()
-    } catch (err) {
-      groupList = e.bot.gl
-    }
+    let groupList = await getGroupList(e)
     try {
       if (groupList.get(target)) {
         let group = await e.bot.pickGroup(target)

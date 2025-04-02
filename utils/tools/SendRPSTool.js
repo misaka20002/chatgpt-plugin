@@ -1,4 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
+import { getGroupList } from '../common.js'
 
 export class SendRPSTool extends AbstractTool {
   name = 'sendRPS'
@@ -20,12 +21,7 @@ export class SendRPSTool extends AbstractTool {
     const target = isNaN(targetGroupIdOrQQNumber) || !targetGroupIdOrQQNumber
       ? defaultTarget
       : parseInt(targetGroupIdOrQQNumber) === e.bot.uin ? defaultTarget : parseInt(targetGroupIdOrQQNumber)
-    let groupList
-    try {
-      groupList = await e.bot.getGroupList()
-    } catch (err) {
-      groupList = e.bot.gl
-    }
+    let groupList = await getGroupList(e)
     if (groupList.get(target)) {
       let group = await e.bot.pickGroup(target, true)
       await group.sendMsg(segment.rps(num))
