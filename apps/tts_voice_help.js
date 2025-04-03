@@ -16,6 +16,7 @@ import fs from 'fs'
 import fetch from 'node-fetch'
 import cfg from '../../../lib/config/config.js'
 import { getGeminiModelsByFetch } from '../utils/paimonFuction.js'
+import { ConversationManager } from '../model/conversation.js'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
@@ -130,6 +131,11 @@ export class voicechangehelp extends plugin {
                 {
                     reg: '^#派蒙tts测试$',
                     fnc: 'paimon_tts_test',
+                    permission: 'master'
+                },
+                {
+                    reg: '^#删除所有(gemini|Gemini)(对话|会话)记录$',
+                    fnc: 'delete_redis_all_gemini_msg',
                     permission: 'master'
                 },
             ]
@@ -787,6 +793,22 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
             logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
         }
     }
+
+    /** ^#删除所有(gemini|Gemini)(对话|会话)记录$ */
+    async delete_redis_all_gemini_msg(e) {
+        let gemini_messages = await redis.keys('CHATGPT:MESSAGE_Gemini:*')
+        let deleted = 0
+        for (let i = 0; i < gemini_messages.length; i++) {
+            await redis.del(gemini_messages[i])
+            if (Config.debug) {
+                logger.info('delete gemini_message: ' + gemini_messages[i])
+            }
+            deleted++
+        }
+        e.reply(`已经删除${deleted}个Gemini会话记录。建议：\n#结束全部对话`, true)
+        return true;
+    }
+
 }
 
 

@@ -290,6 +290,12 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:QQ_MESSAGE:*') // 未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'chatglm': {
@@ -302,6 +308,12 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM:*') // 未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'qwen': {
@@ -314,6 +326,12 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_QWEN:*') // 未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'gemini': {
@@ -326,6 +344,12 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_Gemini:*')
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'chatglm4': {
@@ -338,6 +362,12 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM4:*') // 未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
     }
