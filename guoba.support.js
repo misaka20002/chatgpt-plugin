@@ -1374,7 +1374,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_reply_voice',
           label: '语音回复概率',
-          bottomHelpMessage: '戳一戳响应概率',
+          bottomHelpMessage: '戳一戳响应概率，设置“AI的第一人称”后，目前支持语音的角色有：派蒙、白露、可莉、纳西妲、春原心奈(心奈)、下江小春(小春)、缇宝',
           component: 'InputNumber',
           componentProps: {
             min: 0,
