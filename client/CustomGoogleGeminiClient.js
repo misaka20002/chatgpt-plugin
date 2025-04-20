@@ -296,10 +296,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         if (Config.sf_markdownPic) {
           // sf图片模式
           try {
-            const userMsg = this.e.img ? this.e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + this.e.msg_bak_2 : this.e.msg_bak_2;
-            const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-            const img = await markdown_screenshot(this.e.user_id, this.e.self_id, userMsg, text.trim());
-            this.e.reply({ ...img, origin: true }, true)
+            if (text.trim()) {
+              const userMsg = this.e.img ? this.e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + this.e.msg_bak_2 : this.e.msg_bak_2;
+              const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
+              const img = await markdown_screenshot(this.e.user_id, this.e.self_id, userMsg, text.trim());
+              this.e.reply({ ...img, origin: true }, true)
+            }
           } catch (err) {
             logger.error('[chatgpt][functionCall附加的对话text]sf图片模式错误\n' + err)
             opt.replyPureTextCallback && await opt.replyPureTextCallback(text.trim())

@@ -1301,12 +1301,14 @@ export class chatgpt extends plugin {
           else if (Config.sf_markdownPic) {
             // sf图片模式
             try {
-              /** 添加引用图片 */
-              logger.info("[ChatGPT]" + responseText)
-              const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + e.msg_bak_2 : e.msg_bak_2;
-              const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-              const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
-              this.reply({ ...img, origin: true }, true)
+              if (responseText.join('')?.trim()) {
+                /** 添加引用图片 */
+                logger.info("[ChatGPT]" + responseText)
+                const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + e.msg_bak_2 : e.msg_bak_2;
+                const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
+                const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
+                this.reply({ ...img, origin: true }, true)
+              }
             } catch (err) {
               logger.error('[ChatGPT]sf图片模式错误\n' + err)
             }
@@ -1378,12 +1380,14 @@ export class chatgpt extends plugin {
         else if (Config.sf_markdownPic) {
           // sf图片模式
           try {
-            /** 添加引用图片 */
-            logger.info("[ChatGPT]" + responseText)
-            const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + e.msg_bak_2 : e.msg_bak_2;
-            const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-            const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
-            this.reply({ ...img, origin: true }, true)
+            if (responseText.join('')?.trim()) {
+              /** 添加引用图片 */
+              logger.info("[ChatGPT]" + responseText)
+              const userMsg = e.img ? e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + e.msg_bak_2 : e.msg_bak_2;
+              const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
+              const img = await markdown_screenshot(e.user_id, e.self_id, userMsg, responseText.join(''));
+              this.reply({ ...img, origin: true }, true)
+            }
           } catch (err) {
             logger.error('[ChatGPT]sf图片模式错误\n' + err)
           }
