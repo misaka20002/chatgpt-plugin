@@ -910,7 +910,9 @@ async function convertWebpToPng(url) {
         const webpBuffer = Buffer.from(arrayBuffer);
         // 使用 sharp 将 WebP 转换为 PNG
         const pngBuffer = await sharp(webpBuffer)
-            .png() // 转换为 PNG
+            .jpeg({
+                quality: 80, // 默认值 80
+            })
             .toBuffer(); // 返回 Buffer
         return pngBuffer;
     } catch (err) {
@@ -1931,8 +1933,8 @@ function getRandomUrl(type) {
             "https://t.alcy.cc/moemp",
             "https://t.alcy.cc/ysmp",
             "https://www.loliapi.com/acg",
-            "http://api.mysqil.com/pc.php",
-            "http://api.mysqil.com/pe.php",
+            // "http://api.mysqil.com/pc.php",
+            // "http://api.mysqil.com/pe.php",
         ],
         "scywebp": [ // 三次元 webp格式
             "",
