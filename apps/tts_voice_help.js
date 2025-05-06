@@ -747,7 +747,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         try {
             Config.geminiModelsByFetch = await getGeminiModelsByFetch();
             logger.info('[sf插件自动任务] 成功更新 Gemini 模型列表');
-            if (e?.reply) e.reply('[派蒙chatgpt自动任务] 成功更新 Gemini 模型列表');
+            if (e?.reply) e.reply('[派蒙chatgpt自动任务] 成功更新 Gemini 模型列表，请刷新锅巴');
         } catch (err) {
             logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
             if (e?.reply) e.reply('[派蒙chatgpt自动任务] 每日获取Gemini模型错误')
