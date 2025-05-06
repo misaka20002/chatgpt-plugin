@@ -278,20 +278,25 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE:*') // 呆毛未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'api3': {
         let qcs = await redis.keys('CHATGPT:QQ_CONVERSATION:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete conversation bind: ' + qcs[i])
           }
           deleted++
         }
 
-        let ms = await redis.keys('CHATGPT:QQ_MESSAGE:*') // 未验证
+        let ms = await redis.keys('CHATGPT:QQ_MESSAGE:*') // 呆毛未验证
         for (let i = 0; i < ms.length; i++) {
           await redis.del(ms[i])
         }
@@ -302,14 +307,13 @@ export class ConversationManager {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_CHATGLM:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete chatglm conversation bind: ' + qcs[i])
           }
           deleted++
         }
 
-        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM:*') // 未验证
+        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM:*') // 呆毛未验证
         for (let i = 0; i < ms.length; i++) {
           await redis.del(ms[i])
         }
@@ -320,14 +324,13 @@ export class ConversationManager {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_QWEN:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete qwen conversation bind: ' + qcs[i])
           }
           deleted++
         }
 
-        let ms = await redis.keys('CHATGPT:MESSAGE_QWEN:*') // 未验证
+        let ms = await redis.keys('CHATGPT:MESSAGE_QWEN:*') // 呆毛未验证
         for (let i = 0; i < ms.length; i++) {
           await redis.del(ms[i])
         }
@@ -338,7 +341,6 @@ export class ConversationManager {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_GEMINI:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete gemini conversation bind: ' + qcs[i])
           }
@@ -356,14 +358,13 @@ export class ConversationManager {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_CHATGLM4:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete chatglm4 conversation bind: ' + qcs[i])
           }
           deleted++
         }
 
-        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM4:*') // 未验证
+        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM4:*') // 呆毛未验证
         for (let i = 0; i < ms.length; i++) {
           await redis.del(ms[i])
         }
