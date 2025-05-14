@@ -70,7 +70,9 @@ const defaultPropmtPrefix = ', a large language model trained by OpenAI. You ans
 const paintPropmtPrefix = 'It is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. 其中角色使用词条形式，例如 `klee (genshin impact)`。 Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
 // const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
 
-
+function filterCQCodes(message) {
+  return message.replace(/\[CQ:[^\]]+\]/g, '')
+}
 async function handleSystem (e, system, settings) {
   if (settings.enableGroupContext) {
     try {
@@ -109,7 +111,7 @@ async function handleSystem (e, system, settings) {
               // 建议的回复太容易污染设定导致对话太固定跑偏了
               return ''
             }
-            return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+            return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
           })
           .join('\n')
       }
@@ -189,7 +191,7 @@ class Core {
           system += chats
             .map(chat => {
               let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
             })
             .join('\n')
         }
@@ -286,7 +288,7 @@ class Core {
             option.system += chats
               .map(chat => {
                 let sender = chat.sender || {}
-                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
               })
               .join('\n')
           }
@@ -628,7 +630,7 @@ class Core {
           system += chats
             .map(chat => {
               let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
             })
             .join('\n')
         }
