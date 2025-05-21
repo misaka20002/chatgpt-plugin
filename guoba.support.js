@@ -1497,13 +1497,13 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'autoEmoticonsConfig.useEmojiSave',
+          field: 'autoEmoticons_useEmojiSave',
           label: '启用表情保存',
           bottomHelpMessage: '是否启用表情保存/偷取',
           component: 'Switch'
         },
         {
-          field: 'autoEmoticonsConfig.expireTimeInSeconds',
+          field: 'autoEmoticons_expireTimeInSeconds',
           label: '表情记录时间',
           bottomHelpMessage: '在此时间内发送多次才会被保存',
           helpMessage: '单位：秒',
@@ -1515,7 +1515,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.confirmCount',
+          field: 'autoEmoticons_confirmCount',
           label: '表情确认次数',
           bottomHelpMessage: '在记录时间内接收多少次才保存表情包',
           component: 'InputNumber',
@@ -1526,7 +1526,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.autoEmoticonsReplyRate',
+          field: 'autoEmoticons_autoEmoticonsReplyRate',
           label: '发送表情概率',
           bottomHelpMessage: '发送偷取表情的概率',
           component: 'InputNumber',
@@ -1537,7 +1537,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.maxEmojiCount',
+          field: 'autoEmoticons_maxEmojiCount',
           label: '表情包最大数量',
           bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',
           component: 'InputNumber',
@@ -1548,7 +1548,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.maxEmojiSize',
+          field: 'autoEmoticons_maxEmojiSize',
           label: '表情大小限制',
           bottomHelpMessage: '表情包文件大小限制 (字节)',
           component: 'InputNumber',
@@ -1559,7 +1559,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.allowGroups',
+          field: 'autoEmoticons_allowGroups',
           label: '表情包白名单群',
           bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群',
           component: "GTags",
@@ -1567,7 +1567,7 @@ export function supportGuoba() {
             placeholder: '请输入qq群号',
             allowAdd: true,
             allowDel: true,
-            valueParser: ((value) => value.split(',').map(Number).filter(n => Number.isInteger(n) && n > 0)),  // 只允许正整数
+            valueParser: (value) => value.split(',') || []
           },
         },
         {
