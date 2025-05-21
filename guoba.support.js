@@ -1493,6 +1493,84 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
+          label: '以下为自动表情包',
+          component: 'Divider'
+        },
+        {
+          field: 'autoEmoticonsConfig.useEmojiSave',
+          label: '启用表情保存',
+          bottomHelpMessage: '是否启用表情保存/偷取',
+          component: 'Switch'
+        },
+        {
+          field: 'autoEmoticonsConfig.expireTimeInSeconds',
+          label: '表情记录时间',
+          bottomHelpMessage: '在此时间内发送多次才会被保存',
+          helpMessage: '单位：秒',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            // max: 999999999,
+            step: 1
+          }
+        },
+        {
+          field: 'autoEmoticonsConfig.confirmCount',
+          label: '表情确认次数',
+          bottomHelpMessage: '在记录时间内接收多少次才保存表情包',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            // max: 999999999,
+            step: 1
+          }
+        },
+        {
+          field: 'autoEmoticonsConfig.autoEmoticonsReplyRate',
+          label: '发送表情概率',
+          bottomHelpMessage: '发送偷取表情的概率',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 1,
+            step: 0.01
+          }
+        },
+        {
+          field: 'autoEmoticonsConfig.maxEmojiCount',
+          label: '表情包最大数量',
+          bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            // max: 1,
+            step: 1
+          }
+        },
+        {
+          field: 'autoEmoticonsConfig.maxEmojiSize',
+          label: '表情大小限制',
+          bottomHelpMessage: '表情包文件大小限制 (字节)',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            // max: 1,
+            step: 1
+          }
+        },
+        {
+          field: 'autoEmoticonsConfig.allowGroups',
+          label: '表情包白名单群',
+          bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群',
+          component: "GTags",
+          componentProps: {
+            placeholder: '请输入qq群号',
+            allowAdd: true,
+            allowDel: true,
+            valueParser: ((value) => value.split(',').map(Number).filter(n => Number.isInteger(n) && n > 0)),  // 只允许正整数
+          },
+        },
+        {
           label: '伪人',
           component: 'SOFT_GROUP_BEGIN'
         },

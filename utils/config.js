@@ -296,7 +296,30 @@ const defaultConfig = {
   geminiForceToolKeywords: [],
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',
-  version: 'v2.8.4'
+  version: 'v2.8.4',
+
+  autoEmoticonsConfig: {
+    // 是否启用表情保存
+    useEmojiSave: true,
+    // 表情过期时间（秒）- 在此时间内发送多次才会被保存
+    expireTimeInSeconds: 259200, // 3天
+    // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
+    confirmCount: 3, // 默认是3次，可以设置为更高的值
+    // 默认发送偷取表情的概率
+    autoEmoticonsReplyRate: 0.05, // 每次消息有5%的概率发送表情包
+    // 表情包最大数量
+    maxEmojiCount: 100,
+    // 表情包大小限制 (字节)
+    maxEmojiSize: 100000,
+    // 需要保存表情包的群号列表，为空数组时表示所有群
+    allowGroups: [1111],
+    // 发送表情时的延迟 (毫秒)
+    replyDelay: {
+        min: 1000,
+        max: 5000
+    }
+  }
+  
 }
 const _path = process.cwd()
 let config = {}
