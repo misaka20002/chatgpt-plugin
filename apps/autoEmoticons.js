@@ -165,7 +165,8 @@ export class autoEmoticons extends plugin {
         }
 
         // 从Redis获取表情文件路径
-        const emojiPath = await redis.get(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
+        const emojiFile = await redis.get(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
+        const emojiPath = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId, emojiFile);
         if (!emojiPath) {
             // await e.reply('找不到这个表情或者已经过期了哦~');
             return false;
@@ -247,8 +248,14 @@ export class autoEmoticons extends plugin {
                         continue
                     }
 
+                    // 从filename获取图片类型，如果没有则从URL获取或默认使用jpg
+                    const imgType = item.filename
+                        ? item.filename.split('.').pop()
+                        : (item.file.split('.').pop() || 'jpg')
+                    const filename = `${fileUnique}.${imgType}`
+
                     // 检查是否已经保存过此表情
-                    if (!emojiList.includes(`${fileUnique}.jpg`) && !emojiList.includes(`${fileUnique}.png`) && !emojiList.includes(`${fileUnique}.gif`)) {
+                    if (!emojiList.includes(`${fileUnique}.jpg`) && !emojiList.includes(`${filename}`)) {
                         let canBeStored = false
                         // 检查Redis中是否已有记录
                         const redisKey = `Yz:autoEmoticons:${groupId}:${fileUnique}`
@@ -279,12 +286,6 @@ export class autoEmoticons extends plugin {
                         }
 
                         if (!canBeStored) continue
-
-                        // 从filename获取图片类型，如果没有则从URL获取或默认使用jpg
-                        const imgType = item.filename
-                            ? item.filename.split('.').pop()
-                            : (item.file.split('.').pop() || 'jpg')
-                        const filename = `${fileUnique}.${imgType}`
                         // 保存表情
                         logger.mark(`[autoEmoticons] 保存表情: ${filename}`)
 
@@ -335,18 +336,19 @@ export class autoEmoticons extends plugin {
             try {
                 // 随机选择一个表情
                 const randomIndex = Math.floor(Math.random() * emojiList.length)
-                const emojiPath = path.join(emojiSaveDir, emojiList[randomIndex])
+                const emojiFile = emojiList[randomIndex];
+                const emojiPath = path.join(emojiSaveDir, emojiFile);
 
                 // 添加随机延迟
                 const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
-                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送表情: ${emojiList[randomIndex]}`)
+                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送表情: ${emojiPath}`)
                 await sleep(delay)
 
                 // 发送表情
                 msgRet = await e.reply(segment.image(emojiPath))
                 msgRet_id = msgRet.seq || msgRet.data.message_id
-                redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgRet_id}`, emojiPath, { EX: 60 * 60 * 24 * 3 }); // 储存3天
-                logger.debug(`[autoEmoticons] 发送表情成功: ${emojiList[randomIndex]}`)
+                redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgRet_id}`, emojiFile, { EX: 60 * 60 * 24 * 1 }); // 储存1天
+                logger.debug(`[autoEmoticons] 发送表情成功: ${emojiPath}`)
             } catch (error) {
                 logger.error(`[autoEmoticons] 发送表情失败: ${error}`)
             }
@@ -388,6 +390,11 @@ export class autoEmoticons extends plugin {
                 const emojiFile = emojiList[randomIndex];
                 const emojiPath = path.join(emojiSaveDir, emojiFile);
 
+                // 添加随机延迟
+                const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
+                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送表情: ${emojiPath}`)
+                await sleep(delay)
+
                 // 发送表情
                 try {
                     // 使用Bot API发送
@@ -400,10 +407,11 @@ export class autoEmoticons extends plugin {
                     // 发送表情
                     const msgRet = await group.sendMsg(segment.image(emojiPath));
                     const msgId = msgRet.seq || msgRet.message_id;
+                    logger.debug(`[autoEmoticons] 发送表情成功: ${emojiPath}`)
 
                     // 记录发送的表情路径
-                    await redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgId}`, emojiPath, {
-                        EX: 60 * 60 * 24 * 3  // 储存3天
+                    await redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgId}`, emojiFile, {
+                        EX: 60 * 60 * 24 * 1  // 储存1天
                     });
 
                     logger.debug(`[autoEmoticons] 定时任务发送表情到群 ${groupId}: ${emojiFile}`);
