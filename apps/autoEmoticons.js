@@ -136,7 +136,8 @@ export class autoEmoticons extends plugin {
                 // 每5分钟执行一次
                 cron: '0 */5 * * * *',
                 name: '自动表情包-发送表情',
-                fnc: this.sendimg.bind(this)
+                fnc: this.sendimg.bind(this),
+                log: false
             },
         ]
     }
@@ -187,7 +188,7 @@ export class autoEmoticons extends plugin {
                     emojiListCache.set(groupId, emojiList);
                 }
 
-                let res = await e.group.recallMsg(m.message_id)
+                let res = await e.group.recallMsg(replyMsgId)
                 if (!res) {
                     this.reply("人家不是管理员，不能撤回超过2分钟的消息呢~")
                 }
