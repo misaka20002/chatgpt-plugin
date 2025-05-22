@@ -515,6 +515,15 @@ function handleArgs(key, args, userInfos) {
         const trimmedArg = args.trim();
         argsObj[prop] = valueMap[trimmedArg] || propInfo.default;
       }
+      // 处理数字类型参数
+      else if (propInfo.type === 'integer' || propInfo.type === 'number') {
+        const trimmedArg = args.trim();
+        // 尝试将参数解析为数字
+        if (/^\d+$/.test(trimmedArg)) {
+          const numValue = parseInt(trimmedArg);
+          argsObj[prop] = numValue;
+        }
+      }
     }
   }
 
@@ -535,7 +544,7 @@ const detail = code => {
 
   // 检查是否有参数类型定义
   if (d.params_type.args_type?.parser_options?.length > 0) {
-    let supportArgs = generateSupportArgsText(code, d);
+    let supportArgs = generateSupportArgsText(d);
     ins += `【支持参数】${supportArgs}`;
   }
 
@@ -543,7 +552,7 @@ const detail = code => {
 };
 
 // 辅助函数：根据infos生成参数说明文本
-function generateSupportArgsText(code, info) {
+function generateSupportArgsText(info) {
   try {
     const argsType = info.params_type.args_type;
     const props = argsType.args_model.properties;
@@ -594,6 +603,18 @@ function generateSupportArgsText(code, info) {
             const exampleName = chineseNames.length > 0 ? chineseNames[0] : valueNames[0];
             return `${description || prop}，可选值：${valuesText}。如#${exampleName}`;
           }
+        }
+        // 处理数字类型
+        else if (propInfo.type === 'integer' || propInfo.type === 'number') {
+          // 添加数字范围说明（如果有）
+          let rangeText = '';
+          if (propInfo.minimum !== undefined && propInfo.maximum !== undefined) {
+            rangeText = `范围为${propInfo.minimum}~${propInfo.maximum}`;
+          } else if (propInfo.description && propInfo.description.includes('范围')) {
+            rangeText = propInfo.description;
+          }
+
+          return `${description || prop}${rangeText ? '，' + rangeText : ''}。如#1`;
         }
 
         break;
