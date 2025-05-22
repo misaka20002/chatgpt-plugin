@@ -225,7 +225,7 @@ export class memes extends plugin {
     if (Config.meme_turnOff) return false;
     let resultFileLoc = 'data/memes/render_list1.jpg'
     if (fs.existsSync(resultFileLoc)) {
-      await e.reply(segment.image(`file://${resultFileLoc}`))
+      await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
       return true
     }
     let response = await fetch(baseUrl + '/memes/render_list', {
@@ -235,7 +235,7 @@ export class memes extends plugin {
     const resultArrayBuffer = await resultBlob.arrayBuffer()
     const resultBuffer = Buffer.from(resultArrayBuffer)
     await fs.writeFileSync(resultFileLoc, resultBuffer)
-    await e.reply(segment.image(`file://${resultFileLoc}`))
+    await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
     setTimeout(async () => {
       await fs.unlinkSync(resultFileLoc)
     }, 3600)
@@ -375,12 +375,12 @@ export class memes extends plugin {
         let imgUrl = imgUrls[i]
         const imageResponse = await fetch(imgUrl)
         const fileType = imageResponse.headers.get('Content-Type').split('/')[1]
-        fileLoc = `data/memes/original/${Date.now()}.${fileType}`
-        mkdirs('data/memes/original')
+        // fileLoc = `data/memes/original/${Date.now()}.${fileType}`
+        // mkdirs('data/memes/original')
         const blob = await imageResponse.blob()
         const arrayBuffer = await blob.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
-        await fs.writeFileSync(fileLoc, buffer)
+        // await fs.writeFileSync(fileLoc, buffer)
         formData.append('images', new File([buffer], `avatar_${i}.jpg`, { type: 'image/jpeg' }))
       }
     }
@@ -448,15 +448,17 @@ export class memes extends plugin {
       await e.reply(error, true)
       return true
     }
-    mkdirs('data/memes/result')
-    let resultFileLoc = `data/memes/result/${Date.now()}.gif`
+    // mkdirs('data/memes/result')
+    // let resultFileLoc = `data/memes/result/${Date.now()}.gif`
     const resultBlob = await response.blob()
     const resultArrayBuffer = await resultBlob.arrayBuffer()
-    const resultBuffer = Buffer.from(resultArrayBuffer)
-    await fs.writeFileSync(resultFileLoc, resultBuffer)
-    await e.reply(segment.image(`file://${resultFileLoc}`), reply)
-    fileLoc && await fs.unlinkSync(fileLoc)
-    await fs.unlinkSync(resultFileLoc)
+    // const resultBuffer = Buffer.from(resultArrayBuffer)
+    // await fs.writeFileSync(resultFileLoc, resultBuffer)
+    const resultBase64 = Buffer.from(resultArrayBuffer).toString('base64')
+    // await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`), reply)
+    await e.reply(segment.image("base64://" + resultBase64), reply)
+    // fileLoc && await fs.unlinkSync(fileLoc)
+    // await fs.unlinkSync(resultFileLoc)
   }
 }
 
