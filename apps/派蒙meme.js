@@ -280,20 +280,42 @@ export class memes extends plugin {
 
     // console.log(e)
     let msg = e.msg.replace('#', '')
-    let keys = Object.keys(keyMap).filter(k => msg.startsWith(k))
-    let target = keys[0]
-    if (target === '玩' && msg.startsWith('玩游戏')) {
-      target = '玩游戏'
+    // let keys = Object.keys(keyMap).filter(k => msg.startsWith(k))
+    // let target = keys[0]
+    // 用于匹配有多个关键词但是第一个关键词与其他关键词首字相同的情况
+    // if (target === '玩' && msg.startsWith('玩游戏')) {
+    //   target = '玩游戏'
+    // }
+    // if (target === '舔' && msg.startsWith('舔糖')) {
+    //   target = '舔糖'
+    // }
+    // if (target === '滚' && msg.startsWith('滚屏')) {
+    //   target = '滚屏'
+    // }
+    // if (target === '小丑' && msg.startsWith('小丑面具')) {
+    //   target = '小丑面具'
+    // }
+    // if (target === '膜' && msg.startsWith('膜拜')) {
+    //   target = '膜拜'
+    // }
+    /**
+   * 智能匹配最长关键词
+   * @param {string} msg 用户消息
+   * @param {Object} keyMap 关键词映射对象
+   * @returns {string} 匹配到的最长关键词，如果没有匹配则返回null
+   */
+    function findLongestMatchingKey(msg, keyMap) {
+      // 找出所有匹配消息开头的关键词
+      const matchingKeys = Object.keys(keyMap).filter(k => msg.startsWith(k));
+      if (matchingKeys.length === 0) {
+        return null; // 没有匹配项
+      }
+      // 按关键词长度降序排序，选择最长的一个
+      return matchingKeys.sort((a, b) => b.length - a.length)[0];
     }
-    if (target === '舔' && msg.startsWith('舔糖')) {
-      target = '舔糖'
-    }
-    if (target === '滚' && msg.startsWith('滚屏')) {
-      target = '滚屏'
-    }
-    if (target === '小丑' && msg.startsWith('小丑面具')) {
-      target = '小丑面具'
-    }
+    // 替换原有的硬编码匹配逻辑
+    let target = findLongestMatchingKey(msg, keyMap);
+
     let targetCode = keyMap[target]
     // let target = e.msg.replace(/^#?meme(s)?/, '')
     let text1 = _.trimStart(e.msg, '#').replace(target, '')
