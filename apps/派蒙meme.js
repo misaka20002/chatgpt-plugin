@@ -271,7 +271,7 @@ export class memes extends plugin {
 
     // meme响应CD
     let lastTime = await redis.get(`Yz:paimon_meme_cd:${e.group_id}:${e.sender.user_id || e.user_id}`);
-    if (lastTime && !e.isFromPaimonChuo) return false;
+    if (lastTime && !e.isFromPaimonChuo && !e.isMaster) return false;
     else {
       // 写入cd
       let meme_CD = Config.meme_CD
@@ -280,24 +280,6 @@ export class memes extends plugin {
 
     // console.log(e)
     let msg = e.msg.replace('#', '')
-    // let keys = Object.keys(keyMap).filter(k => msg.startsWith(k))
-    // let target = keys[0]
-    // 用于匹配有多个关键词但是第一个关键词与其他关键词首字相同的情况
-    // if (target === '玩' && msg.startsWith('玩游戏')) {
-    //   target = '玩游戏'
-    // }
-    // if (target === '舔' && msg.startsWith('舔糖')) {
-    //   target = '舔糖'
-    // }
-    // if (target === '滚' && msg.startsWith('滚屏')) {
-    //   target = '滚屏'
-    // }
-    // if (target === '小丑' && msg.startsWith('小丑面具')) {
-    //   target = '小丑面具'
-    // }
-    // if (target === '膜' && msg.startsWith('膜拜')) {
-    //   target = '膜拜'
-    // }
     /**
    * 智能匹配最长关键词
    * @param {string} msg 用户消息
@@ -488,204 +470,142 @@ function handleArgs(key, args, userInfos) {
   if (!args) {
     args = ''
   }
+
   let argsObj = {}
-  switch (key) {
-    case 'look_flat': {
-      argsObj = { ratio: parseInt(args || '2') }
-      break
-    }
-    case 'crawl': {
-      argsObj = { number: parseInt(args) ? parseInt(args) : _.random(1, 92, false) }
-      break
-    }
-    case 'firefly_holdsign': {
-      argsObj = { number: parseInt(args) ? parseInt(args) : _.random(1, 21, false) }
-      break
-    }
-    case 'symmetric': {
-      let directionMap = {
-        左: 'left',
-        右: 'right',
-        上: 'top',
-        下: 'bottom'
+
+  // 检查是否有参数类型定义
+  if (infos[key]?.params_type?.args_type) {
+    const argsType = infos[key].params_type.args_type;
+    const argsModel = argsType.args_model;
+    const parserOptions = argsType.parser_options || [];
+
+    // 处理枚举类型参数
+    for (const prop in argsModel.properties) {
+      if (prop === 'user_infos') continue; // 用户信息单独处理
+
+      const propInfo = argsModel.properties[prop];
+
+      // 查找相关的parser选项
+      const relatedOptions = parserOptions.filter(opt =>
+        opt.dest === prop ||
+        (opt.args && opt.args.some(arg => arg.name === prop))
+      );
+
+      if (propInfo.enum && relatedOptions.length > 0) {
+        // 为枚举类型创建映射表
+        const valueMap = {};
+
+        // 从parser options中提取名称映射
+        relatedOptions.forEach(opt => {
+          if (opt.action?.type === 0) {
+            opt.names.forEach(name => {
+              // 处理非选项形式(如"左", "右")和选项形式(如"--right")
+              if (!/^-/.test(name)) {
+                valueMap[name] = opt.action.value;
+              } else if (name.startsWith('--')) {
+                // 处理选项形式，去掉前缀--
+                const simpleName = name.substring(2);
+                valueMap[simpleName] = opt.action.value;
+              }
+            });
+          }
+        });
+
+        // 设置默认值
+        const trimmedArg = args.trim();
+        argsObj[prop] = valueMap[trimmedArg] || propInfo.default;
       }
-      argsObj = { direction: directionMap[args.trim()] || 'left' }
-      break
-    }
-    case 'petpet':
-    case 'jiji_king':
-    case 'kirby_hammer': {
-      argsObj = { circle: args.startsWith('圆') }
-      break
-    }
-    case 'my_friend': {
-      if (!args) {
-        args = _.trim(userInfos[0].text, '@')
-      }
-      argsObj = { name: args }
-      break
-    }
-    case 'looklook': {
-      argsObj = { mirror: args === '翻转' }
-      break
-    }
-    case 'always': {
-      let modeMap = {
-        '': 'normal',
-        循环: 'loop',
-        套娃: 'circle'
-      }
-      argsObj = { mode: modeMap[args] || 'normal' }
-      break
-    }
-    case 'gun':
-    case 'bubble_tea': {
-      let directionMap = {
-        左: 'left',
-        右: 'right',
-        两边: 'both'
-      }
-      argsObj = { position: directionMap[args.trim()] || 'right' }
-      break
-    }
-    case 'dog_dislike': {
-      argsObj = { circle: args.startsWith('圆') }
-      break
-    }
-    case 'clown': {
-      argsObj = { person: args.startsWith('爷') }
-      break
-    }
-    case 'note_for_leave': {
-      if (args) {
-        argsObj = { time: args }
-      }
-      break
-    }
-    case 'mourning': {
-      argsObj = { black: args.startsWith('黑白') || args.startsWith('灰') }
-      break
-    }
-    case 'genshin_eat': {
-      const roleMap = {
-        八重: 1,
-        胡桃: 2,
-        妮露: 3,
-        可莉: 4,
-        刻晴: 5,
-        钟离: 6
-      }
-      argsObj = { character: roleMap[args.trim()] || 0 }
-      break
-    }
-    case 'clown_mask': {
-      argsObj = { mode: args === '前' ? 'front' : 'behind' }
-      break
-    }
-    case "alipay": {
-      argsObj = {
-        message: args ? args : "",
-      };
-      break;
-    }
-    case "wechat_pay": {
-      argsObj = {
-        message: args ? args : "",
-      };
-      break;
-    }
-    case "panda_dragon_figure": {
-      argsObj = {
-        name: args || "",
-      };
-      break;
     }
   }
+
   argsObj.user_infos = userInfos.map(u => {
     return {
       name: _.trim(u.text, '@'),
       gender: u.gender || 'unknown'
     }
   })
-  return JSON.stringify(argsObj)
+
+  return JSON.stringify(argsObj);
 }
 
 const detail = code => {
-  let d = infos[code]
-  let keywords = d.keywords.join('、')
-  let ins = `【代码】${d.key}\n【名称】${keywords}\n【最大图片数量】${d.params_type.max_images}\n【最小图片数量】${d.params_type.min_images}\n【最大文本数量】${d.params_type.max_texts}\n【最小文本数量】${d.params_type.min_texts}\n【默认文本】${d.params_type.default_texts.join('/')}\n`
-  // todo api break change!
-  if (d.params_type.args_type?.parser_options.length > 0) {
-    let supportArgs = ''
-    switch (code) {
-      case 'look_flat': {
-        supportArgs = '看扁率，数字.如#3'
-        break
-      }
-      case 'crawl': {
-        supportArgs = '爬的图片编号，1-92。如#33'
-        break
-      }
-      case 'firefly_holdsign': {
-        supportArgs = '流萤举牌的图片编号，1-21。如#2'
-        break
-      }
-      case 'symmetric': {
-        supportArgs = '方向，上下左右。如#下'
-        break
-      }
-      case 'dog_dislike':
-      case 'petpet':
-      case 'jiji_king':
-      case 'kirby_hammer': {
-        supportArgs = '是否圆形头像，输入圆即可。如#圆'
-        break
-      }
-      case 'always': {
-        supportArgs = '一直图像的渲染模式，循环、套娃、默认。不填参数即默认。如一直#循环'
-        break
-      }
-      case 'gun':
-      case 'bubble_tea': {
-        supportArgs = '方向，左、右、两边。如#两边'
-        break
-      }
-      case 'clown': {
-        supportArgs = '是否使用爷爷头轮廓。如#爷'
-        break
-      }
-      case 'note_for_leave': {
-        supportArgs = '请假时间。如#2023年11月11日'
-        break
-      }
-      case 'mourning': {
-        supportArgs = '是否黑白。如#黑白 或 #灰'
-        break
-      }
-      case 'genshin_eat': {
-        supportArgs = '吃的角色(八重、胡桃、妮露、可莉、刻晴、钟离)。如#胡桃'
-        break
-      }
-      case 'clown_mask': {
-        supportArgs = '小丑在前或在后，如#前 #后'
-        break
-      }
-      case "alipay": {
-        supportArgs = "二维码的内容链接或文本，如#https://gituhub.com";
-        break;
-      }
-      case "wechat_pay": {
-        supportArgs = "二维码的内容链接或文本，如#https://gituhub.com";
-        break;
-      }
-      case "panda_dragon_figure": {
-        supportArgs = "奇怪龙表情生成，如#原神龙";
+  let d = infos[code];
+  let keywords = d.keywords.join('、');
+  let ins = `【代码】${d.key}\n【名称】${keywords}\n【最大图片数量】${d.params_type.max_images}\n【最小图片数量】${d.params_type.min_images}\n【最大文本数量】${d.params_type.max_texts}\n【最小文本数量】${d.params_type.min_texts}\n【默认文本】${d.params_type.default_texts.join('/')}\n`;
+
+  // 检查是否有参数类型定义
+  if (d.params_type.args_type?.parser_options?.length > 0) {
+    let supportArgs = generateSupportArgsText(code, d);
+    ins += `【支持参数】${supportArgs}`;
+  }
+
+  return ins;
+};
+
+// 辅助函数：根据infos生成参数说明文本
+function generateSupportArgsText(code, info) {
+  try {
+    const argsType = info.params_type.args_type;
+    const props = argsType.args_model.properties;
+    const options = argsType.parser_options;
+
+    // 寻找主要参数及其描述
+    let mainParam = '';
+    let description = '';
+
+    for (const prop in props) {
+      if (prop !== 'user_infos') {
+        const propInfo = props[prop];
+        mainParam = prop;
+
+        // 寻找参数说明
+        const option = options.find(opt =>
+          opt.dest === prop ||
+          (opt.args && opt.args.some(arg => arg.name === prop))
+        );
+
+        if (option?.help_text) {
+          description = option.help_text;
+        } else if (propInfo.description) {
+          description = propInfo.description;
+        }
+
+        // 如果是枚举类型，列出可能的值
+        if (propInfo.enum) {
+          // 收集中文参数名称（非选项形式）
+          const chineseNames = options
+            .filter(opt => opt.action?.type === 0 && opt.action?.value && opt.dest === prop)
+            .flatMap(opt => opt.names.filter(name => !/^-/.test(name)));
+
+          // 收集英文参数名称（从选项形式提取）
+          const englishNames = options
+            .filter(opt => opt.action?.type === 0 && opt.action?.value && opt.dest === prop)
+            .flatMap(opt => opt.names
+              .filter(name => name.startsWith('--'))
+              .map(name => name.substring(2))
+            );
+
+          // 合并中文和英文参数名称
+          const valueNames = [...new Set([...chineseNames, ...englishNames])];
+
+          if (valueNames.length > 0) {
+            const valuesText = valueNames.join('、');
+            // 优先使用中文名称作为示例
+            const exampleName = chineseNames.length > 0 ? chineseNames[0] : valueNames[0];
+            return `${description || prop}，可选值：${valuesText}。如#${exampleName}`;
+          }
+        }
+
         break;
       }
     }
-    ins += `【支持参数】${supportArgs}`
+
+    return description || `${mainParam}参数`;
+
+  } catch (e) {
+    console.error(`生成参数说明出错: ${e.message}`);
+    return '支持额外参数';
   }
-  return ins
 }
 
 // 最大支持的文件大小（字节）
