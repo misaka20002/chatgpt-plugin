@@ -315,6 +315,8 @@ const defaultConfig = {
   autoEmoticons_replyDelay_min: 1000,
   autoEmoticons_replyDelay_max: 5000,
 
+  turnOnBilitv: false,  
+
 }
 const _path = process.cwd()
 let config = {}

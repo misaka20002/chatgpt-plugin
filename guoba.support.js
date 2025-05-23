@@ -1191,6 +1191,16 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
+          label: '视频解析',
+          component: 'Divider'
+        },
+        {
+          field: 'turnOnBilitv',
+          label: '开启b站解析',
+          bottomHelpMessage: '开启后，将会解析并发送bilibili链接或小程序关联的视频。',
+          component: 'Switch'
+        },
+        {
           label: '呆毛版 机器人cos设置',
           component: 'Divider'
         },

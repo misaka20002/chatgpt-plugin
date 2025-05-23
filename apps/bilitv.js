@@ -1,3 +1,5 @@
+import { Config } from '../utils/config.js'
+
 /**
  * 轻量，快速的b站解析插件
  * 通过匹配BV号,av号,b23.tv短链,epid,ssid,md获取数据
@@ -65,6 +67,8 @@ export class bilitv extends plugin {
     }
 
     async jxsp(e) {
+        if (!Config.turnOnBilitv)
+            return false;
         let bvid = ""
         if (e.msg.match(regAV)) {
             let table = 'fZodR9XQDSUm21yCkr6zBqiveYah8bt4xsWpHnJE7jL5VG3guMTKNPAwcF'
@@ -134,6 +138,8 @@ export class bilitv extends plugin {
 
 
     async jxfj(e) {
+        if (!Config.turnOnBilitv)
+            return false;
         let epid = ""
         let ssid = ""
         if (e.msg.includes("点赞" && "投币")) { return true }
