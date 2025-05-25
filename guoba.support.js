@@ -1509,7 +1509,7 @@ export function supportGuoba() {
         {
           field: 'autoEmoticons_useEmojiSave',
           label: '启用表情保存',
-          bottomHelpMessage: '是否启用表情保存/偷取',
+          bottomHelpMessage: '是否启用表情保存/偷取/发送；会自动发送保存在  /data/chatgpt/emoji_save/群号/ 和 /data/chatgpt/PaimonChuoYiChouPictures/ 目录下的表情包',
           component: 'Switch'
         },
         {
