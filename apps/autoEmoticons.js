@@ -588,8 +588,11 @@ export async function downloadImageFile(url, relativePath, maxSize = null) {
             const headResponse = await fetch(url, {
                 method: 'HEAD',
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                }
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                },
+                timeout: 10000, // 10秒超时
+                follow: 5, // 最多跟随5次重定向
+                compress: false // 禁用压缩
             })
 
             if (headResponse.ok && headResponse.headers.has('content-length')) {
@@ -614,55 +617,107 @@ export async function downloadImageFile(url, relativePath, maxSize = null) {
             logger.debug(`[downloadImageFile] HEAD 请求失败，继续下载: ${headError.message}`)
         }
 
-        // 下载文件
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        // 下载文件，添加更多错误处理和重试机制
+        let response
+        let retryCount = 0
+        const maxRetries = 3
+
+        while (retryCount < maxRetries) {
+            try {
+                response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    timeout: 30000, // 30秒超时
+                    follow: 5, // 最多跟随5次重定向
+                    compress: false, // 禁用压缩
+                    agent: false // 禁用 agent 重用
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`)
+                }
+
+                break // 请求成功，跳出重试循环
+            } catch (fetchError) {
+                retryCount++
+                logger.warn(`[downloadImageFile] 下载尝试 ${retryCount}/${maxRetries} 失败: ${fetchError.message}`)
+
+                if (retryCount >= maxRetries) {
+                    throw fetchError
+                }
+
+                // 等待一段时间后重试
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
             }
+        }
+
+        // 使用流式读取来处理大文件
+        const chunks = []
+        let downloadedSize = 0
+
+        return new Promise((resolve, reject) => {
+            response.body.on('data', (chunk) => {
+                downloadedSize += chunk.length
+
+                // 检查文件大小限制
+                if (maxSize && downloadedSize > maxSize) {
+                    response.body.destroy()
+                    resolve({
+                        success: false,
+                        filePath: null,
+                        actualExt: null,
+                        size: downloadedSize,
+                        error: `下载过程中发现文件过大: ${downloadedSize} 字节，超过限制 ${maxSize} 字节`
+                    })
+                    return
+                }
+
+                chunks.push(chunk)
+            })
+
+            response.body.on('end', () => {
+                try {
+                    const bufferData = Buffer.concat(chunks)
+
+                    // 根据文件头判断真实格式
+                    const actualExt = getImageTypeFromBuffer(bufferData)
+
+                    // 构建完整文件路径
+                    const baseDir = path.join(process.cwd(), 'data', 'chatgpt')
+                    const fullPath = path.join(baseDir, `${relativePath}.${actualExt}`)
+
+                    // 确保目录存在
+                    const dir = path.dirname(fullPath)
+                    if (!fs.existsSync(dir)) {
+                        fs.mkdirSync(dir, { recursive: true })
+                    }
+
+                    // 写入文件
+                    fs.writeFileSync(fullPath, bufferData)
+
+                    resolve({
+                        success: true,
+                        filePath: fullPath,
+                        actualExt: actualExt,
+                        size: bufferData.length
+                    })
+                } catch (error) {
+                    reject(error)
+                }
+            })
+
+            response.body.on('error', (error) => {
+                reject(new Error(`下载流错误: ${error.message}`))
+            })
         })
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const buffer = await response.arrayBuffer()
-        const bufferData = Buffer.from(buffer)
-
-        // 二次检查：如果 HEAD 请求没有返回大小，在下载后再次检查
-        if (maxSize && bufferData.length > maxSize) {
-            return {
-                success: false,
-                filePath: null,
-                actualExt: null,
-                size: bufferData.length,
-                error: `下载后发现文件过大: ${bufferData.length} 字节，超过限制 ${maxSize} 字节`
-            }
-        }
-
-        // 根据文件头判断真实格式
-        const actualExt = getImageTypeFromBuffer(bufferData)
-
-        // 构建完整文件路径
-        const baseDir = path.join(process.cwd(), 'data', 'chatgpt')
-        const fullPath = path.join(baseDir, `${relativePath}.${actualExt}`)
-
-        // 确保目录存在
-        const dir = path.dirname(fullPath)
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true })
-        }
-
-        // 写入文件
-        fs.writeFileSync(fullPath, bufferData)
-
-        return {
-            success: true,
-            filePath: fullPath,
-            actualExt: actualExt,
-            size: bufferData.length
-        }
     } catch (error) {
-        logger.error(`[downloadImageFile] 下载失败: ${error}`)
+        logger.error(`[downloadImageFile] 下载失败: ${error.message}`)
         return {
             success: false,
             filePath: null,
