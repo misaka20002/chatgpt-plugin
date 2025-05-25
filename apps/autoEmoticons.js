@@ -21,6 +21,8 @@ import fetch from 'node-fetch'
 //     maxEmojiSize: 10,
 //     // 需要保存表情包的群号列表，为空数组时表示所有群
 //     allowGroups: ["1111"],
+//     // 自动发送表情包的冷却时间（秒）
+//     autoEmoticons_sendCD: 60,
 //     // 发送表情时的延迟 (毫秒)
 //     replyDelay: {
 //         min: 1000,
@@ -371,6 +373,16 @@ export class autoEmoticons extends plugin {
             }
         }
 
+        // 检查群发送冷却时间
+        const cooldownKey = `Yz:autoEmoticons:cooldown:${groupId}`
+        const lastSendTime = await redis.get(cooldownKey)
+        const now = Date.now()
+
+        if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons_sendCD * 1000)) {
+            const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons_sendCD * 1000)) - now) / 1000)
+            logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
+            return false
+        }
 
         // 随机发送表情包（包含共享图片）
         const availablePictures = getAvailablePictures(groupId)
@@ -389,6 +401,9 @@ export class autoEmoticons extends plugin {
                 // 发送图片
                 msgRet = await e.reply(segment.image(picturePath))
                 msgRet_id = msgRet.seq || msgRet.data.message_id
+
+                // 设置冷却时间
+                await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
 
                 // 存储文件信息（用于删除功能）
                 const isSharedPicture = sharedPicturesCache.includes(picturePath)
@@ -416,6 +431,17 @@ export class autoEmoticons extends plugin {
         // 遍历配置的群列表
         for (const groupId of Config.autoEmoticons_allowGroups) {
             try {
+                // 检查群发送冷却时间
+                const cooldownKey = `Yz:autoEmoticons:cooldown:${groupId}`
+                const lastSendTime = await redis.get(cooldownKey)
+                const now = Date.now()
+
+                if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons_sendCD * 1000)) {
+                    const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons_sendCD * 1000)) - now) / 1000)
+                    logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
+                    continue
+                }
+
                 // 使用与手动触发相同的概率判断
                 if (Math.random() >= Config.autoEmoticons_autoEmoticonsReplyRate) {
                     logger.debug(`[autoEmoticons] 群 ${groupId} 随机概率未触发发送`);
@@ -453,6 +479,9 @@ export class autoEmoticons extends plugin {
 
                     const msgRet = await group.sendMsg(segment.image(picturePath));
                     const msgId = msgRet.seq || msgRet.message_id;
+
+                    // 设置冷却时间
+                    await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
 
                     // 存储文件信息
                     const isSharedPicture = sharedPicturesCache.includes(picturePath)

@@ -1547,6 +1547,16 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'autoEmoticons_sendCD',
+          label: '发送表情冷却时间',
+          bottomHelpMessage: '发送表情的冷却时间（秒）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            step: 1
+          }
+        },
+        {
           field: 'autoEmoticons_maxEmojiCount',
           label: '表情包最大数量',
           bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',

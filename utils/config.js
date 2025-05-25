@@ -314,8 +314,10 @@ const defaultConfig = {
   // 发送表情时的延迟 (毫秒)
   autoEmoticons_replyDelay_min: 1000,
   autoEmoticons_replyDelay_max: 5000,
+  // 自动发送表情包的冷却时间（秒）
+  autoEmoticons_sendCD: 300,
 
-  turnOnBilitv: false,  
+  turnOnBilitv: false,
 
 }
 const _path = process.cwd()
