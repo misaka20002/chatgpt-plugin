@@ -35,8 +35,109 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + mi
 // 存储各群表情列表的缓存
 const emojiListCache = new Map()
 
+// 存储共享图片列表的缓存
+const sharedPicturesCache = []
+
 // 存储目录监视器
 const watchers = new Map()
+
+// 共享图片目录监视器
+let sharedPicturesWatcher = null
+
+/**
+ * 初始化共享图片目录监视器
+ */
+function initSharedPicturesWatcher() {
+    if (sharedPicturesWatcher) return
+
+    const sharedPicturesDir = path.join(process.cwd(), 'data', 'chatgpt', 'PaimonChuoYiChouPictures')
+
+    // 确保目录存在
+    if (!fs.existsSync(sharedPicturesDir)) {
+        fs.mkdirSync(sharedPicturesDir, { recursive: true })
+    }
+
+    // 递归读取所有图片文件
+    function loadSharedPictures(dir) {
+        const pictures = []
+        try {
+            const items = fs.readdirSync(dir, { withFileTypes: true })
+            for (const item of items) {
+                const fullPath = path.join(dir, item.name)
+                if (item.isDirectory()) {
+                    // 递归处理子目录
+                    pictures.push(...loadSharedPictures(fullPath))
+                } else if (item.isFile()) {
+                    // 检查是否为图片文件
+                    const ext = path.extname(item.name).toLowerCase()
+                    if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext)) {
+                        pictures.push(fullPath)
+                    }
+                }
+            }
+        } catch (err) {
+            logger.error(`[autoEmoticons] 读取共享图片目录失败: ${err}`)
+        }
+        return pictures
+    }
+
+    // 初始加载共享图片
+    const initialPictures = loadSharedPictures(sharedPicturesDir)
+    sharedPicturesCache.splice(0, sharedPicturesCache.length, ...initialPictures)
+    logger.info(`[autoEmoticons] 已加载 ${sharedPicturesCache.length} 个共享图片`)
+
+    // 创建监视器
+    sharedPicturesWatcher = chokidar.watch(sharedPicturesDir, {
+        persistent: true,
+        ignoreInitial: true,
+        recursive: true, // 递归监视子目录
+        awaitWriteFinish: {
+            stabilityThreshold: 1000,
+            pollInterval: 100
+        }
+    })
+
+    // 监听文件添加事件
+    sharedPicturesWatcher.on('add', (filepath) => {
+        const ext = path.extname(filepath).toLowerCase()
+        if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext)) {
+            if (!sharedPicturesCache.includes(filepath)) {
+                sharedPicturesCache.push(filepath)
+                logger.debug(`[autoEmoticons] 监测到新共享图片: ${path.relative(sharedPicturesDir, filepath)}`)
+            }
+        }
+    })
+
+    // 监听文件删除事件
+    sharedPicturesWatcher.on('unlink', (filepath) => {
+        const index = sharedPicturesCache.indexOf(filepath)
+        if (index > -1) {
+            sharedPicturesCache.splice(index, 1)
+            logger.debug(`[autoEmoticons] 监测到共享图片删除: ${path.relative(sharedPicturesDir, filepath)}`)
+        }
+    })
+
+    // 监听错误事件
+    sharedPicturesWatcher.on('error', (error) => {
+        logger.error(`[autoEmoticons] 共享图片目录监视器错误: ${error}`)
+    })
+}
+
+/**
+ * 获取可用的图片列表（群专属 + 共享图片）
+ * @param {string} groupId 群号
+ * @returns {Array} 图片路径列表
+ */
+export function getAvailablePictures(groupId) {
+    const groupEmojis = emojiListCache.get(groupId) || []
+    const emojiSaveDir = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId)
+
+    // 群专属表情的完整路径
+    const groupEmojiPaths = groupEmojis.map(filename => path.join(emojiSaveDir, filename))
+
+    // 合并群专属表情和共享图片
+    return [...groupEmojiPaths, ...sharedPicturesCache]
+}
 
 /**
  * 初始化表情目录监视器
@@ -148,68 +249,6 @@ export class autoEmoticons extends plugin {
         return false;
     }
 
-    /**
-     * 删除表情包
-     * @param {*} e 
-     * @returns 
-     */
-    async deleteEmoji(e) {
-        const groupId = String(e.group_id)
-        if (!e.isGroup || !e.isMaster) return false;
-
-        // 获取回复的消息ID
-        const replyMsgId = e.source?.seq || e.reply_id;
-        if (!replyMsgId) {
-            // await e.reply('请回复要删除的表情消息~');
-            return false;
-        }
-
-        // 从Redis获取表情文件路径
-        const emojiFile = await redis.get(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
-        const emojiPath = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId, emojiFile);
-        if (!emojiPath) {
-            // await e.reply('找不到这个表情或者已经过期了哦~');
-            return false;
-        }
-
-        try {
-            // 检查文件是否存在
-            if (fs.existsSync(emojiPath)) {
-                // 获取文件名
-                const filename = path.basename(emojiPath);
-
-                // 删除文件
-                fs.unlinkSync(emojiPath);
-
-                // 从缓存中删除
-                const emojiList = emojiListCache.get(groupId) || [];
-                const index = emojiList.indexOf(filename);
-                if (index > -1) {
-                    emojiList.splice(index, 1);
-                    emojiListCache.set(groupId, emojiList);
-                }
-
-                let res = await e.group.recallMsg(replyMsgId)
-                if (!res) {
-                    this.reply("人家不是管理员，不能撤回超过2分钟的消息呢~")
-                }
-
-                // 删除Redis记录
-                await redis.del(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
-
-                await e.reply(`呜呜呜~人家错了，以后不发了~呜`);
-                // logger.info(`[autoEmoticons] 表情已删除: ${filename}`);
-            } else {
-                // await e.reply('表情文件不存在，可能已被删除~');
-            }
-        } catch (error) {
-            logger.error(`[autoEmoticons] 删除表情失败: ${error}`);
-            // await e.reply('删除表情失败，请查看日志~');
-        }
-
-        return true;
-    }
-
     async saveAndSendEmoji(e) {
         if (!Config.autoEmoticons_useEmojiSave) return false
         if (!e.isGroup) return false
@@ -219,8 +258,9 @@ export class autoEmoticons extends plugin {
             return false
         }
 
-        // 初始化该群的监视器
+        // 初始化该群的监视器和共享图片监视器
         initWatcher(groupId)
+        initSharedPicturesWatcher()
 
         // 获取表情保存目录路径
         const emojiSaveDir = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', `${groupId}`)
@@ -330,27 +370,35 @@ export class autoEmoticons extends plugin {
             }
         }
 
-        // 随机发送表情包
-        if (Math.random() < Config.autoEmoticons_autoEmoticonsReplyRate && emojiList.length > 0) {
+
+        // 随机发送表情包（包含共享图片）
+        const availablePictures = getAvailablePictures(groupId)
+        if (Math.random() < Config.autoEmoticons_autoEmoticonsReplyRate && availablePictures.length > 0) {
             let msgRet, msgRet_id
             try {
-                // 随机选择一个表情
-                const randomIndex = Math.floor(Math.random() * emojiList.length)
-                const emojiFile = emojiList[randomIndex];
-                const emojiPath = path.join(emojiSaveDir, emojiFile);
+                // 随机选择一个图片
+                const randomIndex = Math.floor(Math.random() * availablePictures.length)
+                const picturePath = availablePictures[randomIndex]
 
                 // 添加随机延迟
                 const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
-                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送表情: ${emojiPath}`)
+                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
                 await sleep(delay)
 
-                // 发送表情
-                msgRet = await e.reply(segment.image(emojiPath))
+                // 发送图片
+                msgRet = await e.reply(segment.image(picturePath))
                 msgRet_id = msgRet.seq || msgRet.data.message_id
-                redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgRet_id}`, emojiFile, { EX: 60 * 60 * 24 * 1 }); // 储存1天
-                logger.debug(`[autoEmoticons] 发送表情成功: ${emojiPath}`)
+
+                // 存储文件信息（用于删除功能）
+                const isSharedPicture = sharedPicturesCache.includes(picturePath)
+                const fileInfo = isSharedPicture
+                    ? `shared:${path.relative(path.join(process.cwd(), 'data', 'chatgpt', 'PaimonChuoYiChouPictures'), picturePath)}`
+                    : path.basename(picturePath)
+
+                redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgRet_id}`, fileInfo, { EX: 60 * 60 * 24 * 1 })
+                logger.info(`[autoEmoticons] 概率发送图片成功: ${picturePath}`)
             } catch (error) {
-                logger.error(`[autoEmoticons] 发送表情失败: ${error}`)
+                logger.error(`[autoEmoticons] 发送图片失败: ${error}`)
             }
         }
 
@@ -361,6 +409,9 @@ export class autoEmoticons extends plugin {
         // 如果表情自动发送功能未开启，则不执行
         if (!Config.autoEmoticons_useEmojiSave) return false;
 
+        // 初始化共享图片监视器
+        initSharedPicturesWatcher()
+
         // 遍历配置的群列表
         for (const groupId of Config.autoEmoticons_allowGroups) {
             try {
@@ -370,53 +421,51 @@ export class autoEmoticons extends plugin {
                     continue;
                 }
 
-                // 初始化该群的监视器（确保表情列表已加载）
+                // 初始化该群的监视器
                 initWatcher(groupId);
 
-                // 获取该群的表情列表
-                const emojiList = emojiListCache.get(groupId) || [];
+                // 获取可用图片列表（群专属 + 共享）
+                const availablePictures = getAvailablePictures(groupId)
 
-                // 如果没有表情，跳过此群
-                if (emojiList.length === 0) {
-                    logger.debug(`[autoEmoticons] 群 ${groupId} 没有可用表情，跳过`);
+                // 如果没有可用图片，跳过此群
+                if (availablePictures.length === 0) {
+                    logger.debug(`[autoEmoticons] 群 ${groupId} 没有可用图片，跳过`);
                     continue;
                 }
 
-                // 获取表情保存目录路径
-                const emojiSaveDir = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId);
-
-                // 随机选择一个表情
-                const randomIndex = Math.floor(Math.random() * emojiList.length);
-                const emojiFile = emojiList[randomIndex];
-                const emojiPath = path.join(emojiSaveDir, emojiFile);
+                // 随机选择一个图片
+                const randomIndex = Math.floor(Math.random() * availablePictures.length);
+                const picturePath = availablePictures[randomIndex];
 
                 // 添加随机延迟
                 const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
-                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送表情: ${emojiPath}`)
+                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
                 await sleep(delay)
 
-                // 发送表情
+                // 发送图片
                 try {
-                    // 使用Bot API发送
                     const group = Bot.pickGroup(parseInt(groupId));
                     if (!group) {
                         logger.error(`[autoEmoticons] 无法获取群 ${groupId} 的实例`);
                         continue;
                     }
 
-                    // 发送表情
-                    const msgRet = await group.sendMsg(segment.image(emojiPath));
+                    const msgRet = await group.sendMsg(segment.image(picturePath));
                     const msgId = msgRet.seq || msgRet.message_id;
-                    logger.debug(`[autoEmoticons] 发送表情成功: ${emojiPath}`)
 
-                    // 记录发送的表情路径
-                    await redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgId}`, emojiFile, {
-                        EX: 60 * 60 * 24 * 1  // 储存1天
+                    // 存储文件信息
+                    const isSharedPicture = sharedPicturesCache.includes(picturePath)
+                    const fileInfo = isSharedPicture
+                        ? `shared:${path.relative(path.join(process.cwd(), 'data', 'chatgpt', 'PaimonChuoYiChouPictures'), picturePath)}`
+                        : path.basename(picturePath)
+
+                    await redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgId}`, fileInfo, {
+                        EX: 60 * 60 * 24 * 1
                     });
 
-                    logger.debug(`[autoEmoticons] 定时任务发送表情到群 ${groupId}: ${emojiFile}`);
+                    logger.info(`[autoEmoticons] 定时任务发送图片到群 ${groupId}: ${picturePath}`);
                 } catch (error) {
-                    logger.error(`[autoEmoticons] 定时任务发送表情到群 ${groupId} 失败: ${error}`);
+                    logger.error(`[autoEmoticons] 定时任务发送图片到群 ${groupId} 失败: ${error}`);
                 }
             } catch (error) {
                 logger.error(`[autoEmoticons] 处理群 ${groupId} 定时发送任务出错: ${error}`);
@@ -425,4 +474,62 @@ export class autoEmoticons extends plugin {
 
         return false;
     }
+
+    /**
+     * 删除表情包（需要修改以支持共享图片）
+     */
+    async deleteEmoji(e) {
+        const groupId = String(e.group_id)
+        if (!e.isGroup || !e.isMaster) return false;
+
+        const replyMsgId = e.source?.seq || e.reply_id;
+        if (!replyMsgId) {
+            return false;
+        }
+
+        const fileInfo = await redis.get(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
+        if (!fileInfo) {
+            return false;
+        }
+
+        try {
+            let filePath;
+            let canDelete = true;
+
+            if (fileInfo.startsWith('shared:')) {
+                // 共享图片 - 不允许删除
+                canDelete = false;
+                await e.reply('这是共享图片，不能删除哦~');
+            } else {
+                // 群专属表情
+                filePath = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId, fileInfo);
+            }
+
+            if (canDelete && filePath && fs.existsSync(filePath)) {
+                const filename = path.basename(filePath);
+                fs.unlinkSync(filePath);
+
+                const emojiList = emojiListCache.get(groupId) || [];
+                const index = emojiList.indexOf(filename);
+                if (index > -1) {
+                    emojiList.splice(index, 1);
+                    emojiListCache.set(groupId, emojiList);
+                }
+
+                let res = await e.group.recallMsg(replyMsgId)
+                if (!res) {
+                    this.reply("人家不是管理员，不能撤回超过2分钟的消息呢~")
+                }
+
+                await e.reply(`呜呜呜~人家错了，以后不发了~呜`);
+            }
+
+            await redis.del(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
+        } catch (error) {
+            logger.error(`[autoEmoticons] 删除表情失败: ${error}`);
+        }
+
+        return true;
+    }
+
 }

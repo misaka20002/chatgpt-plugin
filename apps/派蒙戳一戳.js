@@ -19,13 +19,14 @@ import {
 import fs from 'fs'
 import path from 'path'
 import sharp from 'sharp'
+import { getAvailablePictures } from './autoEmoticons.js'
 
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
 
 // 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
-const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures`
-const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
+const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/data/chatgpt/PaimonChuoYiChouPictures`
+const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/chatgpt/PaimonChuoYiChouPictures/savePics`
 if (!Config.paimon_chou_IsSendLocalpic) {
     Config.paimon_chou_reply_text += Config.paimon_chou_randowLocalPic
     Config.paimon_chou_randowLocalPic = 0
@@ -422,10 +423,12 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
-                let pic_url = await sendRandomPictureInFolder(paimonChuoYiChouPicturesDirectory)
-                if (pic_url) await e.reply(await segment.image(pic_url))
-                else {
-                    this.send_randow_text_msg(e);
+                // 传入群号以获取该群的专属表情和共享图片
+                let pic_path = await sendRandomPictureInFolder(e.group_id)
+                if (pic_path) {
+                    await e.reply(await segment.image(pic_path))
+                } else {
+                    this.send_randow_text_msg(e)
                     return
                 }
             }
@@ -769,57 +772,34 @@ async function get_msg_SickMsg() {
 }
 
 /**
- * @description: 随机返回文件夹里面的1张图片的地址
- * @param {*} 文件夹路径
- * @return {*} 返回/\.gif$|\.jpg$|\.jpge$|\.png$/，若无则返回null
+ * @description: 从群专属表情和共享图片中随机返回一张图片
+ * @param {string} groupId 群号
+ * @return {string|null} 返回图片路径，若无则返回null
  */
-async function sendRandomPictureInFolder(folderPath) {
+async function sendRandomPictureInFolder(groupId) {
     try {
-        let filesStr = await redis.get(`Yz:PaimongChuoLocalPicIndex`);
-        let files
-        if (!filesStr) {
-            logger.mark(`派蒙戳一戳开始索引文件夹：${paimonChuoYiChouPicturesDirectory}`)
-            files = getAllFiles(folderPath);
-            // 把数组files转化为字符串
-            filesStr = files.join('\n');
-            // 写入索引
-            redis.set(`Yz:PaimongChuoLocalPicIndex`, filesStr, { EX: 1800 });
-        } else {
-            // 把字符串files转为数组
-            files = filesStr.split('\n');
+        // 使用 getAvailablePictures 获取所有可用图片（群专属 + 共享）
+        const availablePictures = getAvailablePictures(groupId)
+
+        if (availablePictures.length === 0) {
+            return null
         }
+
         // 随机选择一张图片
         for (let i = 0; i < 20; i++) {
-            const randomIndex = Math.floor(Math.random() * files.length);
-            let picPath = files[randomIndex];
-            if (picPath.match(/\.gif$|\.jpg$|\.jpeg$|\.png$/))
-                return picPath;
-        }
-        return null;
-    } catch (err) {
-        return null;
-    }
-}
-/**递归函数 递归获取文件夹和子文件夹中的所有文件*/
-function getAllFiles(folderPath) {
-    try {
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath);
-        }
-        let files = [];
-        if (fs.statSync(folderPath).isDirectory()) {
-            const subFolders = fs.readdirSync(folderPath);
-            for (const subFolder of subFolders) {
-                const subFolderPath = path.join(folderPath, subFolder);
-                const subFolderFiles = getAllFiles(subFolderPath);
-                files.push(...subFolderFiles);
+            const randomIndex = Math.floor(Math.random() * availablePictures.length)
+            const picPath = availablePictures[randomIndex]
+
+            // 检查文件是否存在且为图片格式
+            if (fs.existsSync(picPath) && picPath.match(/\.(gif|jpg|jpeg|png|webp|bmp)$/i)) {
+                return picPath
             }
-        } else {
-            files.push(folderPath);
         }
-        return files;
+
+        return null
     } catch (err) {
-        return null;
+        logger.error(`[派蒙戳一戳] 获取随机图片失败: ${err}`)
+        return null
     }
 }
 

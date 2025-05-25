@@ -1197,7 +1197,7 @@ export function supportGuoba() {
         {
           field: 'turnOnBilitv',
           label: '开启b站解析',
-          bottomHelpMessage: '开启后，将会解析并发送bilibili链接或小程序关联的视频。',
+          bottomHelpMessage: '开启后，将会解析并发送bilibili链接或小程序关联的视频',
           component: 'Switch'
         },
         {
@@ -1213,7 +1213,7 @@ export function supportGuoba() {
         {
           field: 'chat_for_First_person',
           label: 'AI回应第一人称呼叫',
-          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉。',
+          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉',
           component: 'Switch'
         },
         {
@@ -1225,13 +1225,13 @@ export function supportGuoba() {
         {
           field: 'sf_markdownPic',
           label: 'sf图片模式',
-          bottomHelpMessage: '调用sf插件的图片回复功能，需要先安装siliconflow插件；与分多次回复冲突；与chatgpt插件图片模式冲突；',
+          bottomHelpMessage: '调用sf插件的图片回复功能，需要先安装siliconflow插件；与分多次回复冲突；与chatgpt插件图片模式冲突',
           component: 'Switch'
         },
         {
           field: 'disable_sendMessage_tool',
           label: '禁用文字工具',
-          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊工具”，适用于sf图片模式、伪人重复发送相同文本等问题。',
+          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊工具”，适用于sf图片模式、伪人重复发送相同文本等问题',
           component: 'Switch'
         },
         {
@@ -1350,7 +1350,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_IsSendLocalpic',
           label: '戳一戳发送本地图片（重启生效）',
-          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/resources/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
+          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/data/chatgpt/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
           component: 'Switch'
         },
         {
