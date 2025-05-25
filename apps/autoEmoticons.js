@@ -1,10 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import chokidar from 'chokidar'
-import { downloadFile } from '../utils/common.js'
 import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
-import { json } from 'node:stream/consumers'
+import fetch from 'node-fetch'
 
 // 表情包配置
 // const Config.autoEmoticonsConfig = {
@@ -330,27 +329,29 @@ export class autoEmoticons extends plugin {
                         logger.mark(`[autoEmoticons] 保存表情: ${filename}`)
 
                         // 使用URL下载图片
-                        await downloadFile(item.url, `emoji_save/${groupId}/${filename}`)
+                        const downloadResult = await downloadImageFile(
+                            item.url,
+                            `emoji_save/${groupId}/${fileUnique}`,
+                            Config.autoEmoticons_maxEmojiSize
+                        )
 
-                        // 下载后检查文件大小
-                        const filePath = path.join(process.cwd(), 'data', 'chatgpt', `emoji_save/${groupId}/${filename}`)
-                        const ONE_MONTH_IN_SECONDS = 3 * 24 * 60 * 60 // 3天的秒数
+                        if (!downloadResult.success) {
+                            logger.error(`[autoEmoticons] 下载表情失败: ${downloadResult.error}`)
 
-                        try {
-                            const stats = fs.statSync(filePath)
-                            if (stats.size > Config.autoEmoticons_maxEmojiSize) {
-                                // 文件太大，删除它
-                                fs.unlinkSync(filePath)
-                                // 设置redis记录防止重复下载
+                            // 如果是因为文件过大而失败，添加到黑名单
+                            if (downloadResult.error && downloadResult.error.includes('文件过大')) {
+                                const ONE_MONTH_IN_SECONDS = 30 * 24 * 60 * 60 // 30天的秒数
                                 await redis.set(blockKey, '1', {
                                     EX: ONE_MONTH_IN_SECONDS
                                 })
-                                logger.mark(`[autoEmoticons] 表情文件过大已删除: ${filename}，大小: ${stats.size}，一个月内不再下载`)
-                                continue
+                                logger.mark(`[autoEmoticons] 表情文件过大，已加入黑名单: ${fileUnique}，大小: ${downloadResult.size}，30天内不再下载`)
                             }
-                        } catch (err) {
-                            logger.error(`[autoEmoticons] 检查文件大小失败: ${err}`)
+                            continue
                         }
+
+                        const actualFilename = `${fileUnique}.${downloadResult.actualExt}`
+                        logger.mark(`[autoEmoticons] 保存表情成功: ${actualFilename}，大小: ${downloadResult.size} 字节`)
+
 
                         // 控制表情数量
                         if (emojiList.length > Config.autoEmoticons_maxEmojiCount) {
@@ -532,4 +533,142 @@ export class autoEmoticons extends plugin {
         return true;
     }
 
+}
+
+/**
+ * 根据文件头信息判断图片格式
+ * @param {Buffer} buffer 文件缓冲区
+ * @returns {string} 图片扩展名
+ */
+function getImageTypeFromBuffer(buffer) {
+    if (!buffer || buffer.length < 8) return 'jpg'
+
+    // JPEG
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+        return 'jpg'
+    }
+
+    // PNG
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+        return 'png'
+    }
+
+    // GIF
+    if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+        return 'gif'
+    }
+
+    // WebP
+    if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+        return 'webp'
+    }
+
+    // BMP
+    if (buffer[0] === 0x42 && buffer[1] === 0x4D) {
+        return 'bmp'
+    }
+
+    // 默认返回 jpg
+    return 'jpg'
+}
+
+/**
+ * 下载文件并自动识别图片格式
+ * @param {string} url 下载链接
+ * @param {string} relativePath 相对路径（不包含扩展名）
+ * @param {number} maxSize 最大文件大小（字节），可选
+ * @returns {Promise<{success: boolean, filePath: string, actualExt: string, size: number, error?: string}>}
+ */
+export async function downloadImageFile(url, relativePath, maxSize = null) {
+    try {
+        // 首先发送 HEAD 请求检查文件大小
+        let contentLength = null
+        try {
+            const headResponse = await fetch(url, {
+                method: 'HEAD',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            })
+
+            if (headResponse.ok && headResponse.headers.has('content-length')) {
+                contentLength = parseInt(headResponse.headers.get('content-length'))
+
+                // 如果指定了最大大小且文件超过限制，直接返回错误
+                if (maxSize && contentLength > maxSize) {
+                    return {
+                        success: false,
+                        filePath: null,
+                        actualExt: null,
+                        size: contentLength,
+                        error: `文件过大: ${contentLength} 字节，超过限制 ${maxSize} 字节`
+                    }
+                }
+
+                logger.debug(`[downloadImageFile] 文件大小检查通过: ${contentLength} 字节`)
+            } else {
+                logger.debug(`[downloadImageFile] 无法获取文件大小，继续下载`)
+            }
+        } catch (headError) {
+            logger.debug(`[downloadImageFile] HEAD 请求失败，继续下载: ${headError.message}`)
+        }
+
+        // 下载文件
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const buffer = await response.arrayBuffer()
+        const bufferData = Buffer.from(buffer)
+
+        // 二次检查：如果 HEAD 请求没有返回大小，在下载后再次检查
+        if (maxSize && bufferData.length > maxSize) {
+            return {
+                success: false,
+                filePath: null,
+                actualExt: null,
+                size: bufferData.length,
+                error: `下载后发现文件过大: ${bufferData.length} 字节，超过限制 ${maxSize} 字节`
+            }
+        }
+
+        // 根据文件头判断真实格式
+        const actualExt = getImageTypeFromBuffer(bufferData)
+
+        // 构建完整文件路径
+        const baseDir = path.join(process.cwd(), 'data', 'chatgpt')
+        const fullPath = path.join(baseDir, `${relativePath}.${actualExt}`)
+
+        // 确保目录存在
+        const dir = path.dirname(fullPath)
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+        }
+
+        // 写入文件
+        fs.writeFileSync(fullPath, bufferData)
+
+        return {
+            success: true,
+            filePath: fullPath,
+            actualExt: actualExt,
+            size: bufferData.length
+        }
+    } catch (error) {
+        logger.error(`[downloadImageFile] 下载失败: ${error}`)
+        return {
+            success: false,
+            filePath: null,
+            actualExt: null,
+            size: 0,
+            error: error.message
+        }
+    }
 }
