@@ -308,7 +308,7 @@ const defaultConfig = {
   // 表情包最大数量
   autoEmoticons_maxEmojiCount: 100,
   // 表情包大小限制 (字节)
-  autoEmoticons_maxEmojiSize: 100000,
+  autoEmoticons_maxEmojiSize: 10,
   // 需要保存表情包的群号列表，为空数组时表示所有群
   autoEmoticons_allowGroups: ["1111"],
   // 发送表情时的延迟 (毫秒)

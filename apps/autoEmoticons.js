@@ -17,8 +17,8 @@ import fetch from 'node-fetch'
 //     autoEmoticonsReplyRate: 0.05, // 每次消息有5%的概率发送表情包
 //     // 表情包最大数量
 //     maxEmojiCount: 100,
-//     // 表情包大小限制 (字节)
-//     maxEmojiSize: 100000,
+//     // 表情包大小限制 (MB)
+//     maxEmojiSize: 10,
 //     // 需要保存表情包的群号列表，为空数组时表示所有群
 //     allowGroups: ["1111"],
 //     // 发送表情时的延迟 (毫秒)
@@ -271,7 +271,7 @@ export class autoEmoticons extends plugin {
         for (const item of e.message) {
             if (item.type === 'image') {
                 // 检查图片大小，如果没有file_size字段则直接处理
-                if (item.file_size && item.file_size >= Config.autoEmoticons_maxEmojiSize) continue
+                if (item.file_size && item.file_size >= (Config.autoEmoticons_maxEmojiSize * 1024 * 1024)) continue
 
                 // 获取图片唯一ID - 优先使用filename字段
                 const fileUnique = item.filename
@@ -577,11 +577,14 @@ function getImageTypeFromBuffer(buffer) {
  * 下载文件并自动识别图片格式
  * @param {string} url 下载链接
  * @param {string} relativePath 相对路径（不包含扩展名）
- * @param {number} maxSize 最大文件大小（字节），可选
+ * @param {number} maxSizeMB 最大文件大小（MB），可选
  * @returns {Promise<{success: boolean, filePath: string, actualExt: string, size: number, error?: string}>}
  */
-export async function downloadImageFile(url, relativePath, maxSize = null) {
+export async function downloadImageFile(url, relativePath, maxSizeMB = null) {
     try {
+        // 将 MB 转换为字节
+        const maxSize = maxSizeMB ? maxSizeMB * 1024 * 1024 : null
+
         // 首先发送 HEAD 请求检查文件大小
         let contentLength = null
         try {
@@ -600,16 +603,18 @@ export async function downloadImageFile(url, relativePath, maxSize = null) {
 
                 // 如果指定了最大大小且文件超过限制，直接返回错误
                 if (maxSize && contentLength > maxSize) {
+                    const fileSizeMB = (contentLength / 1024 / 1024).toFixed(2)
                     return {
                         success: false,
                         filePath: null,
                         actualExt: null,
                         size: contentLength,
-                        error: `文件过大: ${contentLength} 字节，超过限制 ${maxSize} 字节`
+                        error: `文件过大: ${fileSizeMB}MB，超过限制 ${maxSizeMB}MB`
                     }
                 }
 
-                logger.debug(`[downloadImageFile] 文件大小检查通过: ${contentLength} 字节`)
+                const fileSizeMB = (contentLength / 1024 / 1024).toFixed(2)
+                logger.debug(`[downloadImageFile] 文件大小检查通过: ${fileSizeMB}MB`)
             } else {
                 logger.debug(`[downloadImageFile] 无法获取文件大小，继续下载`)
             }
@@ -667,12 +672,13 @@ export async function downloadImageFile(url, relativePath, maxSize = null) {
                 // 检查文件大小限制
                 if (maxSize && downloadedSize > maxSize) {
                     response.body.destroy()
+                    const downloadedSizeMB = (downloadedSize / 1024 / 1024).toFixed(2)
                     resolve({
                         success: false,
                         filePath: null,
                         actualExt: null,
                         size: downloadedSize,
-                        error: `下载过程中发现文件过大: ${downloadedSize} 字节，超过限制 ${maxSize} 字节`
+                        error: `下载过程中发现文件过大: ${downloadedSizeMB}MB，超过限制 ${maxSizeMB}MB`
                     })
                     return
                 }

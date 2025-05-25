@@ -1560,7 +1560,7 @@ export function supportGuoba() {
         {
           field: 'autoEmoticons_maxEmojiSize',
           label: '表情大小限制',
-          bottomHelpMessage: '表情包文件大小限制 (字节)',
+          bottomHelpMessage: '表情包文件大小限制 (MB)',
           component: 'InputNumber',
           componentProps: {
             min: 0,
