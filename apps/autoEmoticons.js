@@ -729,6 +729,8 @@ export class autoEmoticons extends plugin {
                     await e.reply('❗ 当前群的自动表情包功能已经是关闭状态了~')
                 }
             }
+
+            Config.save();
         } catch (error) {
             logger.error(`[autoEmoticons] 切换群功能失败: ${error}`)
             await e.reply('❌ 操作失败，请查看日志获取详细信息')

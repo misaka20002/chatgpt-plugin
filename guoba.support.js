@@ -2,6 +2,7 @@ import { Config } from './utils/config.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { supportConfigurations as voxRoleList } from './utils/tts/voicevox.js'
+import lodash from "lodash";
 // 支持锅巴
 export function supportGuoba() {
   return {
@@ -1967,39 +1968,6 @@ export function supportGuoba() {
       },
       // 设置配置的方法（前端点确定后调用的方法）
       setConfigData(data, { Result }) {
-        /** 根据点分隔格式的 keyPath 将值写入 嵌套格式的 config 中 */
-        function setNestedProperty(config, keyPath, value) {
-          const keys = keyPath.split('.')
-          let current = config
-          // 遍历到倒数第二个key
-          for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i]
-            if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
-              current[key] = {}
-            }
-            current = current[key]
-          }
-          // 设置最后一个key的值
-          const lastKey = keys[keys.length - 1]
-          if (current[lastKey] !== value) {
-            current[lastKey] = value
-          }
-        }
-
-        /** 根据点分隔格式的 keyPath 从 config 中获取值 */
-        function getNestedProperty(config, keyPath) {
-          const keys = keyPath.split('.')
-          let current = config
-          for (const key of keys) {
-            if (current && typeof current === 'object' && key in current) {
-              current = current[key]
-            } else {
-              return undefined
-            }
-          }
-          return current
-        }
-
         for (let [keyPath, value] of Object.entries(data)) {
           // 处理黑名单
           if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
@@ -2021,14 +1989,12 @@ export function supportGuoba() {
             }, [])
           }
           else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'bymDisableGroup') {
-            value = value.trim()
+            value = value.map(item => item.trim()).filter(item => item !== '')
           }
 
-          // 1.把锅巴返回的 点分隔keyPath 转为 嵌套格式对象 获取当前值并比较后赋值； 2.其他插件用 lodash.set(config, keyPath, value) 可以自动处理keyPath中的点分隔，而这里的Config因为是代理函数所以没法用 lodash.set
-          const currentValue = getNestedProperty(Config, keyPath)
-          if (currentValue !== value) {
-            setNestedProperty(Config, keyPath, value)
-          }
+          // 使用 lodash 处理锅巴传入的 点分隔 keyPath
+          lodash.set(Config, keyPath, value)
+          Config.save();
         }
 
         // 正确储存azureRoleSelect结果
