@@ -298,7 +298,7 @@ const defaultConfig = {
   githubAPIKey: '',
   version: 'v2.8.4',
 
-  autoEmoticons: {
+  autoEmoticons: { // Config 是 Proxy 对象，所有对 对象/对象数组 的修改后需要使用 Config.save()；（字符串/数字数组不需要）
     // 是否启用表情保存
     useEmojiSave: true,
     // 表情过期时间（秒）- 在此时间内发送多次才会被保存
@@ -321,6 +321,7 @@ const defaultConfig = {
       max: 240000
     }
   },
+  autoRepeat_config: [],
 
   turnOnBilitv: false,
 
