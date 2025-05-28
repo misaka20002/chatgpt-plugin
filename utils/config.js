@@ -341,40 +341,10 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
 }
 config = lodash.merge({}, defaultConfig, config)
 config.version = defaultConfig.version
-// const latestTag = execSync(`cd ${_path}/plugins/chatgpt-plugin && git describe --tags --abbrev=0`).toString().trim()
-// config.version = latestTag
-
-function deepDiff(obj, base) {
-  function changes(object, base) {
-    return lodash.transform(object, function (result, value, key) {
-      if (!lodash.isEqual(value, base[key])) {
-        result[key] = (lodash.isObject(value) && lodash.isObject(base[key]))
-          ? changes(value, base[key])
-          : value;
-      }
-    });
-  }
-  return changes(obj, base);
-}
-
-function saveConfigDiff(change) {
-  try {
-    fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(change, null, 2), { flag: 'w' })
-    return true
-  } catch (err) {
-    logger.error(err)
-    return false
-  }
-}
 
 export const Config = new Proxy(config, {
   get(target, property) {
-    if (property === 'save') {
-      return function () {
-        saveConfigDiff(deepDiff(target, defaultConfig))
-      }
-    }
-    else if (property === 'getGeminiKey') {
+    if (property === 'getGeminiKey') {
       return function () {
         if (target.geminiKey?.length === 0) {
           return ''
@@ -418,7 +388,28 @@ export const Config = new Proxy(config, {
     return target[property]
   },
   set(target, property, value) {
+    /** 递归判断Diff */
+    function deepDiff(obj, base) {
+      function changes(object, base) {
+        return lodash.transform(object, function (result, value, key) {
+          if (!lodash.isEqual(value, base[key])) {
+            result[key] = (lodash.isObject(value) && lodash.isObject(base[key]))
+              ? changes(value, base[key])
+              : value;
+          }
+        });
+      }
+      return changes(obj, base);
+    }
+
     target[property] = value
-    return saveConfigDiff(deepDiff(target, defaultConfig))
+    try {
+      const nestedChange = deepDiff(target, defaultConfig);
+      fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(nestedChange, null, 2), { flag: 'w' })
+      return true
+    } catch (err) {
+      logger.error(err)
+      return false
+    }
   }
 })

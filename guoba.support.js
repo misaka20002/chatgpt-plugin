@@ -1604,25 +1604,25 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'autoEmoticonsConfig.useEmojiSave',
+          field: 'autoEmoticons.useEmojiSave',
           label: '启用表情保存',
-          bottomHelpMessage: '是否启用表情保存/偷取/发送；会自动发送保存在  /data/chatgpt/emoji_save/群号/ 和 /data/chatgpt/PaimonChuoYiChouPictures/ 目录下的表情包',
+          bottomHelpMessage: '是否启用表情保存/偷取/发送；会自动发送保存在  /data/chatgpt/emoji_save/群号/ 和 /data/chatgpt/PaimonChuoYiChouPictures/ 目录下的表情包；群单独指令：#哒咩 #自动表情包[开启|关闭] #表情包配置',
           component: 'Switch'
         },
+        // {
+        //   field: 'autoEmoticons.expireTimeInSeconds',
+        //   label: '表情记录时间',
+        //   bottomHelpMessage: '在此时间内发送多次才会被保存',
+        //   helpMessage: '单位：秒',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 0,
+        //     // max: 999999999,
+        //     step: 1
+        //   }
+        // },
         {
-          field: 'autoEmoticonsConfig.expireTimeInSeconds',
-          label: '表情记录时间',
-          bottomHelpMessage: '在此时间内发送多次才会被保存',
-          helpMessage: '单位：秒',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 999999999,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticonsConfig.confirmCount',
+          field: 'autoEmoticons.confirmCount',
           label: '表情确认次数',
           bottomHelpMessage: '在记录时间内接收多少次才保存表情包',
           component: 'InputNumber',
@@ -1633,7 +1633,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.replyRate',
+          field: 'autoEmoticons.replyRate',
           label: '发送表情概率',
           bottomHelpMessage: '发送偷取表情的概率',
           component: 'InputNumber',
@@ -1644,7 +1644,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.sendCD',
+          field: 'autoEmoticons.sendCD',
           label: '发送表情冷却时间',
           bottomHelpMessage: '发送表情的冷却时间（秒）',
           component: 'InputNumber',
@@ -1654,7 +1654,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.maxEmojiCount',
+          field: 'autoEmoticons.maxEmojiCount',
           label: '表情包最大数量',
           bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',
           component: 'InputNumber',
@@ -1665,7 +1665,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.maxEmojiSize',
+          field: 'autoEmoticons.maxEmojiSize',
           label: '表情大小限制',
           bottomHelpMessage: '表情包文件大小限制 (MB)',
           component: 'InputNumber',
@@ -1676,7 +1676,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticonsConfig.allowGroups',
+          field: 'autoEmoticons.allowGroups',
           label: '表情包白名单群',
           bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群；（推荐设置该选项，设置后支持无触发自动发送表情包，否则只能接受任意信息后概率触发表情包）',
           component: "GTags",
@@ -1967,10 +1967,45 @@ export function supportGuoba() {
       },
       // 设置配置的方法（前端点确定后调用的方法）
       setConfigData(data, { Result }) {
+        /** 根据点分隔格式的 keyPath 将值写入 嵌套格式的 config 中 */
+        function setNestedProperty(config, keyPath, value) {
+          const keys = keyPath.split('.')
+          let current = config
+          // 遍历到倒数第二个key
+          for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i]
+            if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
+              current[key] = {}
+            }
+            current = current[key]
+          }
+          // 设置最后一个key的值
+          const lastKey = keys[keys.length - 1]
+          if (current[lastKey] !== value) {
+            current[lastKey] = value
+          }
+        }
+
+        /** 根据点分隔格式的 keyPath 从 config 中获取值 */
+        function getNestedProperty(config, keyPath) {
+          const keys = keyPath.split('.')
+          let current = config
+          for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+              current = current[key]
+            } else {
+              return undefined
+            }
+          }
+          return current
+        }
+
         for (let [keyPath, value] of Object.entries(data)) {
           // 处理黑名单
-          if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') { value = value.toString().split(/[,，;；\|]/) }
-          if (keyPath === 'blacklist' || keyPath === 'whitelist') {
+          if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
+            value = value.toString().split(/[,，;；\|]/)
+          }
+          else if (keyPath === 'blacklist' || keyPath === 'whitelist') {
             // 6-10位数的群号或qq
             const regex = /^\^?[1-9]\d{5,9}(\^[1-9]\d{5,9})?$/
             const inputSet = new Set()
@@ -1985,8 +2020,17 @@ export function supportGuoba() {
               return acc
             }, [])
           }
-          if (Config[keyPath] !== value) { Config[keyPath] = value }
+          else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'bymDisableGroup') {
+            value = value.trim()
+          }
+
+          // 1.把锅巴返回的 点分隔keyPath 转为 嵌套格式对象 获取当前值并比较后赋值； 2.其他插件用 lodash.set(config, keyPath, value) 可以自动处理keyPath中的点分隔，而这里的Config因为是代理函数所以没法用 lodash.set
+          const currentValue = getNestedProperty(Config, keyPath)
+          if (currentValue !== value) {
+            setNestedProperty(Config, keyPath, value)
+          }
         }
+
         // 正确储存azureRoleSelect结果
         const azureSpeaker = azureRoleList.find(config => {
           let i = config.roleInfo || config.code

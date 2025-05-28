@@ -664,6 +664,17 @@ export class autoEmoticons extends plugin {
         const groupId = String(e.group_id)
         const action = e.msg.includes('开启') ? 'enable' : 'disable'
 
+        // 格式化时间
+        const formatTime = (seconds) => {
+            const days = Math.floor(seconds / 86400)
+            const hours = Math.floor((seconds % 86400) / 3600)
+            const minutes = Math.floor((seconds % 3600) / 60)
+
+            if (days > 0) return `${days}天${hours}小时${minutes}分钟`
+            if (hours > 0) return `${hours}小时${minutes}分钟`
+            return `${minutes}分钟`
+        }
+
         try {
             // 获取当前配置
             const currentAllowGroups = [...Config.autoEmoticons.allowGroups]
@@ -718,10 +729,6 @@ export class autoEmoticons extends plugin {
                     await e.reply('❗ 当前群的自动表情包功能已经是关闭状态了~')
                 }
             }
-
-            // 保存配置到文件
-            Config.saveConfig()
-
         } catch (error) {
             logger.error(`[autoEmoticons] 切换群功能失败: ${error}`)
             await e.reply('❌ 操作失败，请查看日志获取详细信息')
