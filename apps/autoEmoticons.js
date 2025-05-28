@@ -6,7 +6,8 @@ import { Config } from '../utils/config.js'
 import fetch from 'node-fetch'
 
 // 表情包配置
-// const Config.autoEmoticonsConfig = {
+// const Config = {}
+// Config.autoEmoticonsConfig = {
 //     // 是否启用表情保存
 //     useEmojiSave: true,
 //     // 表情过期时间（秒）- 在此时间内发送多次才会被保存
@@ -14,7 +15,7 @@ import fetch from 'node-fetch'
 //     // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
 //     confirmCount: 3, // 默认是3次，可以设置为更高的值
 //     // 默认发送偷取表情的概率
-//     autoEmoticonsReplyRate: 0.05, // 每次消息有5%的概率发送表情包
+//     replyRate: 0.05, // 每次消息有5%的概率发送表情包
 //     // 表情包最大数量
 //     maxEmojiCount: 100,
 //     // 表情包大小限制 (MB)
@@ -22,11 +23,11 @@ import fetch from 'node-fetch'
 //     // 需要保存表情包的群号列表，为空数组时表示所有群
 //     allowGroups: ["1111"],
 //     // 自动发送表情包的冷却时间（秒）
-//     autoEmoticons_sendCD: 60,
+//     sendCD: 300,
 //     // 发送表情时的延迟 (毫秒)
 //     replyDelay: {
 //         min: 1000,
-//         max: 5000
+//         max: 240000
 //     }
 // }
 
@@ -230,6 +231,14 @@ export class autoEmoticons extends plugin {
                 {
                     reg: '^#?(哒|达)咩$',
                     fnc: 'deleteEmoji',
+                },
+                {
+                    reg: '^#表情包配置$',
+                    fnc: 'showConfig',
+                },
+                {
+                    reg: '^#自动表情包(开启|关闭)$',
+                    fnc: 'toggleGroupEmoticons',
                 }
             ],
         })
@@ -251,11 +260,11 @@ export class autoEmoticons extends plugin {
     }
 
     async saveAndSendEmoji(e) {
-        if (!Config.autoEmoticons_useEmojiSave) return false
+        if (!Config.autoEmoticons.useEmojiSave) return false
         if (!e.isGroup) return false
         // 检查群号是否在允许列表中（如果配置了特定群号）
         const groupId = String(e.group_id)
-        if (Config.autoEmoticons_allowGroups.length > 0 && !Config.autoEmoticons_allowGroups.includes(groupId)) {
+        if (Config.autoEmoticons.allowGroups.length > 0 && !Config.autoEmoticons.allowGroups.includes(groupId)) {
             return false
         }
 
@@ -273,7 +282,7 @@ export class autoEmoticons extends plugin {
         for (const item of e.message) {
             if (item.type === 'image') {
                 // 检查图片大小，如果没有file_size字段则直接处理
-                if (item.file_size && item.file_size >= (Config.autoEmoticons_maxEmojiSize * 1024 * 1024)) continue
+                if (item.file_size && item.file_size >= (Config.autoEmoticons.maxEmojiSize * 1024 * 1024)) continue
 
                 // 获取图片唯一ID - 优先使用filename字段
                 const fileUnique = item.filename
@@ -305,24 +314,24 @@ export class autoEmoticons extends plugin {
                         if (!currentCount) {
                             // 首次发现，设置为1并设置过期时间
                             await redis.set(redisKey, '1', {
-                                EX: Config.autoEmoticons_expireTimeInSeconds
+                                EX: Config.autoEmoticons.expireTimeInSeconds
                             })
-                            logger.debug(`[autoEmoticons] 表情首次出现: ${fileUnique} (1/${Config.autoEmoticons_confirmCount})`)
+                            logger.debug(`[autoEmoticons] 表情首次出现: ${fileUnique} (1/${Config.autoEmoticons.confirmCount})`)
                         } else {
                             // 增加计数
                             const newCount = parseInt(currentCount) + 1
                             await redis.set(redisKey, String(newCount), {
-                                EX: Config.autoEmoticons_expireTimeInSeconds
+                                EX: Config.autoEmoticons.expireTimeInSeconds
                             })
 
                             // 检查是否达到保存阈值
-                            if (newCount >= Config.autoEmoticons_confirmCount) {
+                            if (newCount >= Config.autoEmoticons.confirmCount) {
                                 // 达到指定次数，可以保存
                                 await redis.del(redisKey)
                                 canBeStored = true
-                                logger.debug(`[autoEmoticons] 已达到确认次数: ${fileUnique} (${Config.autoEmoticons_confirmCount}/${Config.autoEmoticons_confirmCount})`)
+                                logger.debug(`[autoEmoticons] 已达到确认次数: ${fileUnique} (${Config.autoEmoticons.confirmCount}/${Config.autoEmoticons.confirmCount})`)
                             } else {
-                                logger.debug(`[autoEmoticons] 表情再次出现: ${fileUnique} (${newCount}/${Config.autoEmoticons_confirmCount})`)
+                                logger.debug(`[autoEmoticons] 表情再次出现: ${fileUnique} (${newCount}/${Config.autoEmoticons.confirmCount})`)
                             }
                         }
 
@@ -334,7 +343,7 @@ export class autoEmoticons extends plugin {
                         const downloadResult = await downloadImageFile(
                             item.url,
                             `emoji_save/${groupId}/${fileUnique}`,
-                            Config.autoEmoticons_maxEmojiSize
+                            Config.autoEmoticons.maxEmojiSize
                         )
 
                         if (!downloadResult.success) {
@@ -356,7 +365,7 @@ export class autoEmoticons extends plugin {
 
 
                         // 控制表情数量
-                        if (emojiList.length > Config.autoEmoticons_maxEmojiCount) {
+                        if (emojiList.length > Config.autoEmoticons.maxEmojiCount) {
                             const randomIndex = Math.floor(Math.random() * emojiList.length)
                             const fileToDelete = emojiList[randomIndex]
                             try {
@@ -378,15 +387,15 @@ export class autoEmoticons extends plugin {
         const lastSendTime = await redis.get(cooldownKey)
         const now = Date.now()
 
-        if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons_sendCD * 1000)) {
-            const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons_sendCD * 1000)) - now) / 1000)
+        if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.sendCD * 1000)) {
+            const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.sendCD * 1000)) - now) / 1000)
             logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
             return false
         }
 
         // 随机发送表情包（包含共享图片）
         const availablePictures = getAvailablePictures(groupId)
-        if (Math.random() < Config.autoEmoticons_autoEmoticonsReplyRate && availablePictures.length > 0) {
+        if (Math.random() < Config.autoEmoticons.replyRate && availablePictures.length > 0) {
             let msgRet, msgRet_id
             try {
                 // 随机选择一个图片
@@ -394,10 +403,10 @@ export class autoEmoticons extends plugin {
                 const picturePath = availablePictures[randomIndex]
 
                 // 设置冷却时间
-                await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
+                await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
 
                 // 添加随机延迟
-                const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
+                const delay = randomInt(Config.autoEmoticons.replyDelay.min, Config.autoEmoticons.replyDelay.max)
                 logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
                 await sleep(delay)
 
@@ -411,7 +420,7 @@ export class autoEmoticons extends plugin {
                     ? `shared:${path.relative(path.join(process.cwd(), 'data', 'chatgpt', 'PaimonChuoYiChouPictures'), picturePath)}`
                     : path.basename(picturePath)
 
-                redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgRet_id}`, fileInfo, { EX: 60 * 60 * 24 * 1 })
+                redis.set(`Yz:autoEmoticons.sent:pic_filePath:${groupId}:${msgRet_id}`, fileInfo, { EX: 60 * 60 * 24 * 1 })
                 logger.info(`[autoEmoticons] 概率发送图片成功: ${picturePath}`)
             } catch (error) {
                 logger.error(`[autoEmoticons] 发送图片失败: ${error}`)
@@ -423,27 +432,27 @@ export class autoEmoticons extends plugin {
 
     async sendimg() {
         // 如果表情自动发送功能未开启，则不执行
-        if (!Config.autoEmoticons_useEmojiSave) return false;
+        if (!Config.autoEmoticons.useEmojiSave) return false;
 
         // 初始化共享图片监视器
         initSharedPicturesWatcher()
 
         // 遍历配置的群列表
-        for (const groupId of Config.autoEmoticons_allowGroups) {
+        for (const groupId of Config.autoEmoticons.allowGroups) {
             try {
                 // 检查群发送冷却时间
                 const cooldownKey = `Yz:autoEmoticons:cooldown:${groupId}`
                 const lastSendTime = await redis.get(cooldownKey)
                 const now = Date.now()
 
-                if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons_sendCD * 1000)) {
-                    const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons_sendCD * 1000)) - now) / 1000)
+                if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.sendCD * 1000)) {
+                    const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.sendCD * 1000)) - now) / 1000)
                     logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
                     continue
                 }
 
                 // 使用与手动触发相同的概率判断
-                if (Math.random() >= Config.autoEmoticons_autoEmoticonsReplyRate) {
+                if (Math.random() >= Config.autoEmoticons.replyRate) {
                     logger.debug(`[autoEmoticons] 群 ${groupId} 随机概率未触发发送`);
                     continue;
                 }
@@ -476,10 +485,10 @@ export class autoEmoticons extends plugin {
                     const msgId = msgRet.seq || msgRet.message_id;
 
                     // 设置冷却时间
-                    await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
+                    await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
 
                     // 添加随机延迟
-                    const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
+                    const delay = randomInt(Config.autoEmoticons.replyDelay.min, Config.autoEmoticons.replyDelay.max)
                     logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
                     await sleep(delay)
 
@@ -489,7 +498,7 @@ export class autoEmoticons extends plugin {
                         ? `shared:${path.relative(path.join(process.cwd(), 'data', 'chatgpt', 'PaimonChuoYiChouPictures'), picturePath)}`
                         : path.basename(picturePath)
 
-                    await redis.set(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${msgId}`, fileInfo, {
+                    await redis.set(`Yz:autoEmoticons.sent:pic_filePath:${groupId}:${msgId}`, fileInfo, {
                         EX: 60 * 60 * 24 * 1
                     });
 
@@ -517,7 +526,7 @@ export class autoEmoticons extends plugin {
             return false;
         }
 
-        const fileInfo = await redis.get(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
+        const fileInfo = await redis.get(`Yz:autoEmoticons.sent:pic_filePath:${groupId}:${replyMsgId}`);
         if (!fileInfo) {
             return false;
         }
@@ -554,13 +563,173 @@ export class autoEmoticons extends plugin {
                 await e.reply(`呜呜呜~人家错了，以后不发了~呜`);
             }
 
-            await redis.del(`Yz:autoEmoticons_sent:pic_filePath:${groupId}:${replyMsgId}`);
+            await redis.del(`Yz:autoEmoticons.sent:pic_filePath:${groupId}:${replyMsgId}`);
         } catch (error) {
             logger.error(`[autoEmoticons] 删除表情失败: ${error}`);
         }
 
         return true;
     }
+
+    /**
+     * 显示表情包配置信息
+     */
+    async showConfig(e) {
+        if (!e.isGroup || !e.isMaster) {
+            await e.reply('只有主人可以查看配置哦~')
+            return true
+        }
+
+        const config = Config.autoEmoticons
+        const groupId = String(e.group_id)
+
+        // 获取当前群的表情数量
+        const emojiList = emojiListCache.get(groupId) || []
+        const groupEmojiCount = emojiList.length
+
+        // 获取共享图片数量
+        const sharedPictureCount = sharedPicturesCache.length
+
+        // 格式化时间
+        const formatTime = (seconds) => {
+            const days = Math.floor(seconds / 86400)
+            const hours = Math.floor((seconds % 86400) / 3600)
+            const minutes = Math.floor((seconds % 3600) / 60)
+
+            if (days > 0) return `${days}天${hours}小时${minutes}分钟`
+            if (hours > 0) return `${hours}小时${minutes}分钟`
+            return `${minutes}分钟`
+        }
+
+        // 格式化延迟时间
+        const formatDelay = (ms) => {
+            if (ms >= 60000) {
+                return `${Math.floor(ms / 60000)}分${Math.floor((ms % 60000) / 1000)}秒`
+            }
+            return `${Math.floor(ms / 1000)}秒`
+        }
+
+        // 检查当前群是否在允许列表中
+        const isGroupAllowed = config.allowGroups.length === 0 || config.allowGroups.includes(groupId)
+
+        // 检查冷却状态
+        const cooldownKey = `Yz:autoEmoticons:cooldown:${groupId}`
+        const lastSendTime = await redis.get(cooldownKey)
+        const now = Date.now()
+        let cooldownStatus = '无冷却'
+
+        if (lastSendTime && (now - parseInt(lastSendTime)) < (config.sendCD * 1000)) {
+            const remainingTime = Math.ceil(((parseInt(lastSendTime) + (config.sendCD * 1000)) - now) / 1000)
+            cooldownStatus = `冷却中 (${formatTime(remainingTime)})`
+        }
+
+        const configMsg = [
+            '📊 表情包插件配置状态',
+            '━━━━━━━━━━━━━━━━━━',
+            `🔧 功能状态: ${config.useEmojiSave ? '✅ 已启用' : '❌ 已禁用'}`,
+            `🎯 当前群状态: ${isGroupAllowed ? '✅ 允许' : '❌ 不在允许列表'}`,
+            '',
+            '📈 统计信息:',
+            `　🖼️ 当前群表情: ${groupEmojiCount} 个`,
+            `　🌐 共享图片: ${sharedPictureCount} 个`,
+            `　⏰ 发送冷却: ${cooldownStatus}`,
+            '',
+            '⚙️ 配置参数:',
+            `　⏱️ 过期时间: ${formatTime(config.expireTimeInSeconds)}`,
+            `　🔢 确认次数: ${config.confirmCount} 次`,
+            `　🎲 发送概率: ${(config.replyRate * 100).toFixed(1)}%`,
+            `　📦 最大数量: ${config.maxEmojiCount} 个`,
+            `　📏 大小限制: ${config.maxEmojiSize} MB`,
+            `　❄️ 冷却时间: ${formatTime(config.sendCD)}`,
+            `　⏳ 发送延迟: ${formatDelay(config.replyDelay.min)} ~ ${formatDelay(config.replyDelay.max)}`,
+            '',
+            '🎯 允许群组:',
+            config.allowGroups.length === 0 ? '　📢 所有群组' : config.allowGroups.map(id => `　🏷️ ${id}`).join('\n'),
+            '━━━━━━━━━━━━━━━━━━'
+        ].join('\n')
+
+        await e.reply(configMsg)
+        return true
+    }
+
+    /**
+     * 切换当前群的自动表情包功能
+     */
+    async toggleGroupEmoticons(e) {
+        if (!e.isGroup || !e.isMaster) {
+            await e.reply('只有主人可以设置群表情包功能哦~')
+            return true
+        }
+
+        const groupId = String(e.group_id)
+        const action = e.msg.includes('开启') ? 'enable' : 'disable'
+
+        try {
+            // 获取当前配置
+            const currentAllowGroups = [...Config.autoEmoticons.allowGroups]
+
+            if (action === 'enable') {
+                // 开启功能
+                if (!currentAllowGroups.includes(groupId)) {
+                    currentAllowGroups.push(groupId)
+
+                    // 更新配置
+                    Config.autoEmoticons.allowGroups = currentAllowGroups
+
+                    // 初始化该群的监视器
+                    initWatcher(groupId)
+                    initSharedPicturesWatcher()
+
+                    await e.reply([
+                        '✅ 当前群自动表情包功能已开启！',
+                        '',
+                        '功能说明：',
+                        `• 图片在 ${formatTime(Config.autoEmoticons.expireTimeInSeconds)} 内出现 ${Config.autoEmoticons.confirmCount} 次将被保存`,
+                        `• 有 ${(Config.autoEmoticons.replyRate * 100).toFixed(1)}% 概率自动发送表情`,
+                        `• 发送间隔：${formatTime(Config.autoEmoticons.sendCD)}`,
+                        `• 回复"#(哒|达)咩"可删除刚发送的表情`
+                    ].join('\n'))
+                } else {
+                    await e.reply('❗ 当前群的自动表情包功能已经是开启状态了~')
+                }
+            } else {
+                // 关闭功能
+                const index = currentAllowGroups.indexOf(groupId)
+                if (index > -1) {
+                    currentAllowGroups.splice(index, 1)
+
+                    // 更新配置
+                    Config.autoEmoticons.allowGroups = currentAllowGroups
+
+                    // 清除该群的冷却状态
+                    const cooldownKey = `Yz:autoEmoticons:cooldown:${groupId}`
+                    await redis.del(cooldownKey)
+
+                    await e.reply([
+                        '❌ 当前群自动表情包功能已关闭！',
+                        '',
+                        '说明：',
+                        '• 不再保存新的表情包',
+                        '• 不再自动发送表情',
+                        '• 已保存的表情包不会被删除',
+                        '• 可随时使用"#当前群自动表情包开启"重新启用'
+                    ].join('\n'))
+                } else {
+                    await e.reply('❗ 当前群的自动表情包功能已经是关闭状态了~')
+                }
+            }
+
+            // 保存配置到文件
+            Config.saveConfig()
+
+        } catch (error) {
+            logger.error(`[autoEmoticons] 切换群功能失败: ${error}`)
+            await e.reply('❌ 操作失败，请查看日志获取详细信息')
+        }
+
+        return true
+    }
+
 
 }
 

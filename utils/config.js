@@ -297,25 +297,30 @@ const defaultConfig = {
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',
   version: 'v2.8.4',
-  // 是否启用表情保存
-  autoEmoticons_useEmojiSave: true,
-  // 表情过期时间（秒）- 在此时间内发送多次才会被保存
-  autoEmoticons_expireTimeInSeconds: 259200, // 3天
-  // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
-  autoEmoticons_confirmCount: 3, // 默认是3次，可以设置为更高的值
-  // 默认发送偷取表情的概率
-  autoEmoticons_autoEmoticonsReplyRate: 0.05, // 每次消息有5%的概率发送表情包
-  // 表情包最大数量
-  autoEmoticons_maxEmojiCount: 100,
-  // 表情包大小限制 (字节)
-  autoEmoticons_maxEmojiSize: 10,
-  // 需要保存表情包的群号列表，为空数组时表示所有群
-  autoEmoticons_allowGroups: ["1111"],
-  // 发送表情时的延迟 (毫秒)
-  autoEmoticons_replyDelay_min: 1000,
-  autoEmoticons_replyDelay_max: 240000,
-  // 自动发送表情包的冷却时间（秒）
-  autoEmoticons_sendCD: 300,
+
+  autoEmoticons: {
+    // 是否启用表情保存
+    useEmojiSave: true,
+    // 表情过期时间（秒）- 在此时间内发送多次才会被保存
+    expireTimeInSeconds: 259200, // 3天
+    // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
+    confirmCount: 3, // 默认是3次，可以设置为更高的值
+    // 默认发送偷取表情的概率
+    replyRate: 0.05, // 每次消息有5%的概率发送表情包
+    // 表情包最大数量
+    maxEmojiCount: 100,
+    // 表情包大小限制 (MB)
+    maxEmojiSize: 10,
+    // 需要保存表情包的群号列表，为空数组时表示所有群
+    allowGroups: ["1111"],
+    // 自动发送表情包的冷却时间（秒）
+    sendCD: 300,
+    // 发送表情时的延迟 (毫秒)
+    replyDelay: {
+      min: 1000,
+      max: 240000
+    }
+  },
 
   turnOnBilitv: false,
 
@@ -352,9 +357,24 @@ function deepDiff(obj, base) {
   return changes(obj, base);
 }
 
+function saveConfigDiff(change) {
+  try {
+    fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(change, null, 2), { flag: 'w' })
+    return true
+  } catch (err) {
+    logger.error(err)
+    return false
+  }
+}
+
 export const Config = new Proxy(config, {
   get(target, property) {
-    if (property === 'getGeminiKey') {
+    if (property === 'save') {
+      return function () {
+        saveConfigDiff(deepDiff(target, defaultConfig))
+      }
+    }
+    else if (property === 'getGeminiKey') {
       return function () {
         if (target.geminiKey?.length === 0) {
           return ''
@@ -399,14 +419,6 @@ export const Config = new Proxy(config, {
   },
   set(target, property, value) {
     target[property] = value
-    const change = deepDiff(target, defaultConfig)
-
-    try {
-      fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(change, null, 2), { flag: 'w' })
-    } catch (err) {
-      logger.error(err)
-      return false
-    }
-    return true
+    return saveConfigDiff(deepDiff(target, defaultConfig))
   }
 })

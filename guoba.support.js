@@ -1509,7 +1509,7 @@ export function supportGuoba() {
         {
           field: "autoRepeat_config",
           label: "🍓群单独设置",
-          bottomHelpMessage: "复读 & 打断复读",
+          bottomHelpMessage: "复读 & 打断复读；群单独指令：#自动复读[开启|关闭] #打断复读[开启|关闭] #自动复读状态",
           component: "GSubForm",
           componentProps: {
             multiple: true,
@@ -1529,7 +1529,7 @@ export function supportGuoba() {
                 field: "cooldown",
                 label: "冷却时间",
                 required: false,
-                bottomHelpMessage: "冷却时间（秒）",
+                bottomHelpMessage: "冷却时间（秒），默认30秒",
                 component: "InputNumber",
                 componentProps: {
                   min: 1,
@@ -1540,14 +1540,14 @@ export function supportGuoba() {
                 field: "enabled",
                 label: "自动复读",
                 required: false,
-                bottomHelpMessage: "是否启用自动复读",
+                bottomHelpMessage: "是否启用自动复读，默认关闭",
                 component: 'Switch'
               },
               {
                 field: "triggerCount",
                 label: "触发复读的次数",
                 required: false,
-                bottomHelpMessage: "触发复读的次数",
+                bottomHelpMessage: "触发复读的次数，默认3次",
                 component: "InputNumber",
                 componentProps: {
                   min: 1,
@@ -1558,7 +1558,7 @@ export function supportGuoba() {
                 field: "probability",
                 label: "复读概率",
                 required: false,
-                bottomHelpMessage: "复读概率",
+                bottomHelpMessage: "复读概率，默认1",
                 component: "InputNumber",
                 componentProps: {
                   min: 0,
@@ -1570,14 +1570,14 @@ export function supportGuoba() {
                 field: "breakEnabled",
                 label: "打断复读",
                 required: false,
-                bottomHelpMessage: "是否启用打断复读",
+                bottomHelpMessage: "是否启用打断复读，默认关闭",
                 component: 'Switch'
               },
               {
                 field: "breakCount",
                 label: "打断的次数",
                 required: false,
-                bottomHelpMessage: "打断的次数",
+                bottomHelpMessage: "打断的次数，默认5次",
                 component: "InputNumber",
                 componentProps: {
                   min: 1,
@@ -1588,7 +1588,7 @@ export function supportGuoba() {
                 field: "breakProbability",
                 label: "打断概率",
                 required: false,
-                bottomHelpMessage: "打断概率",
+                bottomHelpMessage: "打断概率，默认0.8",
                 component: "InputNumber",
                 componentProps: {
                   min: 0,
@@ -1604,13 +1604,13 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'autoEmoticons_useEmojiSave',
+          field: 'autoEmoticonsConfig.useEmojiSave',
           label: '启用表情保存',
           bottomHelpMessage: '是否启用表情保存/偷取/发送；会自动发送保存在  /data/chatgpt/emoji_save/群号/ 和 /data/chatgpt/PaimonChuoYiChouPictures/ 目录下的表情包',
           component: 'Switch'
         },
         {
-          field: 'autoEmoticons_expireTimeInSeconds',
+          field: 'autoEmoticonsConfig.expireTimeInSeconds',
           label: '表情记录时间',
           bottomHelpMessage: '在此时间内发送多次才会被保存',
           helpMessage: '单位：秒',
@@ -1622,7 +1622,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticons_confirmCount',
+          field: 'autoEmoticonsConfig.confirmCount',
           label: '表情确认次数',
           bottomHelpMessage: '在记录时间内接收多少次才保存表情包',
           component: 'InputNumber',
@@ -1633,7 +1633,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticons_autoEmoticonsReplyRate',
+          field: 'autoEmoticonsConfig.replyRate',
           label: '发送表情概率',
           bottomHelpMessage: '发送偷取表情的概率',
           component: 'InputNumber',
@@ -1644,7 +1644,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticons_sendCD',
+          field: 'autoEmoticonsConfig.sendCD',
           label: '发送表情冷却时间',
           bottomHelpMessage: '发送表情的冷却时间（秒）',
           component: 'InputNumber',
@@ -1654,7 +1654,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticons_maxEmojiCount',
+          field: 'autoEmoticonsConfig.maxEmojiCount',
           label: '表情包最大数量',
           bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',
           component: 'InputNumber',
@@ -1665,7 +1665,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticons_maxEmojiSize',
+          field: 'autoEmoticonsConfig.maxEmojiSize',
           label: '表情大小限制',
           bottomHelpMessage: '表情包文件大小限制 (MB)',
           component: 'InputNumber',
@@ -1676,7 +1676,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'autoEmoticons_allowGroups',
+          field: 'autoEmoticonsConfig.allowGroups',
           label: '表情包白名单群',
           bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群；（推荐设置该选项，设置后支持无触发自动发送表情包，否则只能接受任意信息后概率触发表情包）',
           component: "GTags",

@@ -17,22 +17,17 @@ export class autoRepeat extends plugin {
             priority: 3000,
             rule: [
                 {
-                    reg: '^#?(自动复读|复读)(开启|关闭)$',
+                    reg: '^#(自动复读|复读)(开启|关闭)$',
                     fnc: 'setRepeatStatus',
                     permission: 'admin'
                 },
                 {
-                    reg: '^#?(打断复读|复读打断)(开启|关闭)$',
+                    reg: '^#(打断复读|复读打断)(开启|关闭)$',
                     fnc: 'setBreakStatus',
                     permission: 'admin'
                 },
                 {
-                    reg: '^#?复读设置\\s*(\\d+)\\s*(\\d+)$',
-                    fnc: 'setRepeatConfig',
-                    permission: 'admin'
-                },
-                {
-                    reg: '^#?复读状态$',
+                    reg: '^#(自动复读|复读)状态$',
                     fnc: 'getRepeatStatus'
                 },
                 {
@@ -45,8 +40,8 @@ export class autoRepeat extends plugin {
 
         // 默认配置
         this.defaultConfig = {
-            enabled: true,              // 是否启用自动复读
-            breakEnabled: false,        // 是否启用打断复读
+            enabled: false,            // 是否启用自动复读
+            breakEnabled: false,       // 是否启用打断复读
             triggerCount: 3,           // 触发复读的次数
             breakCount: 5,             // 触发打断的次数
             probability: 1.0,          // 复读概率 (0-1)
@@ -90,20 +85,52 @@ export class autoRepeat extends plugin {
         }
 
         const existingIndex = Config.autoRepeat_config.findIndex(item => item.groupId === groupId)
+        const currentConfig = this.getGroupConfig(groupId)
 
-        const newConfig = {
-            groupId: groupId,
-            ...this.getGroupConfig(groupId),
+        // 合并新配置
+        const mergedConfig = {
+            ...currentConfig,
             ...config
         }
 
-        if (existingIndex !== -1) {
-            // 更新现有配置
-            Config.autoRepeat_config[existingIndex] = newConfig
+        // 只保存与默认配置不同的部分
+        const configToSave = { groupId: groupId }
+
+        Object.keys(this.defaultConfig).forEach(key => {
+            const mergedValue = mergedConfig[key]
+            const defaultValue = this.defaultConfig[key]
+
+            // 对于数组类型，需要深度比较
+            if (Array.isArray(defaultValue)) {
+                if (!Array.isArray(mergedValue) ||
+                    mergedValue.length !== defaultValue.length ||
+                    !mergedValue.every((item, index) => item === defaultValue[index])) {
+                    configToSave[key] = mergedValue
+                }
+            } else {
+                // 普通值的比较
+                if (mergedValue !== defaultValue) {
+                    configToSave[key] = mergedValue
+                }
+            }
+        })
+
+        // 如果没有需要保存的差异配置，则删除该配置项
+        if (Object.keys(configToSave).length === 1) { // 只有 groupId
+            if (existingIndex !== -1) {
+                Config.autoRepeat_config.splice(existingIndex, 1)
+            }
         } else {
-            // 添加新配置
-            Config.autoRepeat_config.push(newConfig)
+            if (existingIndex !== -1) {
+                // 更新现有配置
+                Config.autoRepeat_config[existingIndex] = configToSave
+            } else {
+                // 添加新配置
+                Config.autoRepeat_config.push(configToSave)
+            }
         }
+
+        Config.save();
     }
 
     /**
@@ -112,12 +139,12 @@ export class autoRepeat extends plugin {
     async setRepeatStatus(e) {
         if (!e.isGroup) return false
 
-        const groupId = String(e.group_id)
+        const groupId = e.group_id
         const isEnable = e.msg.includes('开启')
 
         this.saveGroupConfig(groupId, { enabled: isEnable })
 
-        await e.reply(`自动复读已${isEnable ? '开启' : '关闭'}`)
+        await e.reply(`当前群自动复读已${isEnable ? '开启' : '关闭'}`)
         return true
     }
 
@@ -127,44 +154,12 @@ export class autoRepeat extends plugin {
     async setBreakStatus(e) {
         if (!e.isGroup) return false
 
-        const groupId = String(e.group_id)
+        const groupId = e.group_id
         const isEnable = e.msg.includes('开启')
 
         this.saveGroupConfig(groupId, { breakEnabled: isEnable })
 
-        await e.reply(`打断复读已${isEnable ? '开启' : '关闭'}`)
-        return true
-    }
-
-    /**
-     * 设置复读参数
-     */
-    async setRepeatConfig(e) {
-        if (!e.isGroup) return false
-
-        const match = e.msg.match(/^#?复读设置\s*(\d+)\s*(\d+)$/)
-        if (!match) return false
-
-        const groupId = String(e.group_id)
-        const triggerCount = parseInt(match[1])
-        const breakCount = parseInt(match[2])
-
-        if (triggerCount < 2 || triggerCount > 10) {
-            await e.reply('触发复读次数应在2-10之间')
-            return true
-        }
-
-        if (breakCount <= triggerCount || breakCount > 20) {
-            await e.reply('打断次数应大于触发次数且不超过20')
-            return true
-        }
-
-        this.saveGroupConfig(groupId, {
-            triggerCount: triggerCount,
-            breakCount: breakCount
-        })
-
-        await e.reply(`复读设置已更新：${triggerCount}次触发复读，${breakCount}次触发打断`)
+        await e.reply(`当前群打断复读已${isEnable ? '开启' : '关闭'}`)
         return true
     }
 
@@ -174,7 +169,7 @@ export class autoRepeat extends plugin {
     async getRepeatStatus(e) {
         if (!e.isGroup) return false
 
-        const groupId = String(e.group_id)
+        const groupId = e.group_id
         const config = this.getGroupConfig(groupId)
 
         const status = [
@@ -187,7 +182,7 @@ export class autoRepeat extends plugin {
             `冷却时间：${config.cooldown}秒`
         ]
 
-        await e.reply(`复读设置状态：\n${status.join('\n')}`)
+        await e.reply(`当前群复读设置状态：\n${status.join('\n')}`)
         return true
     }
 
@@ -201,7 +196,7 @@ export class autoRepeat extends plugin {
         // 忽略以#开头的命令
         if (e.msg?.startsWith('#')) return false
 
-        const groupId = String(e.group_id)
+        const groupId = e.group_id
         const config = this.getGroupConfig(groupId)
 
         // 检查是否启用自动复读
