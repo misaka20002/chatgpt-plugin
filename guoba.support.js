@@ -1527,17 +1527,6 @@ export function supportGuoba() {
                 },
               },
               {
-                field: "cooldown",
-                label: "冷却时间",
-                required: false,
-                bottomHelpMessage: "冷却时间（秒），默认30秒",
-                component: "InputNumber",
-                componentProps: {
-                  min: 1,
-                  step: 1,
-                },
-              },
-              {
                 field: "enabled",
                 label: "自动复读",
                 required: false,
@@ -1595,6 +1584,17 @@ export function supportGuoba() {
                   min: 0,
                   max: 1,
                   step: 0.01,
+                },
+              },
+              {
+                field: "cooldown",
+                label: "冷却时间",
+                required: false,
+                bottomHelpMessage: "冷却时间（秒），默认30秒",
+                component: "InputNumber",
+                componentProps: {
+                  min: 1,
+                  step: 1,
                 },
               },
             ],
