@@ -393,6 +393,9 @@ export class autoEmoticons extends plugin {
                 const randomIndex = Math.floor(Math.random() * availablePictures.length)
                 const picturePath = availablePictures[randomIndex]
 
+                // 设置冷却时间
+                await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
+
                 // 添加随机延迟
                 const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
                 logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
@@ -401,9 +404,6 @@ export class autoEmoticons extends plugin {
                 // 发送图片
                 msgRet = await e.reply(segment.image(picturePath))
                 msgRet_id = msgRet.seq || msgRet.data.message_id
-
-                // 设置冷却时间
-                await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
 
                 // 存储文件信息（用于删除功能）
                 const isSharedPicture = sharedPicturesCache.includes(picturePath)
@@ -464,11 +464,6 @@ export class autoEmoticons extends plugin {
                 const randomIndex = Math.floor(Math.random() * availablePictures.length);
                 const picturePath = availablePictures[randomIndex];
 
-                // 添加随机延迟
-                const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
-                logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
-                await sleep(delay)
-
                 // 发送图片
                 try {
                     const group = Bot.pickGroup(parseInt(groupId));
@@ -482,6 +477,11 @@ export class autoEmoticons extends plugin {
 
                     // 设置冷却时间
                     await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons_sendCD })
+
+                    // 添加随机延迟
+                    const delay = randomInt(Config.autoEmoticons_replyDelay_min, Config.autoEmoticons_replyDelay_max)
+                    logger.debug(`[autoEmoticons] 将在${delay}毫秒后发送图片: ${picturePath}`)
+                    await sleep(delay)
 
                     // 存储文件信息
                     const isSharedPicture = sharedPicturesCache.includes(picturePath)

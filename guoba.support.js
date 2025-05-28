@@ -1581,7 +1581,7 @@ export function supportGuoba() {
         {
           field: 'autoEmoticons_allowGroups',
           label: '表情包白名单群',
-          bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群',
+          bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群；（推荐设置该选项，设置后支持无触发自动发送表情包，否则只能接受任意信息后概率触发表情包）',
           component: "GTags",
           componentProps: {
             placeholder: '请输入qq群号',
