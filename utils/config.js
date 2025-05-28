@@ -339,6 +339,19 @@ config.version = defaultConfig.version
 // const latestTag = execSync(`cd ${_path}/plugins/chatgpt-plugin && git describe --tags --abbrev=0`).toString().trim()
 // config.version = latestTag
 
+function deepDiff(obj, base) {
+  function changes(object, base) {
+    return lodash.transform(object, function (result, value, key) {
+      if (!lodash.isEqual(value, base[key])) {
+        result[key] = (lodash.isObject(value) && lodash.isObject(base[key]))
+          ? changes(value, base[key])
+          : value;
+      }
+    });
+  }
+  return changes(obj, base);
+}
+
 export const Config = new Proxy(config, {
   get(target, property) {
     if (property === 'getGeminiKey') {
@@ -386,11 +399,8 @@ export const Config = new Proxy(config, {
   },
   set(target, property, value) {
     target[property] = value
-    const change = lodash.transform(target, function (result, value, key) {
-      if (!lodash.isEqual(value, defaultConfig[key])) {
-        result[key] = value
-      }
-    })
+    const change = deepDiff(target, defaultConfig)
+
     try {
       fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(change, null, 2), { flag: 'w' })
     } catch (err) {

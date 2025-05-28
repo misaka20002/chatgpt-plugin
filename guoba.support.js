@@ -1503,6 +1503,103 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
+          label: '复读 & 打断复读',
+          component: 'Divider'
+        },
+        {
+          field: "autoRepeat_config",
+          label: "🍓群单独设置",
+          bottomHelpMessage: "复读 & 打断复读",
+          component: "GSubForm",
+          componentProps: {
+            multiple: true,
+            schemas: [
+              {
+                field: "groupId",
+                label: "群号",
+                required: true,
+                bottomHelpMessage: "群号",
+                component: "InputNumber",
+                componentProps: {
+                  min: 1,
+                  step: 1,
+                },
+              },
+              {
+                field: "cooldown",
+                label: "冷却时间",
+                required: false,
+                bottomHelpMessage: "冷却时间（秒）",
+                component: "InputNumber",
+                componentProps: {
+                  min: 1,
+                  step: 1,
+                },
+              },
+              {
+                field: "enabled",
+                label: "自动复读",
+                required: false,
+                bottomHelpMessage: "是否启用自动复读",
+                component: 'Switch'
+              },
+              {
+                field: "triggerCount",
+                label: "触发复读的次数",
+                required: false,
+                bottomHelpMessage: "触发复读的次数",
+                component: "InputNumber",
+                componentProps: {
+                  min: 1,
+                  step: 1,
+                },
+              },
+              {
+                field: "probability",
+                label: "复读概率",
+                required: false,
+                bottomHelpMessage: "复读概率",
+                component: "InputNumber",
+                componentProps: {
+                  min: 0,
+                  max: 1,
+                  step: 0.01,
+                },
+              },
+              {
+                field: "breakEnabled",
+                label: "打断复读",
+                required: false,
+                bottomHelpMessage: "是否启用打断复读",
+                component: 'Switch'
+              },
+              {
+                field: "breakCount",
+                label: "打断的次数",
+                required: false,
+                bottomHelpMessage: "打断的次数",
+                component: "InputNumber",
+                componentProps: {
+                  min: 1,
+                  step: 1,
+                },
+              },
+              {
+                field: "breakProbability",
+                label: "打断概率",
+                required: false,
+                bottomHelpMessage: "打断概率",
+                component: "InputNumber",
+                componentProps: {
+                  min: 0,
+                  max: 1,
+                  step: 0.01,
+                },
+              },
+            ],
+          },
+        },
+        {
           label: '以下为自动表情包',
           component: 'Divider'
         },
