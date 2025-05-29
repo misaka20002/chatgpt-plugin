@@ -290,7 +290,7 @@ export class autoEmoticons extends plugin {
                     : item.file.split('/').pop().split('.')[0] || item.url.split('/').pop().split('.')[0]
 
                 try {
-                    // 检查是否在黑名单中（过大的图片不再下载）
+                    // 检查是否在黑名单中（过大的图片/已#哒咩 过的不再下载）
                     const blockKey = `Yz:autoEmoticons:blocked:${fileUnique}`
                     const isBlocked = await redis.get(blockKey)
                     if (isBlocked) {
@@ -534,6 +534,7 @@ export class autoEmoticons extends plugin {
         try {
             let filePath;
             let canDelete = true;
+            let fileUnique = null;
 
             if (fileInfo.startsWith('shared:')) {
                 // 共享图片 - 不允许删除
@@ -542,6 +543,8 @@ export class autoEmoticons extends plugin {
             } else {
                 // 群专属表情
                 filePath = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId, fileInfo);
+                // 获取文件唯一标识，去除扩展名
+                fileUnique = path.basename(fileInfo, path.extname(fileInfo));
             }
 
             if (canDelete && filePath && fs.existsSync(filePath)) {
@@ -553,6 +556,16 @@ export class autoEmoticons extends plugin {
                 if (index > -1) {
                     emojiList.splice(index, 1);
                     emojiListCache.set(groupId, emojiList);
+                }
+
+                // 将删除的表情添加到黑名单，30天内不再下载
+                if (fileUnique) {
+                    const blockKey = `Yz:autoEmoticons:blocked:${fileUnique}`
+                    const ONE_MONTH_IN_SECONDS = 30 * 24 * 60 * 60 // 30天的秒数
+                    await redis.set(blockKey, '1', {
+                        EX: ONE_MONTH_IN_SECONDS
+                    })
+                    logger.mark(`[autoEmoticons] 表情被删除，已加入黑名单: ${fileUnique}，15天内不再下载`)
                 }
 
                 let res = await e.group.recallMsg(replyMsgId)
