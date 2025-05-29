@@ -370,9 +370,14 @@ function saveDiff(target) {
 
 export const Config = new Proxy(config, {
   get(target, property) {
-    if (property === 'save') {
+    if (property === 'save') { // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
       return function () {
         return saveDiff(target);
+      }
+    }
+    else if (property === 'getConfig') {
+      return function () {
+        return config;
       }
     }
     else if (property === 'getGeminiKey') {

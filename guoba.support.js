@@ -1993,8 +1993,7 @@ export function supportGuoba() {
           }
 
           // 使用 lodash 处理锅巴传入的 点分隔 keyPath
-          lodash.set(Config, keyPath, value)
-          Config.save();
+          lodash.set(Config.getConfig(), keyPath, value)
         }
 
         // 正确储存azureRoleSelect结果
@@ -2007,8 +2006,11 @@ export function supportGuoba() {
           }
         })
         if (typeof azureSpeaker === 'object' && azureSpeaker !== null) {
-          Config.azureTTSSpeaker = azureSpeaker.code
+          Config.getConfig().azureTTSSpeaker = azureSpeaker.code
         }
+
+        // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
+        Config.save();
         return Result.ok({}, '保存成功~')
       }
     }
