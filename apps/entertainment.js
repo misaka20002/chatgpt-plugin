@@ -347,7 +347,7 @@ ${translateLangLabels}
     logger.info('combine ' + e.msg)
     let resultFileLoc = `data/chatgpt/emoji/${left}_${right}.jpg`
     if (fs.existsSync(resultFileLoc)) {
-      let image = segment.image(resultFileLoc)
+      let image = segment.image(process.cwd() + "/" + resultFileLoc)
       image.asface = true
       await this.reply(image, true)
       return true

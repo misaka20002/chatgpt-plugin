@@ -43,15 +43,16 @@ export class SendVideoTool extends AbstractTool {
       msg.push('\n视频在路上啦！')
       await group.sendMsg(msg)
       const videoResponse = await fetch(videoUrl, { headers })
-      const fileType = videoResponse.headers.get('Content-Type').split('/')[1]
-      let fileLoc = `data/chatgpt/videos/${bvid}.${fileType}`
+      // const fileType = videoResponse.headers.get('Content-Type').split('/')[1]
+      // let fileLoc = `data/chatgpt/videos/${bvid}.${fileType}`
       mkdirs('data/chatgpt/videos')
-      videoResponse.blob().then(async blob => {
-        const arrayBuffer = await blob.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        await fs.writeFileSync(fileLoc, buffer)
-        await group.sendMsg(segment.video(fileLoc))
-      })
+      // videoResponse.blob().then(async blob => {
+      //   const arrayBuffer = await blob.arrayBuffer()
+      //   const buffer = Buffer.from(arrayBuffer)
+        // await fs.writeFileSync(fileLoc, buffer)
+        // await group.sendMsg(segment.video(buffer))
+      // })
+      await group.sendMsg(segment.video(Buffer.from(await videoResponse.arrayBuffer())))
       return `the video ${title.replace(/(<([^>]+)>)/ig, '')} was shared to ${target}. the video information: ${msg}`
     } catch (err) {
       logger.error(err)
