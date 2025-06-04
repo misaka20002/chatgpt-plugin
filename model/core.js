@@ -869,7 +869,7 @@ async function collectTools (e) {
 
   let systemAddition = ''
   if (e.isGroup) {
-    let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e), true) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e), true)
+    let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
     if (botInfo.role !== 'member') {
       // 管理员才给这些工具
       tools.push(...[new EditCardTool(), new JinyanTool(), new KickOutTool(), new HandleMessageMsgTool(), new SetTitleTool()])
