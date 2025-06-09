@@ -767,9 +767,7 @@ export async function getImg(e, alsoGetAtAvatar = true) {
           logger.error('[派蒙chatgpt插件]获取好友信息失败:', error)
         }
       }
-    }
-    // 添加OneBotv11适配器的处理
-    else if (e.reply_id) {
+    } else if (e.reply_id) {
       try {
         const reply = await e.getReply(e.reply_id)
         senderNickname = reply.sender?.card || reply.sender?.nickname
@@ -802,6 +800,8 @@ export async function getImg(e, alsoGetAtAvatar = true) {
         `> ##### ${senderNickname}：\n> ---\n${quotedLines}` : 
         quotedLines;
     }
+    // 收集引用消息的 message_id
+    e.source_message_id = e.reply_id || e.source.seq || e.source.time;
   }
   return e.img;
 }

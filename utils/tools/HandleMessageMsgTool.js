@@ -20,6 +20,7 @@ export class HandleMessageMsgTool extends AbstractTool {
 
   func = async function (opts, e) {
     let { type = 'recall', messageId = e.message_id } = opts
+    messageId = e.source_message_id || e.message_id // 因为 gemini 太蠢了所以手动指定使用 source_message_id
     try {
       switch (type) {
         case 'recall': {
