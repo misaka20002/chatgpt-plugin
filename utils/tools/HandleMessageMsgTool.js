@@ -30,7 +30,9 @@ export class HandleMessageMsgTool extends AbstractTool {
     try {
       switch (type) {
         case 'recall': {
-          await e.group.recallMsg(messageId)
+          // fix: bot 总是乱撤回，不给他这个权限了
+          // await e.group.recallMsg(messageId)
+          return 'failed'
           break
         }
         case 'essence': {
