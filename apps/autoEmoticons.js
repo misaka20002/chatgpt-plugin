@@ -387,7 +387,7 @@ export class autoEmoticons extends plugin {
         const lastSendTime = await redis.get(cooldownKey)
         const now = Date.now()
 
-        if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.sendCD * 1000)) {
+        if (lastSendTime) {
             const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.sendCD * 1000)) - now) / 1000)
             logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
             return false
@@ -445,7 +445,7 @@ export class autoEmoticons extends plugin {
                 const lastSendTime = await redis.get(cooldownKey)
                 const now = Date.now()
 
-                if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.sendCD * 1000)) {
+                if (lastSendTime) {
                     const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.sendCD * 1000)) - now) / 1000)
                     logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
                     continue
@@ -631,7 +631,7 @@ export class autoEmoticons extends plugin {
         const now = Date.now()
         let cooldownStatus = '无冷却'
 
-        if (lastSendTime && (now - parseInt(lastSendTime)) < (config.sendCD * 1000)) {
+        if (lastSendTime) {
             const remainingTime = Math.ceil(((parseInt(lastSendTime) + (config.sendCD * 1000)) - now) / 1000)
             cooldownStatus = `冷却中 (${formatTime(remainingTime)})`
         }
