@@ -1,5 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 
+import { Config } from '../../utils/config.js'
+
 export class HandleMessageMsgTool extends AbstractTool {
   name = 'handleMsg'
 
@@ -21,18 +23,19 @@ export class HandleMessageMsgTool extends AbstractTool {
   func = async function (opts, e) {
     let { type = 'recall', messageId = e.message_id } = opts
 
-    // 因为 gemini 太蠢了所以手动指定使用 source_message_id
-    if (e.source_message_id && messageId == e.source_message_id)
-      logger.mark("[ChatGPT][handleMsg] ai 已正确选择引用消息 source_message_id")
-    else
-      messageId = e.source_message_id || e.message_id
+    // 因为 gemini 2.0 太蠢了所以手动指定使用 source_message_id
+    if (Config.change_handleMsg_tool)
+      if (e.source_message_id && messageId == e.source_message_id)
+        logger.mark("[ChatGPT][handleMsg] ai 已正确选择引用消息 source_message_id")
+      else
+        messageId = e.source_message_id || e.message_id
 
     try {
       switch (type) {
         case 'recall': {
-          // fix: bot 总是乱撤回，不给他这个权限了
-          // await e.group.recallMsg(messageId)
-          return 'failed'
+          if (Config.change_handleMsg_tool)
+            return 'failed'
+          await e.group.recallMsg(messageId)
           break
         }
         case 'essence': {

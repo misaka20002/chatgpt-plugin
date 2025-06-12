@@ -1232,7 +1232,13 @@ export function supportGuoba() {
         {
           field: 'disable_sendMessage_tool',
           label: '禁用文字工具',
-          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊工具”，适用于sf图片模式、伪人重复发送相同文本等问题',
+          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于sf图片模式、伪人重复发送相同文本等问题',
+          component: 'Switch'
+        },
+        {
+          field: 'change_handleMsg_tool',
+          label: '调整msg工具',
+          bottomHelpMessage: '智能模式中，修改“handleMsg工具”：1.引用消息时，bot如果要加精华时将强制指定为引用的消息；2.禁用撤回消息的功能。（该选项用于某些不够聪明的模型，例如 gemini 2.0 系列）（当你在控制台看到mark消息“[ChatGPT][handleMsg] ai 已正确选择引用消息 source_message_id”就可以将该选项关闭了）',
           component: 'Switch'
         },
         {
