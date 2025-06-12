@@ -398,12 +398,12 @@ export class autoEmoticons extends plugin {
         if (Math.random() < Config.autoEmoticons.replyRate && availablePictures.length > 0) {
             let msgRet, msgRet_id
             try {
+                // 设置冷却时间
+                await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
+
                 // 随机选择一个图片
                 const randomIndex = Math.floor(Math.random() * availablePictures.length)
                 const picturePath = availablePictures[randomIndex]
-
-                // 设置冷却时间
-                await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
 
                 // 添加随机延迟
                 const delay = randomInt(Config.autoEmoticons.replyDelay.min, Config.autoEmoticons.replyDelay.max)
@@ -475,6 +475,9 @@ export class autoEmoticons extends plugin {
 
                 // 发送图片
                 try {
+                    // 设置冷却时间
+                    await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
+
                     const group = Bot.pickGroup(parseInt(groupId));
                     if (!group) {
                         logger.error(`[autoEmoticons] 无法获取群 ${groupId} 的实例`);
@@ -483,9 +486,6 @@ export class autoEmoticons extends plugin {
 
                     const msgRet = await group.sendMsg(segment.image(picturePath));
                     const msgId = msgRet.seq || msgRet.message_id;
-
-                    // 设置冷却时间
-                    await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
 
                     // 添加随机延迟
                     const delay = randomInt(Config.autoEmoticons.replyDelay.min, Config.autoEmoticons.replyDelay.max)
