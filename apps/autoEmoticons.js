@@ -387,7 +387,7 @@ export class autoEmoticons extends plugin {
         const lastSendTime = await redis.get(cooldownKey)
         const now = Date.now()
 
-        if (lastSendTime) {
+        if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons.sendCD * 1000)) {
             const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons.sendCD * 1000)) - now) / 1000)
             logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
             return false
@@ -445,7 +445,7 @@ export class autoEmoticons extends plugin {
                 const lastSendTime = await redis.get(cooldownKey)
                 const now = Date.now()
 
-                if (lastSendTime) {
+                if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons.sendCD * 1000)) {
                     const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons.sendCD * 1000)) - now) / 1000)
                     logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
                     continue
@@ -631,7 +631,7 @@ export class autoEmoticons extends plugin {
         const now = Date.now()
         let cooldownStatus = '无冷却'
 
-        if (lastSendTime) {
+        if (lastSendTime && (now - parseInt(lastSendTime)) < (Config.autoEmoticons.sendCD * 1000)) {
             const remainingTime = Math.ceil(((parseInt(lastSendTime) + (config.sendCD * 1000)) - now) / 1000)
             cooldownStatus = `冷却中 (${formatTime(remainingTime)})`
         }
@@ -736,7 +736,7 @@ export class autoEmoticons extends plugin {
                         '• 不再保存新的表情包',
                         '• 不再自动发送表情',
                         '• 已保存的表情包不会被删除',
-                        '• 可随时使用"#当前群自动表情包开启"重新启用'
+                        '• 可随时使用"#自动表情包开启"重新启用'
                     ].join('\n'))
                 } else {
                     await e.reply('❗ 当前群的自动表情包功能已经是关闭状态了~')
