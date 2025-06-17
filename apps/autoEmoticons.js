@@ -388,7 +388,7 @@ export class autoEmoticons extends plugin {
         const now = Date.now()
 
         if (lastSendTime) {
-            const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.sendCD * 1000)) - now) / 1000)
+            const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons.sendCD * 1000)) - now) / 1000)
             logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
             return false
         }
@@ -399,7 +399,7 @@ export class autoEmoticons extends plugin {
             let msgRet, msgRet_id
             try {
                 // 设置冷却时间
-                await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
+                await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons.sendCD })
 
                 // 随机选择一个图片
                 const randomIndex = Math.floor(Math.random() * availablePictures.length)
@@ -446,7 +446,7 @@ export class autoEmoticons extends plugin {
                 const now = Date.now()
 
                 if (lastSendTime) {
-                    const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.sendCD * 1000)) - now) / 1000)
+                    const remainingTime = Math.ceil(((parseInt(lastSendTime) + (Config.autoEmoticons.sendCD * 1000)) - now) / 1000)
                     logger.debug(`[autoEmoticons] 群 ${groupId} 还在冷却中，剩余 ${remainingTime} 秒`)
                     continue
                 }
@@ -476,7 +476,7 @@ export class autoEmoticons extends plugin {
                 // 发送图片
                 try {
                     // 设置冷却时间
-                    await redis.set(cooldownKey, String(now), { EX: Config.sendCD })
+                    await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons.sendCD })
 
                     const group = Bot.pickGroup(parseInt(groupId));
                     if (!group) {
