@@ -190,6 +190,18 @@ var ChatGPTAPI = /** @class */ (function () {
                                             Authorization: "Bearer ".concat(this._apiKey)
                                         };
                                         body = __assign(__assign(__assign({ max_completion_tokens: maxTokens }, this._completionParams), completionParams), { messages: messages, stream: stream });
+
+                                        // 如果存在 functions，将其转换为 tools 格式
+                                        if (body.functions && body.functions.length > 0) {
+                                            body.tools = body.functions.map(function(func) {
+                                                return {
+                                                    type: "function",
+                                                    function: func
+                                                };
+                                            });
+                                            delete body.functions;
+                                        }
+                                        
                                         if (this._debug) {
                                             console.log(JSON.stringify(body));
                                         }
@@ -221,7 +233,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                                     }
                                                     if ((_a = response.choices) === null || _a === void 0 ? void 0 : _a.length) {
                                                         var delta = response.choices[0].delta;
-                                                        if (delta.function_call) {
+                                                        if (delta.function_call && delta.function_call !== null) {
                                                             if (delta.function_call.name) {
                                                                 result.functionCall = {
                                                                     name: delta.function_call.name,
@@ -232,16 +244,22 @@ var ChatGPTAPI = /** @class */ (function () {
                                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments;
                                                             }
                                                         }
-                                                        else if (delta.tool_calls) {
+                                                        else if (delta.tool_calls && delta.tool_calls.length > 0) {
                                                             var fc = delta.tool_calls[0].function;
                                                             if (fc.name) {
                                                                 result.functionCall = {
                                                                     name: fc.name,
                                                                     arguments: fc.arguments
                                                                 };
+                                                                // 同时设置 toolCalls 以支持新的格式
+                                                                result.toolCalls = delta.tool_calls;
                                                             }
                                                             else {
                                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments;
+                                                                // 更新 toolCalls 中的参数
+                                                                if (result.toolCalls && result.toolCalls.length > 0) {
+                                                                    result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments;
+                                                                }
                                                             }
                                                         }
                                                         else {
@@ -298,11 +316,14 @@ var ChatGPTAPI = /** @class */ (function () {
                                             if (message_1.content) {
                                                 result.text = message_1.content;
                                             }
-                                            else if (message_1.function_call) {
+                                            else if (message_1.function_call && message_1.function_call !== null) {
                                                 result.functionCall = message_1.function_call;
                                             }
-                                            else if (message_1.tool_calls) {
+                                            else if (message_1.tool_calls && message_1.tool_calls.length > 0) {
+                                                // 设置 functionCall 以兼容旧代码
                                                 result.functionCall = message_1.tool_calls.map(function (tool) { return tool.function; })[0];
+                                                // 同时设置 toolCalls 以支持新的格式
+                                                result.toolCalls = message_1.tool_calls;
                                             }
                                             result.thinking_text = message_1.reasoning_content;
                                             if (message_1.role) {

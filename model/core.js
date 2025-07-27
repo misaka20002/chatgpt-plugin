@@ -480,28 +480,36 @@ class Core {
           option.systemMessage += '如果我要求你生成音乐或写歌，你需要回复适合Suno生成音乐的信息。请使用Verse、Chorus、Bridge、Outro和End等关键字对歌词进行分段，如[Verse 1]。音乐信息需要使用markdown包裹的JSON格式回复给我，结构为```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```。'
         }
         systemAddition && (option.systemMessage += systemAddition)
-        opts.completionParams.parameters.tools = Object.keys(funcMap)
-          .map(k => funcMap[k].function)
-          .map(obj => {
-            return {
-              type: 'function',
-              function: obj
-            }
-          })
+        opts.completionParams.tools = Object.keys(funcMap).map(k => ({
+          type: 'function',
+          function: funcMap[k].function
+        }))
         let msg
         try {
           this.qwenApi = new QwenApi(opts)
           msg = await this.qwenApi.sendMessage(prompt, option)
           logger.info(msg)
-          while (msg.functionCall) {
+          while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
             }
-            let {
-              name,
-              arguments: args
-            } = msg.functionCall
-            args = JSON.parse(args)
+            
+            let name, args;
+            
+            if (msg.functionCall) {
+              // 处理旧的 functionCall 格式
+              name = msg.functionCall.name;
+              args = JSON.parse(msg.functionCall.arguments);
+            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
+              // 处理新的 toolCalls 格式
+              const toolCall = msg.toolCalls[0];
+              name = toolCall.function.name;
+              args = JSON.parse(toolCall.function.arguments);
+            } else {
+              // 如果没有工具调用，跳出循环
+              break;
+            }
+            
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -522,6 +530,17 @@ class Core {
             await common.sleep(300)
             msg = await this.qwenApi.sendMessage(functionResult, option, 'tool')
             logger.info(msg)
+            
+            // 如果是函数返回结果，则跳出循环
+            if (msg.conversation && msg.conversation.length > 0) {
+              const lastMessage = msg.conversation[msg.conversation.length - 1]
+              if (lastMessage.role === 'function' && lastMessage.name === name) {
+                // 清除工具调用相关字段，避免循环
+                msg.functionCall = undefined
+                msg.toolCalls = undefined
+                break
+              }
+            }
           }
         } catch (err) {
           logger.error(err)
@@ -713,20 +732,37 @@ class Core {
         }
         promptAddition && (prompt += promptAddition)
         systemAddition && (option.systemMessage += systemAddition)
-        option.completionParams.functions = Object.keys(funcMap).map(k => funcMap[k].function)
+        option.completionParams.tools = Object.keys(funcMap).map(k => ({
+          type: "function",
+          function: funcMap[k].function
+        }))
         let msg
         try {
           msg = await this.chatGPTApi.sendMessage(prompt, option)
           logger.info(msg)
-          while (msg.functionCall) {
+          
+          // 检查是否有工具调用
+          while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
             if (msg.text) {
               await this.reply(msg.text.replace('\n\n\n', '\n'))
             }
-            let {
-              name,
-              arguments: args
-            } = msg.functionCall
-            args = JSON.parse(args)
+            
+            let name, args;
+            
+            if (msg.functionCall) {
+              // 处理旧的 functionCall 格式
+              name = msg.functionCall.name;
+              args = JSON.parse(msg.functionCall.arguments);
+            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
+              // 处理新的 toolCalls 格式
+              const toolCall = msg.toolCalls[0];
+              name = toolCall.function.name;
+              args = JSON.parse(toolCall.function.arguments);
+            } else {
+              // 如果没有工具调用，跳出循环
+              break;
+            }
+            
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -747,6 +783,17 @@ class Core {
             await common.sleep(300)
             msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
             logger.info(msg)
+            
+            // 如果是函数返回结果，则跳出循环
+            if (msg.conversation && msg.conversation.length > 0) {
+              const lastMessage = msg.conversation[msg.conversation.length - 1]
+              if (lastMessage.role === 'function' && lastMessage.name === name) {
+                // 清除工具调用相关字段，避免循环
+                msg.functionCall = undefined
+                msg.toolCalls = undefined
+                break
+              }
+            }
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
