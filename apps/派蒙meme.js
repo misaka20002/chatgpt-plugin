@@ -449,7 +449,7 @@ export class memes extends plugin {
     if (response.status > 299) {
       let error = await response.text()
       console.error(error)
-      await e.reply(error, true)
+      await e.reply(error.message || "" + " meme合成发生错误，请查看控制台", true)
       return true
     }
     // mkdirs('data/memes/result')
