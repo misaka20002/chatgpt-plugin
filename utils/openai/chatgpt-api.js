@@ -316,10 +316,10 @@ var ChatGPTAPI = /** @class */ (function () {
                                             if (message_1.content) {
                                                 result.text = message_1.content;
                                             }
-                                            else if (message_1.function_call && message_1.function_call !== null) {
+                                            if (message_1.function_call && message_1.function_call !== null) {
                                                 result.functionCall = message_1.function_call;
                                             }
-                                            else if (message_1.tool_calls && message_1.tool_calls.length > 0) {
+                                            if (message_1.tool_calls && message_1.tool_calls.length > 0) {
                                                 // 设置 functionCall 以兼容旧代码
                                                 result.functionCall = message_1.tool_calls.map(function (tool) { return tool.function; })[0];
                                                 // 同时设置 toolCalls 以支持新的格式
