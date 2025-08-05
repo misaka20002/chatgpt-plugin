@@ -712,7 +712,7 @@ export function supportGuoba() {
         {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
-          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliya.top （常见报错：500 Internal Server Error）',
+          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliy.top （常见报错：500 Internal Server Error）',
           component: 'Input'
         },
         {
@@ -891,7 +891,7 @@ export function supportGuoba() {
         {
           field: 'ttsSpace',
           label: 'vits语音转换API地址',
-          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 或 https://misaka20001-paimon-is-not-a-food.hf.space/api/generate 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliya.top/v1/audio/speech；使用 hf_Bert-VITS2 填入： https://huggingface.co/spaces/TLME/Bert-VITS-Umamusume-Genshin-HonkaiSR ；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 或 https://misaka20001-paimon-is-not-a-food.hf.space/api/generate 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliy.top/v1/audio/speech；使用 hf_Bert-VITS2 填入： https://huggingface.co/spaces/TLME/Bert-VITS-Umamusume-Genshin-HonkaiSR ；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
           component: 'Input'
         },
         {
