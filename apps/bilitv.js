@@ -117,6 +117,10 @@ export class bilitv extends plugin {
         } else {
             e.reply([segment.image(res.data.pic), `${res.data.title}\nhttps://www.bilibili.com/video/${bvid}\n作者: ${res.data.owner.name}\n播放: ${formatNumber(res.data.stat.view)} | 弹幕: ${formatNumber(res.data.stat.danmaku)}\n点赞: ${formatNumber(res.data.stat.like)} | 投币: ${formatNumber(res.data.stat.coin)}\n收藏: ${formatNumber(res.data.stat.favorite)} | 评论: ${formatNumber(res.data.stat.reply)}`], true)
         }
+        if (res.data.duration > (Config.bilitv_max_duration_min * 60)) {
+            e.reply(`视频时长 ${(res.data.duration / 60).toFixed(1)} 分钟，人家不敢解析QAQ`, true)
+            return true;
+        }
         res = await fetch(`https://api.bilibili.com/x/player/playurl?avid=${res.data.aid}&cid=${res.data.cid}&qn=16&type=mp4&platform=html5`, {
             headers: {
                 'referer': 'https://www.bilibili.com/',
