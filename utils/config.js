@@ -324,8 +324,8 @@ const defaultConfig = {
   },
   autoRepeat_config: [],
 
-  turnOnBilitv: false,
-  bilitv_max_duration_min: 10
+  // turnOnBilitv: false,
+  // bilitv_max_duration_min: 10
 
 }
 const _path = process.cwd()

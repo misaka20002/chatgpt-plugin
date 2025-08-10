@@ -1195,23 +1195,23 @@ export function supportGuoba() {
           label: '视频解析',
           component: 'Divider'
         },
-        {
-          field: 'turnOnBilitv',
-          label: '开启b站解析',
-          bottomHelpMessage: '开启后，将会解析并发送bilibili链接或小程序关联的视频',
-          component: 'Switch'
-        },
-        {
-          field: 'bilitv_max_duration_min',
-          label: '视频最大时长',
-          bottomHelpMessage: '超过该时长的视频将不会解析，防止爆内存重启',
-          helpMessage: '单位：分钟',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            step: 1
-          }
-        },
+        // {
+        //   field: 'turnOnBilitv',
+        //   label: '开启b站解析',
+        //   bottomHelpMessage: '开启后，将会解析并发送bilibili链接或小程序关联的视频',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'bilitv_max_duration_min',
+        //   label: '视频最大时长',
+        //   bottomHelpMessage: '超过该时长的视频将不会解析，防止爆内存重启',
+        //   helpMessage: '单位：分钟',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 0,
+        //     step: 1
+        //   }
+        // },
         {
           label: '呆毛版 机器人cos设置',
           component: 'Divider'
