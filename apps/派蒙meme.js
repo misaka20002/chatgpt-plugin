@@ -573,7 +573,7 @@ function handleArgs(key, args, userInfos) {
 
   argsObj.user_infos = userInfos.map(u => {
     return {
-      name: _.trim(u.text, '@'),
+      name: _.trim(u.text || u.name, '@'),
       gender: u.gender || 'unknown'
     }
   })

@@ -1191,10 +1191,10 @@ export function supportGuoba() {
           label: '小功能',
           component: 'SOFT_GROUP_BEGIN'
         },
-        {
-          label: '视频解析',
-          component: 'Divider'
-        },
+        // {
+        //   label: '视频解析',
+        //   component: 'Divider'
+        // },
         // {
         //   field: 'turnOnBilitv',
         //   label: '开启b站解析',
