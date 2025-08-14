@@ -136,27 +136,27 @@ export class PaimonChuo extends plugin {
                     case 1:
                         url = getRandomUrl("ecywebp");
                         await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
-                        await e.reply([await segment.image(await convertWebpToPng(url))]);
+                        await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 2:
                         url = getRandomUrl("scy");
                         await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
-                        await e.reply([await segment.image(await convertWebpToPng(url))]);
+                        await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 3:
                         url = getRandomUrl("ecy");
                         await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
-                        await e.reply([await segment.image(await convertWebpToPng(url))]);
+                        await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 4:
                         url = await get_url_from_api_lolicon('ロリ|loli|萝莉|风景|壁纸', '');
                         await this.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`, false, { recallMsg: 100 })
-                        await this.reply([await segment.image(await convertWebpToPng(url))], false, { recallMsg: 100 });
+                        await this.reply([await segment.image(await convertWebpToJpg(url))], false, { recallMsg: 100 });
                         break;
                     case 5:
                         url = await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
                         await this.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`, false, { recallMsg: 100 })
-                        await this.reply([await segment.image(await convertWebpToPng(url))], false, { recallMsg: 100 });
+                        await this.reply([await segment.image(await convertWebpToJpg(url))], false, { recallMsg: 100 });
                         break;
                 }
             }
@@ -344,8 +344,10 @@ export class PaimonChuo extends plugin {
                         await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
                         break;
                     case 7:
+                        await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bq_img"))))
+                        break;
                     case 8:
-                        await e.reply(await segment.image(await convertWebpToPng(getRandomUrl("bqwebp"))))
+                        await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bqwebp"))))
                         break;
                     case 9:
                     case 10:
@@ -880,7 +882,7 @@ async function chuo_text_generateAndSendAudio(message, e) {
  * @param {*} url
  * @return {*} pngBuffer
  */
-async function convertWebpToPng(url) {
+async function convertWebpToJpg(url) {
     try {
         // 从指定 URL 获取图像
         const res = await fetch(url);
@@ -889,12 +891,12 @@ async function convertWebpToPng(url) {
         const arrayBuffer = await res.arrayBuffer();
         const webpBuffer = Buffer.from(arrayBuffer);
         // 使用 sharp 将 WebP 转换为 PNG
-        const pngBuffer = await sharp(webpBuffer)
+        const imgBuffer = await sharp(webpBuffer)
             .jpeg({
                 quality: 80, // 默认值 80
             })
             .toBuffer(); // 返回 Buffer
-        return pngBuffer;
+        return imgBuffer;
     } catch (err) {
         logger.error("[派蒙戳一戳][下载webp]" + err);
         throw new Error("[派蒙戳一戳][下载webp]" + err);
@@ -1900,9 +1902,39 @@ function getRandomUrl(type) {
         "ecy": [ // 二次元
             "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
             "https://api.fuchenboke.cn/api/dongman.php",
+            "https://i18.net/api.php?fl=dongman",
+            "https://i18.net/acg.php",
+            "https://api.boxmoe.com/random.php", // 返回下载图片的
+            "https://rpic.origz.com/api.php?category=pixiv",
+            "https://api.mtyqx.cn/api/random.php",
+            "https://api.mtyqx.cn/tapi/random.php",
+            "https://api.paugram.com/wallpaper/",
+            "http://www.98qy.com/sjbz/api.php",
+            "https://img.xjh.me/random_img.php",
+            "https://www.dmoe.cc/random.php", // 返回下载图片的
+            "https://moe.jitsu.top/api",
+            "https://api.horosama.com/random.php",
+            "https://api.likepoems.com/img/pc",
+            "https://api.likepoems.com/img/pe",
+            "https://api.likepoems.com/img/pixiv",
+            "https://v2.xxapi.cn/api/randomAcgPic?type=pc&return=302",
+            "https://v2.xxapi.cn/api/randomAcgPic?type=wap&return=302",
+            "https://api.suyanw.cn/api/comic/api.php", // 返回下载图片的
+            "https://cdn.seovx.com/d/?mom=302",
         ],
         "scy": [ // 三次元
             "https://api.btstu.cn/sjbz/api.php",
+            "https://i18.net/cos.php",
+            "https://i18.net/bing.php",
+            "https://t.alcy.cc/fj", // 三次元 webp格式
+            "https://api.btstu.cn/sjbz/api.php",
+            "https://api.lolimi.cn/API/tup/xjj.php",
+            "https://api.likepoems.com/img/nature",
+            "https://api.likepoems.com/img/bing",
+            "https://v2.xxapi.cn/api/meinvpic?return=302",
+            "https://v2.xxapi.cn/api/baisi?return=302",
+            "https://api.suyanw.cn/api/ksxjj",
+            "https://cdn.seovx.com/?mom=302",
         ],
         "ecywebp": [ // 二次元 webp格式
             // "https://t.mwm.moe/mp",
@@ -1915,6 +1947,8 @@ function getRandomUrl(type) {
             "https://www.loliapi.com/acg",
             // "http://api.mysqil.com/pc.php",
             // "http://api.mysqil.com/pe.php",
+            "https://api.rls.ovh/horizontal", // avif格式
+            "https://api.rls.ovh/vertical",
         ],
         "scywebp": [ // 三次元 webp格式
             "",
@@ -1922,10 +1956,12 @@ function getRandomUrl(type) {
         "bq_img": [ // 表情
             // "http://api.zhilaohu.icu/xnn",
             // "http://api.zhilaohu.icu/chajun",
+            "https://api.likepoems.com/img/mc",
         ],
         "bqwebp": [
             "https://t.alcy.cc/xhl",
             "https://t.alcy.cc/lai",
+            "https://api.suyanw.cn/api/mao",
         ],
     };
     const randomIndex = Math.floor(Math.random() * urls[type].length);
