@@ -337,7 +337,9 @@ ${translateLangLabels}
     }
   }
 
-  async combineEmoj (e) {
+  async combineEmoj(e) {
+    if (!Config.emojiBaseSwitch)
+      return false;
     let left = e.msg.codePointAt(0).toString(16).toLowerCase()
     let right = e.msg.codePointAt(2).toString(16).toLowerCase()
     if (left === right) {

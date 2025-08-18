@@ -1865,8 +1865,14 @@ export function supportGuoba() {
         },
         {
           field: 'emojiBaseURL',
-          label: '合成emoji的API地址，默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
+          label: '合成emoji的API地址',
+          bottomHelpMessage: '默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
           component: 'Input'
+        },
+        {
+          field: 'emojiBaseSwitch',
+          label: '合成emoji开关',
+          component: 'Switch'
         },
         {
           label: '以下为后台与渲染相关配置',
