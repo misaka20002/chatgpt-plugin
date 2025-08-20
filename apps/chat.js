@@ -568,6 +568,13 @@ export class chatgpt extends plugin {
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
     // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
     prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
+
+    // 关闭私聊通道后不回复
+    if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
+      return false
+    }
+    if (!this.canGPT_blackAndWhitelist(e)) return false
+
     await this.abstractChat(e, prompt, use, forcePictureMode)
   }
 
@@ -607,18 +614,19 @@ export class chatgpt extends plugin {
     // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
     prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
 
-    await this.abstractChat(e, prompt, use)
-  }
-
-  async abstractChat(e, prompt, use, forcePictureMode = false) {
-    /** 备份用户最初的 e.msg */
-    e.msg_bak_2 = e.msg
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
     }
+    if (!this.canGPT_blackAndWhitelist(e)) return false
+
+    await this.abstractChat(e, prompt, use)
+  }
+
+  /** 黑白名单过滤后可进行对话 */
+  canGPT_blackAndWhitelist(e) {
     // 黑白名单过滤对话
-    let [whitelist = [], blacklist = []] = [Config.whitelist, Config.blacklist]
+    let [whitelist = [], blacklist = []] = [Config.whitelist, Config.whitelist]
     let chatPermission = false // 对话许可
     if (typeof whitelist === 'string') {
       whitelist = [whitelist]
@@ -656,6 +664,14 @@ export class chatgpt extends plugin {
     }
     // 当白名单设置不为空的时候，使用白名单加黑名单模式
     if (whitelist.join('').length > 0 && !chatPermission) return false
+
+    // 黑白名单过滤后可进行对话
+    return true;
+  }
+
+  async abstractChat(e, prompt, use, forcePictureMode = false) {
+    /** 备份用户最初的 e.msg */
+    e.msg_bak_2 = e.msg
 
     let userSetting = await getUserReplySetting(this.e)
     let useTTS = !!userSetting.useTTS
