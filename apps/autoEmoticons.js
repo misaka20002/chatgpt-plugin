@@ -131,8 +131,8 @@ function initSharedPicturesWatcher() {
  * @returns {Array} 图片路径列表
  */
 export function getAvailablePictures(groupId) {
-    const groupEmojis = emojiListCache.get(groupId) || []
-    const emojiSaveDir = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', groupId)
+    const groupEmojis = emojiListCache.get(String(groupId)) || []
+    const emojiSaveDir = path.join(process.cwd(), 'data', 'chatgpt', 'emoji_save', String(groupId))
 
     // 群专属表情的完整路径
     const groupEmojiPaths = groupEmojis.map(filename => path.join(emojiSaveDir, filename))
