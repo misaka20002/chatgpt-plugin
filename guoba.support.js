@@ -931,12 +931,12 @@ export function supportGuoba() {
           bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
           component: 'Switch'
         },
-        // {
-        //   field: 'tts_ffmpeg_path',
-        //   label: 'FFMPEG路径',
-        //   bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
-        //   component: 'Input'
-        // },
+        {
+          field: 'tts_ffmpeg_path',
+          label: 'FFMPEG路径',
+          bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
+          component: 'Input'
+        },
         {
           label: 'fish.audio的设置',
           component: 'Divider'
