@@ -626,44 +626,74 @@ export class chatgpt extends plugin {
   /** 黑白名单过滤后可进行对话 */
   canGPT_blackAndWhitelist(e) {
     // 黑白名单过滤对话
-    let [whitelist = [], blacklist = []] = [Config.whitelist, Config.whitelist]
+    let [whitelist = [], blacklist = []] = [Config.whitelist, Config.blacklist]
     let chatPermission = false // 对话许可
+
+    // 处理字符串格式的白名单和黑名单，支持英文逗号分割
     if (typeof whitelist === 'string') {
-      whitelist = [whitelist]
+      whitelist = whitelist.length > 0 ? whitelist.split(',').map(item => item.trim()) : []
     }
     if (typeof blacklist === 'string') {
-      blacklist = [blacklist]
+      blacklist = blacklist.length > 0 ? blacklist.split(',').map(item => item.trim()) : []
     }
-    if (whitelist.join('').length > 0) {
+
+    // 检查白名单
+    if (whitelist.length > 0) {
       for (const item of whitelist) {
-        if (item.length > 11) {
+        if (!item) continue // 跳过空项
+
+        // 格式：群号^QQ号 (例如：123456^123456)
+        if (item.includes('^')) {
           const [group, qq] = item.split('^')
           if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
             chatPermission = true
             break
           }
-        } else if (item.startsWith('^') && item.slice(1) === e.sender.user_id.toString()) {
-          chatPermission = true
-          break
-        } else if (e.isGroup && !item.startsWith('^') && item === e.group_id.toString()) {
+        }
+        // 格式：^QQ号 (例如：^123456)
+        else if (item.startsWith('^')) {
+          const qq = item.slice(1)
+          if (qq === e.sender.user_id.toString()) {
+            chatPermission = true
+            break
+          }
+        }
+        // 格式：群号 (例如：123456)
+        else if (e.isGroup && item === e.group_id.toString()) {
           chatPermission = true
           break
         }
       }
     }
-    // 判断黑名单
-    if (blacklist.join('').length > 0) {
+
+    // 检查黑名单
+    if (blacklist.length > 0) {
       for (const item of blacklist) {
-        if (e.isGroup && !item.startsWith('^') && item === e.group_id.toString()) return false
-        if (item.startsWith('^') && item.slice(1) === e.sender.user_id.toString()) return false
-        if (item.length > 11) {
+        if (!item) continue // 跳过空项
+
+        // 格式：群号^QQ号 (例如：123456^123456)
+        if (item.includes('^')) {
           const [group, qq] = item.split('^')
-          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) return false
+          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
+            return false
+          }
+        }
+        // 格式：^QQ号 (例如：^123456)
+        else if (item.startsWith('^')) {
+          const qq = item.slice(1)
+          if (qq === e.sender.user_id.toString()) {
+            return false
+          }
+        }
+        // 格式：群号 (例如：123456)
+        else if (e.isGroup && item === e.group_id.toString()) {
+          return false
         }
       }
     }
+
     // 当白名单设置不为空的时候，使用白名单加黑名单模式
-    if (whitelist.join('').length > 0 && !chatPermission) return false
+    if (whitelist.length > 0 && !chatPermission) return false
 
     // 黑白名单过滤后可进行对话
     return true;
