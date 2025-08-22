@@ -746,7 +746,7 @@ export function supportGuoba() {
         //   component: 'InputPassword'
         // },
         {
-          label: '以下为语音合成设置',
+          label: '全局语音合成设置',
           component: 'Divider'
         },
         {
@@ -795,6 +795,28 @@ export function supportGuoba() {
               // { label: '数据', value: 'buffer' }
             ]
           }
+        },
+        {
+          field: 'focus_CloudTranscode',
+          label: '强制使用云转码',
+          bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
+          component: 'Switch'
+        },
+        // {
+        //   field: 'tts_ffmpeg_path',
+        //   label: 'FFMPEG路径',
+        //   bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'ttsHD',
+        //   label: '本地SILK转码方案2',
+        //   bottomHelpMessage: '开启本地SILK转码方案2，此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
+        //   component: 'Switch'
+        // },
+        {
+          label: '语音合成服务器设置',
+          component: 'Divider'
         },
         {
           field: 'ttsMode',
@@ -918,24 +940,6 @@ export function supportGuoba() {
           bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
             '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译',
           component: 'Switch'
-        },
-        {
-          field: 'ttsHD',
-          label: '本地SILK转码方案2',
-          bottomHelpMessage: '开启本地SILK转码方案2，此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
-          component: 'Switch'
-        },
-        {
-          field: 'focus_CloudTranscode',
-          label: '强制使用云转码',
-          bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
-          component: 'Switch'
-        },
-        {
-          field: 'tts_ffmpeg_path',
-          label: 'FFMPEG路径',
-          bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
-          component: 'Input'
         },
         {
           label: 'fish.audio的设置',
