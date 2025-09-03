@@ -118,7 +118,7 @@ export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey()) {
 
     const data = await response.json();
     if (Config.debug) {
-        logger.info('获取Gemini模型列表响应:', JSON.stringify(data));
+        logger.debug('获取Gemini模型列表响应:', JSON.stringify(data));
     }
 
     // Extract model names from the models array and return them
