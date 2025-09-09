@@ -371,7 +371,7 @@ export class memes extends plugin {
         if (reply?.message) {
           for (let val of reply.message) {
             if (val.type === 'image') {
-              console.log(val)
+              logger.info(val)
               imgUrls.push(val.url)
             }
           }
@@ -481,7 +481,7 @@ export class memes extends plugin {
     if (checkFileSize(images)) {
       return this.e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
     }
-    console.log('input', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
+    logger.info('派蒙meme表情制作:\ninput', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
     let response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
       method: 'POST',
       body: formData
