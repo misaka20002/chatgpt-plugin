@@ -45,7 +45,8 @@ export class PaimonChuo extends plugin {
             priority: 1000,
             rule: [
                 {
-                    fnc: 'chuoyichuo'
+                    fnc: 'chuoyichuo',
+                    log: false
                 }
             ]
         }
