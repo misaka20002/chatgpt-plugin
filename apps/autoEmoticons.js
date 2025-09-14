@@ -412,7 +412,7 @@ export class autoEmoticons extends plugin {
 
                 // 发送图片
                 msgRet = await e.reply(segment.image(picturePath))
-                msgRet_id = msgRet.seq || msgRet.data.message_id
+                msgRet_id = msgRet.seq || msgRet.data?.message_id || msgRet.time
 
                 // 存储文件信息（用于删除功能）
                 const isSharedPicture = sharedPicturesCache.includes(picturePath)
@@ -485,7 +485,7 @@ export class autoEmoticons extends plugin {
                     }
 
                     const msgRet = await group.sendMsg(segment.image(picturePath));
-                    const msgId = msgRet.seq || msgRet.message_id;
+                    const msgId = msgRet.seq || msgRet.data?.message_id || msgRet.time
 
                     // 添加随机延迟
                     const delay = randomInt(Config.autoEmoticons.replyDelay.min, Config.autoEmoticons.replyDelay.max)
@@ -528,6 +528,7 @@ export class autoEmoticons extends plugin {
 
         const fileInfo = await redis.get(`Yz:autoEmoticons.sent:pic_filePath:${groupId}:${replyMsgId}`);
         if (!fileInfo) {
+            logger.mark(`[autoEmoticons] 该图片也许不是本插件发送的`)
             return false;
         }
 
