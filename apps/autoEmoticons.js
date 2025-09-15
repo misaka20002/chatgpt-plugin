@@ -5,32 +5,6 @@ import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 import fetch from 'node-fetch'
 
-// 表情包配置
-// const Config = {}
-// Config.autoEmoticonsConfig = {
-//     // 是否启用表情保存
-//     useEmojiSave: true,
-//     // 表情过期时间（秒）- 在此时间内发送多次才会被保存
-//     expireTimeInSeconds: 259200, // 3天
-//     // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
-//     confirmCount: 3, // 默认是3次，可以设置为更高的值
-//     // 默认发送偷取表情的概率
-//     replyRate: 0.05, // 每次消息有5%的概率发送表情包
-//     // 表情包最大数量
-//     maxEmojiCount: 100,
-//     // 表情包大小限制 (MB)
-//     maxEmojiSize: 10,
-//     // 需要保存表情包的群号列表，为空数组时表示所有群
-//     allowGroups: ["1111"],
-//     // 自动发送表情包的冷却时间（秒）
-//     sendCD: 300,
-//     // 发送表情时的延迟 (毫秒)
-//     replyDelay: {
-//         min: 1000,
-//         max: 240000
-//     }
-// }
-
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 
@@ -478,7 +452,7 @@ export class autoEmoticons extends plugin {
                     // 设置冷却时间
                     await redis.set(cooldownKey, String(now), { EX: Config.autoEmoticons.sendCD })
 
-                    const group = Bot.pickGroup(parseInt(groupId));
+                    const group = getBotByQQ(Config.autoEmoticons.getBotByQQ_targetQQArr).pickGroup(parseInt(groupId));
                     if (!group) {
                         logger.error(`[autoEmoticons] 无法获取群 ${groupId} 的实例`);
                         continue;
@@ -953,4 +927,20 @@ export async function downloadImageFile(url, relativePath, maxSizeMB = null) {
             error: error.message
         }
     }
+}
+
+/**
+ * @description: 获取指定QQ号的Bot对象，如果都不存在则返回默认的Bot对象
+ * @param {Array} targetQQArr bot qq号数组
+ * @return {Object} Bot实例对象
+ */
+function getBotByQQ(targetQQArr) {
+    for (const targetQQ of targetQQArr) {
+        // 检查目标QQ的Bot是否存在
+        if (targetQQ && Bot[targetQQ]) {
+            return Bot[targetQQ];
+        }
+    }
+    // 最后的兜底：返回Bot对象本身（适用于单Bot环境）
+    return Bot;
 }

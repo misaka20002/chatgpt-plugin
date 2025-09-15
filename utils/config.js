@@ -269,10 +269,6 @@ const defaultConfig = {
   bymDisableGroup: [],
   // 伪人模式触发骂人反击的关键词
   bymFuckList: [
-    '骂',
-    '你妈',
-    '他妈',
-    '尼玛',
     '艹'
   ],
   // 伪人骂人反击后是否撤回
@@ -315,6 +311,8 @@ const defaultConfig = {
     maxEmojiSize: 10,
     // 需要保存表情包的群号列表，为空数组时表示所有群
     allowGroups: ["1111"],
+    // BotQQ号
+    getBotByQQ_targetQQArr: [],
     // 自动发送表情包的冷却时间（秒）
     sendCD: 300,
     // 发送表情时的延迟 (毫秒)

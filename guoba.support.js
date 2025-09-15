@@ -1710,6 +1710,18 @@ export function supportGuoba() {
           },
         },
         {
+          field: 'autoEmoticons.getBotByQQ_targetQQArr',
+          label: 'BotQQ号',
+          bottomHelpMessage: 'Bot多开qq时指定一个或多个Bot发送表情包，否则将随机使用1个已登录的Bot',
+          component: "GTags", // 不需要转为数字数组
+          componentProps: {
+            placeholder: '请输入qq号',
+            allowAdd: true,
+            allowDel: true,
+            valueParser: ((value) => value.split(',') || []),
+          },
+        },
+        {
           label: '伪人',
           component: 'SOFT_GROUP_BEGIN'
         },
@@ -2015,7 +2027,7 @@ export function supportGuoba() {
               return acc
             }, [])
           }
-          else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'bymDisableGroup') {
+          else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr' || keyPath === 'bymDisableGroup') {
             value = value.map(item => item.trim()).filter(item => item !== '')
           }
 
