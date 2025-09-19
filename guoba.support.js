@@ -1281,7 +1281,7 @@ export function supportGuoba() {
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
               { label: "ap-plugin（#绘图）", value: "ap-plugin" },
               { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
-              { label: "siliconflow-plugin（#mjp'）", value: "siliconflow-plugin-mj" },
+              { label: "siliconflow-plugin（#mjp）", value: "siliconflow-plugin-mj" },
             ],
           },
         },
@@ -1298,7 +1298,7 @@ export function supportGuoba() {
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
               { label: "ap-plugin（#绘图）", value: "ap-plugin" },
               { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
-              { label: "siliconflow-plugin（#mjp'）", value: "siliconflow-plugin-mj" },
+              { label: "siliconflow-plugin（#mjp）", value: "siliconflow-plugin-mj" },
             ],
           },
         },
@@ -1734,7 +1734,7 @@ export function supportGuoba() {
         {
           field: 'enableBYM',
           label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。目前仅支持gemini，会使用gemini的配置。发言包括AI名字会必定触发回复。',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（伪人将全局读取群聊上下文）',
           component: 'Switch'
         },
         {
