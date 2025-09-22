@@ -870,8 +870,8 @@ async function collectTools (e) {
     new SerpImageTool(),
     new SearchMusicTool(),
     new SendMusicTool(),
-    new SerpIkechan8370Tool(),
-    new SerpTool(),
+    // new SerpIkechan8370Tool(), // 这个工具使用 url 搜索的，但 url 已经寄了
+    // new SerpTool(), // 这个工具使用 url 搜索的，但 url 已经寄了
     // new SendAudioMessageTool(),
     // new ProcessPictureTool(),
     new APTool(),
@@ -904,7 +904,7 @@ async function collectTools (e) {
     // new SendAudioMessageTool(),
     new APTool(),
     // new HandleMessageMsgTool(),
-    serpTool,
+    // serpTool, // 这个工具使用 url 搜索的，但 url 已经寄了
     new QueryUserinfoTool(),
     new GithubAPITool()
   ]
