@@ -221,18 +221,19 @@ export function supportGuoba() {
         {
           field: 'azSerpKey',
           label: 'Azure search key',
-          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api',
+          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api https://portal.azure.com',
           component: 'Input'
         },
         {
           field: 'serpSource',
-          label: '搜索来源，azure需填写key，ikechan8370为作者自备源',
+          label: '搜索来源',
           component: 'Select',
+          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key',
           componentProps: {
             options: [
-              { label: 'Azure', value: 'azure' },
-              { label: 'ikechan8370', value: 'ikechan8370' }
-              // { label: '数据', value: 'buffer' }
+              { label: 'Azure（收费的）', value: 'azure' },
+              { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
+              { label: '使用LLM内置搜索', value: 'off' }
             ]
           }
         },

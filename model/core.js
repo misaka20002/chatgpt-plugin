@@ -839,16 +839,16 @@ async function collectTools (e) {
   let serpTool
   switch (Config.serpSource) {
     case 'ikechan8370': {
-      serpTool = new SerpIkechan8370Tool()
+      serpTool = new SerpIkechan8370Tool() // 该工具使用的 url 不再提供服务
       break
     }
     case 'azure': {
-      if (!Config.azSerpKey) {
-        logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
-        serpTool = new SerpIkechan8370Tool()
-      } else {
+      // if (!Config.azSerpKey) {
+      //   logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
+      //   serpTool = new SerpIkechan8370Tool()
+      // } else {
         serpTool = new SerpTool()
-      }
+      // }
       break
     }
     default: {
@@ -870,8 +870,8 @@ async function collectTools (e) {
     new SerpImageTool(),
     new SearchMusicTool(),
     new SendMusicTool(),
-    // new SerpIkechan8370Tool(), // 这个工具使用 url 搜索的，但 url 已经寄了
-    // new SerpTool(), // 这个工具使用 url 搜索的，但 url 已经寄了
+    new SerpIkechan8370Tool(),
+    new SerpTool(),
     // new SendAudioMessageTool(),
     // new ProcessPictureTool(),
     new APTool(),
@@ -904,14 +904,19 @@ async function collectTools (e) {
     // new SendAudioMessageTool(),
     new APTool(),
     // new HandleMessageMsgTool(),
-    // serpTool, // 这个工具使用 url 搜索的，但 url 已经寄了
+    serpTool,
     new QueryUserinfoTool(),
     new GithubAPITool()
   ]
 
   if (Config.disable_sendMessage_tool) {
-    tools = tools.filter(tool => tool?.name !== 'sendMessage')
+    tools = tools.filter(tool => tool?.name !== 'sendMessage') // 这个 name 是对象内的 name 元素
     fullTools = fullTools.filter(tool => tool?.name !== 'sendMessage')
+  }
+
+  if (Config.serpSource === "off") {
+    tools = tools.filter(tool => tool?.name !== 'serp' && tool?.name !== 'search')
+    fullTools = fullTools.filter(tool => tool?.name !== 'serp' && tool?.name !== 'search')
   }
 
   let systemAddition = ''
