@@ -55,6 +55,7 @@ import { BingAIClient } from '../client/CopilotAIClient.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
 import {GithubAPITool} from '../utils/tools/GithubTool.js'
+import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -838,6 +839,10 @@ class Core {
 async function collectTools (e) {
   let serpTool
   switch (Config.serpSource) {
+    case 'misaka_WebSearchTool': {
+      serpTool = new Misaka_WebSearchTool()
+      break
+    }
     case 'ikechan8370': {
       serpTool = new SerpIkechan8370Tool() // 该工具使用的 url 不再提供服务
       break
@@ -852,9 +857,10 @@ async function collectTools (e) {
       break
     }
     default: {
-      serpTool = new SerpIkechan8370Tool()
+      serpTool = new Misaka_WebSearchTool()
     }
   }
+  /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
     new EditCardTool(),
     // new QueryStarRailTool(),
@@ -870,8 +876,9 @@ async function collectTools (e) {
     new SerpImageTool(),
     new SearchMusicTool(),
     new SendMusicTool(),
-    new SerpIkechan8370Tool(),
-    new SerpTool(),
+    // new SerpIkechan8370Tool(),
+    // new SerpTool(),
+    serpTool,
     // new SendAudioMessageTool(),
     // new ProcessPictureTool(),
     new APTool(),

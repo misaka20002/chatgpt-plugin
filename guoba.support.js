@@ -221,19 +221,20 @@ export function supportGuoba() {
         {
           field: 'azSerpKey',
           label: 'Azure search key',
-          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api https://portal.azure.com',
+          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api 访问 https://portal.azure.com 创建新的 "Bing Search" 资源；当您首次创建 Azure 账户时，微软会提供 ​​200 美元的免费信用额度​​，有效期 30 天。',
           component: 'Input'
         },
         {
           field: 'serpSource',
           label: '搜索来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key',
+          bottomHelpMessage: '呆毛版纯本地搜索工具：Google → Bing → 搜狗 → DuckDuckGo；若选择 Azure（收费的）需填写 Azure search key',
           componentProps: {
             options: [
+              { label: '呆毛版纯本地搜索工具', value: 'misaka_WebSearchTool' },
               { label: 'Azure（收费的）', value: 'azure' },
               { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
-              { label: '使用LLM内置搜索', value: 'off' }
+              { label: '关闭搜索工具', value: 'off' }
             ]
           }
         },
