@@ -66,13 +66,14 @@ async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', igno
   }
   let result
   if (Config.ttsHD) {
-    logger.mark('使用本地-2转码silk进行高清语音生成:')
+    logger.info('使用本地-2转码silk进行高清语音生成:')
     result = await getPttBuffer(recordUrl, Bot.config?.ffmpeg_path ?? Config.tts_ffmpeg_path, false);
   } else if (pcm2slk && !Config.focus_CloudTranscode) {
-    logger.mark('使用本地pcm2slk转码silk进行高清语音生成:')
+    logger.info('使用本地pcm2slk转码silk进行高清语音生成:')
     result = await getPttBuffer(recordUrl, Bot.config?.ffmpeg_path ?? Config.tts_ffmpeg_path, true);
   } else if (Config.cloudTranscode) {
-    logger.mark('使用云转码silk进行高清语音生成:')
+    if (Config.cloudMode === 'off') return false;
+    logger.info('使用云转码silk进行高清语音生成:')
     try {
       if (recordType === 'buffer') {
         // save it as a file
@@ -119,7 +120,7 @@ async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', igno
           logger.error(t)
           throw e
         }
-      } else {
+      } else { // Config.cloudMode === 'url'
         const cloudUrl = new URL(Config.cloudTranscode)
         const resultres = await fetch(`${cloudUrl}audio`, {
           method: 'POST',

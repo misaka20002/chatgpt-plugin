@@ -142,7 +142,7 @@
   "ttsRegex": "/匹配规则/匹配模式",
   "cloudTranscode": "https://silk.201666.xyz",
   "cloudRender": false,
-  "cloudMode": "url",
+  "cloudMode": "off",
   "cloudDPR": 1,
   "ttsMode": "vits-uma-genshin-honkai",
   "azureTTSKey": "",

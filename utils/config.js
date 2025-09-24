@@ -205,7 +205,7 @@ const defaultConfig = {
   // slackCozeSpecifiedChannel: '',
   cloudTranscode: 'https://silk.201666.xyz',
   cloudRender: false,
-  cloudMode: 'url',
+  cloudMode: 'off',
   cloudDPR: 1,
   ttsMode: 'vits-uma-genshin-honkai', // or azure
   azureTTSKey: '',

@@ -792,18 +792,19 @@ export function supportGuoba() {
           component: 'Select',
           componentProps: {
             options: [
+              { label: '关闭云转码', value: 'off' },
               { label: '文件', value: 'file' },
-              { label: '链接', value: 'url' }
+              { label: '链接', value: 'url' },
               // { label: '数据', value: 'buffer' }
             ]
           }
         },
-        {
-          field: 'focus_CloudTranscode',
-          label: '强制使用云转码',
-          bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
-          component: 'Switch'
-        },
+        // {
+        //   field: 'focus_CloudTranscode',
+        //   label: '强制使用云转码',
+        //   bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
+        //   component: 'Switch'
+        // },
         // {
         //   field: 'tts_ffmpeg_path',
         //   label: 'FFMPEG路径',
