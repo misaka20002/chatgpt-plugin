@@ -228,7 +228,7 @@ export function supportGuoba() {
           field: 'serpSource',
           label: '搜索来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key；若使用呆毛版纯本地搜索工具：Google → Bing → 搜狗 → DuckDuckGo ，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
+          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key；若使用呆毛版纯本地搜索工具：Bing → Google → sogou ，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
           componentProps: {
             options: [
               { label: '呆毛版纯本地搜索工具', value: 'misaka_WebSearchTool' },

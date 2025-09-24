@@ -39,9 +39,11 @@ class SearchResult:
     snippet: str
 
 class WebSearcher:
-    def __init__(self):
+    def __init__(self, preferred_engines=None):
         self.timeout = 10
         self.headers = HEADERS.copy()
+        # 默认搜索引擎顺序：Bing -> Google -> sogou
+        self.preferred_engines = preferred_engines or ["bing", "google", "sogou"]
 
     def tidy_text(self, text: str) -> str:
         """清理文本，去除空格、换行符等"""
@@ -101,27 +103,49 @@ class WebSearcher:
             # 尝试导入googlesearch库
             try:
                 from googlesearch import search
+                import asyncio
+                from concurrent.futures import ThreadPoolExecutor
                 
-                search_results = search(
-                    query,
-                    advanced=True,
-                    num_results=num_results,
-                    timeout=3,
-                )
+                def _google_search_sync():
+                    # 使用基本搜索模式，返回URL列表
+                    return list(search(
+                        query,
+                        num_results=num_results,
+                        lang='zh-CN',
+                        timeout=3,  # 减少超时时间
+                        sleep_interval=0.5,  # 减少等待间隔
+                        safe='off'  # 关闭安全搜索以获得更多结果
+                    ))
                 
-                for result in search_results:
+                # 在线程池中异步执行同步的Google搜索
+                with ThreadPoolExecutor() as executor:
+                    search_results = await asyncio.wait_for(
+                        asyncio.get_event_loop().run_in_executor(executor, _google_search_sync),
+                        timeout=10.0  # 10秒总超时
+                    )
+                
+                # 将URL转换为SearchResult对象
+                for i, url in enumerate(search_results):
+                    if i >= num_results:
+                        break
                     results.append(SearchResult(
-                        title=result.title or query,
-                        url=result.url,
-                        snippet=result.description or ""
+                        title=f"Google搜索结果 {i+1}",
+                        url=url,
+                        snippet=""
                     ))
                     
-            except ImportError:
-                # 如果没有googlesearch库，使用备用方法
+            except (ImportError, asyncio.TimeoutError) as e:
+                # 如果没有googlesearch库或超时，使用备用方法
+                print(f"Google search library failed ({e}), trying fallback method", file=sys.stderr)
                 results = await self.search_google_fallback(query, num_results)
                 
         except Exception as e:
             print(f"Google search error: {e}", file=sys.stderr)
+            # 尝试备用方法
+            try:
+                results = await self.search_google_fallback(query, num_results)
+            except Exception:
+                pass
             
         return results
 
@@ -262,36 +286,35 @@ class WebSearcher:
         return results
 
     async def web_search_default(self, query: str, num_results: int = 5) -> List[SearchResult]:
-        """默认搜索方法，按Google -> Bing -> 搜狗的顺序尝试"""
+        """默认搜索方法，按配置的顺序尝试搜索引擎"""
         results = []
         
-        # 尝试Google搜索
-        try:
-            results = await self.search_google(query, num_results)
-            if results:
-                print(f"Found {len(results)} results using Google", file=sys.stderr)
-                return results
-        except Exception as e:
-            print(f"Google search failed: {e}", file=sys.stderr)
+        # 搜索引擎映射
+        engine_map = {
+            "google": ("Google", self.search_google),
+            "bing": ("Bing", self.search_bing),
+            "sogou": ("Sogou", self.search_sogou)
+        }
         
-        # 尝试Bing搜索
-        try:
-            results = await self.search_bing(query, num_results)
-            if results:
-                print(f"Found {len(results)} results using Bing", file=sys.stderr)
-                return results
-        except Exception as e:
-            print(f"Bing search failed: {e}", file=sys.stderr)
+        # 按照配置的顺序尝试搜索引擎
+        for engine_key in self.preferred_engines:
+            if engine_key not in engine_map:
+                continue
+                
+            engine_name, search_func = engine_map[engine_key]
+            try:
+                print(f"Trying {engine_name} search for: {query}", file=sys.stderr)
+                results = await search_func(query, num_results)
+                if results:
+                    print(f"Found {len(results)} results using {engine_name}", file=sys.stderr)
+                    return results
+                else:
+                    print(f"{engine_name} returned no results", file=sys.stderr)
+            except Exception as e:
+                print(f"{engine_name} search failed: {e}", file=sys.stderr)
+                continue
         
-        # 尝试搜狗搜索
-        try:
-            results = await self.search_sogou(query, num_results)
-            if results:
-                print(f"Found {len(results)} results using Sogou", file=sys.stderr)
-                return results
-        except Exception as e:
-            print(f"Sogou search failed: {e}", file=sys.stderr)
-        
+        print("All search engines failed or returned no results", file=sys.stderr)
         return results
 
     async def process_search_result(self, result: SearchResult, index: int) -> Dict[str, Any]:
@@ -360,6 +383,10 @@ async def main():
         if not input_data.strip():
             raise ValueError("No input data provided")
         
+        # 确保正确处理UTF-8编码
+        if isinstance(input_data, str):
+            input_data = input_data.encode('utf-8').decode('utf-8')
+        
         params = json.loads(input_data)
         query = params.get("query", "").strip()
         max_results = params.get("max_results", 5)
@@ -374,7 +401,7 @@ async def main():
         searcher = WebSearcher()
         result = await searcher.search(query, max_results)
         
-        # 输出JSON结果
+        # 输出JSON结果，确保中文字符正确显示
         print(json.dumps(result, ensure_ascii=False, indent=2))
         
     except Exception as e:

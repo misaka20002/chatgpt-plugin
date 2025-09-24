@@ -47,7 +47,7 @@ export class Misaka_WebSearchTool extends AbstractTool {
             return 'Error: 搜索结果数量应在 1-20 之间'
         }
 
-        console.log(`web_searcher - search_from_search_engine: ${query}`)
+        logger.info(`web_searcher - search_from_search_engine: ${query}`)
 
         try {
             // Python 脚本路径
@@ -58,8 +58,6 @@ export class Misaka_WebSearchTool extends AbstractTool {
                 query: query,
                 max_results: max_results
             })
-
-            console.log(`Calling Python search script for: ${query}`)
 
             // 使用 execSync 执行 Python 脚本
             let stdout
@@ -99,7 +97,7 @@ export class Misaka_WebSearchTool extends AbstractTool {
                 return 'Error: 网络搜索没有返回任何结果，请尝试不同的关键词'
             }
 
-            console.log(`Processing ${result.results.length} search results...`)
+            logger.info(`Processing ${result.results.length} search results...`)
 
             // 格式化搜索结果
             const formattedResults = []
