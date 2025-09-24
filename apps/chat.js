@@ -38,14 +38,11 @@ let proxy = getProxy()
 const isTrss = Array.isArray(Bot.uin)
 const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
-// 使机器人可以对其第一人称回应
-const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person, "g");
 import {
   recognitionResultsByGemini,
   convertSentenceToArray,
   extractCharacterName,
 } from '../utils/paimonFuction.js'
-import { PaimonChuo } from '../apps/派蒙戳一戳.js'
 
 /**
  * 每个对话保留的时长。单个对话内ai是保留上下文的。超时后销毁对话，再次对话创建新的对话。
@@ -158,7 +155,7 @@ export class chatgpt extends plugin {
         },
         {
           /** 命令正则匹配 */
-          reg: reg_chatgpt_for_firstperson_call,
+          reg: Config.tts_First_person,
           /** 执行方法 */
           fnc: 'chatgpt_for_firstperson_call',
           log: false

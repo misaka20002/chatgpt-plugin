@@ -285,7 +285,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       return this.sendMessage(text, opt, retryTime--)
     }
     // todo 空回复也可以重试
-    if (responseContent.parts?.filter(i => i.functionCall).length > 0) {
+    if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       // functionCall
       const functionCall = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall)
       const text = responseContent.parts.find(i => i.text)?.text
