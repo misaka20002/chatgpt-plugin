@@ -220,7 +220,7 @@ const defaultConfig = {
   enableGenerateSuno: false,
   amapKey: '',
   azSerpKey: '',
-  serpSource: 'misaka_WebSearchTool',
+  serpSource: 'off',
   extraUrl: 'https://cpe.ikechan8370.com',
   smartMode: false,
   // claude2
