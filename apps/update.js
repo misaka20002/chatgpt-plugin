@@ -1,9 +1,7 @@
-﻿// modified from StarRail-plugin | 已经过StarRail-plugin作者本人同意
-import plugin from '../../../lib/plugins/plugin.js'
+﻿import plugin from '../../../lib/plugins/plugin.js'
 import { createRequire } from 'module'
 import _ from 'lodash'
 import { Restart } from '../../other/restart.js'
-import {} from '../utils/common.js'
 
 const require = createRequire(import.meta.url)
 const { exec, execSync } = require('child_process')
@@ -15,14 +13,14 @@ let uping = false
  * 处理插件更新
  */
 export class Update extends plugin {
-  constructor () {
+  constructor() {
     super({
       name: 'chatgpt更新插件',
       event: 'message',
       priority: 1000,
       rule: [
         {
-          reg: '^#?(chatgpt|柴特寄批踢|GPT|ChatGPT|柴特鸡批踢|Chat|CHAT|CHATGPT|柴特|ChatGPT-Plugin|ChatGPT-plugin|chatgpt-plugin)(插件)?(强制)?更新$',
+          reg: '^#(chatgpt|柴特寄批踢|GPT|ChatGPT|柴特鸡批踢|Chat|CHAT|CHATGPT|柴特|ChatGPT-Plugin|ChatGPT-plugin|chatgpt-plugin)((插件)?(强制)?更新| update)$',
           fnc: 'update'
         }
       ]
@@ -33,7 +31,7 @@ export class Update extends plugin {
    * rule - 更新chatgpt插件
    * @returns
    */
-  async update () {
+  async update() {
     if (!this.e.isMaster) return false
 
     /** 检查是否正在更新中 */
@@ -46,9 +44,13 @@ export class Update extends plugin {
     if (!(await this.checkGit())) return
 
     const isForce = this.e.msg.includes('强制')
+    // 检查是否为dev分支更新
+    const isDevUpdate = this.e.msg.includes('dev') || this.e.msg.includes('DEV')
+    // 检查是否为dev分支更新
+    const isMainUpdate = this.e.msg.includes('main') || this.e.msg.includes('MAIN')
 
     /** 执行更新 */
-    await this.runUpdate(isForce)
+    await this.runUpdate(isForce, isDevUpdate, isMainUpdate)
 
     /** 是否需要重启 */
     if (this.isUp) {
@@ -57,21 +59,33 @@ export class Update extends plugin {
     }
   }
 
-  restart () {
+  restart() {
     new Restart(this.e).restart()
   }
 
   /**
-   * chatgpt插件更新函数
+   * 更新
    * @param {boolean} isForce 是否为强制更新
+   * @param {boolean} isDevUpdate 是否为更新 dev
+   * @param {boolean} isMainUpdate 是否为更新 main
    * @returns
    */
-  async runUpdate (isForce) {
-    let command = 'git -C ./plugins/chatgpt-plugin/ pull --no-rebase'
-    if (isForce) {
-      command = `git -C ./plugins/chatgpt-plugin/ checkout . && ${command}`
+  async runUpdate(isForce, isDevUpdate, isMainUpdate) {
+    let command = ''
+
+    if (isForce && isDevUpdate) {
+      // dev分支强制更新
+      command = 'git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout dev && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/dev'
+      this.e.reply('正在执行dev分支强制更新操作，请稍等')
+    } else if (isForce && isMainUpdate) {
+      // main分支强制更新
+      command = 'git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout main && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/main'
+      this.e.reply('正在执行main分支强制更新操作，请稍等')
+    } else if (isForce) {
+      command = `git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout . && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard @{u}`
       this.e.reply('正在执行强制更新操作，请稍等')
     } else {
+      command = 'git -C ./plugins/chatgpt-plugin/ pull --no-rebase'
       this.e.reply('正在执行更新操作，请稍等')
     }
     /** 获取上次提交的commitId，用于获取日志时判断新增的更新日志 */
@@ -90,11 +104,11 @@ export class Update extends plugin {
     let time = await this.getTime('chatgpt-plugin')
 
     if (/(Already up[ -]to[ -]date|已经是最新的)/.test(ret.stdout)) {
-      await this.reply(`chatgpt-plugin已经是最新版本\n最后更新时间：${time}`)
+      await this.reply(`chatgpt-plugin${isDevUpdate ? '(dev分支)' : ''}${isMainUpdate ? '(main分支)' : ''}已经是最新版本\n最后更新时间：${time}`)
     } else {
-      await this.reply(`chatgpt-plugin\n最后更新时间：${time}`)
+      await this.reply(`chatgpt-plugin${isDevUpdate ? '(dev分支)' : ''}${isMainUpdate ? '(main分支)' : ''}\n最后更新时间：${time}`)
       this.isUp = true
-      /** 获取chatgpt组件的更新日志 */
+      /** 获取chatgpt-plugin的更新日志 */
       let log = await this.getLog('chatgpt-plugin')
       await this.reply(log)
     }
@@ -105,11 +119,11 @@ export class Update extends plugin {
   }
 
   /**
-   * 获取chatgpt插件的更新日志
+   * 获取chatgpt-plugin的更新日志
    * @param {string} plugin 插件名称
    * @returns
    */
-  async getLog (plugin = '') {
+  async getLog(plugin = '') {
     let cm = `cd ./plugins/${plugin}/ && git log  -20 --oneline --pretty=format:"%h||[%cd]  %s" --date=format:"%m-%d %H:%M"`
 
     let logAll
@@ -138,7 +152,7 @@ export class Update extends plugin {
 
     let end = ''
     end =
-      '更多详细信息，请前往git查看'
+      '更多详细信息，请前往github查看\nhttps://github.com/misaka20002/chatgpt-plugin/commits/v2'
 
     log = await this.makeForwardMsg(`chatgpt-plugin更新日志，共${line}条`, log, end)
 
@@ -150,7 +164,7 @@ export class Update extends plugin {
    * @param {string} plugin 插件名称
    * @returns
    */
-  async getcommitId (plugin = '') {
+  async getcommitId(plugin = '') {
     let cm = `git -C ./plugins/${plugin}/ rev-parse --short HEAD`
 
     let commitId = await execSync(cm, { encoding: 'utf-8' })
@@ -164,7 +178,7 @@ export class Update extends plugin {
    * @param {string} plugin 插件名称
    * @returns
    */
-  async getTime (plugin = '') {
+  async getTime(plugin = '') {
     let cm = `cd ./plugins/${plugin}/ && git log -1 --oneline --pretty=format:"%cd" --date=format:"%m-%d %H:%M"`
 
     let time = ''
@@ -185,15 +199,14 @@ export class Update extends plugin {
    * @param {string} end 最后一条信息
    * @returns
    */
-  async makeForwardMsg (title, msg, end) {
-    const _bot = this.e.bot ?? Bot
-    let nickname = _bot.nickname
+  async makeForwardMsg(title, msg, end) {
+    let nickname = (this.e.bot ?? Bot).nickname
     if (this.e.isGroup) {
-      let info = await _bot?.pickMember?.(this.e.group_id, _bot.uin) || await _bot?.getGroupMemberInfo?.(this.e.group_id, _bot.uin)
+      let info = await (this.e.bot ?? Bot).getGroupMemberInfo?.(this.e.group_id, (this.e.bot ?? Bot).uin) || await (this.e.bot ?? Bot).pickMember?.(this.e.group_id, (this.e.bot ?? Bot).uin);
       nickname = info.card || info.nickname
     }
     let userInfo = {
-      user_id: _bot.uin,
+      user_id: (this.e.bot ?? Bot).uin,
       nickname
     }
 
@@ -247,7 +260,7 @@ export class Update extends plugin {
    * @param {string} stdout
    * @returns
    */
-  async gitErr (err, stdout) {
+  async gitErr(err, stdout) {
     let msg = '更新失败！'
     let errMsg = err.toString()
     stdout = stdout.toString()
@@ -264,26 +277,7 @@ export class Update extends plugin {
       return
     }
 
-    if (errMsg.includes('be overwritten by merge')) {
-      await this.reply(
-        msg +
-        `存在冲突：\n${errMsg}\n` +
-        '请解决冲突后再更新，或者执行#强制更新，放弃本地修改'
-      )
-      return
-    }
-
-    if (stdout.includes('CONFLICT')) {
-      await this.reply([
-        msg + '存在冲突\n',
-        errMsg,
-        stdout,
-        '\n请解决冲突后再更新，或者执行#强制更新，放弃本地修改'
-      ])
-      return
-    }
-
-    await this.reply([errMsg, stdout])
+    await this.reply([errMsg, stdout, `\n若存在git冲突，可尝试执行#chatgpt强制更新`])
   }
 
   /**
@@ -291,7 +285,7 @@ export class Update extends plugin {
    * @param {string} cmd git命令
    * @returns
    */
-  async execSync (cmd) {
+  async execSync(cmd) {
     return new Promise((resolve, reject) => {
       exec(cmd, { windowsHide: true }, (error, stdout, stderr) => {
         resolve({ error, stdout, stderr })
@@ -303,7 +297,7 @@ export class Update extends plugin {
    * 检查git是否安装
    * @returns
    */
-  async checkGit () {
+  async checkGit() {
     let ret = await execSync('git --version', { encoding: 'utf-8' })
     if (!ret || !ret.includes('git version')) {
       await this.reply('请先安装git')
