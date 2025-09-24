@@ -917,13 +917,13 @@ async function collectTools (e) {
   ]
 
   if (Config.disable_sendMessage_tool) {
-    tools = tools.filter(tool => tool?.name !== 'sendMessage') // 这个 name 是对象内的 name 元素
-    fullTools = fullTools.filter(tool => tool?.name !== 'sendMessage')
+    tools = tools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
+    fullTools = fullTools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
   }
 
   if (Config.serpSource === "off") {
-    tools = tools.filter(tool => tool?.name !== 'serp' && tool?.name !== 'search')
-    fullTools = fullTools.filter(tool => tool?.name !== 'serp' && tool?.name !== 'search')
+    tools = tools.filter(tool => tool !== serpTool);
+    fullTools = fullTools.filter(tool => tool !== serpTool);
   }
 
   let systemAddition = ''
