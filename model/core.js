@@ -57,6 +57,8 @@ import crypto from 'crypto'
 import {GithubAPITool} from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
+import { TavilyTool } from '../utils/tools/TavilyTool.js'
+import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -841,7 +843,7 @@ async function collectTools (e) {
   let serpTool
   switch (Config.serpSource) {
     case 'tavily_search': {
-      serpTool = new TavilySearchAndExtractTool()
+      serpTool = new TavilyTool()
       break
     }
     case 'misaka_WebSearchTool': {
