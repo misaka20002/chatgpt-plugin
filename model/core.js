@@ -56,6 +56,7 @@ import Keyv from 'keyv'
 import crypto from 'crypto'
 import {GithubAPITool} from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
+import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -563,7 +564,7 @@ class Core {
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
-        key: Config.getGeminiKey(),
+        key: Config.getGeminiKey,
         model: Config.geminiModel,
         baseUrl: Config.geminiBaseUrl,
         debug: Config.debug
@@ -839,6 +840,10 @@ class Core {
 async function collectTools (e) {
   let serpTool
   switch (Config.serpSource) {
+    case 'tavily_search': {
+      serpTool = new TavilySearchAndExtractTool()
+      break
+    }
     case 'misaka_WebSearchTool': {
       serpTool = new Misaka_WebSearchTool()
       break

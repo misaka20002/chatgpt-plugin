@@ -15,7 +15,7 @@ export async function recognitionResultsByGemini(e, img) {
             let client = new CustomGoogleGeminiClient({
                 e,
                 userId: e.sender.user_id,
-                key: Config.getGeminiKey(),
+                key: Config.getGeminiKey,
                 model: Config.gemini_vqa_model,
                 baseUrl: Config.geminiBaseUrl,
                 debug: Config.debug
@@ -92,7 +92,7 @@ export function convertSentenceToArray(str) {
  * @param {string} apiKey - Google AI API密钥，默认从配置中获取
  * @return {Promise<Array>} 返回可用模型的数组
  */
-export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey()) {
+export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey) {
     // 构建请求URL（考虑自定义baseUrl的情况）
     const baseUrl = Config.geminiBaseUrl || 'https://generativelanguage.googleapis.com';
     const endpoint = baseUrl.endsWith('/') ?

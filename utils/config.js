@@ -220,6 +220,7 @@ const defaultConfig = {
   enableGenerateSuno: false,
   amapKey: '',
   azSerpKey: '',
+  tavilyKey: '',
   serpSource: 'off',
   extraUrl: 'https://cpe.ikechan8370.com',
   smartMode: false,
@@ -369,6 +370,20 @@ function saveDiff(target) {
   }
 }
 
+/**
+ * @description: 随机英文逗号分割的字符串的一个元素
+ * @param {*} str 英文逗号分割的字符串
+ * @param {*} funcName
+ * @return {*}
+ */
+function randomKeyStr(str, funcName) {
+  if (str?.length === 0) return '';
+  const keyArr = str?.trim().split(/[,，]/)
+  const randomIndex = Math.floor(Math.random() * keyArr.length)
+  logger.info(`[chatgpt][${funcName}]随机使用第${randomIndex + 1}个 Key: ${keyArr[randomIndex].replace(/(.{7}).*(.{10})/, '$1****$2')}`)
+  return keyArr[randomIndex];
+}
+
 export const Config = new Proxy(config, {
   get(target, property) {
     if (property === 'save') { // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
@@ -381,17 +396,10 @@ export const Config = new Proxy(config, {
         return config;
       }
     }
-    else if (property === 'getGeminiKey') {
-      return function () {
-        if (target.geminiKey?.length === 0) {
-          return ''
-        }
-        const geminiKeyArr = target.geminiKey?.trim().split(/[,，]/)
-        const randomIndex = Math.floor(Math.random() * geminiKeyArr.length)
-        logger.info(`[chatgpt]随机使用第${randomIndex + 1}个gemini Key: ${geminiKeyArr[randomIndex].replace(/(.{7}).*(.{10})/, '$1****$2')}`)
-        return geminiKeyArr[randomIndex]
-      }
-    }
+    else if (property === 'getGeminiKey')
+      return randomKeyStr(target.geminiKey, property);
+    else if (property === 'getTavilyKey')
+      return randomKeyStr(target.tavilyKey, property);
     else if (property === 'get_draw_PluginCharactersList') {
       return function () {
         const defaultJson = { "nahida": "nahida (genshin impact), toddler", "klee": "klee (genshin impact), toddler", "paimon": "paimon (genshin impact), toddler", "bailu": "bailu (honkai: star rail), toddler", "clara": "clara (honkai: star rail), toddler", "last(_|\\s)order|misaka": "last order(Toaru Majutsu no Index), toddler", "sayu": "sayu (genshin impact), toddler", "diona": "diona (genshin impact), toddler", "yaoyao": "yaoyao (genshin impact), toddler", "qiqi": "qiqi (genshin impact), toddler", "furina": "furina (genshin impact), toddler", "Mahiro": "Oyama Mahiro(Onichanhaoshimai), toddler", "arona": "arona (blue archive), toddler", "sora": "sora (blue archive), toddler", "kokona": "kokona (blue archive), toddler", "hoshino": "hoshino (blue archive), toddler", "Koharu": "Shimoe Koharu (Blue archive), toddler", "Gura": "Gawr Gura (Hololive), toddler", "suzuran": "suzuran (arknights), toddler", "Anya": "Anya Forger(SPY×FAMILY), light pink hair, toddler", "AzusaNya": "nakano Azusa(K-ON), toddler", "Azusa": "azusa (blue archive), toddler", "laffey": "laffey (azur lane), toddler", "nachoneko": "nachoneko (indie virtual youtuber), toddler", "ibuki": "tanga ibuki (blue archive), blond hair, toddler", "shun": "shun (small) (blue archive), toddler", "hu(_|\\s)tao": "hu tao (genshin impact), toddler", "Platelet": "girl Platelet (Hataraku Saibou), toddler", "chino": "kafuu chino (gochuumon wa usagi desu ka?), toddler", "shuvi": "shuvi (no game no life), purple hair, long hair, hair_ornament, toddler", "plana": "plana (blue archive), toddler", "kinako": "kinako (40hara), cat girl, cat ear, toddler", "kanna(_|\\s)kamui": "kanna kamui (maidragon), toddler" }
