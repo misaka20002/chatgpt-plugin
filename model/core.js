@@ -840,7 +840,7 @@ class Core {
  * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string, fullFuncMap: {}}>}
  */
 async function collectTools (e) {
-  let serpTool
+  let serpTool, WebTool
   switch (Config.serpSource) {
     case 'tavily_search': {
       serpTool = new TavilyTool()
@@ -867,11 +867,17 @@ async function collectTools (e) {
       serpTool = new Misaka_WebSearchTool()
     }
   }
+  // 若填写了 tavily Key 则使用 TavilyExtractTool
+  if (Config.getTavilyKey)
+    WebTool = new TavilyExtractTool()
+  else
+    WebTool = new WebsiteTool()
+
   /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
     new EditCardTool(),
     // new QueryStarRailTool(),
-    new WebsiteTool(),
+    WebTool,
     new JinyanTool(),
     new KickOutTool(),
     new WeatherTool(),
@@ -910,7 +916,7 @@ async function collectTools (e) {
     new SendMusicTool(),
     new SearchMusicTool(),
     new ProcessPictureTool(),
-    new WebsiteTool(),
+    WebTool,
     // new JinyanTool(),
     // new KickOutTool(),
     new WeatherTool(),

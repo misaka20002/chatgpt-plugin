@@ -226,15 +226,15 @@ export function supportGuoba() {
         },
         {
           field: 'tavilyKey',
-          label: 'tavily search key',
-          bottomHelpMessage: 'https://app.tavily.com/ 每个月 1000 次搜索额度；若拥有多个 Key 使用英文逗号分割',
+          label: 'tavily key',
+          bottomHelpMessage: 'https://app.tavily.com/ 每个月 1000 Credits 额度；填写后智能模式中的 WebsiteTool（网页内容提取工具）将使用 tavily Api；若拥有多个 Key 使用英文逗号分割',
           component: 'Input'
         },
         {
           field: 'serpSource',
           label: '搜索来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily search key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
+          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
           componentProps: {
             options: [
               { label: '呆毛版纯本地搜索工具', value: 'misaka_WebSearchTool' },

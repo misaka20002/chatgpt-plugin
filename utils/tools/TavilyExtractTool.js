@@ -3,7 +3,7 @@ import { Config } from '../config.js'
 
 /** 使用 Tavily 提取完整内容的工具 */
 export class TavilyExtractTool extends AbstractTool {
-    name = 'tavily_extract'
+    name = 'tavily_website_extract'
 
     parameters = {
         properties: {
