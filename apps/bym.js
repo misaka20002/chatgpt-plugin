@@ -6,7 +6,7 @@ import core, { roleMap } from '../model/core.js'
 import { formatDate } from '../utils/common.js'
 
 export class bym extends plugin {
-  constructor () {
+  constructor() {
     super({
       name: 'ChatGPT-Plugin 伪人bym',
       dsc: 'bym',
@@ -25,7 +25,7 @@ export class bym extends plugin {
   }
 
   /** 复读 */
-  async bym (e) {
+  async bym(e) {
     if (!Config.enableBYM) {
       return false
     }
@@ -60,6 +60,7 @@ export class bym extends plugin {
         candidate +
         `\n你的回复应该尽可能简练，像人类一样随意，不要附加任何奇怪的东西，如聊天记录的格式（比如${Config.assistantLabel}：），禁止重复聊天记录。`
 
+      e.msg = e.msg || "识图";
       let rsp = await core.sendMessage(e.msg, {}, Config.bymMode, e, {
         enableSmart: Config.smartMode,
         system: {
