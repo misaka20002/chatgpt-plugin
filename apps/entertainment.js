@@ -276,7 +276,8 @@ ${translateLangLabels}
 
       await redis.set(`CHATGPT:WORDCLOUD:${groupId}`, '1', { EX: 600 })
       try {
-        await makeWordcloud(e, e.group_id, duration)
+        let img = await makeWordcloud(e, e.group_id, duration);
+        this.reply(img, true)
       } catch (err) {
         logger.error(err)
         await this.reply(err)
@@ -326,7 +327,8 @@ ${translateLangLabels}
       }
       await redis.set(`CHATGPT:WORDCLOUD_NEW:${groupId}_${userId}`, '1', { EX: 600 })
       try {
-        await makeWordcloud(e, e.group_id, duration, userId)
+        let img = await makeWordcloud(e, e.group_id, duration, userId);
+        this.reply(img, true)
       } catch (err) {
         logger.error(err)
         await this.reply(err)
