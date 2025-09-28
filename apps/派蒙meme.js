@@ -39,7 +39,7 @@ let infos = {}
 /**
  * 主人保护list 如['lash','do','beat_up','little_do']
  */
-let protectList = ['lash', 'do', 'beat_up', 'little_do']
+let protectList = ['lash','do','beat_up','little_do','fast_do','qi','fast_qi']
 
 /**
  * 隐藏错误信息中的隐私信息（网址、IP地址等）
