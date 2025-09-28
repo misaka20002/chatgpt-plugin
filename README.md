@@ -1,4 +1,97 @@
-![chatgpt-plugin](https://socialify.git.ci/ikechan8370/chatgpt-plugin/image?description=1&font=Jost&forks=1&issues=1&language=1&name=1&owner=1&pulls=1&stargazers=1&theme=Light)
+<img decoding="async" align=right src="https://github.com/misaka20002/chatgpt-plugin/assets/40714502/498efc25-c2d0-4bba-9872-274feff31f08" width="40%">
+
+# 简介：
+- 最完善的戳一戳功能，整合数十种api
+- ~~最清晰的Vits语音，支持中日英三语发音（感谢genshinvoice.top提供的api支持！）~~
+- 让机器人更真实地 cos 任意角色
+- 新增一些小玩意
+#### 欢迎加入交流群共同讨论 285744328 或 740335111 或 527540987
+## 更新记录：
+- vit2语音源新增Bert-VITS2源（感谢genshinvoice.top提供的api支持！）
+- 新增戳一戳
+- 更新日志：
+- 2024年3月31日更新了碧蓝档案角色语音，并将自动转日语输出。
+- ~~2024年5月15日vits源新增Fish-VITS2模型，详细在锅巴中设置（感谢firefly.matce.cn提供的api支持！）~~
+- 2024年6月1日新增对话使用gemini的图片识图，详细在锅巴中设置
+- ~~2024年7月7日新增更多Fish-VITS2的支持（感谢fish.audio提供的api支持！）~~
+- 2024年7月8日新增小玩意：Ai智能调用画图插件（prompt模式）
+- 2024年7月9日对话白名单的逻辑改为使用喵崽配置管理的白名单群逻辑；
+- 2024年8月1日，还是 huggingface vits-uma 好啊
+- 2024年8月22日，新增功能：分多次回复
+- 2024年10月11日，重新接入FISH API
+- 2024年10月21日，tts接入海螺
+- 2024年11月11日，tts接入 ai_hobbyist ，大感谢！
+- 2025年2月22日，tts接入 hf_Bert-VITS2
+- 2025年3月7日，重构函数，智能模式绘图和prompt模式绘图时，支持切换 nai插件、ap插件、sf插件
+- 2025年5月5日，修复了原版v2结束对话的时候没有清空历史对话导致数据库越来越大（都占用redis内存数据库到1GB了...）
+- 2025年5月15日，增加自动偷取发送表情包功能、自动复读和打断复读
+- 2025年9月25日，智能模式中增加 `呆毛版纯本地搜索工具` 和 `Tavily搜索`，详细使用阅读锅巴 全局 - 搜索来源
+## 小玩意：
+- 戳一戳功能
+  - 整合#chatgpt设置AI第一人称 和锅巴控制
+  - 最完善的戳一戳功能，整合数十种api
+  - (对于某些不支持戳一戳的平台，可以使用 "@机器人 戳")
+- 自动偷取发送表情包功能、自动复读和打断复读
+  - 在锅巴开启关闭
+<!-- - 随机语音打招呼功能
+  - 受#chatgpt设置AI第一人称 控制
+  - 命令：#chatgpt打招呼[群号]
+  - 推荐使用auto插件实现定时功能：
+    - #定时指令 -c="0 5 0,8,10,12,15,18,20,22 * * ? " -t="#chatgpt打招呼[群号]" -->
+- AI会回应包含其第一人称的消息
+  - 在锅巴开启关闭
+- Ai智能调用画图插件：
+  - 自动使用nai插件、ap插件、sf插件的画图，用法：锅巴内开启后直接告知Bot你想要画画的内容，需要先安装nai插件/ap插件/sf插件，具体请查阅锅巴设置
+
+
+## 命令 #tts语音帮助：
+- #tts帮助
+- #tts帮助pro
+- #tts查看当前语音设置
+- #chatgpt查看回复设置
+- #chatgpt(图片|语音)模式
+- #tts删除所有用户回复设置帮助
+- #tts可选人物列表
+- #tts语言设置帮助
+- #tts语音转日语帮助
+- #chatgpt设置AI第一人称帮助
+- #chatgpt(查看|设置)输出黑名单
+- #chatgpt(查看|设置)输入黑名单
+- #chatgpt必应(开启|关闭)搜索
+<!-- ## 命令 #tts查看当前语音设置
+ - 默认角色：派蒙_ZH
+ - 发音语言：ZH
+ - tts情感设置上锁：true
+ - vits_emotion：Happy
+ - noiseScale：0.6
+ - noiseScaleW：0.9
+ - lengthScale：0.9
+ - sdp_ratio：0.5
+ - 融合文本：
+ - 融合权重：0.7
+ - 全局语音模式：true
+ - AI第一人称：派蒙 -->
+
+## 安装：
+```
+git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
+```
+
+## 预览：
+
+<img decoding="async" src="https://github.com/user-attachments/assets/8bc41dd8-badc-4fce-9092-0445d1c7a5f8" width="40%">
+
+<img decoding="async"  src="https://github.com/user-attachments/assets/672ae907-3c31-4cd9-9947-e426f63c2e49" width="40%">
+
+
+
+
+---
+
+
+
+
+<div align=center> <h1>云崽系机器人的智能聊天插件</h1> </div>
 <div align=center>
 
    <img src ="https://img.shields.io/github/issues/ikechan8370/chatgpt-plugin?logo=github"/>
@@ -7,9 +100,6 @@
 <img src ="https://img.shields.io/github/languages/top/ikechan8370/chatgpt-plugin?logo=github"/>
 </div>
 
-
-
-![26224FE397F1E74104C1C007C1A32DDE](https://user-images.githubusercontent.com/21212372/227718994-4d33da74-6886-41d5-afd0-73986b086df0.gif)
 
 
 
@@ -71,10 +161,7 @@ Node.js >= 18 / Node.js >= 14(with node-fetch)
 
 ```shell
 # github源
-git clone --depth=1 https://github.com/ikechan8370/chatgpt-plugin.git ./plugins/chatgpt-plugin/
-
-# 网络不好连不上github可以使用gitee源，但更新可能不如github及时
-git clone --depth=1 https://gitee.com/ikechan/chatgpt-plugin.git ./plugins/chatgpt-plugin/
+git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
 
 # 以上二选一后执行下面步骤进入目录安装依赖
 cd plugins/chatgpt-plugin

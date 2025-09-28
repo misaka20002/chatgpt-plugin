@@ -27,7 +27,7 @@ import { createServer, runServer, stopServer } from '../server/index.js'
 import { BingAIClient } from '../client/CopilotAIClient.js'
 
 export class ChatgptManagement extends plugin {
-  constructor (e) {
+  constructor(e) {
     super({
       name: 'ChatGPT-Plugin 管理',
       dsc: '插件的管理项配置，让你轻松掌控各个功能的开闭和管理。包含各种实用的配置选项，让你的聊天更加便捷和高效！',
@@ -304,6 +304,11 @@ export class ChatgptManagement extends plugin {
           fnc: 'viewAPIModel'
         },
         {
+          reg: '^#chatgpt(开启|关闭)本地SILK转码$',
+          fnc: 'enableTtsHD',
+          permission: 'master'
+        },
+        {
           reg: '^#chatgpt设置(API|api)模型$',
           fnc: 'setAPIModel',
           permission: 'master'
@@ -395,7 +400,7 @@ export class ChatgptManagement extends plugin {
     }
   }
 
-  async viewUserSetting (e) {
+  async viewUserSetting(e) {
     const userSetting = await getUserReplySetting(this.e)
     const replyMsg = `${this.e.sender.user_id}的回复设置:
 图片模式: ${userSetting.usePicture === true ? '开启' : '关闭'}
@@ -408,7 +413,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     return true
   }
 
-  async getTTSRoleList (e) {
+  async getTTSRoleList(e) {
     const matchCommand = e.msg.match(/^#(chatgpt)?(vits|azure|vox)?语音(服务|角色列表)/)
     if (matchCommand[3] === '服务') {
       await this.reply(`当前支持vox、vits、azure语音服务，可使用'#(vox|azure|vits)语音角色列表'查看支持的语音角色。
@@ -459,7 +464,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(roleList)
   }
 
-  async ttsSwitch (e) {
+  async ttsSwitch(e) {
     let userReplySetting = await getUserReplySetting(this.e)
     if (!userReplySetting.useTTS) {
       let replyMsg
@@ -486,7 +491,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return false
   }
 
-  async commandHelp (e) {
+  async commandHelp(e) {
     if (/^#(chatgpt)?指令表帮助$/.exec(e.msg.trim())) {
       await this.reply('#chatgpt指令表: 查看本插件的所有指令\n' +
         '#chatgpt(对话|管理|娱乐|绘图|人物设定|聊天记录)指令表: 查看对应功能分类的指令表\n' +
@@ -502,7 +507,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       聊天记录: '聊天记录'
     }
 
-    function getCategory (e, plugin) {
+    function getCategory(e, plugin) {
       for (const key in categories) {
         if (e.msg.includes(key) && plugin.name.includes(categories[key])) {
           return '功能名称: '
@@ -556,7 +561,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
 
     const prompts = []
     for (const plugin of commandSet) {
-      const commands = plugin.rule.map(v => v.reg.includes('[#*0-9]') ? '表情合成功能只需要发送两个emoji表情即可' : v.reg)
+      const commands = plugin.rule
+        .filter(v => typeof v.reg === 'string')
+        .map(v => v.reg.includes('[#*0-9]') ? '表情合成功能只需要发送两个emoji表情即可' : v.reg)
       const category = getCategory(e, plugin)
       if (category || (!e.msg.includes('对话') && !e.msg.includes('管理') && !e.msg.includes('娱乐') && !e.msg.includes('绘图') && !e.msg.includes('人物设定') && !e.msg.includes('聊天记录'))) {
         prompts.push(generatePrompt(plugin, commands))
@@ -567,13 +574,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return true
   }
 
-  async enablePrivateChat (e) {
+  async enablePrivateChat(e) {
     Config.enablePrivateChat = !!e.msg.match(/(允许|打开|同意)/)
     await this.reply('设置成功', e.isGroup)
     return false
   }
 
-  async enableGroupContext (e) {
+  async enableGroupContext(e) {
     const reg = /(关闭|打开)/
     const match = e.msg.match(reg)
     if (match) {
@@ -589,7 +596,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return false
   }
 
-  async setDefaultReplySetting (e) {
+  async setDefaultReplySetting(e) {
     const reg = /^#chatgpt(打开|关闭|设置)?全局((文本模式|图片模式|语音模式|((azure|vits|vox)?语音角色|角色语音|角色)(.*))|回复帮助)/
     const matchCommand = e.msg.match(reg)
     const settingType = matchCommand[2]
@@ -684,7 +691,11 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
               if (vitsRoleList.includes(ttsRole)) {
                 Config.defaultTTSRole = ttsRole
                 replyMsg = `ChatGPT默认语音角色已被设置为“${ttsRole}”`
-              } else {
+              } else if (Config.ttsSpace.includes('api.fish.audio')) {
+                Config.fish_reference_id = ttsRole
+                replyMsg = `FishVIts默认语音角色已被设置为“${ttsRole}”`
+              }
+              else {
                 replyMsg = `抱歉，我还不认识“${ttsRole}”这个语音角色,可使用'#vits角色列表'查看可配置的角色`
               }
             } else if (ttsSupportKinds.includes(3) && voiceKind === 'vox') {
@@ -722,36 +733,36 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(replyMsg, true)
   }
 
-  async turnOnConfirm (e) {
+  async turnOnConfirm(e) {
     await redis.set('CHATGPT:CONFIRM', 'on')
     await this.reply('已开启消息确认', true)
     return false
   }
 
-  async turnOffConfirm (e) {
+  async turnOffConfirm(e) {
     await redis.set('CHATGPT:CONFIRM', 'off')
     await this.reply('已关闭消息确认', true)
     return false
   }
 
-  async setAccessToken (e) {
+  async setAccessToken(e) {
     this.setContext('saveToken')
     await this.reply('请发送ChatGPT AccessToken', true)
     return false
   }
 
-  async delAccessToken () {
+  async delAccessToken() {
     await redis.del('CHATGPT:TOKEN')
     await this.reply('删除成功', true)
   }
 
-  async setPoeCookie () {
+  async setPoeCookie() {
     this.setContext('savePoeToken')
     await this.reply('请发送Poe Cookie', true)
     return false
   }
 
-  async savePoeToken (e) {
+  async savePoeToken(e) {
     if (!this.e.msg) return
     let token = this.e.msg
     if (!token.startsWith('p-b=')) {
@@ -764,13 +775,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('savePoeToken')
   }
 
-  async setBingAccessToken (e) {
+  async setBingAccessToken(e) {
     this.setContext('saveBingToken')
     await this.reply('请发送Bing Cookie Token.("_U" cookie from bing.com)', true)
     return false
   }
 
-  async migrateBingAccessToken () {
+  async migrateBingAccessToken() {
     let token = await redis.get('CHATGPT:BING_TOKEN')
     if (token) {
       token = token.split('|')
@@ -794,7 +805,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply('迁移完成', true)
   }
 
-  async getBingAccessToken (e) {
+  async getBingAccessToken(e) {
     let tokens = await redis.get('CHATGPT:BING_TOKENS')
     if (tokens) tokens = JSON.parse(tokens)
     else tokens = []
@@ -807,7 +818,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return false
   }
 
-  async delBingAccessToken (e) {
+  async delBingAccessToken(e) {
     this.setContext('deleteBingToken')
     let tokens = await redis.get('CHATGPT:BING_TOKENS')
     if (tokens) tokens = JSON.parse(tokens)
@@ -822,7 +833,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return false
   }
 
-  async saveBingToken () {
+  async saveBingToken() {
     if (!this.e.msg) return
     let token = this.e.msg
     if (token.length < 100) {
@@ -879,7 +890,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveBingToken')
   }
 
-  async deleteBingToken () {
+  async deleteBingToken() {
     if (!this.e.msg) return
     let tokenId = this.e.msg
     if (await redis.exists('CHATGPT:BING_TOKENS') != 0) {
@@ -900,7 +911,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async saveToken () {
+  async saveToken() {
     if (!this.e.msg) return
     let token = this.e.msg
     if (!token.startsWith('ey') || token.length < 20) {
@@ -913,12 +924,12 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveToken')
   }
 
-  async useBrowserBasedSolution (e) {
+  async useBrowserBasedSolution(e) {
     await redis.set('CHATGPT:USE', 'browser')
     await this.reply('已切换到基于浏览器的解决方案，如果已经对话过建议执行`#结束对话`避免引起404错误')
   }
 
-  async useOpenAIAPIBasedSolution (e) {
+  async useOpenAIAPIBasedSolution(e) {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'api') {
       await redis.set('CHATGPT:USE', 'api')
@@ -928,12 +939,12 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useChatGLMSolution (e) {
+  async useChatGLMSolution(e) {
     await redis.set('CHATGPT:USE', 'chatglm')
     await this.reply('已切换到ChatGLM-6B解决方案，如果已经对话过建议执行`#结束对话`避免引起404错误')
   }
 
-  async useReversedAPIBasedSolution2 (e) {
+  async useReversedAPIBasedSolution2(e) {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'api3') {
       await redis.set('CHATGPT:USE', 'api3')
@@ -943,7 +954,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useBingSolution (e) {
+  async useBingSolution(e) {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'bing') {
       await redis.set('CHATGPT:USE', 'bing')
@@ -953,7 +964,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useClaudeAPIBasedSolution () {
+  async useClaudeAPIBasedSolution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'claude') {
       await redis.set('CHATGPT:USE', 'claude')
@@ -963,7 +974,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useClaudeAISolution () {
+  async useClaudeAISolution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'claude2') {
       await redis.set('CHATGPT:USE', 'claude2')
@@ -973,7 +984,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useGeminiSolution () {
+  async useGeminiSolution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'gemini') {
       await redis.set('CHATGPT:USE', 'gemini')
@@ -983,7 +994,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useXinghuoBasedSolution () {
+  async useXinghuoBasedSolution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'xh') {
       await redis.set('CHATGPT:USE', 'xh')
@@ -993,7 +1004,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useAzureBasedSolution () {
+  async useAzureBasedSolution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'azure') {
       await redis.set('CHATGPT:USE', 'azure')
@@ -1003,7 +1014,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async patchGemini () {
+  async patchGemini() {
     const _path = process.cwd()
     let packageJson = fs.readFileSync(`${_path}/package.json`)
     packageJson = JSON.parse(String(packageJson))
@@ -1026,14 +1037,14 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
     fs.writeFileSync(`${_path}/package.json`, JSON.stringify(packageJson, null, 2))
 
-    function execSync (cmd) {
+    function execSync(cmd) {
       return new Promise((resolve, reject) => {
         exec(cmd, (error, stdout, stderr) => {
           resolve({ error, stdout, stderr })
         })
       })
     }
-    async function checkPnpm () {
+    async function checkPnpm() {
       let npm = 'npm'
       let ret = await execSync('pnpm -v')
       if (ret.stdout) npm = 'pnpm'
@@ -1054,7 +1065,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useQwenSolution () {
+  async useQwenSolution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'qwen') {
       await redis.set('CHATGPT:USE', 'qwen')
@@ -1064,7 +1075,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async useGLM4Solution () {
+  async useGLM4Solution() {
     let use = await redis.get('CHATGPT:USE')
     if (use !== 'chatglm4') {
       await redis.set('CHATGPT:USE', 'chatglm4')
@@ -1074,7 +1085,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async changeBingTone (e) {
+  async changeBingTone(e) {
     let tongStyle = e.msg.replace(/^#chatgpt(必应|Bing)切换/, '')
     if (!tongStyle) {
       return
@@ -1098,12 +1109,12 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async bingOpenSuggestedResponses (e) {
+  async bingOpenSuggestedResponses(e) {
     Config.enableSuggestedResponses = e.msg.indexOf('开启') > -1
     await this.reply('操作成功')
   }
 
-  async checkAuth (e) {
+  async checkAuth(e) {
     if (!e.isMaster) {
       this.reply(`只有主人才能命令ChatGPT哦~
     (*/ω＼*)`)
@@ -1112,12 +1123,12 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return true
   }
 
-  async versionChatGPTPlugin (e) {
+  async versionChatGPTPlugin(e) {
     let img = await renderUrl(e, `http://127.0.0.1:${Config.serverPort || 3321}/version`, { Viewport: { width: 800, height: 600 }, retType: 'base64' })
     this.reply(img)
   }
 
-  async modeHelp () {
+  async modeHelp() {
     let mode = await redis.get('CHATGPT:USE')
     const modeMap = {
       // browser: '浏览器',
@@ -1139,7 +1150,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(message)
   }
 
-  async shutUp (e) {
+  async shutUp(e) {
     let duration = e.msg.replace(/^#chatgpt(本群)?(群\d+)?(关闭|闭嘴|关机|休眠|下班)/, '')
     let scope
     let time = 3600000
@@ -1191,7 +1202,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async openMouth (e) {
+  async openMouth(e) {
     const match = e.msg.match(/^#chatgpt群(\d+)/)
     if (e.msg.indexOf('本群') > -1) {
       if (await redis.get('CHATGPT:SHUT_UP:ALL')) {
@@ -1246,7 +1257,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async listShutUp () {
+  async listShutUp() {
     let keys = await redis.keys('CHATGPT:SHUT_UP:*')
     if (!keys || keys.length === 0) {
       await this.reply('已经开启过全群响应啦', true)
@@ -1263,13 +1274,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async setAPIKey (e) {
+  async setAPIKey(e) {
     this.setContext('saveAPIKey')
     await this.reply('请发送OpenAI API Key.', true)
     return false
   }
 
-  async saveAPIKey () {
+  async saveAPIKey() {
     if (!this.e.msg) return
     let token = this.e.msg
     if (!token.startsWith('sk-') && !token.startsWith('sess-')) {
@@ -1283,13 +1294,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveAPIKey')
   }
 
-  async setClaudeKey (e) {
+  async setClaudeKey(e) {
     this.setContext('saveClaudeKey')
     await this.reply('请发送Claude API Key。\n如果要设置多个key请用逗号隔开。\n此操作会覆盖当前配置，请谨慎操作', true)
     return false
   }
 
-  async saveClaudeKey () {
+  async saveClaudeKey() {
     if (!this.e.msg) return
     let token = this.e.msg
     if (!token.startsWith('sk-ant')) {
@@ -1302,13 +1313,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveClaudeKey')
   }
 
-  async setGeminiKey (e) {
+  async setGeminiKey(e) {
     this.setContext('saveGeminiKey')
-    await this.reply('请发送Gemini API Key.获取地址：https://makersuite.google.com/app/apikey', true)
+    await this.reply('请发送Gemini API Key，如果有多个用英文逗号隔开；获取地址：https://makersuite.google.com/app/apikey', true)
     return false
   }
 
-  async saveGeminiKey () {
+  async saveGeminiKey() {
     if (!this.e.msg) return
     let token = this.e.msg
     // todo
@@ -1317,13 +1328,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveGeminiKey')
   }
 
-  async setXinghuoToken () {
+  async setXinghuoToken() {
     this.setContext('saveXinghuoToken')
     await this.reply('请发送星火的ssoSessionId', true)
     return false
   }
 
-  async saveXinghuoToken () {
+  async saveXinghuoToken() {
     if (!this.e.msg) return
     let token = this.e.msg
     // todo
@@ -1332,13 +1343,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveXinghuoToken')
   }
 
-  async setAPIPromptPrefix (e) {
+  async setAPIPromptPrefix(e) {
     this.setContext('saveAPIPromptPrefix')
     await this.reply('请发送用于API模式的设定', true)
     return false
   }
 
-  async saveAPIPromptPrefix (e) {
+  async saveAPIPromptPrefix(e) {
     if (!this.e.msg) return
     if (this.e.msg === '取消') {
       await this.reply('已取消设置API设定', true)
@@ -1351,13 +1362,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveAPIPromptPrefix')
   }
 
-  async setBingPromptPrefix (e) {
+  async setBingPromptPrefix(e) {
     this.setContext('saveBingPromptPrefix')
     await this.reply('请发送用于Bing Sydney模式的设定', true)
     return false
   }
 
-  async saveBingPromptPrefix (e) {
+  async saveBingPromptPrefix(e) {
     if (!this.e.msg) return
     if (this.e.msg === '取消') {
       await this.reply('已取消设置Sydney设定', true)
@@ -1369,7 +1380,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveBingPromptPrefix')
   }
 
-  async switchDraw (e) {
+  async switchDraw(e) {
     if (e.msg.indexOf('开启') > -1) {
       if (Config.enableDraw) {
         await this.reply('当前已经开启chatgpt画图功能', true)
@@ -1387,15 +1398,15 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async queryAPIPromptPrefix (e) {
+  async queryAPIPromptPrefix(e) {
     await this.reply(Config.promptPrefixOverride, true)
   }
 
-  async queryBingPromptPrefix (e) {
+  async queryBingPromptPrefix(e) {
     await this.reply(Config.sydney, true)
   }
 
-  async setAdminPassword (e) {
+  async setAdminPassword(e) {
     if (e.isGroup || !e.isPrivate) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1405,7 +1416,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return false
   }
 
-  async setUserPassword (e) {
+  async setUserPassword(e) {
     if (e.isGroup || !e.isPrivate) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1415,7 +1426,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return false
   }
 
-  async saveAdminPassword (e) {
+  async saveAdminPassword(e) {
     if (!this.e.msg) return
     const passwd = this.e.msg
     await redis.set('CHATGPT:ADMIN_PASSWD', md5(passwd))
@@ -1423,7 +1434,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveAdminPassword')
   }
 
-  async saveUserPassword (e) {
+  async saveUserPassword(e) {
     if (!this.e.msg) return
     const passwd = this.e.msg
     const dir = 'resources/ChatGPTCache/user'
@@ -1459,7 +1470,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveUserPassword')
   }
 
-  async adminPage (e) {
+  async adminPage(e) {
     if (!Config.groupAdminPage && (e.isGroup || !e.isPrivate)) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1468,7 +1479,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(`请登录${viewHost}进行系统配置`, true)
   }
 
-  async userPage (e) {
+  async userPage(e) {
     if (!Config.groupAdminPage && (e.isGroup || !e.isPrivate)) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1477,7 +1488,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(`请登录${viewHost}进行系统配置`, true)
   }
 
-  async toolsPage (e) {
+  async toolsPage(e) {
     if (e.isGroup || !e.isPrivate) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1492,12 +1503,12 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(`请登录http://tools.alcedogroup.com/login?server=${viewHost}&otp=${otp}`, true)
   }
 
-  async setOpenAIPlatformToken (e) {
+  async setOpenAIPlatformToken(e) {
     this.setContext('doSetOpenAIPlatformToken')
     await this.reply('请发送refreshToken\n你可以在已登录的platform.openai.com后台界面打开调试窗口，在终端中执行\nJSON.parse(localStorage.getItem(Object.keys(localStorage).filter(k => k.includes(\'auth0\'))[0])).body.refresh_token\n如果仍不能查看余额，请退出登录重新获取刷新令牌.设置后可以发送#chatgpt设置sessKey来将sessKey作为API Key使用')
   }
 
-  async getSessKey (e) {
+  async getSessKey(e) {
     if (!Config.OpenAiPlatformRefreshToken) {
       this.reply('当前未配置platform.openai.com的刷新token，请发送【#chatgpt设置后台刷新token】进行配置。')
       return false
@@ -1554,7 +1565,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async doSetOpenAIPlatformToken () {
+  async doSetOpenAIPlatformToken() {
     let token = this.e.msg
     if (!token) {
       return false
@@ -1564,7 +1575,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('doSetOpenAIPlatformToken')
   }
 
-  async exportConfig (e) {
+  async exportConfig(e) {
     if (e.isGroup || !e.isPrivate) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1596,7 +1607,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     return true
   }
 
-  async importConfig (e) {
+  async importConfig(e) {
     if (e.isGroup || !e.isPrivate) {
       await this.reply('请私聊发送命令', true)
       return true
@@ -1605,7 +1616,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply('请发送配置文件')
   }
 
-  async doImportConfig (e) {
+  async doImportConfig(e) {
     const file = this.e.message.find(item => item.type === 'file')
     if (file) {
       const fileUrl = await this.e.friend.getFileUrl(file.fid)
@@ -1669,7 +1680,16 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('doImportConfig')
   }
 
-  async switchSmartMode (e) {
+  async enableTtsHD(e) {
+    Config.ttsHD = e.msg.indexOf('开启') > -1
+    if (Config.ttsHD) {
+      await this.reply('已开启本地SILK转码，NTQQ内核版本9.0.0-9.0.7将无法播放语音', true)
+    } else {
+      await this.reply('已关闭本地SILK转码', true)
+    }
+  }
+
+  async switchSmartMode(e) {
     if (e.msg.includes('开启')) {
       if (Config.smartMode) {
         await this.reply('已经开启了')
@@ -1687,7 +1707,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async viewAPIModel (e) {
+  async viewAPIModel(e) {
     const contents = [
       '仅列出部分模型以供参考',
       'gpt-3.5-turbo',
@@ -1708,13 +1728,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(makeForwardMsg(e, modelList, '模型列表'))
   }
 
-  async setAPIModel (e) {
+  async setAPIModel(e) {
     this.setContext('saveAPIModel')
     await this.reply('请发送API模型', true)
     return false
   }
 
-  async saveAPIModel () {
+  async saveAPIModel() {
     if (!this.e.msg) return
     let token = this.e.msg
     Config.model = token
@@ -1722,13 +1742,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveAPIModel')
   }
 
-  async setClaudeModel (e) {
+  async setClaudeModel(e) {
     this.setContext('saveClaudeModel')
     await this.reply('请发送Claude模型，官方推荐模型：\nclaude-3-opus-20240229\nclaude-3-sonnet-20240229\nclaude-3-haiku-20240307', true)
     return false
   }
 
-  async saveClaudeModel () {
+  async saveClaudeModel() {
     if (!this.e.msg) return
     let token = this.e.msg
     Config.claudeApiModel = token
@@ -1736,13 +1756,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveClaudeModel')
   }
 
-  async setOpenAiBaseUrl (e) {
+  async setOpenAiBaseUrl(e) {
     this.setContext('saveOpenAiBaseUrl')
     await this.reply('请发送API反代', true)
     return false
   }
 
-  async saveOpenAiBaseUrl () {
+  async saveOpenAiBaseUrl() {
     if (!this.e.msg) return
     let token = this.e.msg
     // console.log(token.startsWith('http://') || token.startsWith('https://'))
@@ -1756,14 +1776,14 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveOpenAiBaseUrl')
   }
 
-  async setXinghuoModel (e) {
+  async setXinghuoModel(e) {
     this.setContext('saveXinghuoModel')
     await this.reply('1：星火V1.5\n2：星火V2\n3：星火V3\n4：星火V3.5\n5：星火助手')
     await this.reply('请发送序号', true)
     return false
   }
 
-  async saveXinghuoModel (e) {
+  async saveXinghuoModel(e) {
     if (!this.e.msg) return
     let token = this.e.msg
     let ver
@@ -1795,7 +1815,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveXinghuoModel')
   }
 
-  async switchBingSearch (e) {
+  async switchBingSearch(e) {
     if (e.msg.includes('启用') || e.msg.includes('开启')) {
       Config.sydneyEnableSearch = true
       await this.reply('已开启必应搜索')
@@ -1805,7 +1825,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async queryConfig (e) {
+  async queryConfig(e) {
     let use = await redis.get('CHATGPT:USE')
     let config = []
     config.push(`当前模式：${use}`)
@@ -1831,7 +1851,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.reply(config)
   }
 
-  async switchStream (e) {
+  async switchStream(e) {
     if (e.msg.includes('开启')) {
       if (Config.apiStream) {
         await this.reply('已经开启了')
@@ -1849,7 +1869,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async switchToolbox (e) {
+  async switchToolbox(e) {
     if (e.msg.includes('开启')) {
       if (Config.enableToolbox) {
         await this.reply('已经开启了')
@@ -1870,7 +1890,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async switchBYM (e) {
+  async switchBYM(e) {
     if (e.msg.includes('开启')) {
       if (Config.enableBYM) {
         await this.reply('已经开启了')
@@ -1889,7 +1909,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async switchBYMModel (e) {
+  async switchBYMModel(e) {
     let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
     if (['api', 'Api', 'API'].includes(model)) {
       Config.bymMode = 'api'

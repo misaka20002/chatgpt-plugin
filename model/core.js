@@ -55,6 +55,10 @@ import { BingAIClient } from '../client/CopilotAIClient.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
 import {GithubAPITool} from '../utils/tools/GithubTool.js'
+import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
+import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
+import { TavilyTool } from '../utils/tools/TavilyTool.js'
+import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -62,10 +66,10 @@ export const roleMap = {
 }
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
+/** 接入AP、Nai、SF绘画的prompt */
+const paintPropmtPrefix = 'It is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. 其中角色使用词条形式，例如 `klee (genshin impact)`。 Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
+// const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
 
-function filterCQCodes(message) {
-  return message.replace(/\[CQ:[^\]]+\]/g, '')
-}
 
 async function handleSystem (e, system, settings) {
   if (settings.enableGroupContext) {
@@ -105,7 +109,7 @@ async function handleSystem (e, system, settings) {
               // 建议的回复太容易污染设定导致对话太固定跑偏了
               return ''
             }
-            return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+            return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
           })
           .join('\n')
       }
@@ -185,7 +189,7 @@ class Core {
           system += chats
             .map(chat => {
               let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
             })
             .join('\n')
         }
@@ -282,7 +286,7 @@ class Core {
             option.system += chats
               .map(chat => {
                 let sender = chat.sender || {}
-                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
               })
               .join('\n')
           }
@@ -452,6 +456,16 @@ class Core {
         }
         option = Object.assign(option, conversation)
       }
+
+      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+      if (Config.isReplacePromptForSenderMsg) {
+        opts.systemMessage = replacePromptForSenderMsg(e, opts.systemMessage);
+      }
+      // 呆毛版 连接画图插件
+      if (Config.drawByJsonToPlugin) {
+        opts.systemMessage += paintPropmtPrefix
+      }
+
       if (opt.enableSmart) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
         let sender = e.sender.user_id
@@ -470,28 +484,36 @@ class Core {
           option.systemMessage += '如果我要求你生成音乐或写歌，你需要回复适合Suno生成音乐的信息。请使用Verse、Chorus、Bridge、Outro和End等关键字对歌词进行分段，如[Verse 1]。音乐信息需要使用markdown包裹的JSON格式回复给我，结构为```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```。'
         }
         systemAddition && (option.systemMessage += systemAddition)
-        opts.completionParams.parameters.tools = Object.keys(funcMap)
-          .map(k => funcMap[k].function)
-          .map(obj => {
-            return {
-              type: 'function',
-              function: obj
-            }
-          })
+        opts.completionParams.tools = Object.keys(funcMap).map(k => ({
+          type: 'function',
+          function: funcMap[k].function
+        }))
         let msg
         try {
           this.qwenApi = new QwenApi(opts)
           msg = await this.qwenApi.sendMessage(prompt, option)
           logger.info(msg)
-          while (msg.functionCall) {
+          while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
             }
-            let {
-              name,
-              arguments: args
-            } = msg.functionCall
-            args = JSON.parse(args)
+            
+            let name, args;
+            
+            if (msg.functionCall) {
+              // 处理旧的 functionCall 格式
+              name = msg.functionCall.name;
+              args = JSON.parse(msg.functionCall.arguments);
+            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
+              // 处理新的 toolCalls 格式
+              const toolCall = msg.toolCalls[0];
+              name = toolCall.function.name;
+              args = JSON.parse(toolCall.function.arguments);
+            } else {
+              // 如果没有工具调用，跳出循环
+              break;
+            }
+            
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -512,6 +534,17 @@ class Core {
             await common.sleep(300)
             msg = await this.qwenApi.sendMessage(functionResult, option, 'tool')
             logger.info(msg)
+            
+            // 如果是函数返回结果，则跳出循环
+            if (msg.conversation && msg.conversation.length > 0) {
+              const lastMessage = msg.conversation[msg.conversation.length - 1]
+              if (lastMessage.role === 'function' && lastMessage.name === name) {
+                // 清除工具调用相关字段，避免循环
+                msg.functionCall = undefined
+                msg.toolCalls = undefined
+                break
+              }
+            }
           }
         } catch (err) {
           logger.error(err)
@@ -533,7 +566,7 @@ class Core {
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
-        key: Config.getGeminiKey(),
+        key: Config.getGeminiKey,
         model: Config.geminiModel,
         baseUrl: Config.geminiBaseUrl,
         debug: Config.debug
@@ -550,6 +583,8 @@ class Core {
         search: Config.geminiEnableGoogleSearch,
         codeExecution: Config.geminiEnableCodeExecution
       }
+
+      if (!Config.recognitionByGemini) {
       const image = await getImg(e)
       let imageUrl = image ? image[0] : undefined
       if (imageUrl) {
@@ -557,6 +592,8 @@ class Core {
         const base64Image = Buffer.from(await response.arrayBuffer())
         option.image = base64Image.toString('base64')
       }
+      }
+
       if (opt.enableSmart) {
         const {
           funcMap
@@ -565,6 +602,16 @@ class Core {
         client.addTools(tools)
       }
       let system = opt.system.gemini
+
+      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+      if (Config.isReplacePromptForSenderMsg) {
+        system = replacePromptForSenderMsg(e, system);
+      }
+      // 呆毛版 连接画图插件
+      if (Config.drawByJsonToPlugin) {
+        system += paintPropmtPrefix
+      }
+
       if (opt.settings.enableGroupContext && e.isGroup) {
         let chats = await getChatHistoryGroup(e, Config.groupContextLength)
         const namePlaceholder = '[name]'
@@ -581,7 +628,7 @@ class Core {
           system += chats
             .map(chat => {
               let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
             })
             .join('\n')
         }
@@ -618,6 +665,16 @@ class Core {
       let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, opt.settings)
+
+      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+      if (Config.isReplacePromptForSenderMsg) {
+        system = replacePromptForSenderMsg(e, system);
+      }
+      // 呆毛版 连接画图插件
+      if (Config.drawByJsonToPlugin) {
+        system += paintPropmtPrefix
+      }
+
       if (Config.enableChatSuno) {
         system += 'If I ask you to generate music or write songs, you need to reply with information suitable for Suno to generate music. Please use keywords such as Verse, Chorus, Bridge, Outro, and End to segment the lyrics, such as [Verse 1], The returned song information needs to be wrapped in JSON format and sent to me in Markdown format. The message structure is ` ` JSON {"option": "Suno", "tags": "style", "title": "title of The Song", "lyrics": "lyrics"} `.'
       }
@@ -679,20 +736,37 @@ class Core {
         }
         promptAddition && (prompt += promptAddition)
         systemAddition && (option.systemMessage += systemAddition)
-        option.completionParams.functions = Object.keys(funcMap).map(k => funcMap[k].function)
+        option.completionParams.tools = Object.keys(funcMap).map(k => ({
+          type: "function",
+          function: funcMap[k].function
+        }))
         let msg
         try {
           msg = await this.chatGPTApi.sendMessage(prompt, option)
           logger.info(msg)
-          while (msg.functionCall) {
+          
+          // 检查是否有工具调用
+          while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
             if (msg.text) {
               await this.reply(msg.text.replace('\n\n\n', '\n'))
             }
-            let {
-              name,
-              arguments: args
-            } = msg.functionCall
-            args = JSON.parse(args)
+            
+            let name, args;
+            
+            if (msg.functionCall) {
+              // 处理旧的 functionCall 格式
+              name = msg.functionCall.name;
+              args = JSON.parse(msg.functionCall.arguments);
+            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
+              // 处理新的 toolCalls 格式
+              const toolCall = msg.toolCalls[0];
+              name = toolCall.function.name;
+              args = JSON.parse(toolCall.function.arguments);
+            } else {
+              // 如果没有工具调用，跳出循环
+              break;
+            }
+            
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -713,6 +787,17 @@ class Core {
             await common.sleep(300)
             msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
             logger.info(msg)
+            
+            // 如果是函数返回结果，则跳出循环
+            if (msg.conversation && msg.conversation.length > 0) {
+              const lastMessage = msg.conversation[msg.conversation.length - 1]
+              if (lastMessage.role === 'function' && lastMessage.name === name) {
+                // 清除工具调用相关字段，避免循环
+                msg.functionCall = undefined
+                msg.toolCalls = undefined
+                break
+              }
+            }
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
@@ -755,29 +840,44 @@ class Core {
  * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string, fullFuncMap: {}}>}
  */
 async function collectTools (e) {
-  let serpTool
+  let serpTool, WebTool
   switch (Config.serpSource) {
+    case 'tavily_search': {
+      serpTool = new TavilyTool()
+      break
+    }
+    case 'misaka_WebSearchTool': {
+      serpTool = new Misaka_WebSearchTool()
+      break
+    }
     case 'ikechan8370': {
-      serpTool = new SerpIkechan8370Tool()
+      serpTool = new SerpIkechan8370Tool() // 该工具使用的 url 不再提供服务
       break
     }
     case 'azure': {
-      if (!Config.azSerpKey) {
-        logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
-        serpTool = new SerpIkechan8370Tool()
-      } else {
+      // if (!Config.azSerpKey) {
+      //   logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
+      //   serpTool = new SerpIkechan8370Tool()
+      // } else {
         serpTool = new SerpTool()
-      }
+      // }
       break
     }
     default: {
-      serpTool = new SerpIkechan8370Tool()
+      serpTool = new Misaka_WebSearchTool()
     }
   }
+  // 若填写了 tavily Key 则使用 TavilyExtractTool
+  if (Config.getTavilyKey)
+    WebTool = new TavilyExtractTool()
+  else
+    WebTool = new WebsiteTool()
+
+  /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
     new EditCardTool(),
     // new QueryStarRailTool(),
-    new WebsiteTool(),
+    WebTool,
     new JinyanTool(),
     new KickOutTool(),
     new WeatherTool(),
@@ -789,8 +889,9 @@ async function collectTools (e) {
     new SerpImageTool(),
     new SearchMusicTool(),
     new SendMusicTool(),
-    new SerpIkechan8370Tool(),
-    new SerpTool(),
+    // new SerpIkechan8370Tool(),
+    // new SerpTool(),
+    serpTool,
     // new SendAudioMessageTool(),
     // new ProcessPictureTool(),
     new APTool(),
@@ -815,7 +916,7 @@ async function collectTools (e) {
     new SendMusicTool(),
     new SearchMusicTool(),
     new ProcessPictureTool(),
-    new WebsiteTool(),
+    WebTool,
     // new JinyanTool(),
     // new KickOutTool(),
     new WeatherTool(),
@@ -827,10 +928,21 @@ async function collectTools (e) {
     new QueryUserinfoTool(),
     new GithubAPITool()
   ]
+
+  if (Config.disable_sendMessage_tool) {
+    tools = tools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
+    fullTools = fullTools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
+  }
+
+  if (Config.serpSource === "off") {
+    tools = tools.filter(tool => tool !== serpTool);
+    fullTools = fullTools.filter(tool => tool !== serpTool);
+  }
+
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
-    if (botInfo.role !== 'member') {
+    if (botInfo.role !== 'member' && (e.isMaster || e.sender.role !== 'member')) {
       // 管理员才给这些工具
       tools.push(...[new EditCardTool(), new JinyanTool(), new KickOutTool(), new HandleMessageMsgTool(), new SetTitleTool()])
       // 用于撤回和加精的id
@@ -875,6 +987,34 @@ async function collectTools (e) {
     systemAddition,
     promptAddition
   }
+}
+
+/** 呆毛版 在 prompt 中替换文本使用 e.sender 信息 */
+function replacePromptForSenderMsg(e, systemMsg = "") {
+  const getCurrentDate = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const getCurrentTime = () => {
+    const date = new Date();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+  systemMsg = systemMsg.replace(/_sender_name_/igm, e.sender.card || e.sender.nickname)
+  systemMsg = systemMsg.replace(/_sender_id_/igm, e.sender.user_id)
+  systemMsg = systemMsg.replace(/_sender_gender_/igm, e.sender.sex)
+  systemMsg = systemMsg.replace(/_sender_age_/igm, e.sender.age)
+  systemMsg = systemMsg.replace(/_sender_area_/igm, e.sender.area)
+  systemMsg = systemMsg.replace(/_sender_role_/igm, `${e.sender.role == "owner" ? '群主' : `${e.sender.role == "admin" ? '管理员' : ''}`}`)
+  systemMsg = systemMsg.replace(/_sender_title_/igm, e.sender.title)
+  systemMsg = systemMsg.replace(/_date_/igm, getCurrentDate())
+  systemMsg = systemMsg.replace(/_time_/igm, getCurrentTime())
+  systemMsg = systemMsg.replace(/_sender_groupid_/igm, e.group_id || e.sender.user_id)
+  return systemMsg;
 }
 
 export default new Core()

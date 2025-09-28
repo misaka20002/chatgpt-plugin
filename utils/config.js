@@ -10,19 +10,19 @@ export const pureSydneyInstruction = 'You\'re an AI assistant named [name]. Answ
 const defaultConfig = {
   blockWords: ['屏蔽词1', '屏蔽词b'],
   promptBlockWords: ['屏蔽词1', '屏蔽词b'],
-  imgOcr: true,
+  imgOcr: false,
   defaultUsePicture: false,
   defaultUseTTS: false,
-  defaultTTSRole: '纳西妲',
+  defaultTTSRole: '派蒙_ZH',
   alsoSendText: false,
-  autoUsePicture: true,
+  autoUsePicture: false,
   autoUsePictureThreshold: 1200,
   ttsAutoFallbackThreshold: 299,
   conversationPreserveTime: 0,
   toggleMode: 'at',
   groupMerge: false,
   quoteReply: true,
-  showQRCode: true,
+  showQRCode: false,
   apiKey: '',
   openAiBaseUrl: defaultOpenAIReverseProxy,
   OpenAiPlatformRefreshToken: '',
@@ -85,9 +85,75 @@ const defaultConfig = {
   ttsSpace: '',
   // https://114514.201666.xyz
   huggingFaceReverseProxy: '',
+  tts_First_person: '派蒙',
+  chat_for_First_person: true,
+  isReplacePromptForSenderMsg: true,
+  paimon_globalLimitBreak: "",
+  drawByJsonToPlugin: false,
+  drawToolS: false,
+  sf_markdownPic: false,
+  disable_sendMessage_tool: false,
+  change_handleMsg_tool: false,
+  nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
+  geminiModelsByFetch: [],
+  draw_PluginCharactersList: '',
+  doNotCheckPaintPluginSuccess: false,
+  paimon_chuoyichuo_open: true,
+  // paimon_chuoyichuo_ByMsgGroups: [],
+  // paimon_chuoyichuo_Probability_ByMsgGroups: 5,
+  paimon_chou_cd: 14,
+  paimon_chou_reply_text: 0.455,
+  paimon_chou_reply_img: 0.12,
+  paimon_chou_reply_voice: 0.12,
+  paimon_chou_mutepick: 0.03,
+  paimon_chou_paimonChuoMeme: 0.05,
+  paimon_chou_randowLocalPic: 0.12,
+  paimon_chou_dailyEnglish: 0.005,
+  paimon_chou_Fighting_Back: "",
+  paimon_chou_IsSendLocalpic: true,
+  paimon_chou_IsUseLoliconApi: false,
+  paimon_chou_text_generateAndSendAudio: false,
+  vits_emotion: 'Happy',
+  vits_auto_emotion: false,
+  style_text: '',
+  style_text_weights: 0.7,
+  vits_emotion_locker: true,
+  sdp_ratio: 0.2,
   noiseScale: 0.6,
-  noiseScaleW: 0.668,
-  lengthScale: 1.2,
+  noiseScaleW: 0.8,
+  lengthScale: 1.0,
+  tts_language: 'zh',
+  tts_slice_is_slice_generation: true,
+  tts_slice_is_Split_by_sentence: false,
+  tts_slice_pause_between_paragraphs_seconds: 0.2,
+  tts_slice_pause_between_sentences_seconds: 0.2,
+  hailuoApiKey: "",
+  // exampleAudio: "",
+  // Fish_Iterative_Prompt_Length: 90,
+  // Fish_Maximum_tokens_per_batch: 0,
+  // Fish_Top_P: 0.7,
+  // Fish_Repetition_Penalty: 1.5,
+  // Fish_Temperature: 0.7,
+  // api_fish_audio_model: "efc1ce3726a64bbc947d53a1465204aa",
+  // api_fish_audio_account_ID: "",
+  // api_fish_token_quota: 49,
+  // api_fish_control_defaultUseTTS: false,
+  fishApiKey: "",
+  fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
+  recognitionByGemini: false,
+  tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
+  meme_turnOff: false,
+  meme_baseUrl: "https://memes.ikechan8370.com",
+  meme_reply: true,
+  meme_forceSharp: true,
+  meme_masterProtectDo: true,
+  meme_maxFileSize: 10,
+  meme_CD: 19,
+  isConvertSentenceToArrayReply: false,
+  gemini_vqa_model: "gemini-2.0-flash",
+  gemini_vqa_needMaster: true,
+  ttsHD: false,
+  focus_CloudTranscode: false,
   initiativeChatGroups: [],
   enableDraw: true,
   helloPrompt: '写一段话让大家来找我聊天。类似于“有人找我聊天吗？"这种风格，轻松随意一点控制在20个字以内',
@@ -97,11 +163,12 @@ const defaultConfig = {
   allowOtherMode: true,
   sydneyContext: '',
   emojiBaseURL: 'https://www.gstatic.com/android/keyboard/emojikitchen',
+  emojiBaseSwitch: true,
   enableGroupContext: false,
   groupContextTip: '你看看我们群里的聊天记录吧，回答问题的时候要主动参考我们的聊天记录进行回答或提问。但要看清楚哦，不要把我和其他人弄混啦，也不要把自己看晕啦~~',
   groupContextLength: 50,
   enableRobotAt: true,
-  maxNumUserMessagesInConversation: 30,
+  maxNumUserMessagesInConversation: 20,
   sydneyApologyIgnored: true,
   enforceMaster: false,
   bingAPDraw: false,
@@ -138,7 +205,7 @@ const defaultConfig = {
   // slackCozeSpecifiedChannel: '',
   cloudTranscode: 'https://silk.201666.xyz',
   cloudRender: false,
-  cloudMode: 'url',
+  cloudMode: 'off',
   cloudDPR: 1,
   ttsMode: 'vits-uma-genshin-honkai', // or azure
   azureTTSKey: '',
@@ -153,7 +220,8 @@ const defaultConfig = {
   enableGenerateSuno: false,
   amapKey: '',
   azSerpKey: '',
-  serpSource: 'ikechan8370',
+  tavilyKey: '',
+  serpSource: 'off',
   extraUrl: 'https://cpe.ikechan8370.com',
   smartMode: false,
   // claude2
@@ -174,13 +242,13 @@ const defaultConfig = {
   qwenTemperature: 1,
   qwenEnableSearch: true,
   geminiKey: '',
-  geminiModel: 'gemini-1.5-flash',
+  // geminiKeyArr: '',
+  geminiModel: 'gemini-2.0-flash',
   geminiPrompt: 'You are Gemini. Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   // origin: https://generativelanguage.googleapis.com
   geminiBaseUrl: 'https://gemini.ikechan8370.com',
   geminiTemperature: 0.9,
   geminiMaxOutputTokens: 2000,
-
   chatglmRefreshToken: '',
   sunoSessToken: '',
   sunoClientToken: '',
@@ -195,17 +263,13 @@ const defaultConfig = {
   claudeSystemPrompt: '', // claude api 设定
   translateSource: 'openai',
   enableMd: false, // 第三方md，非QQBot。需要适配器实现segment.markdown和segment.button方可使用，否则不建议开启，会造成各种错误
-  enableToolbox: true, // 默认关闭工具箱节省占用和加速启动
+  enableToolbox: false, // 默认关闭工具箱节省占用和加速启动
   enableBYM: false,
   // 触发对话的概率，百分比。比如5%就写5
   bymRate: 5,
   bymDisableGroup: [],
   // 伪人模式触发骂人反击的关键词
   bymFuckList: [
-    '骂',
-    '你妈',
-    '他妈',
-    '尼玛',
     '艹'
   ],
   // 伪人骂人反击后是否撤回
@@ -231,7 +295,38 @@ const defaultConfig = {
   geminiForceToolKeywords: [],
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',
-  version: 'v2.8.4'
+  version: 'v2.8.4',
+
+  autoEmoticons: { // Config 是 Proxy 对象，所有对 对象/对象数组 的修改后需要使用 Config.save()；（字符串/数字数组不需要）
+    // 是否启用表情保存
+    useEmojiSave: true,
+    // 表情过期时间（秒）- 在此时间内发送多次才会被保存
+    expireTimeInSeconds: 259200, // 3天
+    // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
+    confirmCount: 3, // 默认是3次，可以设置为更高的值
+    // 默认发送偷取表情的概率
+    replyRate: 0.05, // 每次消息有5%的概率发送表情包
+    // 表情包最大数量
+    maxEmojiCount: 100,
+    // 表情包大小限制 (MB)
+    maxEmojiSize: 10,
+    // 需要保存表情包的群号列表，为空数组时表示所有群
+    allowGroups: ["1111"],
+    // BotQQ号
+    getBotByQQ_targetQQArr: [],
+    // 自动发送表情包的冷却时间（秒）
+    sendCD: 300,
+    // 发送表情时的延迟 (毫秒)
+    replyDelay: {
+      min: 1000,
+      max: 240000
+    }
+  },
+  autoRepeat_config: [],
+
+  // turnOnBilitv: false,
+  // bilitv_max_duration_min: 10
+
 }
 const _path = process.cwd()
 let config = {}
@@ -246,69 +341,99 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
       logger.warn('chatgpt插件即将使用默认配置')
     }
   }
-} else if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.js`)) {
-  // 旧版本的config.js，读取其内容，生成config.json，然后删掉config.js
-  const fullPath = fs.realpathSync(`${_path}/plugins/chatgpt-plugin/config/config.js`)
-  config = (await import(`file://${fullPath}`)).default
-  try {
-    logger.warn('[ChatGPT-Plugin]发现旧版本config.js文件，正在读取其内容并转换为新版本config.json文件')
-    // 读取其内容，生成config.json
-    fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(config, null, 2))
-    // 删掉config.js
-    fs.unlinkSync(`${_path}/plugins/chatgpt-plugin/config/config.js`)
-    logger.info('[ChatGPT-Plugin]配置文件转换处理完成')
-  } catch (err) {
-    logger.error('[ChatGPT-Plugin]转换旧版配置文件失败，建议手动清理旧版config.js文件，并转为使用新版config.json格式', err)
+}
+config = lodash.merge({}, defaultConfig, config)
+config.version = defaultConfig.version
+
+function saveDiff(target) {
+  /** 递归判断Diff */
+  function deepDiff(obj, base) {
+    function changes(object, base) {
+      return lodash.transform(object, function (result, value, key) {
+        if (!lodash.isEqual(value, base[key])) {
+          result[key] = (lodash.isObject(value) && lodash.isObject(base[key]))
+            ? changes(value, base[key])
+            : value;
+        }
+      });
+    }
+    return changes(obj, base);
   }
-} else if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/index.js`)) {
-  // 兼容旧版本
-  const fullPath = fs.realpathSync(`${_path}/plugins/chatgpt-plugin/config/index.js`)
-  config = (await import(`file://${fullPath}`)).Config
+
   try {
-    logger.warn('[ChatGPT-Plugin]发现旧版本config.js文件，正在读取其内容并转换为新版本config.json文件')
-    // 读取其内容，生成config.json
-    fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(config, null, 2))
-    // index.js
-    fs.unlinkSync(`${_path}/plugins/chatgpt-plugin/config/index.js`)
-    logger.info('[ChatGPT-Plugin]配置文件转换处理完成')
+    const nestedChange = deepDiff(target, defaultConfig);
+    fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(nestedChange, null, 2), { flag: 'w' })
+    return true
   } catch (err) {
-    logger.error('[ChatGPT-Plugin]转换旧版配置文件失败，建议手动清理旧版index.js文件，并转为使用新版config.json格式', err)
+    logger.error(err)
+    return false
   }
 }
-config = Object.assign({}, defaultConfig, config)
-config.version = defaultConfig.version
-// const latestTag = execSync(`cd ${_path}/plugins/chatgpt-plugin && git describe --tags --abbrev=0`).toString().trim()
-// config.version = latestTag
+
+/**
+ * @description: 随机英文逗号分割的字符串的一个元素
+ * @param {*} str 英文逗号分割的字符串
+ * @param {*} funcName
+ * @return {*}
+ */
+function randomKeyStr(str, funcName) {
+  if (str?.length === 0) return '';
+  const keyArr = str?.trim().split(/[,，]/)
+  const randomIndex = Math.floor(Math.random() * keyArr.length)
+  logger.info(`[chatgpt][${funcName}]随机使用第${randomIndex + 1}个 Key: ${keyArr[randomIndex].replace(/(.{7}).*(.{10})/, '$1****$2')}`)
+  return keyArr[randomIndex];
+}
 
 export const Config = new Proxy(config, {
-  get (target, property) {
-    if (property === 'getGeminiKey') {
+  get(target, property) {
+    if (property === 'save') { // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
       return function () {
-        if (target.geminiKey?.length === 0) {
-          return ''
-        }
-        const geminiKeyArr = target.geminiKey?.trim().split(/[,，]/)
-        const randomIndex = Math.floor(Math.random() * geminiKeyArr.length)
-        logger.info(`[chatgpt]随机使用第${randomIndex + 1}个gemini Key: ${geminiKeyArr[randomIndex].replace(/(.{7}).*(.{10})/, '$1****$2')}`)
-        return geminiKeyArr[randomIndex]
+        return saveDiff(target);
       }
+    }
+    else if (property === 'getConfig') {
+      return function () {
+        return config;
+      }
+    }
+    else if (property === 'getGeminiKey')
+      return randomKeyStr(target.geminiKey, property);
+    else if (property === 'getTavilyKey')
+      return randomKeyStr(target.tavilyKey, property);
+    else if (property === 'get_draw_PluginCharactersList') {
+      return function () {
+        const defaultJson = { "nahida": "nahida (genshin impact), toddler", "klee": "klee (genshin impact), toddler", "paimon": "paimon (genshin impact), toddler", "bailu": "bailu (honkai: star rail), toddler", "clara": "clara (honkai: star rail), toddler", "last(_|\\s)order|misaka": "last order(Toaru Majutsu no Index), toddler", "sayu": "sayu (genshin impact), toddler", "diona": "diona (genshin impact), toddler", "yaoyao": "yaoyao (genshin impact), toddler", "qiqi": "qiqi (genshin impact), toddler", "furina": "furina (genshin impact), toddler", "Mahiro": "Oyama Mahiro(Onichanhaoshimai), toddler", "arona": "arona (blue archive), toddler", "sora": "sora (blue archive), toddler", "kokona": "kokona (blue archive), toddler", "hoshino": "hoshino (blue archive), toddler", "Koharu": "Shimoe Koharu (Blue archive), toddler", "Gura": "Gawr Gura (Hololive), toddler", "suzuran": "suzuran (arknights), toddler", "Anya": "Anya Forger(SPY×FAMILY), light pink hair, toddler", "AzusaNya": "nakano Azusa(K-ON), toddler", "Azusa": "azusa (blue archive), toddler", "laffey": "laffey (azur lane), toddler", "nachoneko": "nachoneko (indie virtual youtuber), toddler", "ibuki": "tanga ibuki (blue archive), blond hair, toddler", "shun": "shun (small) (blue archive), toddler", "hu(_|\\s)tao": "hu tao (genshin impact), toddler", "Platelet": "girl Platelet (Hataraku Saibou), toddler", "chino": "kafuu chino (gochuumon wa usagi desu ka?), toddler", "shuvi": "shuvi (no game no life), purple hair, long hair, hair_ornament, toddler", "plana": "plana (blue archive), toddler", "kinako": "kinako (40hara), cat girl, cat ear, toddler", "kanna(_|\\s)kamui": "kanna kamui (maidragon), toddler" }
+        let userJson = {};
+        if (target.draw_PluginCharactersList && target.draw_PluginCharactersList.trim()) {
+          try {
+            userJson = JSON.parse(target.draw_PluginCharactersList);
+          } catch (e) {
+            logger.error(`[chatgpt]解析“绘画添加作品名”失败，请重新配置: ${e.message}`);
+          }
+        }
+        return { ...defaultJson, ...userJson };
+      }
+    }
+    else if (property === 'get_geminiModels') {
+      return function () {
+        const defaultArr = ['gemini-2.0-flash', 'gemini-exp-1206', 'gemini-2.0-flash-thinking-exp-01-21', 'gemini-2.5-flash', 'gemini-2.5-pro']
+        try {
+          const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
+          return lodash.uniq([...defaultArr, ...fetchModels]);
+        } catch (e) {
+          logger.warn(`[chatgpt]Failed to get Gemini models: ${e.message}`);
+          return defaultArr;
+        }
+      }
+    }
+    else if (property === 'paimon_chou_Fighting_Back') {
+      return (1 - target.paimon_chou_reply_text - target.paimon_chou_reply_img - target.paimon_chou_reply_voice - target.paimon_chou_mutepick - target.paimon_chou_paimonChuoMeme - target.paimon_chou_randowLocalPic - target.paimon_chou_dailyEnglish).toFixed(3)
     }
 
     return target[property]
   },
-  set (target, property, value) {
+  set(target, property, value) {
     target[property] = value
-    const change = lodash.transform(target, function (result, value, key) {
-      if (!lodash.isEqual(value, defaultConfig[key])) {
-        result[key] = value
-      }
-    })
-    try {
-      fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(change, null, 2), { flag: 'w' })
-    } catch (err) {
-      logger.error(err)
-      return false
-    }
-    return true
+    return saveDiff(target);
   }
 })

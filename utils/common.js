@@ -708,42 +708,102 @@ export async function getUserReplySetting (e) {
   return userSetting
 }
 
-export async function getImg (e) {
-  // 取消息中的图片、at的头像、回复的图片，放入e.img
-  if (e.at && !e.source) {
-    e.img = [`https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.at}`]
-  }
-  if (e.source) {
-    let reply
-    let seq = e.isGroup ? e.source.seq : e.source.time
-    // if (e.adapter === 'shamrock') {
-    //   seq = e.source.message_id
+/**
+ * @description: （呆毛版）处理消息中的图片：当消息引用了图片，则将对应图片放入e.img ，优先级==> e.source.img > e.img > At头像（开启时）；
+ * @param {*} e
+ * @param {*} alsoGetAtAvatar 开启使用At用户头像作为图片，默认 true
+ * @param {*} useOrigin 是否使用原图，默认 false
+ * @return {*} e.img e.sourceMsg 和 e.theImgIsGetFromSource ，当图片是从引用中获取的则 e.theImgIsGetFromSource 为 true
+ */
+export async function getImg(e, alsoGetAtAvatar = true) {
+  if (Boolean(e.img?.length))
+    e.theImgIsGetFromSource = true;
+  let reply;
+  if (alsoGetAtAvatar && e.at && !e.source && !e.reply_id && !e.img) {
+    // if (e.atBot) { // 不获取Bot的头像，无意义
+    //   e.img = [];
+    //   e.img[0] = e.bot.avatar || `https://q1.qlogo.cn/g?b=qq&s=0&nk=${getUin(e)}`;
     // }
-    if (e.isGroup) {
-      reply = (await e.group.getChatHistory(seq, 1)).pop()?.message
-    } else {
-      reply = (await e.friend.getChatHistory(seq, 1)).pop()?.message
+    if (e.at) {
+      try {
+        e.img = [await e.group.pickMember(e.at).getAvatarUrl()];
+      } catch (error) {
+        e.img = [`https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.at}`];
+      }
     }
-    if (reply) {
-      let i = []
-      for (let val of reply) {
-        if (val.type === 'image') {
-          i.push(val.url)
+  }
+  // ICQQ原生
+  if (e.source) {
+    if (e.isGroup) {
+      reply = (await e.group.getChatHistory(e.source.seq, 1)).pop()?.message;
+    } else {
+      reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
+    }
+  }
+  // 添加OneBotv11适配器
+  else if (e.reply_id) {
+    reply = (await e.getReply(e.reply_id)).message;
+  }
+
+  if (reply) {
+    let i = []
+    let text = [] // 用于存储文本消息
+    let senderNickname = '' // 存储发送者昵称
+
+    // 获取发送者昵称
+    if (e.source) {
+      if (e.isGroup) {
+        try {
+          const sender = await e.group.pickMember(e.source.user_id)
+          senderNickname = sender.card || sender.nickname
+        } catch (error) {
+          logger.error('[派蒙chatgpt插件]获取群成员信息失败:', error)
+        }
+      } else {
+        try {
+          const friend = e.bot.fl.get(e.source.user_id)
+          senderNickname = friend?.nickname
+        } catch (error) {
+          logger.error('[派蒙chatgpt插件]获取好友信息失败:', error)
         }
       }
-      e.img = i
-    }
-  }
-  if (e.reply_id) {
-    let reply = (await e.getReply(e.reply_id)).message;
-    for (const val of reply) {
-      if (val.type === "image") {
-        e.img = [val.url];
-        break;
+    } else if (e.reply_id) {
+      try {
+        const reply = await e.getReply(e.reply_id)
+        senderNickname = reply.sender?.card || reply.sender?.nickname
+      } catch (error) {
+        logger.error('[派蒙chatgpt插件]获取回复消息发送者信息失败:', error)
       }
     }
+
+    for (const val of reply) {
+      if (val.type == 'image') {
+        i.push(val.url)
+      }
+      if (val.type == 'text') {
+        text.push(val.text) // 收集文本消息
+      }
+      if (val.type == "file") {
+        e.reply("不支持消息中的文件，请将该文件以图片发送...", true);
+        return e.img;
+      }
+    }
+    if (Boolean(i.length)) {
+      e.img = i;
+      e.theImgIsGetFromSource = true;
+    }
+    if (text.length > 0) {
+      // 如果有发送者昵称,添加到引用文本前,使用markdown引用格式
+      const lines = text.join('\n').split('\n');
+      const quotedLines = lines.map(line => `> ${line}`).join('\n');
+      e.sourceMsg = senderNickname ? 
+        `> ##### ${senderNickname}：\n> ---\n${quotedLines}` : 
+        quotedLines;
+    }
+    // 收集引用消息的 message_id
+    e.source_message_id = e.reply_id || e.source.seq || e.source.time;
   }
-  return e.img
+  return e.img;
 }
 
 export async function getImageOcrText (e) {
@@ -830,21 +890,6 @@ export function getUin (e) {
       return Bot.uin[Bot.uin.length - 1]
     }
   } else return Bot.uin
-}
-
-export async function getGroupList (e) {
-  let groupList
-  try {
-    groupList = await e.bot.getGroupList()
-  } catch (err) {
-    groupList = e.bot.gl
-  }
-  //onebot getGroupList方法返回的array，需要转换为map 等同于e.bot.gl
-  if (Array.isArray(groupList)) {
-    return e.bot.gl
-  } else {
-    return groupList
-  }
 }
 
 /**

@@ -100,6 +100,11 @@ let helpData = [
         icon: 'sound',
         title: '#chatgpt语音模式',
         desc: '机器人以语音形式回答'
+      },      
+      {
+        icon: 'chat',
+        title: '#tts语音帮助',
+        desc: '提供更改tts发音设定的功能'
       },
       {
         icon: 'game',
@@ -143,8 +148,8 @@ let helpData = [
       },
       {
         icon: 'switch',
-        title: '#chatgpt切换浏览器/API/API3/Bing/ChatGLM/Claude/Poe',
-        desc: '切换使用的后端为浏览器或OpenAI API/反代官网API/Bing/自建ChatGLM/Slack Claude/Poe'
+        title: '#chatgpt切换浏览器/API/API3/Bing/ChatGLM/Claude/Gemini',
+        desc: '切换使用的后端为浏览器或OpenAI API/反代官网API/Bing/自建ChatGLM/Slack Claude/Gemini'
       },
       {
         icon: 'confirm',

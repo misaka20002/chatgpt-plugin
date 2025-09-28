@@ -3,6 +3,8 @@ import { GoogleGeminiClient } from './GoogleGeminiClient.js'
 import { newFetch } from '../utils/proxy.js'
 import _ from 'lodash'
 
+import { Config } from '../utils/config.js'
+
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
 export const HarmCategory = {
@@ -283,13 +285,30 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       return this.sendMessage(text, opt, retryTime--)
     }
     // todo 空回复也可以重试
-    if (responseContent.parts.filter(i => i.functionCall).length > 0) {
+    if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       // functionCall
       const functionCall = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall)
       const text = responseContent.parts.find(i => i.text)?.text
       if (text && text.trim()) {
         // send reply first
-        logger.info('send message: ' + text.trim())
+        logger.info('[chatgpt][functionCall附加的对话text]' + text.trim())
+
+        if (Config.sf_markdownPic) {
+          // sf图片模式
+          try {
+            if (text.trim()) {
+              const userMsg = this.e.img ? this.e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + this.e.msg_bak_2 : this.e.msg_bak_2;
+              const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
+              const img = await markdown_screenshot(this.e.user_id, this.e.self_id, userMsg, text.trim());
+              this.e.reply({ ...img, origin: true }, true)
+            }
+          } catch (err) {
+            logger.error('[chatgpt][functionCall附加的对话text]sf图片模式错误\n' + err)
+            opt.replyPureTextCallback && await opt.replyPureTextCallback(text.trim())
+          }
+        }
+        else
+
         opt.replyPureTextCallback && await opt.replyPureTextCallback(text.trim())
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []

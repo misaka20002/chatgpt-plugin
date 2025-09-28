@@ -278,69 +278,100 @@ export class ConversationManager {
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE:*') // 呆毛未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'api3': {
         let qcs = await redis.keys('CHATGPT:QQ_CONVERSATION:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete conversation bind: ' + qcs[i])
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:QQ_MESSAGE:*') // 呆毛未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'chatglm': {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_CHATGLM:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete chatglm conversation bind: ' + qcs[i])
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM:*') // 呆毛未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'qwen': {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_QWEN:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete qwen conversation bind: ' + qcs[i])
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_QWEN:*') // 呆毛未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'gemini': {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_GEMINI:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete gemini conversation bind: ' + qcs[i])
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_Gemini:*')
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
       case 'chatglm4': {
         let qcs = await redis.keys('CHATGPT:CONVERSATIONS_CHATGLM4:*')
         for (let i = 0; i < qcs.length; i++) {
           await redis.del(qcs[i])
-          // todo clean last message id
           if (Config.debug) {
             logger.info('delete chatglm4 conversation bind: ' + qcs[i])
           }
           deleted++
         }
+
+        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM4:*') // 呆毛未验证
+        for (let i = 0; i < ms.length; i++) {
+          await redis.del(ms[i])
+        }
+
         break
       }
     }
-    await this.reply(`结束了${deleted}个用户的对话。`, true)
+    await this.reply(`结束了${deleted}个用户的对话。`, false)
   }
 }

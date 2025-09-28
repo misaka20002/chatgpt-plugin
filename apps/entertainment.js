@@ -4,7 +4,7 @@ import { generateHello } from '../utils/randomMessage.js'
 import { generateVitsAudio } from '../utils/tts.js'
 import fs from 'fs'
 import { emojiRegex, googleRequestUrl } from '../utils/emoj/index.js'
-import { getImageOcrText, getImg, makeForwardMsg, mkdirs, renderUrl } from '../utils/common.js'
+import { getImageOcrText, getImg, makeForwardMsg, mkdirs, renderUrl, generateAudio } from '../utils/common.js'
 import uploadRecord from '../utils/uploadRecord.js'
 import { makeWordcloud } from '../utils/wordcloud/wordcloud.js'
 import { translate, translateLangSupports } from '../utils/translate.js'
@@ -68,7 +68,7 @@ export class Entertainment extends plugin {
           fnc: 'ocr'
         },
         {
-          reg: '^(#url(：|:)|https?://)\\S+$',
+          reg: '^#url(：|:)',
           fnc: 'screenshotUrl'
         },
         {
@@ -143,7 +143,7 @@ ${translateLangLabels}
     // 引用回复
     if (e.source) {
       if (pendingText.length) {
-        await this.reply('引用模式下不需要添加翻译文本，已自动忽略输入文本...((*・∀・）ゞ→→"', e.isGroup)
+        await this.reply('引用模式下不需要添加翻译文本，已自动忽略输入文本...((*・∀・）ゞ→→”', e.isGroup)
       }
     } else {
       if (isImg && pendingText) {
@@ -276,7 +276,8 @@ ${translateLangLabels}
 
       await redis.set(`CHATGPT:WORDCLOUD:${groupId}`, '1', { EX: 600 })
       try {
-        await makeWordcloud(e, e.group_id, duration)
+        let img = await makeWordcloud(e, e.group_id, duration);
+        this.reply(img, true)
       } catch (err) {
         logger.error(err)
         await this.reply(err)
@@ -326,7 +327,8 @@ ${translateLangLabels}
       }
       await redis.set(`CHATGPT:WORDCLOUD_NEW:${groupId}_${userId}`, '1', { EX: 600 })
       try {
-        await makeWordcloud(e, e.group_id, duration, userId)
+        let img = await makeWordcloud(e, e.group_id, duration, userId);
+        this.reply(img, true)
       } catch (err) {
         logger.error(err)
         await this.reply(err)
@@ -337,7 +339,9 @@ ${translateLangLabels}
     }
   }
 
-  async combineEmoj (e) {
+  async combineEmoj(e) {
+    if (!Config.emojiBaseSwitch)
+      return false;
     let left = e.msg.codePointAt(0).toString(16).toLowerCase()
     let right = e.msg.codePointAt(2).toString(16).toLowerCase()
     if (left === right) {
@@ -347,7 +351,7 @@ ${translateLangLabels}
     logger.info('combine ' + e.msg)
     let resultFileLoc = `data/chatgpt/emoji/${left}_${right}.jpg`
     if (fs.existsSync(resultFileLoc)) {
-      let image = segment.image(resultFileLoc)
+      let image = segment.image(process.cwd() + "/" + resultFileLoc)
       image.asface = true
       await this.reply(image, true)
       return true
@@ -405,14 +409,15 @@ ${translateLangLabels}
     let sendable = message
     logger.info(`打招呼给群聊${groupId}：` + message)
     if (Config.defaultUseTTS) {
-      let audio = await generateVitsAudio(message, Config.defaultTTSRole)
-      sendable = segment.record(audio)
+        //let audio = await generateVitsAudio(message, Config.defaultTTSRole)
+        //sendable = segment.record(audio)
+        sendable = await generateAudio(e, message)
     }
     if (!groupId) {
       await this.reply(sendable)
     } else {
       await e.bot.sendGroupMsg(groupId, sendable)
-      await this.reply('发送成功！')
+      // await this.reply('发送成功！')
     }
   }
 
@@ -571,20 +576,16 @@ ${translateLangLabels}
         }
       }
     } else {
-      replyMsg = '无效的打招呼设置，请输入正确的命令。\n可发送"#chatgpt打招呼帮助"获取打招呼指北。'
+      replyMsg = '无效的打招呼设置，请输入正确的命令。\n可发送”#chatgpt打招呼帮助“获取打招呼指北。'
     }
     await this.reply(replyMsg)
     return false
   }
 
-  async screenshotUrl (e) {
-    let url = e.msg
-    if (url.startsWith('#url')) {
-      url = e.msg.replace(/^#url(：|:)/, '')
-    }
-    
+  async screenshotUrl(e) {
+    if (!e.isMaster) return false;
+    let url = e.msg.replace(/^#url(：|:)/, '')
     if (url.length === 0) { return false }
-    
     try {
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'http://' + url
@@ -604,17 +605,17 @@ ${translateLangLabels}
         ),
         e.isGroup && Config.quoteReply)
     } catch (err) {
-      // 如果是直接发送的链接，捕获到错误时不需要回复
-      if (url.startsWith('#url')) {
-        this.reply('无效url:' + url)
-      }
-      return false
+      this.reply('无效url:' + url)
     }
     return true
   }
 
   async vqa (e) {
-    if (!Config.geminiKey) {
+
+    // 只有主人才可以用识图功能
+    if (Config.gemini_vqa_needMaster && !e.isMaster) return false
+
+    if (!Config.geminiKey.length) {
       e.reply('需要配置Gemini密钥以使用识图')
       return
     }
@@ -626,14 +627,14 @@ ${translateLangLabels}
     let client = new CustomGoogleGeminiClient({
       e,
       userId: e.sender.user_id,
-      key: Config.getGeminiKey(),
-      model: 'gemini-1.5-flash-latest',
+      key: Config.getGeminiKey,
+      model: Config.gemini_vqa_model,
       baseUrl: Config.geminiBaseUrl,
       debug: Config.debug
     })
     const response = await fetch(img[0])
     const base64Image = Buffer.from(await response.arrayBuffer())
-    let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') + '.describe this image in Simplified Chinese'
+    let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') || 'describe this image in Simplified Chinese'
     try {
       let res = await client.sendMessage(msg, {
         image: base64Image.toString('base64')

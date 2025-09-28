@@ -9,7 +9,7 @@ class Tokenizer {
     }
     let group = e.bot.pickGroup(groupId, true)
     let latestChat = await group.getChatHistory(undefined, 1)
-    let seq = latestChat[0].seq
+    let seq = latestChat[0].seq || latestChat[0].message_id
     let chats = latestChat
     function compareByTime (a, b) {
       const timeA = a.time
@@ -43,16 +43,23 @@ class Tokenizer {
     const endOfSpecifiedDate = currentTime
     while (isTimestampInDateRange(chats[0]?.time, startOfSpecifiedDate, endOfSpecifiedDate) &&
     isTimestampInDateRange(chats[chats.length - 1]?.time, startOfSpecifiedDate, endOfSpecifiedDate)) {
-      let chatHistory = await group.getChatHistory(seq, 20)
+      let chatHistory
+      try {
+        chatHistory = await group.getChatHistory(seq, 20)
+      }
+      catch (err) {
+        break
+      }
+
       if (chatHistory.length === 1) {
-        if (chats[0].seq === chatHistory[0].seq) {
+        if ((chats[0].seq || chats[0].message_id) === (chatHistory[0].seq || chatHistory[0].message_id)) {
           // 昨天没有聊天记录 比如新建的群 新进群的机器人 会卡在某一条
           break
         }
       }
       chats.push(...chatHistory)
       chats.sort(compareByTime)
-      seq = chatHistory?.[0]?.seq
+      seq = chatHistory?.[0]?.seq || chatHistory?.[0]?.message_id
       if (!seq) {
         break
       }
