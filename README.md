@@ -333,11 +333,20 @@ https://afdian.net/a/ikechan8370
 [![Star History Chart](https://api.star-history.com/svg?repos=ikechan8370/chatgpt-plugin&type=Date)](https://star-history.com/#ikechan8370/chatgpt-plugin&Date)
 
 ## 工具支持
+### Jetbrains
 <a href="https://jb.gg/OpenSourceSupport" >
    <img style="width: 300px" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png"/>
 </a>
 
 JetBrains for Open Source development license
+
+### EdgeOne
+CDN acceleration and security protection for this project are sponsored by Tencent EdgeOne.
+
+[Best Asian CDN, Edge, and Secure Solutions - Tencent EdgeOne](https://edgeone.ai/?from=github)
+
+![EdgeOne](https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png)
+
 
 
 
