@@ -1744,7 +1744,7 @@ export function supportGuoba() {
         {
           field: 'enableBYM',
           label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（伪人仅读取群聊上下文，无对话上下文）',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
           component: 'Switch'
         },
         {
