@@ -17,9 +17,8 @@ import {
     getUserReplySetting,
 } from '../utils/common.js'
 import fs from 'fs'
-import path from 'path'
 import sharp from 'sharp'
-import { getAvailablePictures } from './autoEmoticons.js'
+import { autoEmoticons } from './autoEmoticons.js'
 
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -426,10 +425,9 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
-                // 传入群号以获取该群的专属表情和共享图片
-                let pic_path = await sendRandomPictureInFolder(e.group_id)
-                if (pic_path) {
-                    await e.reply(await segment.image(pic_path))
+                const autoEmoticons_1 = new autoEmoticons();
+                if (await autoEmoticons_1.sendimg_Active(e)) {
+                    return true;
                 } else {
                     this.send_randow_text_msg(e)
                     return
@@ -770,38 +768,6 @@ async function get_msg_SickMsg() {
     }
     catch (err) {
         logger.error(err)
-        return null
-    }
-}
-
-/**
- * @description: 从群专属表情和共享图片中随机返回一张图片
- * @param {string} groupId 群号
- * @return {string|null} 返回图片路径，若无则返回null
- */
-async function sendRandomPictureInFolder(groupId) {
-    try {
-        // 使用 getAvailablePictures 获取所有可用图片（群专属 + 共享）
-        const availablePictures = getAvailablePictures(groupId)
-
-        if (availablePictures.length === 0) {
-            return null
-        }
-
-        // 随机选择一张图片
-        for (let i = 0; i < 20; i++) {
-            const randomIndex = Math.floor(Math.random() * availablePictures.length)
-            const picPath = availablePictures[randomIndex]
-
-            // 检查文件是否存在且为图片格式
-            if (fs.existsSync(picPath) && picPath.match(/\.(gif|jpg|jpeg|png|webp|bmp)$/i)) {
-                return picPath
-            }
-        }
-
-        return null
-    } catch (err) {
-        logger.error(`[派蒙戳一戳] 获取随机图片失败: ${err}`)
         return null
     }
 }
