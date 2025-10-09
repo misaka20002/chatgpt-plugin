@@ -143,7 +143,7 @@ const defaultConfig = {
   recognitionByGemini: false,
   tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
-  meme_baseUrl: "https://memes.ikechan8370.com",
+  meme_baseUrl: "https://misaka20001-memegenerator.hf.space",
   meme_reply: true,
   meme_forceSharp: true,
   meme_masterProtectDo: true,
