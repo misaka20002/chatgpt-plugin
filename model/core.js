@@ -54,11 +54,12 @@ import { QwenApi } from '../utils/alibaba/qwen-api.js'
 import { BingAIClient } from '../client/CopilotAIClient.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
-import {GithubAPITool} from '../utils/tools/GithubTool.js'
+import { GithubAPITool } from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
 import { TavilyTool } from '../utils/tools/TavilyTool.js'
 import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
+import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -71,7 +72,7 @@ const paintPropmtPrefix = 'It is important that If I ask you to create a picture
 // const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
 
 
-async function handleSystem (e, system, settings) {
+async function handleSystem(e, system, settings) {
   if (settings.enableGroupContext) {
     try {
       let opt = {}
@@ -123,7 +124,7 @@ async function handleSystem (e, system, settings) {
 }
 
 class Core {
-  async sendMessage (prompt, conversation = {}, use, e, opt = {
+  async sendMessage(prompt, conversation = {}, use, e, opt = {
     enableSmart: Config.smartMode,
     system: {
       api: Config.promptPrefixOverride,
@@ -426,11 +427,11 @@ class Core {
       }
       const currentDate = new Date().toISOString().split('T')[0]
 
-      async function um (message) {
+      async function um(message) {
         return await upsertMessage(message, 'QWEN')
       }
 
-      async function gm (id) {
+      async function gm(id) {
         return await getMessageById(id, 'QWEN')
       }
 
@@ -497,9 +498,9 @@ class Core {
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
             }
-            
+
             let name, args;
-            
+
             if (msg.functionCall) {
               // 处理旧的 functionCall 格式
               name = msg.functionCall.name;
@@ -513,7 +514,7 @@ class Core {
               // 如果没有工具调用，跳出循环
               break;
             }
-            
+
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -534,7 +535,7 @@ class Core {
             await common.sleep(300)
             msg = await this.qwenApi.sendMessage(functionResult, option, 'tool')
             logger.info(msg)
-            
+
             // 如果是函数返回结果，则跳出循环
             if (msg.conversation && msg.conversation.length > 0) {
               const lastMessage = msg.conversation[msg.conversation.length - 1]
@@ -585,13 +586,13 @@ class Core {
       }
 
       if (!Config.recognitionByGemini) {
-      const image = await getImg(e)
-      let imageUrl = image ? image[0] : undefined
-      if (imageUrl) {
-        const response = await fetch(imageUrl)
-        const base64Image = Buffer.from(await response.arrayBuffer())
-        option.image = base64Image.toString('base64')
-      }
+        const image = await getImg(e)
+        let imageUrl = image ? image[0] : undefined
+        if (imageUrl) {
+          const response = await fetch(imageUrl)
+          const base64Image = Buffer.from(await response.arrayBuffer())
+          option.image = base64Image.toString('base64')
+        }
       }
 
       if (opt.enableSmart) {
@@ -744,15 +745,15 @@ class Core {
         try {
           msg = await this.chatGPTApi.sendMessage(prompt, option)
           logger.info(msg)
-          
+
           // 检查是否有工具调用
           while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
             if (msg.text) {
               await this.reply(msg.text.replace('\n\n\n', '\n'))
             }
-            
+
             let name, args;
-            
+
             if (msg.functionCall) {
               // 处理旧的 functionCall 格式
               name = msg.functionCall.name;
@@ -766,7 +767,7 @@ class Core {
               // 如果没有工具调用，跳出循环
               break;
             }
-            
+
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -787,7 +788,7 @@ class Core {
             await common.sleep(300)
             msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
             logger.info(msg)
-            
+
             // 如果是函数返回结果，则跳出循环
             if (msg.conversation && msg.conversation.length > 0) {
               const lastMessage = msg.conversation[msg.conversation.length - 1]
@@ -839,7 +840,7 @@ class Core {
  * @param e
  * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string, fullFuncMap: {}}>}
  */
-async function collectTools (e) {
+async function collectTools(e) {
   let serpTool, WebTool
   switch (Config.serpSource) {
     case 'tavily_search': {
@@ -859,7 +860,7 @@ async function collectTools (e) {
       //   logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
       //   serpTool = new SerpIkechan8370Tool()
       // } else {
-        serpTool = new SerpTool()
+      serpTool = new SerpTool()
       // }
       break
     }
@@ -939,6 +940,11 @@ async function collectTools (e) {
     fullTools = fullTools.filter(tool => tool !== serpTool);
   }
 
+  if (Config.add_sf_image_edit) {
+    tools.push(...[new Sf_image_edit()])
+    fullTools.push(...[new Sf_image_edit()])
+  }
+
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
@@ -963,7 +969,7 @@ async function collectTools (e) {
   } else {
     tools.push(new SerpImageTool())
     tools.push(...[new SearchVideoTool(),
-      new SendVideoTool()])
+    new SendVideoTool()])
   }
   let funcMap = {}
   let fullFuncMap = {}

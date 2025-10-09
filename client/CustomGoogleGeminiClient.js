@@ -246,9 +246,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (opt.codeExecution) {
       body.tools.push({ code_execution: {} })
     }
-    if (opt.image) {
-      delete body.tools
-    }
+    // if (opt.image) {
+    //   delete body.tools
+    //   delete body.tool_config
+    // }
     body.contents.forEach(content => {
       delete content.id
       delete content.parentMessageId

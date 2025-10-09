@@ -704,7 +704,7 @@ export function supportGuoba() {
         {
           field: 'recognitionByGemini',
           label: '对话中图片识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（对话时不必使用gemini模式）；1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（用于无识图能力的接口）（如果使用gemini也可以开启这个功能以获取更精确的识图结果）；1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
           component: 'Switch'
         },
         {
@@ -1252,6 +1252,12 @@ export function supportGuoba() {
           field: 'sf_markdownPic',
           label: 'sf图片模式',
           bottomHelpMessage: '调用sf插件的图片回复功能，需要先安装siliconflow插件；与分多次回复冲突；与chatgpt插件图片模式冲突',
+          component: 'Switch'
+        },
+        {
+          field: 'add_sf_image_edit',
+          label: '工具-Gemini Image',
+          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口 #g谷歌编辑图片 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md',
           component: 'Switch'
         },
         {
