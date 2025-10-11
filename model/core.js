@@ -60,6 +60,7 @@ import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtrac
 import { TavilyTool } from '../utils/tools/TavilyTool.js'
 import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
+import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -843,6 +844,10 @@ class Core {
 async function collectTools(e) {
   let serpTool, WebTool
   switch (Config.serpSource) {
+    case 'geminiSearchTool': {
+      serpTool = new GeminiSearchTool()
+      break
+    }
     case 'tavily_search': {
       serpTool = new TavilyTool()
       break

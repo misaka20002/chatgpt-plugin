@@ -234,10 +234,11 @@ export function supportGuoba() {
           field: 'serpSource',
           label: '搜索来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
+          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
           componentProps: {
             options: [
               { label: '呆毛版纯本地搜索工具', value: 'misaka_WebSearchTool' },
+              { label: 'Gemini原生搜索', value: 'geminiSearchTool' },
               { label: 'tavily search', value: 'tavily_search' },
               { label: 'Azure（收费的）', value: 'azure' },
               { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
