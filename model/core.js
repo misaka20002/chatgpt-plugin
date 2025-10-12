@@ -61,6 +61,7 @@ import { TavilyTool } from '../utils/tools/TavilyTool.js'
 import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
+import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -892,7 +893,8 @@ async function collectTools(e) {
     // new ImageCaptionTool(),
     new SearchVideoTool(),
     new SendAvatarTool(),
-    new SerpImageTool(),
+    // new SerpImageTool(), // 该工具使用的 url 不再提供服务
+    new SerpImageTool_by_baidu(),
     new SearchMusicTool(),
     new SendMusicTool(),
     // new SerpIkechan8370Tool(),
@@ -972,7 +974,8 @@ async function collectTools(e) {
     // tools.push(new ProcessPictureTool())
     promptAddition += `\nthe url of the picture(s) above: ${img.join(', ')}`
   } else {
-    tools.push(new SerpImageTool())
+    // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
+    tools.push(new SerpImageTool_by_baidu())
     tools.push(...[new SearchVideoTool(),
     new SendVideoTool()])
   }
