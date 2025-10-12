@@ -234,10 +234,11 @@ export function supportGuoba() {
           field: 'serpSource',
           label: '搜索来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
+          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
           componentProps: {
             options: [
               { label: '呆毛版纯本地搜索工具', value: 'misaka_WebSearchTool' },
+              { label: 'Gemini原生搜索', value: 'geminiSearchTool' },
               { label: 'tavily search', value: 'tavily_search' },
               { label: 'Azure（收费的）', value: 'azure' },
               { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
@@ -704,7 +705,7 @@ export function supportGuoba() {
         {
           field: 'recognitionByGemini',
           label: '对话中图片识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（对话时不必使用gemini模式）；1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（用于无识图能力的接口）（如果使用gemini也可以开启这个功能以获取更精确的识图结果）；1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
           component: 'Switch'
         },
         {
@@ -1255,6 +1256,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'add_sf_image_edit',
+          label: '工具-Gemini Image',
+          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口 #g谷歌编辑图片 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md',
+          component: 'Switch'
+        },
+        {
           field: 'disable_sendMessage_tool',
           label: '禁用文字工具',
           bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于sf图片模式、伪人重复发送相同文本等问题',
@@ -1491,10 +1498,10 @@ export function supportGuoba() {
         {
           field: 'meme_baseUrl',
           label: 'MEME api',
-          bottomHelpMessage: '默认值：https://memes.ikechan8370.com，也可以duplicate大大的space：https://huggingface.co/spaces/ikechan8370/meme-generator 然后api填https://[username]-meme-generator.hf.space；或自行搭建meme服务器：https://github.com/misaka20002/meme-generator/blob/main/README.md；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
+          bottomHelpMessage: '默认值：https://misaka20001-memegenerator.hf.space，也可以duplicate这个space然后填写自己的；或自行搭建meme服务器：https://github.com/misaka20002/meme-generator/blob/main/README.md；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
           component: 'Input',
           componentProps: {
-            placeholder: 'https://memes.ikechan8370.com',
+            placeholder: 'https://misaka20001-memegenerator.hf.space',
           },
         },
         {
@@ -1744,7 +1751,7 @@ export function supportGuoba() {
         {
           field: 'enableBYM',
           label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（伪人仅读取群聊上下文，无对话上下文）',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
           component: 'Switch'
         },
         {

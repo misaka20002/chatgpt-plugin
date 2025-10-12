@@ -21,8 +21,21 @@ export class SendRPSTool extends AbstractTool {
     const target = isNaN(targetGroupIdOrQQNumber) || !targetGroupIdOrQQNumber
       ? defaultTarget
       : parseInt(targetGroupIdOrQQNumber) === e.bot.uin ? defaultTarget : parseInt(targetGroupIdOrQQNumber)
-    let groupList = await getGroupList(e)
-    if (groupList.get(target)) {
+    let groupList
+    try {
+      groupList = await e.bot.getGroupList()
+    } catch (err) {
+      groupList = e.bot.gl
+    }
+
+    // 判断groupList是Map还是Array
+    const isGroupExist = groupList instanceof Map
+      ? groupList.has(target)
+      : Array.isArray(groupList)
+        ? groupList.includes(target)
+        : groupList && groupList[target]
+
+    if (isGroupExist) {
       let group = await e.bot.pickGroup(target, true)
       await group.sendMsg(segment.rps(num))
     } else {

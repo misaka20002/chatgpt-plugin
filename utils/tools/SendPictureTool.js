@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
-import {getMasterQQ, getGroupList} from '../common.js'
-import {Config} from '../config.js'
+import { getMasterQQ, getGroupList } from '../common.js'
+import { Config } from '../config.js'
 
 export class SendPictureTool extends AbstractTool {
   name = 'sendPicture'
@@ -40,7 +40,14 @@ export class SendPictureTool extends AbstractTool {
     let groupList = await getGroupList(e)
     let errs = []
     try {
-      if (groupList.get(target)) {
+      // 判断groupList是Map还是Array
+      const isGroupExist = groupList instanceof Map
+        ? groupList.has(target)
+        : Array.isArray(groupList)
+          ? groupList.includes(target)
+          : groupList && groupList[target]
+
+      if (isGroupExist) {
         let group = await e.bot.pickGroup(target)
         for (let pic of pictures) {
           try {
@@ -70,7 +77,7 @@ export class SendPictureTool extends AbstractTool {
         return 'picture has been sent to user' + target + (errs.length > 0 ? `, but some pictures failed to send (${errs.join('、')})` : '')
       }
     } catch (err) {
-      return `failed to send pictures, error: ${JSON.stringify(err)}`
+      return `failed to send pictures, error: ${err.message || err.stack || String(err)}`
     }
   }
 

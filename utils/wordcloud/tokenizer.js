@@ -1,13 +1,26 @@
 import { Config } from '../config.js'
 import fs from 'fs'
 import nodejieba from '@node-rs/jieba'
+import { getChatHistory_w } from '../paimonFuction.js'
 
 class Tokenizer {
   async getHistory (e, groupId, date = new Date(), duration = 0, userId) {
     if (!groupId) {
       throw new Error('no valid group id')
     }
+
     let group = e.bot.pickGroup(groupId, true)
+    let sourceArr = await getChatHistory_w(group, 1000, e.source?.seq || e.reply_id, duration, date, userId);    
+    
+    logger.info(`[getChatHistory_w] 获取到${sourceArr.length}个群消息`);
+    if (userId) {
+      sourceArr = sourceArr.filter(chat => chat.sender.user_id === userId);
+      logger.info(`筛选出${sourceArr.length}个${userId}发送的群消息`);
+    }
+
+    return sourceArr
+
+    // let group = e.bot.pickGroup(groupId, true)
     let latestChat = await group.getChatHistory(undefined, 1)
     let seq = latestChat[0].seq || latestChat[0].message_id
     let chats = latestChat

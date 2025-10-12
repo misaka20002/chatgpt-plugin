@@ -17,7 +17,9 @@ export class APTool extends AbstractTool {
     required: []
   }
 
-  description = 'Useful when you want to draw picture'
+  description = Config.add_sf_image_edit ?
+    'Use this tool ONLY when you need to CREATE a NEW picture from scratch based on text description. DO NOT use this tool for modifying or editing existing images. For editing existing images, use sf_image_edit tool instead.' :
+    'Useful when you want to draw picture'
 
   func = async function (opts, e) {
     let { prompt } = opts

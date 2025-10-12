@@ -17,9 +17,8 @@ import {
     getUserReplySetting,
 } from '../utils/common.js'
 import fs from 'fs'
-import path from 'path'
 import sharp from 'sharp'
-import { getAvailablePictures } from './autoEmoticons.js'
+import { autoEmoticons } from './autoEmoticons.js'
 
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -206,7 +205,7 @@ export class PaimonChuo extends plugin {
                             case '白露_ZH':
                             case '派蒙_JP':
                             case 'Paimeng_hailuo':
-                                voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn, voice_list_paimon_jp);
+                                voice_lists = voice_list_bailu_cn.concat(voice_list_paimon_cn);
                                 break;
                             case '春原心菜':
                             case '春原心奈':
@@ -426,10 +425,9 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
-                // 传入群号以获取该群的专属表情和共享图片
-                let pic_path = await sendRandomPictureInFolder(e.group_id)
-                if (pic_path) {
-                    await e.reply(await segment.image(pic_path))
+                const autoEmoticons_1 = new autoEmoticons();
+                if (await autoEmoticons_1.sendimg_Active(e)) {
+                    return true;
                 } else {
                     this.send_randow_text_msg(e)
                     return
@@ -770,38 +768,6 @@ async function get_msg_SickMsg() {
     }
     catch (err) {
         logger.error(err)
-        return null
-    }
-}
-
-/**
- * @description: 从群专属表情和共享图片中随机返回一张图片
- * @param {string} groupId 群号
- * @return {string|null} 返回图片路径，若无则返回null
- */
-async function sendRandomPictureInFolder(groupId) {
-    try {
-        // 使用 getAvailablePictures 获取所有可用图片（群专属 + 共享）
-        const availablePictures = getAvailablePictures(groupId)
-
-        if (availablePictures.length === 0) {
-            return null
-        }
-
-        // 随机选择一张图片
-        for (let i = 0; i < 20; i++) {
-            const randomIndex = Math.floor(Math.random() * availablePictures.length)
-            const picPath = availablePictures[randomIndex]
-
-            // 检查文件是否存在且为图片格式
-            if (fs.existsSync(picPath) && picPath.match(/\.(gif|jpg|jpeg|png|webp|bmp)$/i)) {
-                return picPath
-            }
-        }
-
-        return null
-    } catch (err) {
-        logger.error(`[派蒙戳一戳] 获取随机图片失败: ${err}`)
         return null
     }
 }
@@ -1476,102 +1442,103 @@ let voice_list_Tribbie_cn = [
     "https://act-upload.mihoyo.com/sr-wiki/2025/03/11/197948068/7aef1a91f1b1cb0225b8392c75519935_605341951674668166.wav",
 ]
 
-/**派蒙和荧中文语音  来自：https://wiki.biligame.com/ys/%E6%97%85%E8%A1%8C%E8%80%85%E8%AF%AD%E9%9F%B3/%E8%8D%A7 注意这个网站会导出很多重复项，自行删除；中文缺少：关于求签…  （2024年1月8日）*/
+/**派蒙和荧中文语音  来自：https://wiki.biligame.com/ys/%E6%97%85%E8%A1%8C%E8%80%85%E8%AF%AD%E9%9F%B3/%E8%8D%A7 注意这个网站会导出很多重复项，自行删除；（2025年9月30日）*/
 let voice_list_paimon_cn = [
-    "https://patchwiki.biligame.com/images/ys/1/17/qipbw117ggwug6jvu6q1yrun57ucups.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/93/bgqqljuhu8f9v6wdlvg7m6uzxq8ox8h.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/69/1s3677di0nh5p5nwmlamxttfjhmuioy.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/31/7s0izyylkdjceon1p84q5uwv3avi3ky.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/32/fmnzpd5i4qkz7wzvyp57hwnx4aamoj3.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/bf/3v8d7nlvoghq81c0mzryd4dgo677w8e.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/08/e86t3m1oz65kx2bl19hybi6vee8wosm.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f7/60xax8u7ivep7av4hxyvu5m5gf4k6ek.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/79/9plpejjo4ycczdvfoaszw181kiozurp.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/97/0b6lwdtf91fbuhbbfji4isju2r1nzzv.mp3",
-    "https://patchwiki.biligame.com/images/ys/d/df/jzgmvuksv2gid75u3wgm2dj0p2tuo3t.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/31/fr7qzu801w0hqutr30fb2cil1unjy4v.mp3",
-    "https://patchwiki.biligame.com/images/ys/d/de/q24zx5c8ze1dcduvw5p02zc5imw780l.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/2b/hkbopbook2ieh35n1h6hjqmqfqi0n75.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/24/2p1poxoes4806tp0py6szf17y49yk9n.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/60/5joc7ygf5g0q83btsxa6ffv5dh1r7id.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/92/n3lmn74x6x0uir0qoia9vpx2ivb6wwy.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/1d/7z2zbm86jol3k9j8ykiwsx4qmr0rtsp.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/44/cx4ezyy7rt2oa8ur3f7cvmd6ol0bl0p.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/ad/eoulv29p6z2b6rvfof9i8dqb4ffybky.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/58/iz8bnzlspagg16167pph0o5lrdslzsa.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b0/0jh7u14yvjnxm0el0ipl1ro87ljbunp.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e5/lpzq8ra1t4lc7v51b8sywa7d4lmsrcf.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/37/j67dtc2mi8jqa6zli3e90y3t897qmi0.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/6e/ht90g16gn8y9uv0fua067bil0ximd41.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a6/91jhsoed72vyg3swd90ygazcnqwpsgh.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/12/kgfuvdntuakdsnrzt3ckpk0r1rsutdy.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e7/kilfr4wo6bcpngsq4nr0b1507lq4b8c.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/80/htzn67up92gmr0evael9u5mln1o1y5v.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/84/7hpl6rcohb9h9ii5boxjs7aglbamku2.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/11/jj6vcondx1q24sgltz8nzt6d2i9a3i9.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/c2/k64y5esl0vu5gaodes1l00wgix8bcwm.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a2/iapwb7m396htvcqsn1mdvf00o9aeaht.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/ed/cnard4tvbqjdr2m1rles4vkz7d7fl8c.mp3",
-    "https://patchwiki.biligame.com/images/ys/d/d0/99zpnndgpbdm9qo46kg3q02e5w1uztu.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/bb/nl2prmpf70bzv2lht7ryq35hcqeayuh.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/7e/tqxtgflvpzpbyxn1llv9zyktww1j33y.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/7b/07nrec1auescdhb44g76rlt9uuwoasm.mp3",
-    "https://patchwiki.biligame.com/images/ys/d/d8/9h96nhwmq6z2l8ecp5ch3qa0k6cy18b.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/ba/b9tf0cuiw1c6euio9n8tqasjkhy6of8.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a1/1h2biy904l7wni5of2dg3ddhekkbp6e.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a3/9kxhuve08am4m8ruwzlpi38590keop3.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/cd/jkumb5x1a950iwdbfosanya7hgmya7h.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/1e/pvdgcnrl46mn70mq8wuwmttwo9w7c7d.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/c8/g50vyvrisrdp0ldakwfigwjgmcpa47y.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/11/r66v44i9daw0noedc5d249i4k7xmodh.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b2/s0wgp53why6uds8pnsp5v03c8yh0s1t.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/13/lo1x8aqpgup8hqkd7rme06lt5cjkeke.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/74/ib1g7ren91kxob6exzdeimzkqzhiwqn.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/32/tmfjodif9irvr0uxpw1onbqfpjvjeuf.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/82/mt6r8vwa1i03j7mdtmp8rqjygjy93qg.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/eb/rku1mcuueqg72iiap0gz2ufbsdc7ssa.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/82/faov85ra10tpkhgpnega8rkg483msuj.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/73/cafdirvv8710dpe3l3xu9hkwnfaqnol.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/8f/kzv1l8wns25vcdy1r5if7g4ex4sjtwd.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/bb/7d94adf5ynjghsyqsdb58k4809y3dsk.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/4d/jp63tuy7burap78wlh5d53b6zoib9am.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/0a/eida28q5rf8ak6h274m6yjs0pbqrjg5.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/3a/7wlcw31r3ksd3ppzwsoqhwlnb7qo708.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/27/3hd6w9z9fmnncijuakqxuhmhqp2rckb.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/8a/kw3se47vkfxlsp43l8h6ofxxrqj7xl1.ogg",
-    "https://patchwiki.biligame.com/images/ys/a/a1/faq7arjr9r4iqblspq0j1ih2489ww82.ogg",
-    "https://patchwiki.biligame.com/images/ys/a/a5/l20btx5pgb7q58ektkom7e7bccdr3fo.ogg",
-    "https://patchwiki.biligame.com/images/ys/4/4b/ogki9npxfsl1i57ru23z26r2d8qvpwm.ogg",
-    "https://patchwiki.biligame.com/images/ys/7/7c/n6n4jnyk86d5dknkcrs4r82qcqremoy.ogg",
-    "https://patchwiki.biligame.com/images/ys/2/2e/dbra7rabbk29avggk3ya7jtkj9yfvwf.ogg",
-    "https://patchwiki.biligame.com/images/ys/c/c1/bfusbtmpug8pqmx1cj5mt5h14apr8qq.ogg",
-    "https://patchwiki.biligame.com/images/ys/5/54/2ajy4y7m9q3gi21m06mptckr42tjqg9.ogg",
-    "https://patchwiki.biligame.com/images/ys/9/9b/m7npcnwixb4l4hgcwbnj4cbfur3464q.ogg",
-    "https://patchwiki.biligame.com/images/ys/d/d8/g61pldvpidpv8lgqfffatsvyfwlawh4.ogg",
-    "https://patchwiki.biligame.com/images/ys/e/e2/hcshb8teu7co3ysba68xdg7xnhq4ukf.ogg",
-    "https://patchwiki.biligame.com/images/ys/a/a9/dt2y7b13n1pf36qut5n9gugk4s7u6g5.ogg",
-    "https://patchwiki.biligame.com/images/ys/0/0f/h1vkckhfjo8iysr8nj7j1bicpudv4s0.ogg",
-    "https://patchwiki.biligame.com/images/ys/7/7c/mi1yqwzayud8ju0klwoet1igxwvbhab.ogg",
-    "https://patchwiki.biligame.com/images/ys/8/8f/ogi7e7guglpswk06k73q4f1zo3htbnk.ogg",
-    "https://patchwiki.biligame.com/images/ys/7/79/rn7rup6w36jtdg1i2r9hkbflr8e3zkz.ogg",
-    "https://patchwiki.biligame.com/images/ys/3/3c/t9oqwo4t1phlpd5bfqche7ks2ouglx4.ogg",
-    "https://patchwiki.biligame.com/images/ys/4/42/r5vde5m7v7yvhjfsms5lmscjkirffej.ogg",
-    "https://patchwiki.biligame.com/images/ys/d/d4/mxvu8e03xoxfw2ul24f1x1qmw4svf7c.ogg",
-    "https://patchwiki.biligame.com/images/ys/6/6a/ie7ojkn4nfk3b7f0k7s8arybuorxqrx.ogg",
-    "https://patchwiki.biligame.com/images/ys/4/44/tvtizcpcuqc9a5fd65bpubhprl74ny2.ogg",
-    "https://patchwiki.biligame.com/images/ys/4/4e/9avds504p4j771477mqg8675df80ib5.ogg",
-    "https://patchwiki.biligame.com/images/ys/b/b7/l1n9got27abb9f7478zutxbbvfachn2.ogg",
-    "https://patchwiki.biligame.com/images/ys/8/8c/aptipo5a0omfjthu2eraxvsblf6x5v6.ogg",
-    "https://patchwiki.biligame.com/images/ys/2/29/3vor2xmpv272z04i9x0patiwr4qzep6.ogg",
-    "https://patchwiki.biligame.com/images/ys/e/e3/iuv8nrqwaaa1kd2y2gwx5mogymwu3vh.ogg",
-    "https://patchwiki.biligame.com/images/ys/7/7b/e49574a6dtm6d21i0encjtpmartswm9.ogg",
-    "https://patchwiki.biligame.com/images/ys/5/51/0ycea9rmml255td6ys84rw0vxqt0t8u.ogg",
-    "https://patchwiki.biligame.com/images/ys/2/23/qp6620azh7tgu2bubs53gvy9342lzg8.ogg",
-    "https://patchwiki.biligame.com/images/ys/1/11/i9a6tpj51iusr0z87vzmz5vob96tm2q.ogg",
-    "https://patchwiki.biligame.com/images/ys/3/3b/9uh4378vkzgxvci48d7i5x90rb5bnpl.ogg",
-    "https://patchwiki.biligame.com/images/ys/6/64/7clglitmz3y8d1fodjjcdyftkzp1gbf.ogg",
-    "https://patchwiki.biligame.com/images/ys/4/4d/80bpat6s9u6neb2pisgpaj3mwxt5u13.ogg",
-    "https://patchwiki.biligame.com/images/ys/1/1a/jbjkcfv2vr5yg6cxktbkhblfjf6t0ub.ogg",
+    "https://patchwiki.biligame.com/images/ys/6/67/8jkmmy6vvggq14j7i2gj7tmgla25x7i.mp3",
+    "https://patchwiki.biligame.com/images/ys/e/e6/floply2k5a3mhrvkz1l0fodkkwvv0lj.mp3",
+    "https://patchwiki.biligame.com/images/ys/e/e1/0li4gs3c03ogthsc57quba9ikv5jdq5.mp3",
+    "https://patchwiki.biligame.com/images/ys/f/f0/snbk6gkgnwcjbmqbix8rsox2i0zelbv.mp3",
+    "https://patchwiki.biligame.com/images/ys/3/3c/qh19dch6dsa3hafw8ivodt8l3gf0r9f.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/23/n3mi9ha8ltc0t56zwxif2fs0nk1pxg1.mp3",
+    "https://patchwiki.biligame.com/images/ys/3/35/95uzkpckm24j1taz4z3rgysvkzow6em.mp3",
+    "https://patchwiki.biligame.com/images/ys/e/e4/i9wkxi9enwmrzpenrmzfnmqwhulixee.mp3",
+    "https://patchwiki.biligame.com/images/ys/a/aa/f6arbsvfk408h89zvk632uuncy1c446.mp3",
+    "https://patchwiki.biligame.com/images/ys/8/83/iirpdvj8caryo1fqisbodo9yq4b1xq5.mp3",
+    "https://patchwiki.biligame.com/images/ys/8/8a/t241psiwz5otx7igptuhulj8s4op8f4.mp3",
+    "https://patchwiki.biligame.com/images/ys/f/f7/73gzk5ahidq9wyd9mfcw3wap12xdr5q.mp3",
+    "https://patchwiki.biligame.com/images/ys/8/83/1eg0pwgv8jx3bk2pjyblpvsbauu677o.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/dd/dij7wlbpjpk06ptbkfpco6t4c2fgfa8.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/d8/gxkg40seu0t68qwx6bvnvq6yd152598.mp3",
+    "https://patchwiki.biligame.com/images/ys/5/5f/3ewg28k6dql7wybb97ol14gk4vgqacq.mp3",
+    "https://patchwiki.biligame.com/images/ys/6/6f/97slbx19m2kqsmy1hocxcujdxk4s5y1.mp3",
+    "https://patchwiki.biligame.com/images/ys/b/b1/43os8m39bc6kreru032iz29ckm4gsc8.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/2e/njj49jckf677r3ylka6tdls7dcbobia.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/d6/aut2eebcdd4vi7fc2tgyhgdi6ciba2p.mp3",
+    "https://patchwiki.biligame.com/images/ys/5/50/40ohb216tnomnm7oh3ypbmvb3lzjvsv.mp3",
+    "https://patchwiki.biligame.com/images/ys/9/9f/fgcn9tnvq6400z1ybwi2igf97yzeq6a.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/de/ivnuttqa4m7brjoghmt09ngyhtj639m.mp3",
+    "https://patchwiki.biligame.com/images/ys/0/0a/ef6b3fhk3e70txet5yss5u5b3e39j4b.mp3",
+    "https://patchwiki.biligame.com/images/ys/1/12/7pt4stxeqy72te7us7vwghc5ok6nuqj.mp3",
+    "https://patchwiki.biligame.com/images/ys/9/9f/rxlofrsr2wyuk4kpd2fsbf1xbuu5610.mp3",
+    "https://patchwiki.biligame.com/images/ys/3/3f/q9nbw5x994dgj2628ba1xpj7u6xpg0m.mp3",
+    "https://patchwiki.biligame.com/images/ys/9/93/pku14eu1j31qpdynx4x7dj3t3fztwwc.mp3",
+    "https://patchwiki.biligame.com/images/ys/7/77/3mkauoawlx4mmtv0f4fi4hydb2fsqjc.mp3",
+    "https://patchwiki.biligame.com/images/ys/6/68/2nzwn6oxtmgvfz5rl46rplu7s86escn.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/25/lx2yugprffrd2vrc0ujecncr91z7bha.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/27/f7vly6jxt7mkb094rtjelv4zt2xfqow.mp3",
+    "https://patchwiki.biligame.com/images/ys/f/fb/ddbwgy5nh64oniqq9o4j79hcupuzaab.mp3",
+    "https://patchwiki.biligame.com/images/ys/9/9f/llaabx2074sx3cp9x10zoveomhr7tqe.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/d1/oipr8v11ksx5tls685njihiq9e6oqxv.mp3",
+    "https://patchwiki.biligame.com/images/ys/4/4d/sia1pgqvd2s57kx3lkxzj2cocrl4mnj.mp3",
+    "https://patchwiki.biligame.com/images/ys/c/cc/75lgy255ks4cmaz0zthclrv10d5s40r.mp3",
+    "https://patchwiki.biligame.com/images/ys/c/c8/i66ftazyt09ersvdnn29gj73cirvkid.mp3",
+    "https://patchwiki.biligame.com/images/ys/7/73/kk7tbtiz2ev1b54oyj134okcukj5vu5.mp3",
+    "https://patchwiki.biligame.com/images/ys/4/4c/hvuz335fuxjc5y401yh21k2vmqfqgxo.mp3",
+    "https://patchwiki.biligame.com/images/ys/f/f6/3ynuavs2cjqeen2z50zx7z9ikecxln3.mp3",
+    "https://patchwiki.biligame.com/images/ys/3/31/5yhycwpnmlaobyvyapjafqmcjsest0o.mp3",
+    "https://patchwiki.biligame.com/images/ys/6/68/cuwrkaqd5kb9gucuv3qdyl54ewndse4.mp3",
+    "https://patchwiki.biligame.com/images/ys/6/6b/48j43q2707dxv8mgc9p4y0nfc2vr6nf.mp3",
+    "https://patchwiki.biligame.com/images/ys/b/ba/pi54argmo0sww2llq2var63a2gaesg2.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/2b/37rjuqogqfpu2t7rcee45kow9zj8510.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/25/htbb1ijwpbxoai75zqmt0olirf5scey.mp3",
+    "https://patchwiki.biligame.com/images/ys/1/16/bbw17xocku5awz9fbfxi9r4epo1qtxf.mp3",
+    "https://patchwiki.biligame.com/images/ys/b/b5/lecfqhjs7qdfbusvyl3by0kusles7j8.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/d0/fu06vtgw17dxv7v7lv8gmg8asr40xq5.mp3",
+    "https://patchwiki.biligame.com/images/ys/b/b6/smuoqwmjas2w6aykd9pxgn05jwijvsc.mp3",
+    "https://patchwiki.biligame.com/images/ys/b/be/me55n815mqzbzkadnb7afwsxlu3oot6.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/df/ielhy3083tckcv442eo2ghvs78wzo98.mp3",
+    "https://patchwiki.biligame.com/images/ys/c/c3/mylt0ui7rosv3qwh7457esgy07ed2fx.mp3",
+    "https://patchwiki.biligame.com/images/ys/2/22/3qkoounbjk4fzj95mrsu9shbnv1mt4g.mp3",
+    "https://patchwiki.biligame.com/images/ys/0/02/1t4z6wjev4g5pzh6s3pdnlwx3gydu2u.mp3",
+    "https://patchwiki.biligame.com/images/ys/1/17/c7oia8glhl4nscbxulfub4yqr8rnll9.mp3",
+    "https://patchwiki.biligame.com/images/ys/6/63/1qqmosl270eg6mtgmrzp037uq4606ke.mp3",
+    "https://patchwiki.biligame.com/images/ys/d/d7/n1zhrxlnu9ouubh61gbdpgzf2sz5o0y.mp3",
+    "https://patchwiki.biligame.com/images/ys/c/c3/0aev0hu1i7t93scmjf0rytjuu1wxfdj.mp3",
+    "https://patchwiki.biligame.com/images/ys/8/86/kw3se47vkfxlsp43l8h6ofxxrqj7xl1.ogg",
+    "https://patchwiki.biligame.com/images/ys/f/f2/faq7arjr9r4iqblspq0j1ih2489ww82.ogg",
+    "https://patchwiki.biligame.com/images/ys/1/1c/tc16q8bqc2rrkgh3h0dr6vzhthkdgrp.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/28/ogki9npxfsl1i57ru23z26r2d8qvpwm.ogg",
+    "https://patchwiki.biligame.com/images/ys/7/75/n6n4jnyk86d5dknkcrs4r82qcqremoy.ogg",
+    "https://patchwiki.biligame.com/images/ys/a/ac/dbra7rabbk29avggk3ya7jtkj9yfvwf.ogg",
+    "https://patchwiki.biligame.com/images/ys/a/af/bfusbtmpug8pqmx1cj5mt5h14apr8qq.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/25/2ajy4y7m9q3gi21m06mptckr42tjqg9.ogg",
+    "https://patchwiki.biligame.com/images/ys/0/04/m7npcnwixb4l4hgcwbnj4cbfur3464q.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/2b/g61pldvpidpv8lgqfffatsvyfwlawh4.ogg",
+    "https://patchwiki.biligame.com/images/ys/6/63/hcshb8teu7co3ysba68xdg7xnhq4ukf.ogg",
+    "https://patchwiki.biligame.com/images/ys/f/f1/dt2y7b13n1pf36qut5n9gugk4s7u6g5.ogg",
+    "https://patchwiki.biligame.com/images/ys/9/9b/h1vkckhfjo8iysr8nj7j1bicpudv4s0.ogg",
+    "https://patchwiki.biligame.com/images/ys/1/1b/mi1yqwzayud8ju0klwoet1igxwvbhab.ogg",
+    "https://patchwiki.biligame.com/images/ys/9/94/ogi7e7guglpswk06k73q4f1zo3htbnk.ogg",
+    "https://patchwiki.biligame.com/images/ys/8/8e/rn7rup6w36jtdg1i2r9hkbflr8e3zkz.ogg",
+    "https://patchwiki.biligame.com/images/ys/9/9f/t9oqwo4t1phlpd5bfqche7ks2ouglx4.ogg",
+    "https://patchwiki.biligame.com/images/ys/d/d9/r5vde5m7v7yvhjfsms5lmscjkirffej.ogg",
+    "https://patchwiki.biligame.com/images/ys/f/fd/mxvu8e03xoxfw2ul24f1x1qmw4svf7c.ogg",
+    "https://patchwiki.biligame.com/images/ys/3/32/ie7ojkn4nfk3b7f0k7s8arybuorxqrx.ogg",
+    "https://patchwiki.biligame.com/images/ys/d/d1/tvtizcpcuqc9a5fd65bpubhprl74ny2.ogg",
+    "https://patchwiki.biligame.com/images/ys/7/71/9avds504p4j771477mqg8675df80ib5.ogg",
+    "https://patchwiki.biligame.com/images/ys/7/75/l1n9got27abb9f7478zutxbbvfachn2.ogg",
+    "https://patchwiki.biligame.com/images/ys/3/3a/aptipo5a0omfjthu2eraxvsblf6x5v6.ogg",
+    "https://patchwiki.biligame.com/images/ys/1/19/3vor2xmpv272z04i9x0patiwr4qzep6.ogg",
+    "https://patchwiki.biligame.com/images/ys/4/4f/iuv8nrqwaaa1kd2y2gwx5mogymwu3vh.ogg",
+    "https://patchwiki.biligame.com/images/ys/7/7e/bydeshaxac1nlv6kr8edwx5brtnq1yg.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/20/e49574a6dtm6d21i0encjtpmartswm9.ogg",
+    "https://patchwiki.biligame.com/images/ys/e/ed/0ycea9rmml255td6ys84rw0vxqt0t8u.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/25/qp6620azh7tgu2bubs53gvy9342lzg8.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/24/i9a6tpj51iusr0z87vzmz5vob96tm2q.ogg",
+    "https://patchwiki.biligame.com/images/ys/7/71/9uh4378vkzgxvci48d7i5x90rb5bnpl.ogg",
+    "https://patchwiki.biligame.com/images/ys/b/b8/7clglitmz3y8d1fodjjcdyftkzp1gbf.ogg",
+    "https://patchwiki.biligame.com/images/ys/4/4a/80bpat6s9u6neb2pisgpaj3mwxt5u13.ogg",
+    "https://patchwiki.biligame.com/images/ys/2/21/jbjkcfv2vr5yg6cxktbkhblfjf6t0ub.ogg",
     "https://patchwiki.biligame.com/images/ys/0/04/d2pqcg2bczvdciu681y3k3bfeglj357.mp3",
     "https://patchwiki.biligame.com/images/ys/3/32/e4ea8vx1jmw6mut9xc4ue9vyvygpul6.mp3",
     "https://patchwiki.biligame.com/images/ys/f/f0/qntqnwj0rgt8izyu30jxcduxizuea0w.mp3",
@@ -1597,129 +1564,6 @@ let voice_list_paimon_cn = [
     "https://patchwiki.biligame.com/images/ys/4/4e/1wlegxmua1i71s3xqyps647b35z8icb.mp3",
     "https://patchwiki.biligame.com/images/ys/0/00/nm9pciqfzpciw547xe9tjmqb3g2hsjs.mp3",
     "https://patchwiki.biligame.com/images/ys/a/a4/9mzdbwal5ieo5zg503rhlmkgnmp90gj.mp3"
-]
-
-/**派蒙和荧日语语音  来自：https://wiki.biligame.com/ys/%E6%97%85%E8%A1%8C%E8%80%85%E8%AF%AD%E9%9F%B3/%E8%8D%A7 缺少：关于神居岛崩炮…  （2024年1月10日）*/
-let voice_list_paimon_jp = [
-    "https://patchwiki.biligame.com/images/ys/4/46/e4z1kd302clek2nkdn9uvmr48ibeu8k.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/7a/pxxfxrz8w0moojyzrnvgdr22k223lo3.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/be/dn5mb7l43yorqzcpu6egj15knric1ey.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/bb/4xjp8e40l2xsvrrjdg35occcdais2br.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/27/69h9pkjdwhd14bi7oalq44ab3zmd5l0.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/0e/lzcv6jd11ycyi1bfz8povzy0tkfp2uo.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/cf/cf0tbcd28hsyqwdyu9amr356gb28ion.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/0f/r6ahqnzst3l0keo0r37pe70n73x2o4i.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/19/7a5d0w963du6l2oulc4mmnkg17h91u9.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/59/1x9tpts5lwgdgzv83i7wy55xeo1iztn.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/00/1hl7nlhheyqiyinvtnddmn79vic92gf.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b3/lebl3e82d7929b7ujvvyg6usg5yu9gy.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/2f/8zgbk4ld4vsm3cdjeecqhd4wa506we4.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/c8/06q0kktxdezu6qnuyc8b6060nffe6ie.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/0c/ib2a7az5k3y889b0a1xh8fjpfsw5put.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/41/lco5bofxtbjjwo443vhzf9g3k4xki4h.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/62/n37qyzbhtipaekr3f0518dtm2zads5w.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/39/kgzwi2hnezwm50w92t7ia3azhu1r55q.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f3/jrb790yoigj33kxa3mcnrqfi8bzn7fu.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/57/mbgfhfhoka9ou3njtsspmduwf317ztu.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/3d/mgapxydptuvu1ko7a4px9vqzxtuwy30.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/4f/l3suhnuml74mdxcnjfqia4mz9dplx3q.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9a/82w6x6q6hbk606hx7d6hs83q9uyx4xd.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/79/92zuaovgdxcz3oj4vj4wuiw1r8snv2d.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/46/cq9txmodaz3ufjz51g6y7yg855ehm8u.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/2d/2danaypd69waju7to8paxlwxmw3cdau.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/fc/hsw58m06olsewh7c2ik0khvclsfgi49.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/79/2mdbriwrprklc6l4njte6tcalsaiu3y.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/33/lqn9gwom4xhel8cno091on36nitjtao.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e9/tho2pami0hujrnbyz67hyacll1r5iku.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f6/ig71j3nqgkyk5v11x5fg4alljuf6lyl.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b7/9e9kv31jyx8d2viywz2889wk1snru5m.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/06/6cvmt9anqp6r0b5fsw80jjgbx6mdyjx.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/2a/tvl12c1ug24kwi4wtttbv49y6al14n3.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/ca/gu4hwa18m9jy7g71oomi55z5drb42vm.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a8/4udll5k0zdejr2la6tdm2kwf20ish4d.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/10/nl8zi82g8vx60zxt82nq6gm6fs780bx.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b5/4vggjpqmbr9kk284bheriw9976mz9c8.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b5/2na4kccyfc500i0ijqi5pvbh19wkjxj.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/58/dbnjizcc6ifpn7dug7glt3bpm680l5o.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a1/ryp4405bjeyw5nncnrobc1jyyzlh38d.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/94/afoove7d1d04l8hli3w6ffep6vjzp11.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9b/b54dtjxph6xt2okpedajbc3xcmulpv4.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/29/95mhhz8c1irwqrpgipbzdy3lv6w59ia.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/1e/jbig3hw4wsmgyec9hicoag58xfpdied.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/4d/i5kx9ou8mw5jcyuohejo7d1teeb2ol5.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f5/rev8wf98zs70x7psszdif0ytu1neuy9.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/3c/k5f7vlxkqvyxf6d8k8dx7a5v1e1y1hh.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/c3/pap3n0apj7uue8yh7j2z4ssjlu65065.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/18/nqrc4ljtdibe4royua2wkj0pmcys7zs.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/14/dafmldktmc7ylnj4fdksxm03uchnaoo.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/12/jwy6zhmkhuhewzcnwlscxyo0gnm0zhp.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/39/cfn6wlcsc092yzbi4qssb7nazh981sp.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/50/cprjj3z4vvwr1msr1xo86z161st5td3.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/88/92q566ngn9rwzb9vtmyefcuct1rt34d.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/30/2zbn9qs9sqsmshqogqk0nw6hblmdu7d.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/4e/816hd22xmqyrngpi9pd65zuijca8hvd.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b5/eo83ud832skbmcfqy9jqp9daep4mhlo.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9c/27oy4uk0zzkqtf1mmmdhqkf5x6tzbn2.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/cb/oxbb26g8ku3h6c7rqn7xxbaz8ldubqr.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/47/hd0jpxvdehi6o8tl3z48rvnah05q6pa.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/6b/93odzdj7vim7oqh67shh9tkkfqhz4un.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e1/t55820ano2cfxn4h1ny2djmlt6xbe1l.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/7b/0j1wc1bmaojw4u5ro1srwresc2xwvx0.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e1/gqecuipph1ju98avk9by99vbzw5jm7u.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/32/3fz68g3202i1jio1npxaz3hj6kut6ba.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/bc/p5kmxg4qv1sa7ulrjq64dio0gm2hzqy.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/2e/qssqmpjow1b4nvljxc33jvhppu3v5b0.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/87/6ngenkuysl45mclljjula0e7th65ola.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/31/3n7zfwc7a6ckko0iq63oolzct4pwamm.mp3",
-    "https://patchwiki.biligame.com/images/ys/3/3a/owo52w8l46ljge6jvf6teatm19dmon4.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/4a/dot3av5d6ogl2ob5evffmqwe8byx8be.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e3/j2g5a3sp3oq2oj9wxdowxp58oih0njf.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/ad/smz9xtedt40o9lrqnwohlcmeuekk2bh.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/8c/nlhqp4pzafm5q3z7bp1d05kyf76e5j8.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a2/nouxse1b5grv33kfc4k8hg3pumb28u0.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/10/81ad2cqmjyumhzcv53cajsbht8lizhx.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/47/jeu99unboefo60uewbksk0uru419mdk.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/59/ri7smmimo46i7rjq5hn278a1t9a783j.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/e4/hduypxbowxw8ydjmbzj87a7xfzt3l6v.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9d/s375o33evoc70a4owhygh5m777ayhy9.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/c9/3zem7ggnceya5gugo60rrd85r5016k9.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/1d/8v3pebnukpvyst0bj745oruj13qtm4d.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a8/ecci0exskeyyyesdy7nvdk8tk7ho09i.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/fd/59xgxg1c804ocbp2pcbv1w9ik2yt7sg.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/46/1rupghenaaw8wj29e5vgzk29exl8ayb.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f4/i1lt9w4yc8zqzmx3zp2cg06rsapnro7.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/24/1zlml4h84dd7to2embfyv1qvmuulsns.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/62/o62uoi5jrnq1rf63rg5hcvhvnfydlcz.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/23/017it3bj7atsgxe2pdqknazwhzh1qf3.mp3",
-    "https://patchwiki.biligame.com/images/ys/e/ef/rbdrtoghy8fi40hq5ss940nxy3kws0p.mp3",
-    "https://patchwiki.biligame.com/images/ys/d/dc/29pwwo3nmtydhyvb35gukqlb8hilewh.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/b3/20lvazs08n32nwe0b09lturuj2t12yb.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/fd/89y28ayz2zo1qgitxhea7oqxuphkds4.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9a/85cjak3fyvzoxtgb1cj26ylhqqanxau.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/8e/2r4quyr7f1k7odan3u5gf1k4q1l97zq.mp3",
-    "https://patchwiki.biligame.com/images/ys/2/23/ma493nf9q95w8padvc4osurl7nn9iav.mp3",
-    "https://patchwiki.biligame.com/images/ys/5/50/j7sgvro7yz4mmkrjokhhwu7uabeez02.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/96/aen6my98iv81focq9445gjpqromib2b.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/4b/4tpzyfnguleeuu58a3teu77mxk99ar0.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f6/mr7qs22ui7gv3af6hzytiek99y18kxg.mp3",
-    "https://patchwiki.biligame.com/images/ys/8/8c/gbve6zf3zjic8bzjc5f78lhxk5tluro.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9c/bgk7zv6vstyk0mz41541fzsnfgzkwy2.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/fc/7gofiwyi11tk69oeomzuwnlmne863b0.mp3",
-    "https://patchwiki.biligame.com/images/ys/6/66/pwd74j9a3t7oe41v2twfy4ksog7lgay.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/7a/arwg0kdzotr8k4lpzvd2erzor5cckg0.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/a2/rezkkmmxaj572lgezcnxm7tzfisk5ew.mp3",
-    "https://patchwiki.biligame.com/images/ys/4/45/5q7vljkzcn0rll1cmbc2n76yhus69bz.mp3",
-    "https://patchwiki.biligame.com/images/ys/9/9e/1h24pjuxy8eqa9swi9kq8j8hpwjf793.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/1c/hh98rgpisnqvt3mj472ht34m61um9oo.mp3",
-    "https://patchwiki.biligame.com/images/ys/a/af/js6n8tw05qe5zwyrnqf4cbuzzntiltl.mp3",
-    "https://patchwiki.biligame.com/images/ys/7/7c/8mvo95a5pnvav1wd43832mrx43v8giu.mp3",
-    "https://patchwiki.biligame.com/images/ys/b/bc/87902hrlf6fwynmpz7tt2btb1iwvkz1.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/1c/39faeb168txwn1ctkf7fsidv9z8t3d5.mp3",
-    "https://patchwiki.biligame.com/images/ys/1/15/o1ho02i5ffim9rgq79wbshpk9do5kll.mp3",
-    "https://patchwiki.biligame.com/images/ys/f/f9/0j50y25z9g68rixk0x1qpwopg8torwr.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/02/kg8h2rseztgir3cl1644cmt8jp8t8ej.mp3",
-    "https://patchwiki.biligame.com/images/ys/c/c2/qdho5pexb4djh6icpgmthlq9xt3kaja.mp3",
-    "https://patchwiki.biligame.com/images/ys/0/0e/swtyr19xnnenr6euuejfjm0pxw1ydgb.mp3"
 ]
 
 /**冰川镜华  来自：https://wiki.biligame.com/pcr/%E9%95%9C%E5%8D%8E 正则表达式匹配：   "https:\S*(ogg|mp3|wav)"         */
@@ -1903,10 +1747,10 @@ function getRandomUrl(type) {
         "ecy": [ // 二次元
             "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
             "https://api.fuchenboke.cn/api/dongman.php",
-            "https://i18.net/api.php?fl=dongman",
-            "https://i18.net/acg.php",
+            // "https://i18.net/api.php?fl=dongman",
+            // "https://i18.net/acg.php",
             "https://api.boxmoe.com/random.php", // 返回下载图片的
-            "https://rpic.origz.com/api.php?category=pixiv",
+            // "https://rpic.origz.com/api.php?category=pixiv",
             "https://api.mtyqx.cn/api/random.php",
             "https://api.mtyqx.cn/tapi/random.php",
             "https://api.paugram.com/wallpaper/",
@@ -1925,8 +1769,8 @@ function getRandomUrl(type) {
         ],
         "scy": [ // 三次元
             "https://api.btstu.cn/sjbz/api.php",
-            "https://i18.net/cos.php",
-            "https://i18.net/bing.php",
+            // "https://i18.net/cos.php",
+            // "https://i18.net/bing.php",
             "https://t.alcy.cc/fj", // 三次元 webp格式
             "https://api.btstu.cn/sjbz/api.php",
             "https://api.lolimi.cn/API/tup/xjj.php",
@@ -1938,7 +1782,7 @@ function getRandomUrl(type) {
             "https://cdn.seovx.com/?mom=302",
         ],
         "ecywebp": [ // 二次元 webp格式
-            // "https://t.mwm.moe/mp",
+            "https://t.mwm.moe/mp",
             "https://t.alcy.cc/ycy",
             "https://t.alcy.cc/moez",
             "https://t.alcy.cc/ysz", // 原神

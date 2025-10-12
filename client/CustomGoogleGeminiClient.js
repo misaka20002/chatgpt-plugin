@@ -117,6 +117,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
   async sendMessage (text, opt = {}, retryTime = 3) {
+    if (!opt.toolChain) {
+      opt.toolChain = {
+        depth: 0,
+        calledTools: []
+      };
+    }
     let history = await this.getHistory(opt.parentMessageId)
     let systemMessage = opt.system
     // if (systemMessage) {
@@ -246,9 +252,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (opt.codeExecution) {
       body.tools.push({ code_execution: {} })
     }
-    if (opt.image) {
-      delete body.tools
-    }
+    // if (opt.image) {
+    //   delete body.tools
+    //   delete body.tool_config
+    // }
     body.contents.forEach(content => {
       delete content.id
       delete content.parentMessageId
@@ -286,6 +293,19 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
+      const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
+      
+      const repeatedTool = toolNames.find(name => opt.toolChain.calledTools.includes(name));
+      
+      if (opt.toolChain.depth >= 2 || repeatedTool) {
+        const text = responseContent.parts.find(i => i.text)?.text || "操作已完成";
+        return {
+          text: text,
+          conversationId: '',
+          parentMessageId: idThis,
+          id: idModel
+        };
+      }
       // functionCall
       const functionCall = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall)
       const text = responseContent.parts.find(i => i.text)?.text
@@ -358,6 +378,19 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       let responseOpt = _.cloneDeep(opt)
       responseOpt.parentMessageId = idModel
       responseOpt.functionResponse = fcResults
+      responseOpt.toolChain = {
+        depth: opt.toolChain.depth + 1,
+        calledTools: [...opt.toolChain.calledTools, ...toolNames]
+      };
+
+      // 添加明确的系统指示
+      const toolResultPrefix = "以下是工具调用的结果，请直接回答用户，不要再次调用工具：\n\n";
+      if (responseOpt.system) {
+        responseOpt.system = toolResultPrefix + responseOpt.system;
+      } else {
+        responseOpt.system = toolResultPrefix;
+      }
+
       // 递归直到返回text
       // 先把这轮的消息存下来
       await this.upsertMessage(thisMessage)
@@ -411,7 +444,7 @@ function handleSearchResponse (responseContent) {
   let final = ''
 
   // 遍历每个 part 并处理
-  responseContent.parts = responseContent.parts.map((part) => {
+  responseContent.parts = responseContent.parts?.map((part) => {
     let newText = ''
 
     if (part.text) {

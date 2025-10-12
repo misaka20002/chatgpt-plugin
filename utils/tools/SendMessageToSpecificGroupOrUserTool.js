@@ -1,7 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { convertFaces } from '../face.js'
-import {getMasterQQ, getGroupList} from '../common.js'
-import {Config} from '../config.js'
+import { getMasterQQ, getGroupList } from '../common.js'
+import { Config } from '../config.js'
 
 export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
   name = 'sendMessage'
@@ -22,7 +22,7 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
 
   func = async function (opt, e) {
     let { msg, sender, targetGroupIdOrQQNumber } = opt
-    
+
     logger.info('[chatgpt][sendMessage工具]' + msg)
 
     const defaultTarget = e.isGroup ? e.group_id : e.sender.user_id
@@ -32,7 +32,15 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
 
     let groupList = await getGroupList(e)
     try {
-      if (groupList.get(target)) {
+
+      // 判断groupList是Map还是Array
+      const isGroupExist = groupList instanceof Map
+        ? groupList.has(target)
+        : Array.isArray(groupList)
+          ? groupList.includes(target)
+          : groupList && groupList[target]
+
+      if (isGroupExist) {
         let group = await e.bot.pickGroup(target)
         await group.sendMsg(await convertFaces(msg, true, e))
         return 'msg has been sent to group' + target

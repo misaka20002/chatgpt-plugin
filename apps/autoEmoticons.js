@@ -404,6 +404,48 @@ export class autoEmoticons extends plugin {
         return false
     }
 
+    /** 用于戳一戳等 主动发送表情包 */
+    async sendimg_Active(e) {
+        const groupId = e.group_id
+        // 初始化共享图片监视器
+        initSharedPicturesWatcher()
+        // 初始化该群的监视器
+        initWatcher(groupId);
+        try {
+            // 获取可用图片列表（群专属 + 共享）
+            const availablePictures = getAvailablePictures(groupId)
+            // 如果没有可用图片，跳过此群
+            if (availablePictures.length === 0) {
+                logger.debug(`[autoEmoticons] 主动发送图片到群 ${groupId} 没有可用图片，跳过`);
+                return false;
+            }
+            // 随机选择一个图片
+            const randomIndex = Math.floor(Math.random() * availablePictures.length);
+            const picturePath = availablePictures[randomIndex];
+            // 发送图片
+            try {
+                const msgRet = await e.reply(segment.image(picturePath));
+                const msgId = msgRet.seq || msgRet.data?.message_id || msgRet.time
+
+                // 存储文件信息
+                const isSharedPicture = sharedPicturesCache.includes(picturePath)
+                const fileInfo = isSharedPicture
+                    ? `shared:${path.relative(path.join(process.cwd(), 'data', 'chatgpt', 'PaimonChuoYiChouPictures'), picturePath)}`
+                    : path.basename(picturePath)
+
+                await redis.set(`Yz:autoEmoticons.sent:pic_filePath:${groupId}:${msgId}`, fileInfo, {
+                    EX: 60 * 60 * 24 * 1
+                });
+                logger.info(`[autoEmoticons] 主动发送图片到群 ${groupId}: ${picturePath}`);
+            } catch (error) {
+                logger.error(`[autoEmoticons] 主动发送图片到群 ${groupId} 失败: ${error}`);
+            }
+        } catch (error) {
+            logger.error(`[autoEmoticons] 主动发送 ${groupId} 表情包出错: ${error}`);
+        }
+        return true;
+    }
+
     async sendimg() {
         // 如果表情自动发送功能未开启，则不执行
         if (!Config.autoEmoticons.useEmojiSave) return false;
