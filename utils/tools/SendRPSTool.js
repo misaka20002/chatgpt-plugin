@@ -26,7 +26,15 @@ export class SendRPSTool extends AbstractTool {
     } catch (err) {
       groupList = e.bot.gl
     }
-    if (groupList.get(target)) {
+
+    // 判断groupList是Map还是Array
+    const isGroupExist = groupList instanceof Map
+      ? groupList.has(target)
+      : Array.isArray(groupList)
+        ? groupList.includes(target)
+        : groupList && groupList[target]
+
+    if (isGroupExist) {
       let group = await e.bot.pickGroup(target, true)
       await group.sendMsg(segment.rps(num))
     } else {

@@ -444,7 +444,7 @@ function handleSearchResponse (responseContent) {
   let final = ''
 
   // 遍历每个 part 并处理
-  responseContent.parts = responseContent.parts.map((part) => {
+  responseContent.parts = responseContent.parts?.map((part) => {
     let newText = ''
 
     if (part.text) {

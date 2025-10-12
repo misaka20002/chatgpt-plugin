@@ -17,8 +17,8 @@ export class SendAudioMessageTool extends AbstractTool {
       ttsMode: {
         type: 'number',
         description: 'default is 1, which indicates that the text will be processed in the current ttsMode.' +
-            '2 is azureMode.' +
-            '3 or 4 corresponds to vitsMode or voxMode.'
+          '2 is azureMode.' +
+          '3 or 4 corresponds to vitsMode or voxMode.'
       },
       vitsModeRole: {
         type: 'string',
@@ -109,7 +109,14 @@ export class SendAudioMessageTool extends AbstractTool {
         groupList = e.bot.gl
       }
       try {
-        if (groupList.get(target)) {
+        // 判断groupList是Map还是Array
+        const isGroupExist = groupList instanceof Map
+          ? groupList.has(target)
+          : Array.isArray(groupList)
+            ? groupList.includes(target)
+            : groupList && groupList[target]
+
+        if (isGroupExist) {
           let group = await e.bot.pickGroup(target)
           await group.sendMsg(sendable)
           return 'audio has been sent to group' + target

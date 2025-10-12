@@ -34,7 +34,15 @@ export class SendAvatarTool extends AbstractTool {
       groupList = e.bot.gl
     }
     console.log('sendAvatar', target, pictures)
-    if (groupList.get(target)) {
+
+    // 判断groupList是Map还是Array
+    const isGroupExist = groupList instanceof Map
+      ? groupList.has(target)
+      : Array.isArray(groupList)
+        ? groupList.includes(target)
+        : groupList && groupList[target]
+
+    if (isGroupExist) {
       let group = await e.bot.pickGroup(target)
       await group.sendMsg(pictures)
     }

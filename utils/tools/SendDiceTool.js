@@ -31,7 +31,15 @@ export class SendDiceTool extends AbstractTool {
       groupList = e.bot.gl
     }
     num = isNaN(num) || !num ? 1 : num > 5 ? 5 : num
-    if (groupList.get(target)) {
+
+    // 判断groupList是Map还是Array
+    const isGroupExist = groupList instanceof Map
+      ? groupList.has(target)
+      : Array.isArray(groupList)
+        ? groupList.includes(target)
+        : groupList && groupList[target]
+
+    if (isGroupExist) {
       let group = await e.bot.pickGroup(target, true)
       for (let i = 0; i < num; i++) {
         await group.sendMsg(segment.dice())
