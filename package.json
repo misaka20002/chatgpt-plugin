@@ -40,7 +40,7 @@
     "node-silk": "^0.1.0",
     "nodejs-pptx": "^1.2.4",
     "pdfjs-dist": "^3.11.174",
-    "sharp": "0.33.5",
+    "sharp": "^0.32.6",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
