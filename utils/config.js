@@ -297,7 +297,6 @@ const defaultConfig = {
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',
   version: 'v2.8.4',
-  autoRepeat_config: [],
 
   // turnOnBilitv: false,
   // bilitv_max_duration_min: 10
