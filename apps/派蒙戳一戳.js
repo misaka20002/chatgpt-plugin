@@ -18,22 +18,21 @@ import {
 } from '../utils/common.js'
 import fs from 'fs'
 import sharp from 'sharp'
-import { autoEmoticons } from './autoEmoticons.js'
 
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
 
 // 随机本地图片地址：如果需要发送随机图片则把图片放在这个文件夹，支持子文件夹和中文文件夹；没有本地图片则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。。
-const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/data/chatgpt/PaimonChuoYiChouPictures`
-const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/chatgpt/PaimonChuoYiChouPictures/savePics`
+const paimonChuoYiChouPicturesDirectory = `${process.cwd()}/data/autoEmoticons/PaimonChuoYiChouPictures`
+const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/autoEmoticons/PaimonChuoYiChouPictures/savePics`
 if (!Config.paimon_chou_IsSendLocalpic) {
     Config.paimon_chou_reply_text += Config.paimon_chou_randowLocalPic
     Config.paimon_chou_randowLocalPic = 0
 }
 // 初始化
 redis.del(`Yz:PaimongChuoLocalPicIndex`);
-if (!fs.existsSync(paimonChuoYiChouPicturesDirectory)) fs.mkdirSync(paimonChuoYiChouPicturesDirectory);
-if (!fs.existsSync(paimonChuoYiChouSavePicDirectory)) fs.mkdirSync(paimonChuoYiChouSavePicDirectory);
+if (!fs.existsSync(paimonChuoYiChouPicturesDirectory)) fs.mkdirSync(paimonChuoYiChouPicturesDirectory, { recursive: true });
+if (!fs.existsSync(paimonChuoYiChouSavePicDirectory)) fs.mkdirSync(paimonChuoYiChouSavePicDirectory, { recursive: true });
 
 export class PaimonChuo extends plugin {
     constructor() {
@@ -425,10 +424,16 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机本地图片生效]')
                 }
-                const autoEmoticons_1 = new autoEmoticons();
-                if (await autoEmoticons_1.sendimg_Active(e)) {
-                    return true;
-                } else {
+                try {
+                    const { autoEmoticons } = await import('../../siliconflow-plugin/apps/autoEmoticons.js')
+                    const autoEmoticons_1 = new autoEmoticons();
+                    if (await autoEmoticons_1.sendimg_Active(e)) {
+                        return true;
+                    } else {
+                        this.send_randow_text_msg(e)
+                        return
+                    }
+                } catch (err) {
                     this.send_randow_text_msg(e)
                     return
                 }

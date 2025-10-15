@@ -18,7 +18,7 @@ import cfg from '../../../lib/config/config.js'
 import { getGeminiModelsByFetch } from '../utils/paimonFuction.js'
 // import { ConversationManager } from '../model/conversation.js'
 
-const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/chatgpt/PaimonChuoYiChouPictures/savePics`
+const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/autoEmoticons/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 export class voicechangehelp extends plugin {
@@ -840,7 +840,6 @@ async function parseSourceImg(e) {
     }
     return e;
 }
-
 
 /** 下载好的图片重命名并存档在directory */
 async function reNameAndSavePic(response, url, directory) {

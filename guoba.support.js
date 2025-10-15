@@ -1389,7 +1389,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_IsSendLocalpic',
           label: '戳一戳发送本地图片（重启生效）',
-          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/data/chatgpt/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
+          bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在"云崽根目录/data/autoEmoticons/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
           component: 'Switch'
         },
         {
@@ -1636,106 +1636,6 @@ export function supportGuoba() {
                 },
               },
             ],
-          },
-        },
-        {
-          label: '以下为自动表情包',
-          component: 'Divider'
-        },
-        {
-          field: 'autoEmoticons.useEmojiSave',
-          label: '启用表情保存',
-          bottomHelpMessage: '是否启用表情保存/偷取/发送；会自动发送保存在  /data/chatgpt/emoji_save/群号/ 和 /data/chatgpt/PaimonChuoYiChouPictures/ 目录下的表情包；群单独指令：#哒咩 #自动表情包[开启|关闭] #表情包配置',
-          component: 'Switch'
-        },
-        // {
-        //   field: 'autoEmoticons.expireTimeInSeconds',
-        //   label: '表情记录时间',
-        //   bottomHelpMessage: '在此时间内发送多次才会被保存',
-        //   helpMessage: '单位：秒',
-        //   component: 'InputNumber',
-        //   componentProps: {
-        //     min: 0,
-        //     // max: 999999999,
-        //     step: 1
-        //   }
-        // },
-        {
-          field: 'autoEmoticons.confirmCount',
-          label: '表情确认次数',
-          bottomHelpMessage: '在记录时间内接收多少次才保存表情包',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 999999999,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.replyRate',
-          label: '发送表情概率',
-          bottomHelpMessage: '发送偷取表情的概率',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 1,
-            step: 0.01
-          }
-        },
-        {
-          field: 'autoEmoticons.sendCD',
-          label: '发送表情冷却时间',
-          bottomHelpMessage: '发送表情的冷却时间（秒）',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.maxEmojiCount',
-          label: '表情包最大数量',
-          bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.maxEmojiSize',
-          label: '表情大小限制',
-          bottomHelpMessage: '表情包文件大小限制 (MB)',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.allowGroups',
-          label: '表情包白名单群',
-          bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群；（推荐设置该选项，设置后支持无触发自动发送表情包，否则只能接受任意信息后概率触发表情包）',
-          component: "GTags",
-          componentProps: {
-            placeholder: '请输入qq群号',
-            allowAdd: true,
-            allowDel: true,
-            valueParser: (value) => value.split(',') || []
-          },
-        },
-        {
-          field: 'autoEmoticons.getBotByQQ_targetQQArr',
-          label: 'BotQQ号',
-          bottomHelpMessage: 'Bot多开qq时指定一个或多个Bot发送表情包，否则将随机使用1个已登录的Bot',
-          component: "GTags", // 不需要转为数字数组
-          componentProps: {
-            placeholder: '请输入qq号',
-            allowAdd: true,
-            allowDel: true,
-            valueParser: ((value) => value.split(',') || []),
           },
         },
         {
