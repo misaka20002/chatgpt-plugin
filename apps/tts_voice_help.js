@@ -16,9 +16,9 @@ import fs from 'fs'
 import fetch from 'node-fetch'
 import cfg from '../../../lib/config/config.js'
 import { getGeminiModelsByFetch } from '../utils/paimonFuction.js'
-import { ConversationManager } from '../model/conversation.js'
+// import { ConversationManager } from '../model/conversation.js'
 
-const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/resources/PaimonChuoYiChouPictures/savePics`
+const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/chatgpt/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 export class voicechangehelp extends plugin {

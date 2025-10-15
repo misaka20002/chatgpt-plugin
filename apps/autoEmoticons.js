@@ -4,6 +4,7 @@ import chokidar from 'chokidar'
 import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 import fetch from 'node-fetch'
+import { getBotByQQ } from '../utils/paimonFuction.js'
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
@@ -969,20 +970,4 @@ export async function downloadImageFile(url, relativePath, maxSizeMB = null) {
             error: error.message
         }
     }
-}
-
-/**
- * @description: 获取指定QQ号的Bot对象，如果都不存在则返回默认的Bot对象
- * @param {Array} targetQQArr bot qq号数组
- * @return {Object} Bot实例对象
- */
-function getBotByQQ(targetQQArr) {
-    for (const targetQQ of targetQQArr) {
-        // 检查目标QQ的Bot是否存在
-        if (targetQQ && Bot[targetQQ]) {
-            return Bot[targetQQ];
-        }
-    }
-    // 最后的兜底：返回Bot对象本身（适用于单Bot环境）
-    return Bot;
 }
