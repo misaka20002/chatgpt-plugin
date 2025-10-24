@@ -875,7 +875,7 @@ async function collectTools(e) {
     }
   }
   // 若填写了 tavily Key 则使用 TavilyExtractTool
-  if (Config.getTavilyKey)
+  if (Config.tavilyKey)
     WebTool = new TavilyExtractTool()
   else
     WebTool = new WebsiteTool()
