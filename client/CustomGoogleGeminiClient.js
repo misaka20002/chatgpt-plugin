@@ -291,6 +291,18 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       logger.warn('遇到MALFORMED_FUNCTION_CALL，进行重试。')
       return this.sendMessage(text, opt, retryTime--)
     }
+    
+    // 检查 responseContent 是否为空
+    if (!responseContent || !responseContent.parts || responseContent.parts.length === 0) {
+      logger.warn('[chatgpt]响应内容为空,使用默认消息')
+      return {
+        text: `${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 1)}？`,
+        conversationId: '',
+        parentMessageId: opt.parentMessageId || '',
+        id: idModel
+      }
+    }
+    
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
@@ -443,8 +455,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 function handleSearchResponse (responseContent) {
   let final = ''
 
+  // 如果 responseContent 不存在或没有 parts,直接返回
+  if (!responseContent || !responseContent.parts) {
+    return {
+      final,
+      responseContent
+    }
+  }
+
   // 遍历每个 part 并处理
-  responseContent.parts = responseContent?.parts?.map((part) => {
+  responseContent.parts = responseContent.parts.map((part) => {
     let newText = ''
 
     if (part.text) {
