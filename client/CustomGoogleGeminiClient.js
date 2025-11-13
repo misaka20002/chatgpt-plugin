@@ -116,7 +116,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    * @param {number} retryTime 重试次数
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
-  async sendMessage (text, opt = {}, retryTime = 3) {
+  async sendMessage (text, opt = {}, retryTime = 10) {
     if (!opt.toolChain) {
       opt.toolChain = {
         depth: 0,
@@ -288,19 +288,20 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     responseContent = response.candidates[0].content
     let groundingMetadata = response.candidates[0].groundingMetadata
     if (response.candidates[0].finishReason === 'MALFORMED_FUNCTION_CALL') {
-      logger.warn('遇到MALFORMED_FUNCTION_CALL，进行重试。')
-      return this.sendMessage(text, opt, retryTime--)
+      if (retryTime <= 0) {
+        throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误,重试次数已用完')
+      }
+      logger.warn('[chatgpt] 遇到 MALFORMED_FUNCTION_CALL 错误,进行重试。')
+      return this.sendMessage(text, opt, --retryTime)
     }
     
     // 检查 responseContent 是否为空
     if (!responseContent || !responseContent.parts || responseContent.parts.length === 0) {
-      logger.warn('[chatgpt]响应内容为空,使用默认消息')
-      return {
-        text: `${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 1)}？`,
-        conversationId: '',
-        parentMessageId: opt.parentMessageId || '',
-        id: idModel
+      if (retryTime <= 0) {
+        throw new Error('responseContent.parts 为空,重试次数已用完')
       }
+      logger.warn('[chatgpt] responseContent.parts 为空,进行重试。')
+      return this.sendMessage(text, opt, --retryTime)
     }
     
     // todo 空回复也可以重试
@@ -310,9 +311,21 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       const repeatedTool = toolNames.find(name => opt.toolChain.calledTools.includes(name));
       
       if (opt.toolChain.depth >= 2 || repeatedTool) {
-        const text = responseContent.parts.find(i => i.text)?.text || "操作已完成";
+        const responseText = responseContent.parts.find(i => i.text)?.text;
+        if(!responseText){
+          if (retryTime <= 0) {
+            return {
+              text: '操作已完成',
+              conversationId: '',
+              parentMessageId: idThis,
+              id: idModel
+            };
+          }
+          logger.warn('[chatgpt] responseContent.parts.text 为空,进行重试。');
+          return this.sendMessage(text, opt, --retryTime);
+        }
         return {
-          text: text,
+          text: responseText,
           conversationId: '',
           parentMessageId: idThis,
           id: idModel
