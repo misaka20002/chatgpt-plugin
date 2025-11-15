@@ -482,13 +482,20 @@ export class memes extends plugin {
       return this.e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
     }
     logger.info('派蒙meme表情制作:\ninput', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
-    let response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
-      method: 'POST',
-      body: formData
-      // headers: {
-      // 'Content-Type': 'multipart/form-data'
-      // }
-    })
+    let response
+    try {
+      response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
+        method: 'POST',
+        body: formData
+        // headers: {
+        // 'Content-Type': 'multipart/form-data'
+        // }
+      })
+    } catch (error) {
+      logger.error('[meme]请求失败:', error)
+      await e.reply(`[meme]表情制作失败: ${error.message}`, true)
+      return true
+    }
     // console.log(response.status)
     if (response.status > 299) {
       let error = await response.text()
