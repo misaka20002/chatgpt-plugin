@@ -41,7 +41,7 @@ import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
 import { SerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
-import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
+// import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
 // import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
 // import { EliMusicTool } from '../utils/tools/EliMusicTool.js'
 import { HandleMessageMsgTool } from '../utils/tools/HandleMessageMsgTool.js'
@@ -908,7 +908,7 @@ async function collectTools(e) {
     // new EliMusicTool(),
     // new EliMovieTool(),
     new SendMessageToSpecificGroupOrUserTool(),
-    new SendDiceTool(),
+    // new SendDiceTool(), // 暂不支持骰子了
     new QueryGenshinTool(),
     new SetTitleTool(),
     new GithubAPITool()
@@ -916,7 +916,7 @@ async function collectTools(e) {
   // todo 3.0再重构tool的插拔和管理
   let /** @type{AbstractTool[]} **/ tools = [
     new SendAvatarTool(),
-    new SendDiceTool(),
+    // new SendDiceTool(), // 暂不支持骰子了
     new SendMessageToSpecificGroupOrUserTool(),
     // new EditCardTool(),
     new QueryStarRailTool(),

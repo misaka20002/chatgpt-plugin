@@ -21,22 +21,11 @@ export async function getChatHistoryGroup (e, num) {
       try {
         let mm = await e.bot.gml
         for (const chat of chats) {
-          if (e.adapter === 'shamrock') {
-            if (chat.sender?.user_id === 0) {
-              // 奇怪格式的历史消息，过滤掉
-              continue
-            }
-            let sender = await pickMemberAsync(e, chat.sender.user_id)
-            if (sender) {
-              chat.sender = sender
-            }
-          } else {
             let sender = mm.get(chat.sender.user_id)
             if (sender) {
               chat.sender = sender
             }
           }
-        }
       } catch (err) {
         logger.warn(err)
       }
