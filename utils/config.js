@@ -166,7 +166,7 @@ const defaultConfig = {
   emojiBaseURL: 'https://www.gstatic.com/android/keyboard/emojikitchen',
   emojiBaseSwitch: true,
   enableGroupContext: false,
-  groupContextTip: '你看看我们群里的聊天记录吧，回答问题的时候要主动参考我们的聊天记录进行回答或提问。但要看清楚哦，不要把我和其他人弄混啦，也不要把自己看晕啦。注意：你的回复中不要使用 CQ:reply',
+  groupContextTip: '你看看我们群里的聊天记录吧，回答问题的时候要主动参考我们的聊天记录进行回答或提问。但要看清楚哦，不要把我和其他人弄混啦，也不要把自己看晕啦。',
   groupContextLength: 50,
   enableRobotAt: true,
   maxNumUserMessagesInConversation: 20,
@@ -300,6 +300,9 @@ const defaultConfig = {
 
   // turnOnBilitv: false,
   // bilitv_max_duration_min: 10
+
+  is_recallMsg: true,
+  removeCQCodeFocus: true,
 
 }
 const _path = process.cwd()

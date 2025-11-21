@@ -1,5 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../../utils/config.js'
+import { hidePrivacyInfo } from '../../utils/paimonFuction.js'
 
 /**
  * Tool: 调用Gemini LLM原生搜索返回结果
@@ -56,7 +57,7 @@ export class GeminiSearchTool extends AbstractTool {
             let res = await client.sendMessage(query, opt)
             return res.text || "Error: 没有返回搜索结果"
         } catch (err) {
-            return 'Error: 网络搜索失败: ' + (err.message || '未知错误');
+            return 'Error: 网络搜索失败: ' + (hidePrivacyInfo(err.message) || '未知错误');
         }
     }
 }

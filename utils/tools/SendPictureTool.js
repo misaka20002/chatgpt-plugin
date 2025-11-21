@@ -13,7 +13,9 @@ export class SendPictureTool extends AbstractTool {
       },
       targetGroupIdOrQQNumber: {
         type: 'string',
-        description: 'Fill in the target user\'s qq number or groupId when you need to send picture to specific user or group, otherwise leave blank'
+        description: Config.enableToolPrivateSend
+          ? 'Fill in the target user\'s qq number or groupId when you need to send picture to specific user or group, otherwise leave blank'
+          : 'Fill in the target groupId when you need to send picture to specific group, otherwise leave blank. ONLY group chat is allowed, do NOT fill in qq number'
       }
     },
     required: ['urlOfPicture', 'targetGroupIdOrQQNumber']

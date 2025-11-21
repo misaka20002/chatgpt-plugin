@@ -32,10 +32,15 @@ import { getProxy } from '../utils/proxy.js'
 import { generateSuggestedResponse } from '../utils/chat.js'
 import Core from '../model/core.js'
 import { collectProcessors } from '../utils/postprocessors/BasicProcessor.js'
+import {
+  hidePrivacyInfo,
+  removeCQCode,
+} from '../utils/paimonFuction.js'
 
 let version = Config.version
 let proxy = getProxy()
-const isTrss = Array.isArray(Bot.uin)
+// const isTrss = Array.isArray(Bot.uin)
+const isTrss = !Config.is_recallMsg
 const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 import {
@@ -749,7 +754,7 @@ export class chatgpt extends plugin {
     let confirm = await redis.get('CHATGPT:CONFIRM')
     let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
     if (confirmOn) {
-      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: isTrss ? 0 : 8 })
+      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: isTrss ? 0 : 30 })
     }
 
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -943,6 +948,11 @@ export class chatgpt extends plugin {
         await this.reply('没有任何回复', true)
         return
       }
+
+      // 移除 CQ
+      if (Config.removeCQCodeFocus)
+        response = removeCQCode(response);
+
       let emotion, emotionDegree
       if (Config.ttsMode === 'azure' && (use === 'claude' || use === 'bing') && await AzureTTS.getEmotionPrompt(e)) {
         let ttsRoleAzure = userReplySetting.ttsRoleAzure
@@ -1337,7 +1347,7 @@ export class chatgpt extends plugin {
             // 多次回复
             const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
-              await this.reply(str_arr[i], e.isGroup);
+              await this.reply(str_arr[i]);
               await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
@@ -1416,7 +1426,7 @@ export class chatgpt extends plugin {
           // 多次回复
           const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
-            await this.reply(str_arr[i], e.isGroup);
+            await this.reply(str_arr[i]);
             await sleep_zz(Math.random() * 5000 + 2000);
           }
         }
@@ -1464,13 +1474,14 @@ export class chatgpt extends plugin {
       }
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)
-        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: isTrss ? 0 : (e.isGroup ? 10 : 0) })
+        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
       } else {
         let errorMessage = err?.message || err?.data?.message || (typeof (err) === 'object' ? JSON.stringify(err) : err) || '未能确认错误类型！'
+        errorMessage = hidePrivacyInfo(errorMessage);
         if (forcePictureMode || userSetting.usePicture || (Config.autoUsePicture && errorMessage.length > Config.autoUsePictureThreshold)) {
           await this.renderImage(e, use, `出现异常,错误信息如下 \n \`\`\`${errorMessage}\`\`\``, prompt)
         } else {
-          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 10 : 0) })
+          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
         }
       }
     }

@@ -13,6 +13,7 @@ import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import { URL } from 'node:url'
 import { getBots } from '../utils/bot.js'
 import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
+import { hidePrivacyInfo } from '../utils/paimonFuction.js'
 
 let useSilk = false
 try {
@@ -641,7 +642,7 @@ ${translateLangLabels}
       })
       await e.reply(res.text, true)
     } catch (err) {
-      await e.reply('❌识图失败：' + err.message, true)
+      await e.reply('❌识图失败：' + hidePrivacyInfo(err.message), true)
     }
     return true
   }
