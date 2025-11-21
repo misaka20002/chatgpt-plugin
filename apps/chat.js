@@ -945,7 +945,9 @@ export class chatgpt extends plugin {
       }
       let mood = 'blandness'
       if (!response) {
-        await this.reply('没有任何回复', true)
+        // await this.reply('没有任何回复', true)
+        logger.info('[chatgpt]没有任何回复')
+        await this.reply(`${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 1)}？`, e.isGroup)
         return
       }
 
