@@ -1246,7 +1246,7 @@ export function supportGuoba() {
         {
           field: 'tts_First_person',
           label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫',
+          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫；重启生效',
           component: 'Input'
         },
         {

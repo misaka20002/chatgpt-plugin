@@ -62,6 +62,7 @@ import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
 import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.js'
+import { BlockUserTool } from '../utils/tools/blockUser.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -911,7 +912,8 @@ async function collectTools(e) {
     // new SendDiceTool(), // 暂不支持骰子了
     new QueryGenshinTool(),
     new SetTitleTool(),
-    new GithubAPITool()
+    new GithubAPITool(),
+    new BlockUserTool(),
   ]
   // todo 3.0再重构tool的插拔和管理
   let /** @type{AbstractTool[]} **/ tools = [
@@ -934,7 +936,8 @@ async function collectTools(e) {
     // new HandleMessageMsgTool(),
     serpTool,
     new QueryUserinfoTool(),
-    new GithubAPITool()
+    new GithubAPITool(),
+    new BlockUserTool(),
   ]
 
   if (Config.disable_sendMessage_tool) {

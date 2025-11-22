@@ -702,6 +702,23 @@ export class chatgpt extends plugin {
   }
 
   async abstractChat(e, prompt, use, forcePictureMode = false) {
+    /** 检查用户是否被拉黑 class BlockUserTool extends AbstractTool */
+    if (!e.isMaster) {
+      const blockKey = `CHATGPT:blockUser:${e.sender.user_id}`
+      const blockData = await redis.get(blockKey)
+      if (blockData) {
+        try {
+          const data = JSON.parse(blockData)
+          const remainingTime = Math.ceil((data.blockedAt + data.duration * 1000 - Date.now()) / 60000)
+          logger.info(`[chatgpt] 用户 ${e.sender.user_id} 被Bot拉黑中，剩余时间: ${remainingTime} 分钟`)
+          await this.reply(`${Config.tts_First_person}不想理你了，因为${data.reason}`, true)
+          return true
+        } catch (err) {
+          logger.error('解析拉黑数据失败:', err)
+        }
+      }
+    }
+
     /** 备份用户最初的 e.msg */
     e.msg_bak_2 = e.msg
 
