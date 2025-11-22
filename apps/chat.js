@@ -548,7 +548,7 @@ export class chatgpt extends plugin {
       let ats = e.message.filter(m => m.type === 'at')
       if (!(e.atme || e.atBot) && ats.length > 0) {
         if (Config.debug) {
-          logger.mark('艾特别人了，没艾特我，忽略#chat')
+          logger.mark('[chatgpt] 艾特别人了，没艾特我，忽略#chat')
         }
         return false
       }
@@ -562,7 +562,7 @@ export class chatgpt extends plugin {
     }
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
-      logger.info('chatgpt闭嘴中，不予理会')
+      logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
       return false
     }
     // 获取用户配置
@@ -585,16 +585,16 @@ export class chatgpt extends plugin {
    */
   async chatgpt_for_firstperson_call(e) {
     if (!Config.chat_for_First_person) {
-      logger.info('AI回应第一人称呼叫已关闭，不予理会')
+      logger.info('[chatgpt] AI回应第一人称呼叫已关闭，不予理会')
       return false
     }
     let msg = e.msg
     if (!msg || e.msg?.startsWith('#')) {
-      logger.info('消息以#开头，，不予理会')
+      logger.info('[chatgpt] 消息以#开头，，不予理会')
       return false
     }
     if (e.user_id == getUin(e)) {
-      logger.info('机器人自己发出来的消息，不予理会')
+      logger.info('[chatgpt] 机器人自己发出来的消息，不予理会')
       return false
     }
     // let ats = e.message.filter(m => m.type === 'at')
@@ -607,7 +607,7 @@ export class chatgpt extends plugin {
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
-      logger.info('chatgpt闭嘴中，不予理会')
+      logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
       return false
     }
     // 获取用户配置
