@@ -303,6 +303,7 @@ const defaultConfig = {
 
   is_recallMsg: true,
   removeCQCodeFocus: true,
+  at_otherUser: true,
 
 }
 const _path = process.cwd()

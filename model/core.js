@@ -62,7 +62,8 @@ import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
 import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.js'
-import { BlockUserTool } from '../utils/tools/blockUser.js'
+import { BlockUserTool } from '../utils/tools/Block_User.js'
+import { AtOtherUserTool } from '../utils/tools/At_otherUser.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -908,7 +909,7 @@ async function collectTools(e) {
     new QueryUserinfoTool(),
     // new EliMusicTool(),
     // new EliMovieTool(),
-    new SendMessageToSpecificGroupOrUserTool(),
+    // new SendMessageToSpecificGroupOrUserTool(),
     // new SendDiceTool(), // 暂不支持骰子了
     new QueryGenshinTool(),
     new SetTitleTool(),
@@ -919,7 +920,7 @@ async function collectTools(e) {
   let /** @type{AbstractTool[]} **/ tools = [
     new SendAvatarTool(),
     // new SendDiceTool(), // 暂不支持骰子了
-    new SendMessageToSpecificGroupOrUserTool(),
+    // new SendMessageToSpecificGroupOrUserTool(),
     // new EditCardTool(),
     new QueryStarRailTool(),
     new QueryGenshinTool(),
@@ -940,9 +941,9 @@ async function collectTools(e) {
     new BlockUserTool(),
   ]
 
-  if (Config.disable_sendMessage_tool) {
-    tools = tools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
-    fullTools = fullTools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
+  if (!Config.disable_sendMessage_tool) {
+    tools.push(...[new SendMessageToSpecificGroupOrUserTool()])
+    fullTools.push(...[new SendMessageToSpecificGroupOrUserTool()])
   }
 
   if (Config.serpSource === "off") {
@@ -953,6 +954,11 @@ async function collectTools(e) {
   if (Config.add_sf_image_edit) {
     tools.push(...[new Sf_image_edit()])
     fullTools.push(...[new Sf_image_edit()])
+  }
+
+  if (Config.at_otherUser) {
+    tools.push(...[new AtOtherUserTool()])
+    fullTools.push(...[new AtOtherUserTool()])
   }
 
   let systemAddition = ''

@@ -1269,19 +1269,25 @@ export function supportGuoba() {
         },
         {
           field: 'add_sf_image_edit',
-          label: '工具-Gemini Image',
+          label: '工具新增-Gemini Image',
           bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口 #g谷歌编辑图片 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md',
           component: 'Switch'
         },
         {
+          field: 'at_otherUser',
+          label: '工具新增-at群友',
+          bottomHelpMessage: '新增主动At其他群友的工具',
+          component: 'Switch'
+        },
+        {
           field: 'disable_sendMessage_tool',
-          label: '禁用文字工具',
+          label: '工具禁用-文字工具',
           bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于sf图片模式、伪人重复发送相同文本等问题',
           component: 'Switch'
         },
         {
           field: 'change_handleMsg_tool',
-          label: '调整msg工具',
+          label: '工具调整-msg工具',
           bottomHelpMessage: '智能模式中，修改“handleMsg工具”：1.引用消息时，bot如果要加精华时将强制指定为引用的消息；2.禁用撤回消息的功能。（该选项用于某些不够聪明的模型，例如 gemini 2.0 系列）（当你在控制台看到mark消息“[ChatGPT][handleMsg] ai 已正确选择引用消息 source_message_id”就可以将该选项关闭了）',
           component: 'Switch'
         },

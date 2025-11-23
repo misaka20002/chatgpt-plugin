@@ -160,5 +160,6 @@
   "extraUrl": "https://cpe.ikechan8370.com",
   "smartMode": false,
   "is_recallMsg": true,
-  "removeCQCodeFocus": true
+  "removeCQCodeFocus": true,
+  "at_otherUser": true
 }
