@@ -193,6 +193,18 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'is_recallMsg',
+          label: '撤回错误消息',
+          bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          component: 'Switch'
+        },
+        {
+          field: 'removeCQCodeFocus',
+          label: '移除CQ码',
+          bottomHelpMessage: '强制移除Bot回复消息中的恼人的 CQ 码',
+          component: 'Switch'
+        },
+        {
           field: 'enableToolbox',
           label: '开启工具箱',
           bottomHelpMessage: '独立的后台管理面板（默认3321端口），与锅巴类似。工具箱会有额外占用，启动速度稍慢，酌情开启。修改后需重启生效！！！',
@@ -1234,7 +1246,7 @@ export function supportGuoba() {
         {
           field: 'tts_First_person',
           label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫',
+          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫；重启生效',
           component: 'Input'
         },
         {
@@ -1389,7 +1401,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_IsSendLocalpic',
           label: '戳一戳发送本地图片（重启生效）',
-          bottomHelpMessage: '随机本地图片地址：如果需要发送随机图片则把图片放在"云崽根目录/data/chatgpt/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
+          bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在"云崽根目录/data/autoEmoticons/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦）。',
           component: 'Switch'
         },
         {
@@ -1478,7 +1490,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_Fighting_Back',
           label: '反击概率',
-          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率',
+          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
           component: 'InputNumber',
           componentProps: {
             readonly: true,
@@ -1540,203 +1552,6 @@ export function supportGuoba() {
           bottomHelpMessage: '用户输入的图片，最大支持的文件大小；重启生效',
           helpMessage: '单位：MB',
           component: 'InputNumber'
-        },
-        {
-          label: '复读 & 打断复读',
-          component: 'Divider'
-        },
-        {
-          field: "autoRepeat_config",
-          label: "🍓群单独设置",
-          bottomHelpMessage: "复读 & 打断复读；群单独指令：#自动复读[开启|关闭] #打断复读[开启|关闭] #自动复读状态",
-          component: "GSubForm",
-          componentProps: {
-            multiple: true,
-            schemas: [
-              {
-                field: "groupId",
-                label: "群号",
-                required: true,
-                bottomHelpMessage: "群号",
-                component: "InputNumber",
-                componentProps: {
-                  min: 1,
-                  step: 1,
-                },
-              },
-              {
-                field: "enabled",
-                label: "自动复读",
-                required: false,
-                bottomHelpMessage: "是否启用自动复读，默认关闭",
-                component: 'Switch'
-              },
-              {
-                field: "triggerCount",
-                label: "触发复读的次数",
-                required: false,
-                bottomHelpMessage: "触发复读的次数，默认3次",
-                component: "InputNumber",
-                componentProps: {
-                  min: 1,
-                  step: 1,
-                },
-              },
-              {
-                field: "probability",
-                label: "复读概率",
-                required: false,
-                bottomHelpMessage: "复读概率，默认1",
-                component: "InputNumber",
-                componentProps: {
-                  min: 0,
-                  max: 1,
-                  step: 0.01,
-                },
-              },
-              {
-                field: "breakEnabled",
-                label: "打断复读",
-                required: false,
-                bottomHelpMessage: "是否启用打断复读，默认关闭",
-                component: 'Switch'
-              },
-              {
-                field: "breakCount",
-                label: "打断的次数",
-                required: false,
-                bottomHelpMessage: "打断的次数，默认5次",
-                component: "InputNumber",
-                componentProps: {
-                  min: 1,
-                  step: 1,
-                },
-              },
-              {
-                field: "breakProbability",
-                label: "打断概率",
-                required: false,
-                bottomHelpMessage: "打断概率，默认0.8",
-                component: "InputNumber",
-                componentProps: {
-                  min: 0,
-                  max: 1,
-                  step: 0.01,
-                },
-              },
-              {
-                field: "cooldown",
-                label: "冷却时间",
-                required: false,
-                bottomHelpMessage: "冷却时间（秒），默认30秒",
-                component: "InputNumber",
-                componentProps: {
-                  min: 1,
-                  step: 1,
-                },
-              },
-            ],
-          },
-        },
-        {
-          label: '以下为自动表情包',
-          component: 'Divider'
-        },
-        {
-          field: 'autoEmoticons.useEmojiSave',
-          label: '启用表情保存',
-          bottomHelpMessage: '是否启用表情保存/偷取/发送；会自动发送保存在  /data/chatgpt/emoji_save/群号/ 和 /data/chatgpt/PaimonChuoYiChouPictures/ 目录下的表情包；群单独指令：#哒咩 #自动表情包[开启|关闭] #表情包配置',
-          component: 'Switch'
-        },
-        // {
-        //   field: 'autoEmoticons.expireTimeInSeconds',
-        //   label: '表情记录时间',
-        //   bottomHelpMessage: '在此时间内发送多次才会被保存',
-        //   helpMessage: '单位：秒',
-        //   component: 'InputNumber',
-        //   componentProps: {
-        //     min: 0,
-        //     // max: 999999999,
-        //     step: 1
-        //   }
-        // },
-        {
-          field: 'autoEmoticons.confirmCount',
-          label: '表情确认次数',
-          bottomHelpMessage: '在记录时间内接收多少次才保存表情包',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 999999999,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.replyRate',
-          label: '发送表情概率',
-          bottomHelpMessage: '发送偷取表情的概率',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 1,
-            step: 0.01
-          }
-        },
-        {
-          field: 'autoEmoticons.sendCD',
-          label: '发送表情冷却时间',
-          bottomHelpMessage: '发送表情的冷却时间（秒）',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.maxEmojiCount',
-          label: '表情包最大数量',
-          bottomHelpMessage: '每个群最大的表情包储存数量，储存在 data/chatgpt/emoji_save/ 文件夹下',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.maxEmojiSize',
-          label: '表情大小限制',
-          bottomHelpMessage: '表情包文件大小限制 (MB)',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            // max: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'autoEmoticons.allowGroups',
-          label: '表情包白名单群',
-          bottomHelpMessage: '需要保存和发送表情包的群号列表，为空数组时表示所有群；（推荐设置该选项，设置后支持无触发自动发送表情包，否则只能接受任意信息后概率触发表情包）',
-          component: "GTags",
-          componentProps: {
-            placeholder: '请输入qq群号',
-            allowAdd: true,
-            allowDel: true,
-            valueParser: (value) => value.split(',') || []
-          },
-        },
-        {
-          field: 'autoEmoticons.getBotByQQ_targetQQArr',
-          label: 'BotQQ号',
-          bottomHelpMessage: 'Bot多开qq时指定一个或多个Bot发送表情包，否则将随机使用1个已登录的Bot',
-          component: "GTags", // 不需要转为数字数组
-          componentProps: {
-            placeholder: '请输入qq号',
-            allowAdd: true,
-            allowDel: true,
-            valueParser: ((value) => value.split(',') || []),
-          },
         },
         {
           label: '伪人',

@@ -32,10 +32,15 @@ import { getProxy } from '../utils/proxy.js'
 import { generateSuggestedResponse } from '../utils/chat.js'
 import Core from '../model/core.js'
 import { collectProcessors } from '../utils/postprocessors/BasicProcessor.js'
+import {
+  hidePrivacyInfo,
+  removeCQCode,
+} from '../utils/paimonFuction.js'
 
 let version = Config.version
 let proxy = getProxy()
-const isTrss = Array.isArray(Bot.uin)
+// const isTrss = Array.isArray(Bot.uin)
+const isTrss = !Config.is_recallMsg
 const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 import {
@@ -543,7 +548,7 @@ export class chatgpt extends plugin {
       let ats = e.message.filter(m => m.type === 'at')
       if (!(e.atme || e.atBot) && ats.length > 0) {
         if (Config.debug) {
-          logger.mark('艾特别人了，没艾特我，忽略#chat')
+          logger.mark('[chatgpt] 艾特别人了，没艾特我，忽略#chat')
         }
         return false
       }
@@ -557,7 +562,7 @@ export class chatgpt extends plugin {
     }
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
-      logger.info('chatgpt闭嘴中，不予理会')
+      logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
       return false
     }
     // 获取用户配置
@@ -580,16 +585,16 @@ export class chatgpt extends plugin {
    */
   async chatgpt_for_firstperson_call(e) {
     if (!Config.chat_for_First_person) {
-      logger.info('AI回应第一人称呼叫已关闭，不予理会')
+      logger.info('[chatgpt] AI回应第一人称呼叫已关闭，不予理会')
       return false
     }
     let msg = e.msg
     if (!msg || e.msg?.startsWith('#')) {
-      logger.info('消息以#开头，，不予理会')
+      logger.info('[chatgpt] 消息以#开头，，不予理会')
       return false
     }
     if (e.user_id == getUin(e)) {
-      logger.info('机器人自己发出来的消息，不予理会')
+      logger.info('[chatgpt] 机器人自己发出来的消息，不予理会')
       return false
     }
     // let ats = e.message.filter(m => m.type === 'at')
@@ -602,7 +607,7 @@ export class chatgpt extends plugin {
     let prompt = msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
-      logger.info('chatgpt闭嘴中，不予理会')
+      logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
       return false
     }
     // 获取用户配置
@@ -697,6 +702,23 @@ export class chatgpt extends plugin {
   }
 
   async abstractChat(e, prompt, use, forcePictureMode = false) {
+    /** 检查用户是否被拉黑 class BlockUserTool extends AbstractTool */
+    if (!e.isMaster) {
+      const blockKey = `CHATGPT:blockUser:${e.sender.user_id}`
+      const blockData = await redis.get(blockKey)
+      if (blockData) {
+        try {
+          const data = JSON.parse(blockData)
+          const remainingTime = Math.ceil((data.blockedAt + data.duration * 1000 - Date.now()) / 60000)
+          logger.info(`[chatgpt] 用户 ${e.sender.user_id} 被Bot拉黑中，剩余时间: ${remainingTime} 分钟`)
+          await this.reply(`${Config.tts_First_person}不想理你了，因为${data.reason}`, true)
+          return true
+        } catch (err) {
+          logger.error('解析拉黑数据失败:', err)
+        }
+      }
+    }
+
     /** 备份用户最初的 e.msg */
     e.msg_bak_2 = e.msg
 
@@ -749,7 +771,7 @@ export class chatgpt extends plugin {
     let confirm = await redis.get('CHATGPT:CONFIRM')
     let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
     if (confirmOn) {
-      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: isTrss ? 0 : 8 })
+      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: isTrss ? 0 : 30 })
     }
 
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -940,9 +962,16 @@ export class chatgpt extends plugin {
       }
       let mood = 'blandness'
       if (!response) {
-        await this.reply('没有任何回复', true)
+        // await this.reply('没有任何回复', true)
+        logger.info('[chatgpt]没有任何回复')
+        await this.reply(`${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 2)}${Config.tts_First_person.substring(0, 1)}？`, e.isGroup)
         return
       }
+
+      // 移除 CQ
+      if (Config.removeCQCodeFocus)
+        response = removeCQCode(response);
+
       let emotion, emotionDegree
       if (Config.ttsMode === 'azure' && (use === 'claude' || use === 'bing') && await AzureTTS.getEmotionPrompt(e)) {
         let ttsRoleAzure = userReplySetting.ttsRoleAzure
@@ -1337,7 +1366,7 @@ export class chatgpt extends plugin {
             // 多次回复
             const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
-              await this.reply(str_arr[i], e.isGroup);
+              await this.reply(str_arr[i]);
               await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
@@ -1416,7 +1445,7 @@ export class chatgpt extends plugin {
           // 多次回复
           const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
-            await this.reply(str_arr[i], e.isGroup);
+            await this.reply(str_arr[i]);
             await sleep_zz(Math.random() * 5000 + 2000);
           }
         }
@@ -1464,13 +1493,14 @@ export class chatgpt extends plugin {
       }
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)
-        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: isTrss ? 0 : (e.isGroup ? 10 : 0) })
+        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
       } else {
         let errorMessage = err?.message || err?.data?.message || (typeof (err) === 'object' ? JSON.stringify(err) : err) || '未能确认错误类型！'
-        if (errorMessage.length < 200) {
-          await this.reply(`出现错误：${errorMessage}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 10 : 0) })
-        } else {
+        errorMessage = hidePrivacyInfo(errorMessage);
+        if (forcePictureMode || userSetting.usePicture || (Config.autoUsePicture && errorMessage.length > Config.autoUsePictureThreshold)) {
           await this.renderImage(e, use, `出现异常,错误信息如下 \n \`\`\`${errorMessage}\`\`\``, prompt)
+        } else {
+          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
         }
       }
     }
@@ -1565,8 +1595,8 @@ export class chatgpt extends plugin {
   async renderImage(e, use, content, prompt, quote = [], mood = '', suggest = '', imgUrls = []) {
     let cacheData = await this.cacheContent(e, use, content, prompt, quote, mood, suggest, imgUrls)
     // const template = use !== 'bing' ? 'content/ChatGPT/index' : 'content/Bing/index'
-    if (cacheData.error || cacheData.status != 200) {
-      await this.reply(`出现错误：${cacheData.error || 'server error ' + cacheData.status}`, true)
+    if (!cacheData || cacheData.error || cacheData.status != 200) {
+      await this.reply(`出现错误：${cacheData?.error || 'server error ' + (cacheData?.status || 'unknown')}`, true)
     } else {
       await this.reply(await renderUrl(e, (Config.viewHost ? `${Config.viewHost}/` : `http://127.0.0.1:${Config.serverPort || 3321}/`) + `page/${cacheData.file}?qr=${Config.showQRCode ? 'true' : 'false'}`, {
         retType: Config.quoteReply ? 'base64' : '',

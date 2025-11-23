@@ -41,7 +41,7 @@ import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
 import { SerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
-import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
+// import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
 // import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
 // import { EliMusicTool } from '../utils/tools/EliMusicTool.js'
 import { HandleMessageMsgTool } from '../utils/tools/HandleMessageMsgTool.js'
@@ -62,6 +62,7 @@ import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
 import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.js'
+import { BlockUserTool } from '../utils/tools/blockUser.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -878,7 +879,7 @@ async function collectTools(e) {
     }
   }
   // 若填写了 tavily Key 则使用 TavilyExtractTool
-  if (Config.getTavilyKey)
+  if (Config.tavilyKey)
     WebTool = new TavilyExtractTool()
   else
     WebTool = new WebsiteTool()
@@ -911,15 +912,16 @@ async function collectTools(e) {
     // new EliMusicTool(),
     // new EliMovieTool(),
     new SendMessageToSpecificGroupOrUserTool(),
-    new SendDiceTool(),
+    // new SendDiceTool(), // 暂不支持骰子了
     new QueryGenshinTool(),
     new SetTitleTool(),
-    new GithubAPITool()
+    new GithubAPITool(),
+    new BlockUserTool(),
   ]
   // todo 3.0再重构tool的插拔和管理
   let /** @type{AbstractTool[]} **/ tools = [
     new SendAvatarTool(),
-    new SendDiceTool(),
+    // new SendDiceTool(), // 暂不支持骰子了
     new SendMessageToSpecificGroupOrUserTool(),
     // new EditCardTool(),
     new QueryStarRailTool(),
@@ -937,7 +939,8 @@ async function collectTools(e) {
     // new HandleMessageMsgTool(),
     serpTool,
     new QueryUserinfoTool(),
-    new GithubAPITool()
+    new GithubAPITool(),
+    new BlockUserTool(),
   ]
 
   if (Config.disable_sendMessage_tool) {

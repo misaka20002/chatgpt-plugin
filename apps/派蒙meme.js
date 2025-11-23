@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'node:path'
 import _ from 'lodash'
 import { Config } from '../utils/config.js'
+import { hidePrivacyInfo } from '../utils/paimonFuction.js'
 
 if (!global.segment) {
   global.segment = (await import('oicq')).segment
@@ -40,50 +41,6 @@ let infos = {}
  * 主人保护list 如['lash','do','beat_up','little_do']
  */
 let protectList = ['lash','do','beat_up','little_do','fast_do','qi','fast_qi']
-
-/**
- * 隐藏错误信息中的隐私信息（网址、IP地址等）
- * @param {string} text 需要处理的文本
- * @returns {string} 处理后的文本
- */
-function hidePrivacyInfo(text) {
-  if (!text || typeof text !== 'string') {
-    return text;
-  }
-  // URL正则表达式 - 匹配 http/https/ftp 协议的网址
-  const urlRegex = /(https?:\/\/|ftp:\/\/)([\w\-._~:/?#[\]@!$&'()*+,;=%]+)/gi;
-  // IPv4地址正则表达式
-  const ipv4Regex = /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g;
-  // IPv6地址正则表达式
-  const ipv6Regex = /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|::1\b|\b(?:[0-9a-fA-F]{1,4}:){1,7}:\b|\b:(?:[0-9a-fA-F]{1,4}:){1,6}[0-9a-fA-F]{1,4}\b/g;
-  let result = text;
-  // 处理URL - 保留协议和域名开头，隐藏其他部分
-  result = result.replace(urlRegex, (match, protocol, rest) => {
-    if (rest.length <= 10) {
-      return protocol + '****';
-    }
-    // 保留前3个字符和后2个字符，中间用****替换
-    const visible = rest.substring(0, 3) + '****' + rest.substring(rest.length - 2);
-    return protocol + visible;
-  });
-  // 处理IPv4地址 - 隐藏后两段
-  result = result.replace(ipv4Regex, (match) => {
-    const parts = match.split('.');
-    return parts[0] + '.' + parts[1] + '.***.***.';
-  });
-  // 处理IPv6地址 - 保留前两段，其他用****替换
-  result = result.replace(ipv6Regex, (match) => {
-    if (match === '::1') {
-      return '****';
-    }
-    const parts = match.split(':');
-    if (parts.length >= 2) {
-      return parts[0] + ':' + parts[1] + ':****';
-    }
-    return '****';
-  });
-  return result;
-}
 
 export class memes extends plugin {
   constructor() {
@@ -482,13 +439,20 @@ export class memes extends plugin {
       return this.e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
     }
     logger.info('派蒙meme表情制作:\ninput', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
-    let response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
-      method: 'POST',
-      body: formData
-      // headers: {
-      // 'Content-Type': 'multipart/form-data'
-      // }
-    })
+    let response
+    try {
+      response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
+        method: 'POST',
+        body: formData
+        // headers: {
+        // 'Content-Type': 'multipart/form-data'
+        // }
+      })
+    } catch (error) {
+      logger.error('[meme]请求失败:', error)
+      await e.reply(`[meme]表情制作失败: ${error.message}`, true)
+      return true
+    }
     // console.log(response.status)
     if (response.status > 299) {
       let error = await response.text()

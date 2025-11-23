@@ -65,10 +65,12 @@ export const HarmBlockThreshold = {
 /**
  * @typedef {{
  *    name: string,
- *    args: {}
+ *    args: {},
+ *    thoughtSignature?: string
  * }} FunctionCall
  *
  * Gemini的FunctionCall
+ * thoughtSignature 用于严格验证函数调用的顺序和完整性
  */
 
 /**
@@ -77,11 +79,13 @@ export const HarmBlockThreshold = {
  *   response: {
  *     name: string,
  *     content: {}
- *   }
+ *   },
+ *   thoughtSignature?: string
  * }} FunctionResponse
  *
  * Gemini的Function执行结果包裹
- * 其中response可以为任意，本项目根据官方示例封装为name和content两个字段
+ * 其中response可以为任意,本项目根据官方示例封装为name和content两个字段
+ * thoughtSignature 必须按照收到的顺序原样返回
  */
 
 export class CustomGoogleGeminiClient extends GoogleGeminiClient {
@@ -116,7 +120,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    * @param {number} retryTime 重试次数
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
-  async sendMessage (text, opt = {}, retryTime = 3) {
+  async sendMessage (text, opt = {}, retryTime = 10) {
     if (!opt.toolChain) {
       opt.toolChain = {
         depth: 0,
@@ -272,7 +276,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     })
     if (result.status !== 200) {
-      throw new Error(await result.text())
+      const errorText = await result.text()
+      if (retryTime <= 0) {
+        throw new Error(errorText)
+      }
+      logger.warn(`[chatgpt] Gemini API 错误 (${result.status}),进行重试。错误信息: ${errorText}`)
+      return this.sendMessage(text, opt, --retryTime)
     }
     /**
      * @type {Content | undefined}
@@ -285,12 +294,44 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (this.debug) {
       console.log(JSON.stringify(response))
     }
+    
+    // 检查响应中是否包含错误
+    if (response.error) {
+      if (retryTime <= 0) {
+        throw new Error(JSON.stringify(response.error))
+      }
+      logger.warn(`[chatgpt] Gemini API 返回错误,进行重试。错误信息: ${JSON.stringify(response.error)}`)
+      return this.sendMessage(text, opt, --retryTime)
+    }
+    
+    // 检查 candidates 是否存在
+    if (!response.candidates || response.candidates.length === 0) {
+      if (retryTime <= 0) {
+        throw new Error('API 返回的 candidates 为空,重试次数已用完')
+      }
+      logger.warn('[chatgpt] API 返回的 candidates 为空,进行重试。')
+      return this.sendMessage(text, opt, --retryTime)
+    }
+    
     responseContent = response.candidates[0].content
     let groundingMetadata = response.candidates[0].groundingMetadata
     if (response.candidates[0].finishReason === 'MALFORMED_FUNCTION_CALL') {
-      logger.warn('遇到MALFORMED_FUNCTION_CALL，进行重试。')
-      return this.sendMessage(text, opt, retryTime--)
+      if (retryTime <= 0) {
+        throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误,重试次数已用完')
+      }
+      logger.warn('[chatgpt] 遇到 MALFORMED_FUNCTION_CALL 错误,进行重试。')
+      return this.sendMessage(text, opt, --retryTime)
     }
+    
+    // 检查 responseContent 是否为空
+    if (!responseContent || !responseContent.parts || responseContent.parts.length === 0) {
+      if (retryTime <= 0) {
+        throw new Error('responseContent.parts 为空,重试次数已用完')
+      }
+      logger.warn('[chatgpt] responseContent.parts 为空,进行重试。')
+      return this.sendMessage(text, opt, --retryTime)
+    }
+    
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
@@ -298,38 +339,60 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       const repeatedTool = toolNames.find(name => opt.toolChain.calledTools.includes(name));
       
       if (opt.toolChain.depth >= 2 || repeatedTool) {
-        const text = responseContent.parts.find(i => i.text)?.text || "操作已完成";
+        const responseText = responseContent.parts.find(i => i.text)?.text;
+        if(!responseText){
+          if (retryTime <= 0) {
+            return {
+              text: '操作已完成',
+              conversationId: '',
+              parentMessageId: idThis,
+              id: idModel
+            };
+          }
+          logger.warn('[chatgpt] responseContent.parts.text 为空,进行重试。');
+          return this.sendMessage(text, opt, --retryTime);
+        }
         return {
-          text: text,
+          text: responseText,
           conversationId: '',
           parentMessageId: idThis,
           id: idModel
         };
       }
-      // functionCall
-      const functionCall = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall)
-      const text = responseContent.parts.find(i => i.text)?.text
-      if (text && text.trim()) {
+      // functionCall - 提取所有的 functionCall 部分（保留原始顺序）
+      const functionCallParts = responseContent.parts.filter(i => i.functionCall)
+      const functionCall = functionCallParts.map(i => i.functionCall)
+      
+      // 提取 thoughtSignatures - 按照文档规则处理
+      // 单次调用：第一个 functionCall 包含签名
+      // 并行调用：只有第一个 functionCall 包含签名
+      // 多步（顺序）调用：每个 functionCall 都有签名
+      const thoughtSignatures = functionCallParts
+        .map(part => part.functionCall?.thoughtSignature)
+        .filter(sig => sig !== undefined && sig !== null)
+      
+      const replyText = responseContent.parts.find(i => i.text)?.text
+      if (replyText && replyText.trim()) {
         // send reply first
-        logger.info('[chatgpt][functionCall附加的对话text]' + text.trim())
+        logger.info('[chatgpt][functionCall附加的对话text]' + replyText.trim())
 
         if (Config.sf_markdownPic) {
           // sf图片模式
           try {
-            if (text.trim()) {
+            if (replyText.trim()) {
               const userMsg = this.e.img ? this.e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + this.e.msg_bak_2 : this.e.msg_bak_2;
               const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-              const img = await markdown_screenshot(this.e.user_id, this.e.self_id, userMsg, text.trim());
+              const img = await markdown_screenshot(this.e.user_id, this.e.self_id, userMsg, replyText.trim());
               this.e.reply({ ...img, origin: true }, true)
             }
           } catch (err) {
             logger.error('[chatgpt][functionCall附加的对话text]sf图片模式错误\n' + err)
-            opt.replyPureTextCallback && await opt.replyPureTextCallback(text.trim())
+            opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
           }
         }
         else
 
-        opt.replyPureTextCallback && await opt.replyPureTextCallback(text.trim())
+        opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
       for (let fc of functionCall) {
@@ -346,6 +409,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             content: null
           }
         }
+        
+        // 关键：保留 thoughtSignature
+        // 根据文档：
+        // - 单次调用：只有一个签名，添加到唯一的 response
+        // - 并行调用：只有第一个有签名，仅添加到第一个 response
+        // - 多步调用：每个都有签名，按索引添加
+        if (fc.thoughtSignature) {
+          functionResponse.thoughtSignature = fc.thoughtSignature
+        }
+        
         if (!chosenTool) {
           // 根本没有这个工具！
           functionResponse.response.content = {
@@ -443,8 +516,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 function handleSearchResponse (responseContent) {
   let final = ''
 
+  // 如果 responseContent 不存在或没有 parts,直接返回
+  if (!responseContent || !responseContent.parts) {
+    return {
+      final,
+      responseContent
+    }
+  }
+
   // 遍历每个 part 并处理
-  responseContent.parts = responseContent.parts?.map((part) => {
+  responseContent.parts = responseContent.parts.map((part) => {
     let newText = ''
 
     if (part.text) {

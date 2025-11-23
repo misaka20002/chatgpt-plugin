@@ -166,7 +166,7 @@ const defaultConfig = {
   emojiBaseURL: 'https://www.gstatic.com/android/keyboard/emojikitchen',
   emojiBaseSwitch: true,
   enableGroupContext: false,
-  groupContextTip: '你看看我们群里的聊天记录吧，回答问题的时候要主动参考我们的聊天记录进行回答或提问。但要看清楚哦，不要把我和其他人弄混啦，也不要把自己看晕啦~~',
+  groupContextTip: '你看看我们群里的聊天记录吧，回答问题的时候要主动参考我们的聊天记录进行回答或提问。但要看清楚哦，不要把我和其他人弄混啦，也不要把自己看晕啦。',
   groupContextLength: 50,
   enableRobotAt: true,
   maxNumUserMessagesInConversation: 20,
@@ -298,35 +298,11 @@ const defaultConfig = {
   githubAPIKey: '',
   version: 'v2.8.4',
 
-  autoEmoticons: { // Config 是 Proxy 对象，所有对 对象/对象数组 的修改后需要使用 Config.save()；（字符串/数字数组不需要）
-    // 是否启用表情保存
-    useEmojiSave: true,
-    // 表情过期时间（秒）- 在此时间内发送多次才会被保存
-    expireTimeInSeconds: 259200, // 3天
-    // 需要确认的次数 - 在过期时间内发送多少次才保存表情包
-    confirmCount: 3, // 默认是3次，可以设置为更高的值
-    // 默认发送偷取表情的概率
-    replyRate: 0.05, // 每次消息有5%的概率发送表情包
-    // 表情包最大数量
-    maxEmojiCount: 100,
-    // 表情包大小限制 (MB)
-    maxEmojiSize: 10,
-    // 需要保存表情包的群号列表，为空数组时表示所有群
-    allowGroups: ["1111"],
-    // BotQQ号
-    getBotByQQ_targetQQArr: [],
-    // 自动发送表情包的冷却时间（秒）
-    sendCD: 300,
-    // 发送表情时的延迟 (毫秒)
-    replyDelay: {
-      min: 1000,
-      max: 240000
-    }
-  },
-  autoRepeat_config: [],
-
   // turnOnBilitv: false,
   // bilitv_max_duration_min: 10
+
+  is_recallMsg: true,
+  removeCQCodeFocus: true,
 
 }
 const _path = process.cwd()
@@ -417,7 +393,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-2.0-flash', 'gemini-exp-1206', 'gemini-2.0-flash-thinking-exp-01-21', 'gemini-2.5-flash', 'gemini-2.5-pro']
+        const defaultArr = ['gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);

@@ -9,8 +9,8 @@ class Tokenizer {
       throw new Error('no valid group id')
     }
 
-    let group = e.bot.pickGroup(groupId, true)
-    let sourceArr = await getChatHistory_w(group, 1000, e.source?.seq || e.reply_id, duration, date, userId);    
+    let group = e.bot.pickGroup(groupId)
+    let sourceArr = await getChatHistory_w(group, 1000, e.source?.seq || e.reply_id, duration, date);    
     
     logger.info(`[getChatHistory_w] 获取到${sourceArr.length}个群消息`);
     if (userId) {
