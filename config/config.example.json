@@ -161,5 +161,6 @@
   "smartMode": false,
   "is_recallMsg": true,
   "removeCQCodeFocus": true,
-  "at_otherUser": true
+  "at_otherUser": true,
+  "poke_userIDs": true
 }

@@ -98,15 +98,35 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
-          field: 'imgOcr',
-          label: '对话中图片OCR',
-          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；该项效果不好，建议关闭，去开启“对话-gemini-呆毛版 对话中图片识别”',
-          component: 'Switch'
-        },
-        {
           field: 'enablePrivateChat',
           label: '是否允许私聊机器人',
           component: 'Switch'
+        },
+        {
+          field: 'groupMerge',
+          label: '群组消息合并',
+          bottomHelpMessage: '开启后，群聊消息将被视为同一对话',
+          component: 'Switch'
+        },
+        {
+          field: 'conversationPreserveTime',
+          label: '对话保留时长',
+          helpMessage: '单位：秒',
+          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0
+          }
+        },
+        {
+          field: 'removeCQCodeFocus',
+          label: '移除CQ码',
+          bottomHelpMessage: '强制移除Bot回复消息中的恼人的 CQ 码',
+          component: 'Switch'
+        },
+        {
+          label: '图片模式',
+          component: 'Divider'
         },
         {
           field: 'defaultUsePicture',
@@ -131,22 +151,6 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'conversationPreserveTime',
-          label: '对话保留时长',
-          helpMessage: '单位：秒',
-          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'groupMerge',
-          label: '群组消息合并',
-          bottomHelpMessage: '开启后，群聊消息将被视为同一对话',
-          component: 'Switch'
-        },
-        {
           field: 'quoteReply',
           label: '图片引用消息',
           bottomHelpMessage: '在回复图片时引用原始消息',
@@ -161,6 +165,12 @@ export function supportGuoba() {
         {
           label: '系统配置',
           component: 'Divider'
+        },
+        {
+          field: 'enableToolbox',
+          label: '开启工具箱',
+          bottomHelpMessage: '独立的后台管理面板（默认3321端口），与锅巴类似。工具箱会有额外占用，启动速度稍慢，酌情开启。修改后需重启生效！呆毛版 推荐关闭',
+          component: 'Switch'
         },
         {
           field: 'proxy',
@@ -178,18 +188,6 @@ export function supportGuoba() {
           field: 'is_recallMsg',
           label: '撤回错误消息',
           bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
-          component: 'Switch'
-        },
-        {
-          field: 'removeCQCodeFocus',
-          label: '移除CQ码',
-          bottomHelpMessage: '强制移除Bot回复消息中的恼人的 CQ 码',
-          component: 'Switch'
-        },
-        {
-          field: 'enableToolbox',
-          label: '开启工具箱',
-          bottomHelpMessage: '独立的后台管理面板（默认3321端口），与锅巴类似。工具箱会有额外占用，启动速度稍慢，酌情开启。修改后需重启生效！！！',
           component: 'Switch'
         },
         {
@@ -1167,7 +1165,7 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
-          label: '智能模式 全局设置',
+          label: 'Agent模式 全局设置',
           component: 'Divider'
         },
         {
@@ -1181,6 +1179,12 @@ export function supportGuoba() {
           label: '智能模式url',
           bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
           component: 'Input'
+        },
+        {
+          field: 'imgOcr',
+          label: '对话中图片OCR',
+          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；该项效果不好，建议关闭，去开启“对话-gemini-呆毛版 对话中图片识别”',
+          component: 'Switch'
         },
         {
           field: 'amapKey',
@@ -1223,7 +1227,7 @@ export function supportGuoba() {
         {
           field: 'enableToolPrivateSend',
           label: '工具新增-私聊用户',
-          bottomHelpMessage: '是否允许智能模式下发起临时对话骚扰其他群友。默认开启，如果怕Bot乱骚扰其他人可以关闭。主人不受影响。',
+          bottomHelpMessage: '是否允许智能模式下发起临时对话骚扰其他群友。呆毛版默认关闭，如果怕Bot乱骚扰其他人可以关闭。',
           component: 'Switch'
         },
         {
@@ -1236,6 +1240,12 @@ export function supportGuoba() {
           field: 'at_otherUser',
           label: '工具新增-at群友',
           bottomHelpMessage: '新增主动At其他群友的工具',
+          component: 'Switch'
+        },
+        {
+          field: 'poke_userIDs',
+          label: '工具新增-戳一戳',
+          bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
           component: 'Switch'
         },
         {
@@ -1255,13 +1265,13 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'drawByJsonToPlugin',
-          label: '绘画prompt模式',
-          bottomHelpMessage: '绘画prompt模式 适用于不支持调用函数的大模型；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。',
+          field: 'drawToolS',
+          label: '智能模式绘画',
+          bottomHelpMessage: '智能模式绘画 适用于支持调用函数的大模型，需要开启 全局-智能模式，在智能模式下控制使用的绘画插件；若使用Gemini可设置gemini强制工具关键词。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
           component: "Select",
           componentProps: {
             options: [
-              { label: "关闭绘画prompt模式", value: false },
+              { label: "关闭智能模式绘画", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
               { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
@@ -1272,13 +1282,13 @@ export function supportGuoba() {
           },
         },
         {
-          field: 'drawToolS',
-          label: '智能模式绘画',
-          bottomHelpMessage: '智能模式绘画 适用于支持调用函数的大模型，需要开启 全局-智能模式，在智能模式下控制使用的绘画插件；若使用Gemini可设置gemini强制工具关键词。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
+          field: 'drawByJsonToPlugin',
+          label: '绘画prompt模式',
+          bottomHelpMessage: '绘画prompt模式 适用于不支持调用函数的大模型；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。',
           component: "Select",
           componentProps: {
             options: [
-              { label: "关闭智能模式绘画", value: false },
+              { label: "关闭绘画prompt模式", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
               { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
@@ -1559,7 +1569,7 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
-          label: '伪人（不推荐使用）',
+          label: '伪人',
           component: 'Divider'
         },
         {
@@ -1640,7 +1650,7 @@ export function supportGuoba() {
           }
         },
         {
-          label: '以下为杂七杂八的配置',
+          label: '主动打招呼（已失效）',
           component: 'Divider'
         },
         {
