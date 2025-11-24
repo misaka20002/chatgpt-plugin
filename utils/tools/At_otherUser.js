@@ -60,5 +60,5 @@ export class AtOtherUserTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to mention (@) other group members and say something to them. You can mention multiple users at once by separating their QQ numbers with commas.'
+  description = 'Mention (@) one or multiple group members by their QQ user IDs and send them a message. This tool can only be used in group chats. The message will be sent immediately when you call this tool, so do not repeat the message content in your response.'
 }
