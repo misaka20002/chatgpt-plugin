@@ -205,12 +205,6 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'githubAPIKey',
-          label: 'github Access Token',
-          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。用于提高AI调用github工具的Rate Limit',
-          component: 'Input'
-        },
-        {
           label: '对话',
           component: 'SOFT_GROUP_BEGIN'
         },
@@ -1221,6 +1215,12 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'githubAPIKey',
+          label: 'github Access Token',
+          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
+          component: 'Input'
+        },
+        {
           label: '智能模式 工具设置',
           component: 'Divider'
         },
@@ -1246,6 +1246,12 @@ export function supportGuoba() {
           field: 'poke_userIDs',
           label: '工具新增-戳一戳',
           bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          component: 'Switch'
+        },
+        {
+          field: 'agent_SandboxSwitch',
+          label: '工具新增-沙箱',
+          bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',
           component: 'Switch'
         },
         {

@@ -65,6 +65,7 @@ import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.
 import { BlockUserTool } from '../utils/tools/Block_User.js'
 import { AtOtherUserTool } from '../utils/tools/At_otherUser.js'
 import { SendGroupPokeTool } from '../utils/tools/SendGroupPoke.js'
+import { SandboxJSTool } from '../utils/tools/Sandbox_JS.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -965,6 +966,11 @@ async function collectTools(e) {
   if (Config.poke_userIDs) {
     tools.push(...[new SendGroupPokeTool()])
     fullTools.push(...[new SendGroupPokeTool()])
+  }
+
+  if (Config.agent_SandboxSwitch) {
+    tools.push(...[new SandboxJSTool()])
+    fullTools.push(...[new SandboxJSTool()])
   }
 
   let systemAddition = ''
