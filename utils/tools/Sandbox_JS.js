@@ -15,17 +15,17 @@ export class SandboxJSTool extends AbstractTool {
         properties: {
             code: {
                 type: 'string',
-                description: '要执行的JavaScript代码。代码必须使用return语句返回结果值,或者将表达式作为最后一条语句(会自动返回)。可用于数学计算(如复杂公式计算、统计分析)、字符串处理(如正则表达式匹配、文本格式化)、数组操作(如排序、过滤、映射)、日期时间计算、数据转换、逻辑判断等。注意:代码将在受限环境中运行,不能访问文件系统、网络或其他系统资源。示例: "return Math.sqrt(144)" 或 "Math.sqrt(144)"'
+                description: 'JavaScript code to execute. Code must use a return statement to return a result, or have an expression as the last statement (which will be automatically returned). Can be used for: mathematical calculations (complex formulas, statistical analysis), string processing (regex matching, text formatting), array operations (sorting, filtering, mapping), date/time calculations, data transformation, logical operations, etc. Note: Code runs in a restricted environment without access to file system, network, or other system resources. Examples: "return Math.sqrt(144)" or "Math.sqrt(144)"'
             },
             timeout: {
                 type: 'number',
-                description: '代码执行超时时间(毫秒),默认5000ms,最大30000ms'
+                description: 'Code execution timeout in milliseconds. Default: 5000ms, Maximum: 30000ms'
             }
         },
         required: ['code']
     }
 
-    description = '在安全的JavaScript沙箱环境中执行代码并返回结果。适用场景包括:1)复杂数学计算和公式求值 2)统计分析和数据聚合 3)字符串处理和正则表达式操作 4)数组/对象的排序、过滤、转换 5)日期时间计算 6)JSON数据处理 7)逻辑判断和条件运算。代码在隔离环境中运行,不能访问外部资源,确保安全性。重要提示:执行成功后,代码和结果已自动发送给用户,你只需根据你的人设向用户解释计算结果即可,无需重复展示代码或原始数据。'
+    description = 'Execute JavaScript code in a secure sandbox environment and return results. Use cases: 1) Complex mathematical calculations and formula evaluation 2) Statistical analysis and data aggregation 3) String processing and regex operations 4) Array/object sorting, filtering, transformation 5) Date/time calculations 6) JSON data processing 7) Logical operations and conditional evaluation. Code runs in an isolated environment without access to external resources, ensuring security. Important: After successful execution, the code and results are automatically sent to the user. You only need to explain the calculation results to the user according to your persona, without repeating the code or raw data.'
 
     constructor() {
         super()
@@ -35,7 +35,7 @@ export class SandboxJSTool extends AbstractTool {
         const { code, timeout = 5000 } = opts
 
         if (!code || typeof code !== 'string') {
-            return 'Error: 代码不能为空'
+            return 'Error: Code cannot be empty'
         }
 
         // 限制最大超时时间
@@ -108,7 +108,7 @@ export class SandboxJSTool extends AbstractTool {
 
             // 返回结果
             if (result === undefined) {
-                return 'Error: 代码没有返回结果。请确保代码有返回值,例如使用return语句或直接写表达式'
+                return 'Error: Code did not return a result. Please ensure the code returns a value, either using a return statement or by writing an expression as the last statement'
             }
 
             // 给用户发送 AI 生成的函数及结果
@@ -118,16 +118,16 @@ export class SandboxJSTool extends AbstractTool {
             // 转换结果为字符串返回给 AI
             let aiResponse = ''
             if (typeof result === 'object') {
-                aiResponse = `执行成功! 计算结果:\n${JSON.stringify(result, null, 2)}`
+                aiResponse = `Execution successful! Result:\n${JSON.stringify(result, null, 2)}`
             } else {
-                aiResponse = `执行成功! 计算结果: ${String(result)}`
+                aiResponse = `Execution successful! Result: ${String(result)}`
             }
 
-            return aiResponse + '\n\n重要提示: 代码和结果已经通过转发消息发送给用户了,你不需要再次展示代码或原始数据。请根据你的人设,用自然的语言向用户解释这个计算结果的含义即可。'
+            return aiResponse + '\n\nImportant: The code and results have already been sent to the user via forwarded message. You do not need to display the code or raw data again. Please explain the calculation results to the user in natural language according to your persona.'
 
         } catch (err) {
             if (err.message.includes('Script execution timed out')) {
-                return `Error: 代码执行超时(${actualTimeout}ms),请优化代码或增加超时时间`
+                return `Error: Code execution timed out (${actualTimeout}ms). Please optimize the code or increase the timeout value`
             }
             return `Error: ${err.message}`
         }
