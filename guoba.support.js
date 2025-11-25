@@ -39,7 +39,7 @@ export function supportGuoba() {
         {
           field: 'toggleMode',
           label: '触发方式',
-          bottomHelpMessage: 'at模式下只有at机器人才会回复。#chat模式下不需要at，但需要添加前缀#chat',
+          bottomHelpMessage: 'at模式下只有at机器人才会回复。#chat模式下不需要at，但需要添加前缀#chat 其他指令：#chatgpt[开启|关闭]回复确认',
           component: 'Select',
           componentProps: {
             options: [
@@ -117,6 +117,12 @@ export function supportGuoba() {
           componentProps: {
             min: 0
           }
+        },
+        {
+          field: 'forwardReasoning',
+          label: '是否转发思考过程',
+          bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。仅适配reasoning_content。默认开启。',
+          component: 'Switch'
         },
         {
           field: 'removeCQCodeFocus',
@@ -221,7 +227,7 @@ export function supportGuoba() {
         {
           field: 'model',
           label: 'OpenAI 模型',
-          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。',
+          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。可用指令： #chatgpt[开启|关闭]API流',
           component: 'Input'
         },
         {
@@ -229,12 +235,6 @@ export function supportGuoba() {
           label: 'max token',
           bottomHelpMessage: '默认4096',
           component: 'InputNumber'
-        },
-        {
-          field: 'forwardReasoning',
-          label: '是否转发思考过程',
-          bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。仅适配reasoning_content。默认开启。',
-          component: 'Switch'
         },
         {
           field: 'openAiBaseUrl',
@@ -633,7 +633,7 @@ export function supportGuoba() {
         {
           field: 'geminiKey',
           label: 'API密钥',
-          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey',
+          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey  #chatgpt切换gemini',
           component: 'InputPassword'
         },
         {

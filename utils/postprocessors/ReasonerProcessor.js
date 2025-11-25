@@ -23,7 +23,7 @@ export class ReasonerProcessor extends AbstractPostProcessor {
     const { text, thinkingText } = extractThinkingTextAndText(input.text)
     return {
       text,
-      thinking_text: (input.thinking_text ? input.thinking_text : '') + thinkingText
+      thinking_text: (input.thinking_text ? input.thinking_text : '') + thinkingText // 作用：把思考的内容组合 = chatMessage.thinking_text + extractThinkingTextAndText(input.text).thinking_text
     }
   }
 }

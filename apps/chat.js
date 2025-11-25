@@ -941,6 +941,7 @@ export class chatgpt extends plugin {
       }
       let response = chatMessage?.text?.replace('\n\n\n', '\n')
       let postProcessors = await collectProcessors('post')
+      /** thinking 累积器，不断追加新的思考内容，以支持 Chain-of-Thought (CoT) 推理的模型 */
       let thinking = chatMessage.thinking_text
       for (let processor of postProcessors) {
         let output = await processor.processInner({
@@ -950,7 +951,7 @@ export class chatgpt extends plugin {
         thinking = output.thinking_text
       }
       if (handler.has('chatgpt.response.post')) {
-        logger.debug('调用后处理器: chatgpt.response.post')
+        logger.debug('调用后处理器: chatgpt.response.post') // 云崽平台的 handler: 调用所有 apps 文件夹中拥有 handler: [{ key: 'chatgpt.response.post',  fn: 'postHandler'}] 的方法
         handler.call('chatgpt.response.post', this.e, {
           content: response,
           thinking,
@@ -971,6 +972,13 @@ export class chatgpt extends plugin {
       // 移除 CQ
       if (Config.removeCQCodeFocus)
         response = removeCQCode(response);
+
+      // 处理某些工具 Prompt 中要求回复的 "<EMPTY>"
+      if (response.trim() === "<EMPTY>") {
+        // await this.reply('没有任何回复', true)
+        logger.info('[chatgpt]返回"<EMPTY>"')
+        return
+      }
 
       let emotion, emotionDegree
       if (Config.ttsMode === 'azure' && (use === 'claude' || use === 'bing') && await AzureTTS.getEmotionPrompt(e)) {

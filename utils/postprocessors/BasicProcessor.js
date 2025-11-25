@@ -12,7 +12,7 @@ export class AbstractPostProcessor {
   type = 'post'
 
   /**
-   *
+   * 通过 collectProcessors() 自动加载 postprocessors 目录下的所有后处理器（目前只有 ReasonerProcessor）
    * @param {{
    *   text: string,
    *   thinking_text?: string
@@ -27,7 +27,7 @@ export class AbstractPostProcessor {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /**
- * collect
+ * collect: 通过 collectProcessors() 自动加载 postprocessors 目录下的所有后处理器（目前只有 ReasonerProcessor）
  * @param {'pre' | 'post' | undefined} type
  * @return {Promise<AbstractPostProcessor[]>}
  */
