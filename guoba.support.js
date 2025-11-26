@@ -631,6 +631,12 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
+          field: 'geminiBaseUrl',
+          label: 'Gemini反代',
+          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliy.top （常见报错：500 Internal Server Error）',
+          component: 'Input'
+        },
+        {
           field: 'geminiKey',
           label: 'API密钥',
           bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey  #chatgpt切换gemini',
@@ -670,12 +676,6 @@ export function supportGuoba() {
           field: 'geminiPrompt',
           label: '设定',
           component: 'InputTextArea'
-        },
-        {
-          field: 'geminiBaseUrl',
-          label: 'Gemini反代',
-          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliy.top （常见报错：500 Internal Server Error）',
-          component: 'Input'
         },
         {
           field: 'geminiForceToolKeywords',

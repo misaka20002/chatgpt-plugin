@@ -305,7 +305,7 @@ const defaultConfig = {
   removeCQCodeFocus: true,
   at_otherUser: true,
   poke_userIDs: true,
-  agent_SandboxSwitch: true,
+  agent_SandboxSwitch: false,
 
 }
 const _path = process.cwd()
