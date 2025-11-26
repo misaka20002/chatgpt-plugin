@@ -35,10 +35,10 @@ export class BlockUserTool extends AbstractTool {
       duration = 30;
     }
 
-    // 检查权限：除非是主人，否则只能拉黑自己
-    if (!e.isMaster) {
+    // 检查权限：只有主人/管理员，可以对其他群友生效
+    if (!(e.isMaster || e.sender.role == 'owner'|| e.sender.role == 'admin')) {
       if (userId !== e.sender.user_id.toString()) {
-        return 'Only the master can block other users.'
+        return 'Only the master or Group admin can block other users.'
       }
     }
 

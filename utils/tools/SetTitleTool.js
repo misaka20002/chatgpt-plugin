@@ -28,6 +28,13 @@ export class SetTitleTool extends AbstractTool {
     qq = isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
     groupId = isNaN(groupId) || !groupId ? e.group_id : parseInt(groupId.trim())
 
+    // 检查权限：只有主人/管理员，可以对其他群友生效
+    if (!(e.isMaster || e.sender.role == 'owner'|| e.sender.role == 'admin')) {
+      if (qq != e.sender.user_id) {
+        return 'Only the master or Group admin can block other users.'
+      }
+    }
+
     let group = await e.bot.pickGroup(groupId)
     let mm = await group.getMemberMap()
     if (!mm.has(qq)) {

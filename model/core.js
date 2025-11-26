@@ -885,7 +885,7 @@ async function collectTools(e) {
     WebTool = new WebsiteTool()
 
   /** fullTools 包括了踢人等管理员用的工具 */
-  let fullTools = [
+  let fullTools = [ // Gemini 只有取 tools，不取 fullTools
     new EditCardTool(),
     // new QueryStarRailTool(),
     WebTool,
@@ -919,7 +919,7 @@ async function collectTools(e) {
     new BlockUserTool(),
   ]
   // todo 3.0再重构tool的插拔和管理
-  let /** @type{AbstractTool[]} **/ tools = [
+  let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
     new SendAvatarTool(),
     // new SendDiceTool(), // 暂不支持骰子了
     // new SendMessageToSpecificGroupOrUserTool(),
@@ -976,9 +976,11 @@ async function collectTools(e) {
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
-    if (botInfo.role !== 'member' && (e.isMaster || e.sender.role !== 'member')) {
+    if (botInfo.role !== 'member') {
+      tools.push(...[new EditCardTool(), new JinyanTool(), new SetTitleTool()])
       // 管理员才给这些工具
-      tools.push(...[new EditCardTool(), new JinyanTool(), new KickOutTool(), new HandleMessageMsgTool(), new SetTitleTool()])
+      if (e.isMaster || e.sender.role == 'owner' || e.sender.role == 'admin')
+        tools.push(...[new KickOutTool(), new HandleMessageMsgTool()])
       // 用于撤回和加精的id
       if (e.source?.seq) {
         let source = (await e.group.getChatHistory(e.source?.seq, 1)).pop()
