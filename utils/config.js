@@ -306,6 +306,7 @@ const defaultConfig = {
   at_otherUser: true,
   poke_userIDs: true,
   agent_SandboxSwitch: false,
+  auto_makeForwardMsg: 2000,
 
 }
 const _path = process.cwd()

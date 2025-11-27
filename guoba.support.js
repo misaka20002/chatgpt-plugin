@@ -1354,13 +1354,24 @@ export function supportGuoba() {
         {
           field: 'sf_markdownPic',
           label: 'sf图片模式',
-          bottomHelpMessage: '调用sf插件的图片回复功能，需要先安装siliconflow插件；与分多次回复冲突；与chatgpt插件图片模式冲突 https://github.com/AIGC-Yunzai/siliconflow-plugin',
+          bottomHelpMessage: '调用sf插件的图片回复功能，需要先安装siliconflow插件；与分多次回复不兼容；与chatgpt插件图片模式不兼容 https://github.com/AIGC-Yunzai/siliconflow-plugin',
           component: 'Switch'
+        },
+        {
+          field: 'auto_makeForwardMsg',
+          label: '自动转合并转发',
+          bottomHelpMessage: '如果AI回复的文本超过多少个字时，自动改用合并转发；常用于某些模型发飙发送乱码；与“sf图片模式”、“chatgpt插件图片模式”不兼容；设置为0则关闭',
+          component: 'InputNumber',
+          helpMessage: '单位：字符',
+          componentProps: {
+            min: 0,
+            step: 1
+          }
         },
         {
           field: 'isReplacePromptForSenderMsg',
           label: '呆毛版 设定拓展',
-          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_groupid_ 替换为 当前群号或私聊； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项冲突：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
+          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_groupid_ 替换为 当前群号或私聊； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项不兼容：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
           component: 'Switch'
         },
         {

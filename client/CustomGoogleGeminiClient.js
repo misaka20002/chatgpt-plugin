@@ -2,6 +2,9 @@ import crypto from 'crypto'
 import { GoogleGeminiClient } from './GoogleGeminiClient.js'
 import { newFetch } from '../utils/proxy.js'
 import _ from 'lodash'
+import {
+  splitString_Enter,
+} from '../utils/paimonFuction.js'
 
 import { Config } from '../utils/config.js'
 
@@ -390,9 +393,14 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
           }
         }
-        else
-
-        opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
+        else {
+          if (Config.auto_makeForwardMsg && replyText.trim()?.length > Config.auto_makeForwardMsg) {
+            this.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg)));
+          }
+          else {
+            opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
+          }
+        }
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
       for (let fc of functionCall) {

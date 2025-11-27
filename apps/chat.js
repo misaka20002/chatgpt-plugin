@@ -47,6 +47,7 @@ import {
   recognitionResultsByGemini,
   convertSentenceToArray,
   extractCharacterName,
+  splitString_Enter,
 } from '../utils/paimonFuction.js'
 
 /**
@@ -1374,7 +1375,7 @@ export class chatgpt extends plugin {
             // 多次回复
             const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
-              await this.reply(str_arr[i]);
+              await this.reply(str_arr[i].trim());
               await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
@@ -1394,7 +1395,10 @@ export class chatgpt extends plugin {
             }
           }
           else {
-            await this.reply(responseText, e.isGroup)
+            if (Config.auto_makeForwardMsg && responseText.join('')?.length > Config.auto_makeForwardMsg)
+              this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg)));
+            else
+              await this.reply(responseText, e.isGroup)
           }
           if (quotemessage.length > 0) {
             this.reply(await makeForwardMsg(this.e, quotemessage.map(msg => `${msg.text} - ${msg.url}`)))
@@ -1453,7 +1457,7 @@ export class chatgpt extends plugin {
           // 多次回复
           const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
-            await this.reply(str_arr[i]);
+            await this.reply(str_arr[i].trim());
             await sleep_zz(Math.random() * 5000 + 2000);
           }
         }
@@ -1473,12 +1477,17 @@ export class chatgpt extends plugin {
           }
         }
         else {
-          this.reply(responseText, e.isGroup, {
-            btnData: {
-              use,
-              suggested: chatMessage.suggestedResponses
-            }
-          })
+          if (Config.auto_makeForwardMsg && responseText.join('')?.length > Config.auto_makeForwardMsg) {
+            this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg)));
+          }
+          else {
+            this.reply(responseText, e.isGroup, {
+              btnData: {
+                use,
+                suggested: chatMessage.suggestedResponses
+              }
+            })
+          }
         }
         if (thinking) {
           if (Config.forwardReasoning) {
