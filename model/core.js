@@ -29,7 +29,7 @@ import { SendAvatarTool } from '../utils/tools/SendAvatarTool.js'
 import { SerpImageTool } from '../utils/tools/SearchImageTool.js'
 import { SearchMusicTool } from '../utils/tools/SearchMusicTool.js'
 import { SendMusicTool } from '../utils/tools/SendMusicTool.js'
-// import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
+import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { QueryGenshinTool } from '../utils/tools/QueryGenshinTool.js'
 import { WeatherTool } from '../utils/tools/WeatherTool.js'
@@ -41,12 +41,12 @@ import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
 import { SerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
-// import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
-// import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
-// import { EliMusicTool } from '../utils/tools/EliMusicTool.js'
+import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
+import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
+import { EliMusicTool } from '../utils/tools/EliMusicTool.js'
 import { HandleMessageMsgTool } from '../utils/tools/HandleMessageMsgTool.js'
 import { ProcessPictureTool } from '../utils/tools/ProcessPictureTool.js'
-// import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
+import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { newFetch } from '../utils/proxy.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
@@ -587,8 +587,8 @@ class Core {
         },
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId,
-        search: Config.geminiEnableGoogleSearch,
-        codeExecution: Config.geminiEnableCodeExecution
+        search: Config.geminiEnableGoogleSearch, // Gemini 原生搜索，开启后无法使用智能模式，默认关闭
+        codeExecution: Config.geminiEnableCodeExecution // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
       }
 
       if (!Config.recognitionByGemini) {
@@ -885,16 +885,16 @@ async function collectTools(e) {
     WebTool = new WebsiteTool()
 
   /** fullTools 包括了踢人等管理员用的工具 */
-  let fullTools = [ // Gemini 只有取 tools，不取 fullTools
+  let fullTools = [
     new EditCardTool(),
-    // new QueryStarRailTool(),
+    new QueryStarRailTool(), // 星铁工具
     WebTool,
     new JinyanTool(),
     new KickOutTool(),
     new WeatherTool(),
     new SendPictureTool(),
     new SendVideoTool(),
-    // new ImageCaptionTool(),
+    // new ImageCaptionTool(), // OCR 工具
     new SearchVideoTool(),
     new SendAvatarTool(),
     // new SerpImageTool(), // 该工具使用的 url 不再提供服务
@@ -904,16 +904,16 @@ async function collectTools(e) {
     // new SerpIkechan8370Tool(),
     // new SerpTool(),
     serpTool,
-    // new SendAudioMessageTool(),
-    // new ProcessPictureTool(),
+    // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
+    // new ProcessPictureTool(), // 图像预处理工具
     new APTool(),
     new HandleMessageMsgTool(),
-    new QueryUserinfoTool(),
+    new QueryUserinfoTool(), // 查看用户 e.sender 工具
     // new EliMusicTool(),
     // new EliMovieTool(),
-    // new SendMessageToSpecificGroupOrUserTool(),
+    // new SendMessageToSpecificGroupOrUserTool(), // 发送信息给指定群或用户
     // new SendDiceTool(), // 暂不支持骰子了
-    new QueryGenshinTool(),
+    new QueryGenshinTool(), // 原神工具
     new SetTitleTool(),
     new GithubAPITool(),
     new BlockUserTool(),
@@ -922,23 +922,23 @@ async function collectTools(e) {
   let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
     new SendAvatarTool(),
     // new SendDiceTool(), // 暂不支持骰子了
-    // new SendMessageToSpecificGroupOrUserTool(),
+    // new SendMessageToSpecificGroupOrUserTool(), // 发送信息给指定群或用户
     // new EditCardTool(),
-    new QueryStarRailTool(),
-    new QueryGenshinTool(),
+    new QueryStarRailTool(), // 星铁工具
+    new QueryGenshinTool(), // 原神工具
     new SendMusicTool(),
     new SearchMusicTool(),
-    new ProcessPictureTool(),
+    // new ProcessPictureTool(), // 图像预处理工具
     WebTool,
     // new JinyanTool(),
     // new KickOutTool(),
     new WeatherTool(),
     new SendPictureTool(),
-    // new SendAudioMessageTool(),
+    // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
     new APTool(),
     // new HandleMessageMsgTool(),
     serpTool,
-    new QueryUserinfoTool(),
+    new QueryUserinfoTool(), // 查看用户 e.sender 工具
     new GithubAPITool(),
     new BlockUserTool(),
   ]
