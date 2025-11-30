@@ -6,7 +6,7 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
 /**
  * @description: 获取gemini的识图结果，需要填写了gemini的token
  * @param {*} e
- * @param {*} img 数组
+ * @param {*} img 图片url数组
  * @return {*} recognitionResults
  */
 export async function recognitionResultsByGemini(e, img) {

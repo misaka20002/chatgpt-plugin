@@ -223,7 +223,7 @@ const defaultConfig = {
   azSerpKey: '',
   tavilyKey: '',
   serpSource: 'off',
-  extraUrl: 'https://cpe.ikechan8370.com',
+  extraUrl: '',
   smartMode: false,
   // claude2
   claudeAIOrganizationId: '',

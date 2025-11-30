@@ -2,7 +2,7 @@ import { AbstractTool } from './AbstractTool.js'
 import fetch, { File, FormData } from 'node-fetch'
 import { Config } from '../config.js'
 
-/** 图像预处理工具: Image2Hed: 提取图片的边缘轮廓线,类似于素描的线稿, Image2Scribble: 将图片转换为简笔画/涂鸦风格,就像手绘草图 */
+/** 该工具已失效。 图像预处理工具: Image2Hed: 提取图片的边缘轮廓线,类似于素描的线稿, Image2Scribble: 将图片转换为简笔画/涂鸦风格,就像手绘草图 */
 export class ProcessPictureTool extends AbstractTool {
   name = 'processPicture'
 

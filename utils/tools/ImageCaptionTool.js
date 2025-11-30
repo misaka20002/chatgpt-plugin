@@ -1,6 +1,8 @@
 import { AbstractTool } from './AbstractTool.js'
 import fetch, { File, FormData } from 'node-fetch'
 import { Config } from '../config.js'
+
+/** 图片OCR 该工具已失效 */
 export class ImageCaptionTool extends AbstractTool {
   name = 'imageCaption'
 

@@ -654,7 +654,7 @@ export function supportGuoba() {
         {
           field: 'gemini_vqa_model',
           label: 'gemini识图模型',
-          bottomHelpMessage: '用于#识图 和 对话中图片识别-gemini；默认值：gemini-2.0-flash',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini识图工具 和 对话中图片识别-gemini；默认值：gemini-2.0-flash',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -1168,12 +1168,12 @@ export function supportGuoba() {
           bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳；需要设置“智能模式url”',
           component: 'Switch'
         },
-        {
-          field: 'extraUrl',
-          label: '智能模式url',
-          bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
-          component: 'Input'
-        },
+        // {
+        //   field: 'extraUrl',
+        //   label: '智能模式url',
+        //   bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
+        //   component: 'Input'
+        // },
         {
           field: 'imgOcr',
           label: '对话中图片OCR',
