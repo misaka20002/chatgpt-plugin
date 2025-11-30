@@ -148,12 +148,12 @@ export class PaimonChuo extends plugin {
                         await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 4:
-                        url = await get_url_from_api_lolicon('ロリ|loli|萝莉|风景|壁纸', '');
+                        url = (await get_url_from_api_lolicon('ロリ|loli|萝莉|风景|壁纸', ''))?.[0];
                         await this.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`, false, { recallMsg: 100 })
                         await this.reply([await segment.image(await convertWebpToJpg(url))], false, { recallMsg: 100 });
                         break;
                     case 5:
-                        url = await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ');
+                        url = (await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ'))?.[0];
                         await this.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`, false, { recallMsg: 100 })
                         await this.reply([await segment.image(await convertWebpToJpg(url))], false, { recallMsg: 100 });
                         break;
@@ -630,25 +630,29 @@ export class PaimonChuo extends plugin {
 
 }
 
-/**从https://api.lolicon.app/setu/v2/ 中返回图片地址，支持2个tag参数，tag中支持20个或| */
-async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2 = '') {
-    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}`;
+/**从https://api.lolicon.app/setu/v2/ 中返回图片地址数组，支持2个tag参数，tag中支持20个或| */
+export async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2 = '', num = 1) {
+    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}&num=${num}`;
     for (let i = 0; i < 3; i++) {
         try {
             const response = await fetch(url)
             const result = await response.json()
             if (Array.isArray(result.data) && result.data.length === 0) {
-                logger.info('派蒙戳一戳api_lolicon未获取到图片')
+                logger.info('[Api_lolicon]未获取到图片')
                 throw new Error(result)
             }
-            let pic_url = result.data[0].urls?.original || result.data[0].urls?.regular || result.data[0].urls?.small
-            if (!pic_url) throw new Error(result)
-            return pic_url
+            // 提取所有图片的URL组成数组
+            let pic_urls = result.data.map(item => {
+                return item.urls?.original || item.urls?.regular || item.urls?.small
+            }).filter(url => url) // 过滤掉空值
+
+            if (pic_urls.length === 0) throw new Error(result)
+            return pic_urls
         } catch (err) {
             logger.info(err)
         }
     }
-    logger.warn(`派蒙戳一戳获取api_lolicon pic_url失败3次`)
+    logger.warn(`[Api_lolicon]派蒙戳一戳获取api_lolicon pic_url失败3次`)
 }
 
 /**

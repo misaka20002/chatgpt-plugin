@@ -307,6 +307,7 @@ const defaultConfig = {
   poke_userIDs: true,
   agent_SandboxSwitch: false,
   auto_makeForwardMsg: 2000,
+  getPixivTool: false,
 
 }
 const _path = process.cwd()

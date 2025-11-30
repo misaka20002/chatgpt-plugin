@@ -1255,6 +1255,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'getPixivTool',
+          label: '工具新增-Pixiv搜图',
+          bottomHelpMessage: '新增工具提供给AI搜索并发送Pixiv的插图',
+          component: 'Switch'
+        },
+        {
           field: 'disable_sendMessage_tool',
           label: '工具禁用-文字工具',
           bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于sf图片模式、伪人重复发送相同文本等问题',

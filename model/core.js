@@ -66,6 +66,7 @@ import { BlockUserTool } from '../utils/tools/Block_User.js'
 import { AtOtherUserTool } from '../utils/tools/At_otherUser.js'
 import { SendGroupPokeTool } from '../utils/tools/SendGroupPoke.js'
 import { SandboxJSTool } from '../utils/tools/Sandbox_JS.js'
+import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -971,6 +972,11 @@ async function collectTools(e) {
   if (Config.agent_SandboxSwitch) {
     tools.push(...[new SandboxJSTool()])
     fullTools.push(...[new SandboxJSTool()])
+  }
+
+  if (Config.getPixivTool) {
+    tools.push(...[new GetPixivApiLoliconTool()])
+    fullTools.push(...[new GetPixivApiLoliconTool()])
   }
 
   let systemAddition = ''
