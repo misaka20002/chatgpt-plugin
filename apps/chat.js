@@ -1396,7 +1396,7 @@ export class chatgpt extends plugin {
           }
           else {
             if (Config.auto_makeForwardMsg && responseText.join('')?.length > Config.auto_makeForwardMsg)
-              this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg)));
+              this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
             else
               await this.reply(responseText, e.isGroup)
           }
@@ -1478,7 +1478,7 @@ export class chatgpt extends plugin {
         }
         else {
           if (Config.auto_makeForwardMsg && responseText.join('')?.length > Config.auto_makeForwardMsg) {
-            this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg)));
+            this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
           }
           else {
             this.reply(responseText, e.isGroup, {

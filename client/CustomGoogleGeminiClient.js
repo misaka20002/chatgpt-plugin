@@ -395,7 +395,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         }
         else {
           if (Config.auto_makeForwardMsg && replyText.trim()?.length > Config.auto_makeForwardMsg) {
-            this.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg)));
+            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
           }
           else {
             opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
