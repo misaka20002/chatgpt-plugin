@@ -60,5 +60,5 @@ export class AtOtherUserTool extends AbstractTool {
     }
   }
 
-  description = 'Mention (@) one or multiple group members by their QQ user IDs and send them a message. This tool can only be used in group chats. The message will be sent immediately when you call this tool, so do not repeat the message content in your response.'
+  description = 'Mention (@) one or multiple group members by their QQ user IDs and send them a message. This tool can only be used in group chats. The message will be sent immediately when you call this tool, so do not repeat the message content in your response. If no extra description needed, just reply <EMPTY> at the next turn.'
 }
