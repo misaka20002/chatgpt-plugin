@@ -377,7 +377,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       const replyText = responseContent.parts.find(i => i.text)?.text
       if (replyText && replyText.trim()) {
         // send reply first
-        logger.info('[chatgpt][functionCall附加的对话text]' + replyText.trim())
+        logger.info('[chatgpt]functionCall附加的对话text: ' + replyText.trim())
 
         if (Config.sf_markdownPic) {
           // sf图片模式
@@ -394,12 +394,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           }
         }
         else {
-          if (Config.auto_makeForwardMsg && replyText.trim()?.length > Config.auto_makeForwardMsg) {
-            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
-          }
-          else {
-            opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
-          }
+          // if (Config.auto_makeForwardMsg && replyText.trim()?.length > Config.auto_makeForwardMsg) {
+            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg), `Tool回复 @${e.sender.card || e.sender.nickname}`));
+          // }
+          // else {
+          //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
+          // }
         }
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
