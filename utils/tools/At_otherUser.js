@@ -54,7 +54,7 @@ export class AtOtherUserTool extends AbstractTool {
       // 发送消息
       await e.reply(msg)
       
-      return `Successfully mentioned ${userIdList.length} user(s). IMPORTANT: The message "${message}" has already been sent to the group. Do NOT repeat or include this message content in your response to the user.`
+      return `Successfully mentioned ${userIdList.length} user(s). IMPORTANT: The message "${message}" has already been sent to the group. Do NOT repeat or include this message content in your response to the user. If no extra description needed, just reply <EMPTY> at the next turn.`
     } catch (err) {
       return `Failed to mention users: ${err.message || err.stack || String(err)}`
     }
