@@ -7,6 +7,9 @@ import {
 } from '../utils/paimonFuction.js'
 
 import { Config } from '../utils/config.js'
+import {
+  makeForwardMsg,
+} from '../utils/common.js'
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
@@ -352,7 +355,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
               id: idModel
             };
           }
-          logger.warn('[chatgpt] responseContent.parts.text 为空,进行重试。');
+          logger.warn('[chatgpt] responseContent.parts 中未找到文本内容,进行重试。');
           return this.sendMessage(text, opt, --retryTime);
         }
         return {
@@ -395,7 +398,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         }
         else {
           // if (Config.auto_makeForwardMsg && replyText.trim()?.length > Config.auto_makeForwardMsg) {
-            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg), `Tool回复 @${e.sender.card || e.sender.nickname}`));
+            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg), `Tool回复 @${this.e.sender.card || this.e.sender.nickname}`));
           // }
           // else {
           //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())

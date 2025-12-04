@@ -1249,6 +1249,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'switch_EmojiTool',
+          label: '工具新增-发送表情',
+          bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食',
+          component: 'Switch'
+        },
+        {
           field: 'agent_SandboxSwitch',
           label: '工具新增-沙箱',
           bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',
@@ -1263,7 +1269,7 @@ export function supportGuoba() {
         {
           field: 'disable_sendMessage_tool',
           label: '工具禁用-文字工具',
-          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于sf图片模式、伪人重复发送相同文本等问题',
+          bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于文字模式、图片模式、sf图片模式重复发送相同文本等问题',
           component: 'Switch'
         },
         {

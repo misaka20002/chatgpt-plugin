@@ -308,6 +308,7 @@ const defaultConfig = {
   agent_SandboxSwitch: false,
   auto_makeForwardMsg: 2000,
   getPixivTool: false,
+  switch_EmojiTool: false,
 
 }
 const _path = process.cwd()

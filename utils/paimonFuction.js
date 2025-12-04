@@ -387,7 +387,12 @@ export function removeCQCode(msg) {
   return msg.replace(/\[CQ:[^\]]+\]/g, '').trim()
 }
 
-/** 把超长字符串按照每 回车 与 chunkSize 字分割成数组 */
+/**
+ * @description: 把超长字符串按照每 回车 与 chunkSize 字分割成数组
+ * @param {string|Array} str
+ * @param {number} chunkSize
+ * @return {Array}
+ */
 export function splitString_Enter(str, chunkSize = 1000) {
   // 如果 str 是数组,先转换为字符串
   if (Array.isArray(str)) {
