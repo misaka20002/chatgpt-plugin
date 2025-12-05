@@ -309,6 +309,7 @@ const defaultConfig = {
   auto_makeForwardMsg: 2000,
   getPixivTool: false,
   switch_EmojiTool: false,
+  switch_ChatCooldown: true,
 
 }
 const _path = process.cwd()

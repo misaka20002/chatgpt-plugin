@@ -36,6 +36,7 @@ import {
   hidePrivacyInfo,
   removeCQCode,
 } from '../utils/paimonFuction.js'
+import ChatCooldown from '../utils/chatCooldown.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -894,6 +895,17 @@ export class chatgpt extends plugin {
     let handler = this.e.runtime?.handler || {
       has: (arg1) => false
     }
+
+    /** 检查对话冷却 */
+    const cooldownResult = await ChatCooldown.check(e.user_id, e.group_id, e.isMaster)
+    if (!cooldownResult.canChat) {
+      logger.info(`[Chatgpt][ChatCooldown]${e.user_id}上一次对话未完成，跳过此次对话，超时时间剩余 ${cooldownResult.remainingTime} 秒`)
+      return false
+    }
+    // 标记对话开始
+    if (Config.switch_ChatCooldown)
+      await ChatCooldown.start(e.user_id, e.group_id)
+
     try {
       if (Config.debug) {
         logger.mark({ conversation })
@@ -1520,6 +1532,8 @@ export class chatgpt extends plugin {
           await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
         }
       }
+    } finally {
+      ChatCooldown.end(e.user_id, e.group_id)
     }
   }
 

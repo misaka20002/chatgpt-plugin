@@ -81,6 +81,12 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'switch_ChatCooldown',
+          label: '不允许并发对话',
+          bottomHelpMessage: '不允许并发对话，用户要等待上一次对话完成后才可以触发下一次对话；每个群单独计算，主人不受限制',
+          component: 'Switch'
+        },
+        {
           field: 'enableGroupContext',
           label: '是否允许机器人读取近期的群聊聊天记录',
           bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
