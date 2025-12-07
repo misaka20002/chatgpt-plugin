@@ -20,10 +20,6 @@ export class GeminiSearchTool extends AbstractTool {
 
     description = '搜索网络以回答用户的问题。当用户需要搜索网络以获取即时性的信息时调用此工具'
 
-    constructor() {
-        super()
-    }
-
     // LLM调用的Tool
     func = async function (opts) {
         const { query } = opts

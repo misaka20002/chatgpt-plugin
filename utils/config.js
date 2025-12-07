@@ -93,8 +93,8 @@ const defaultConfig = {
   drawToolS: false,
   sf_markdownPic: false,
   add_sf_image_edit: false,
-  disable_sendMessage_tool: false,
-  change_handleMsg_tool: false,
+  disable_sendMessage_tool: true,
+  change_handleMsg_tool: true,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
   geminiModelsByFetch: [],
   draw_PluginCharactersList: '',
@@ -223,7 +223,7 @@ const defaultConfig = {
   azSerpKey: '',
   tavilyKey: '',
   serpSource: 'off',
-  extraUrl: 'https://cpe.ikechan8370.com',
+  extraUrl: '',
   smartMode: false,
   // claude2
   claudeAIOrganizationId: '',
@@ -292,7 +292,7 @@ const defaultConfig = {
   _2captchaKey: '',
   bingReasoning: false, // 是否深度思考
   apiMaxToken: 4096,
-  enableToolPrivateSend: true, // 是否允许智能模式下私聊骚扰其他群友。主人不受影响。
+  enableToolPrivateSend: false, // 是否允许智能模式下私聊骚扰其他群友。主人不受影响。
   geminiForceToolKeywords: [],
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',
@@ -303,6 +303,13 @@ const defaultConfig = {
 
   is_recallMsg: true,
   removeCQCodeFocus: true,
+  at_otherUser: true,
+  poke_userIDs: true,
+  agent_SandboxSwitch: false,
+  auto_makeForwardMsg: 2000,
+  getPixivTool: false,
+  switch_EmojiTool: false,
+  switch_ChatCooldown: true,
 
 }
 const _path = process.cwd()

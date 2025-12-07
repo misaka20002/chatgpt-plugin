@@ -6,7 +6,7 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
 /**
  * @description: 获取gemini的识图结果，需要填写了gemini的token
  * @param {*} e
- * @param {*} img 数组
+ * @param {*} img 图片url数组
  * @return {*} recognitionResults
  */
 export async function recognitionResultsByGemini(e, img) {
@@ -374,9 +374,10 @@ export function hidePrivacyInfo(text) {
  */
 export function removeCQCode(msg) {
   if (!msg) return ''
+  // logger.info(`[chatgpt][removeCQCode][debug] ${msg}`) // Debug 几天研究 Bot 返回的真实 CQ 码
   // 如果是数组,递归处理每个元素
   if (Array.isArray(msg)) {
-    return msg.map(item => 
+    return msg.map(item =>
       typeof item === 'string' ? item.replace(/\[CQ:[^\]]+\]/g, '').trim() : item
     )
   }
@@ -384,4 +385,45 @@ export function removeCQCode(msg) {
   if (typeof msg !== 'string') return msg
   // 匹配 [CQ:...] 格式的 CQ 码
   return msg.replace(/\[CQ:[^\]]+\]/g, '').trim()
+}
+
+/**
+ * @description: 把超长字符串按照每 回车 与 chunkSize 字分割成数组
+ * @param {string|Array} str
+ * @param {number} chunkSize
+ * @return {Array}
+ */
+export function splitString_Enter(str, chunkSize = 1000) {
+  // 如果 str 是数组,先转换为字符串
+  if (Array.isArray(str)) {
+    str = str.join('\n');
+  }
+  const result = [];
+  const lines = str.split('\n');
+  let currentChunk = '';
+  for (const line of lines) {
+    // 如果当前行加上当前块不超过限制,就追加
+    if ((currentChunk + line + '\n').length <= chunkSize) {
+      currentChunk += (currentChunk ? '\n' : '') + line;
+    } else {
+      // 如果当前块不为空,先保存
+      if (currentChunk) {
+        result.push(currentChunk);
+        currentChunk = '';
+      }
+      // 如果单行就超过限制,需要强制分割
+      if (line.length > chunkSize) {
+        for (let i = 0; i < line.length; i += chunkSize) {
+          result.push(line.slice(i, i + chunkSize));
+        }
+      } else {
+        currentChunk = line;
+      }
+    }
+  }
+  // 保存最后一个块
+  if (currentChunk) {
+    result.push(currentChunk);
+  }
+  return result;
 }

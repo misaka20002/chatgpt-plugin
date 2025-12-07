@@ -193,7 +193,7 @@ export class memes extends plugin {
     try {
       await this.init()
     } catch (err) {
-      await e.reply('更新失败：' + err.message)
+      await e.reply('更新失败：' + hidePrivacyInfo(err.message))
     }
     await e.reply('更新完成')
   }
@@ -450,7 +450,7 @@ export class memes extends plugin {
       })
     } catch (error) {
       logger.error('[meme]请求失败:', error)
-      await e.reply(`[meme]表情制作失败: ${error.message}`, true)
+      await e.reply(`[meme]表情制作失败: ${hidePrivacyInfo(error.message)}`, true)
       return true
     }
     // console.log(response.status)
@@ -632,7 +632,7 @@ function generateSupportArgsText(info) {
     return description || `${mainParam}参数`;
 
   } catch (e) {
-    console.error(`生成参数说明出错: ${e.message}`);
+    console.error(`生成参数说明出错: ${hidePrivacyInfo(e.message)}`);
     return '支持额外参数';
   }
 }

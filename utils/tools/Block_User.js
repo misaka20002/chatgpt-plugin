@@ -8,15 +8,15 @@ export class BlockUserTool extends AbstractTool {
     properties: {
       userId: {
         type: 'string',
-        description: '要拉黑的用户的QQ号'
+        description: 'The QQ number of the user to be blocked'
       },
       duration: {
         type: 'number',
-        description: '拉黑时长(分钟)，范围10-60分钟'
+        description: 'Duration of the block in minutes, valid range is 30-720 minutes'
       },
       reason: {
         type: 'string',
-        description: '拉黑原因，填写拉黑原因时要符合你的人设'
+        description: 'The reason for blocking this user, should be consistent with your character personality'
       }
     },
     required: ['userId']
@@ -31,14 +31,14 @@ export class BlockUserTool extends AbstractTool {
     }
 
     // 验证拉黑时长
-    if (!duration || duration < 10 || duration > 60) {
-      duration = 30;
+    if (!duration || duration < 30 || duration > 720) {
+      duration = 60;
     }
 
-    // 检查权限：除非是主人，否则只能拉黑自己
-    if (!e.isMaster) {
+    // 检查权限：只有主人/管理员，可以对其他群友生效
+    if (!(e.isMaster || e.sender.role == 'owner' || e.sender.role == 'admin')) {
       if (userId !== e.sender.user_id.toString()) {
-        return 'Only the master can block other users.'
+        return 'Only the master or Group admin can block other users.'
       }
     }
 

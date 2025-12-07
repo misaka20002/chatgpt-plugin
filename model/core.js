@@ -29,7 +29,7 @@ import { SendAvatarTool } from '../utils/tools/SendAvatarTool.js'
 import { SerpImageTool } from '../utils/tools/SearchImageTool.js'
 import { SearchMusicTool } from '../utils/tools/SearchMusicTool.js'
 import { SendMusicTool } from '../utils/tools/SendMusicTool.js'
-// import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
+import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { QueryGenshinTool } from '../utils/tools/QueryGenshinTool.js'
 import { WeatherTool } from '../utils/tools/WeatherTool.js'
@@ -41,12 +41,12 @@ import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
 import { SerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
-// import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
-// import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
-// import { EliMusicTool } from '../utils/tools/EliMusicTool.js'
+import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
+import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
+import { EliMusicTool } from '../utils/tools/EliMusicTool.js'
 import { HandleMessageMsgTool } from '../utils/tools/HandleMessageMsgTool.js'
 import { ProcessPictureTool } from '../utils/tools/ProcessPictureTool.js'
-// import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
+import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { newFetch } from '../utils/proxy.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
@@ -62,7 +62,13 @@ import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
 import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.js'
-import { BlockUserTool } from '../utils/tools/blockUser.js'
+import { BlockUserTool } from '../utils/tools/Block_User.js'
+import { AtOtherUserTool } from '../utils/tools/At_otherUser.js'
+import { SendGroupPokeTool } from '../utils/tools/SendGroupPoke.js'
+import { SandboxJSTool } from '../utils/tools/Sandbox_JS.js'
+import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
+import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
+import { EmojiTool } from '../utils/tools/EmojiTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -587,8 +593,8 @@ class Core {
         },
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId,
-        search: Config.geminiEnableGoogleSearch,
-        codeExecution: Config.geminiEnableCodeExecution
+        search: Config.geminiEnableGoogleSearch, // Gemini 原生搜索，开启后无法使用智能模式，默认关闭
+        codeExecution: Config.geminiEnableCodeExecution // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
       }
 
       if (!Config.recognitionByGemini) {
@@ -887,14 +893,14 @@ async function collectTools(e) {
   /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
     new EditCardTool(),
-    // new QueryStarRailTool(),
+    new QueryStarRailTool(), // 星铁工具
     WebTool,
     new JinyanTool(),
     new KickOutTool(),
     new WeatherTool(),
     new SendPictureTool(),
     new SendVideoTool(),
-    // new ImageCaptionTool(),
+    // new ImageCaptionTool(), // OCR 工具
     new SearchVideoTool(),
     new SendAvatarTool(),
     // new SerpImageTool(), // 该工具使用的 url 不再提供服务
@@ -904,48 +910,50 @@ async function collectTools(e) {
     // new SerpIkechan8370Tool(),
     // new SerpTool(),
     serpTool,
-    // new SendAudioMessageTool(),
-    // new ProcessPictureTool(),
+    // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
+    // new ProcessPictureTool(), // 图像预处理工具
     new APTool(),
     new HandleMessageMsgTool(),
-    new QueryUserinfoTool(),
+    new QueryUserinfoTool(), // 查看用户 e.sender 工具
     // new EliMusicTool(),
     // new EliMovieTool(),
-    new SendMessageToSpecificGroupOrUserTool(),
+    // new SendMessageToSpecificGroupOrUserTool(), // 发送信息给指定群或用户
     // new SendDiceTool(), // 暂不支持骰子了
-    new QueryGenshinTool(),
+    new QueryGenshinTool(), // 原神工具
     new SetTitleTool(),
     new GithubAPITool(),
     new BlockUserTool(),
+    new RecognitionResultsByGeminiTool(),
   ]
   // todo 3.0再重构tool的插拔和管理
-  let /** @type{AbstractTool[]} **/ tools = [
+  let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
     new SendAvatarTool(),
     // new SendDiceTool(), // 暂不支持骰子了
-    new SendMessageToSpecificGroupOrUserTool(),
+    // new SendMessageToSpecificGroupOrUserTool(), // 发送信息给指定群或用户
     // new EditCardTool(),
-    new QueryStarRailTool(),
-    new QueryGenshinTool(),
+    new QueryStarRailTool(), // 星铁工具
+    new QueryGenshinTool(), // 原神工具
     new SendMusicTool(),
     new SearchMusicTool(),
-    new ProcessPictureTool(),
+    // new ProcessPictureTool(), // 图像预处理工具
     WebTool,
     // new JinyanTool(),
     // new KickOutTool(),
     new WeatherTool(),
     new SendPictureTool(),
-    // new SendAudioMessageTool(),
+    // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
     new APTool(),
     // new HandleMessageMsgTool(),
     serpTool,
-    new QueryUserinfoTool(),
+    new QueryUserinfoTool(), // 查看用户 e.sender 工具
     new GithubAPITool(),
     new BlockUserTool(),
+    new RecognitionResultsByGeminiTool(),
   ]
 
-  if (Config.disable_sendMessage_tool) {
-    tools = tools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
-    fullTools = fullTools.filter(tool => !(tool instanceof SendMessageToSpecificGroupOrUserTool));
+  if (!Config.disable_sendMessage_tool) {
+    tools.push(...[new SendMessageToSpecificGroupOrUserTool()])
+    fullTools.push(...[new SendMessageToSpecificGroupOrUserTool()])
   }
 
   if (Config.serpSource === "off") {
@@ -958,12 +966,39 @@ async function collectTools(e) {
     fullTools.push(...[new Sf_image_edit()])
   }
 
+  if (Config.at_otherUser) {
+    tools.push(...[new AtOtherUserTool()])
+    fullTools.push(...[new AtOtherUserTool()])
+  }
+
+  if (Config.poke_userIDs) {
+    tools.push(...[new SendGroupPokeTool()])
+    fullTools.push(...[new SendGroupPokeTool()])
+  }
+
+  if (Config.agent_SandboxSwitch) {
+    tools.push(...[new SandboxJSTool()])
+    fullTools.push(...[new SandboxJSTool()])
+  }
+
+  if (Config.getPixivTool) {
+    tools.push(...[new GetPixivApiLoliconTool()])
+    fullTools.push(...[new GetPixivApiLoliconTool()])
+  }
+
+  if (Config.switch_EmojiTool) {
+    tools.push(...[new EmojiTool()])
+    fullTools.push(...[new EmojiTool()])
+  }
+
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
-    if (botInfo.role !== 'member' && (e.isMaster || e.sender.role !== 'member')) {
+    if (botInfo.role !== 'member') {
+      tools.push(...[new EditCardTool(), new JinyanTool(), new SetTitleTool()])
       // 管理员才给这些工具
-      tools.push(...[new EditCardTool(), new JinyanTool(), new KickOutTool(), new HandleMessageMsgTool(), new SetTitleTool()])
+      if (e.isMaster || e.sender.role == 'owner' || e.sender.role == 'admin')
+        tools.push(...[new KickOutTool(), new HandleMessageMsgTool()])
       // 用于撤回和加精的id
       if (e.source?.seq) {
         let source = (await e.group.getChatHistory(e.source?.seq, 1)).pop()
@@ -975,7 +1010,7 @@ async function collectTools(e) {
   }
   let promptAddition = ''
   let img = await getImg(e)
-  if (img?.length > 0 && Config.extraUrl) {
+  if (img?.length > 0) {
     // tools.push(new ImageCaptionTool())
     // tools.push(new ProcessPictureTool())
     promptAddition += `\nthe url of the picture(s) above: ${img.join(', ')}`

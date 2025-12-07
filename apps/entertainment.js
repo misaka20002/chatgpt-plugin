@@ -13,7 +13,10 @@ import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import { URL } from 'node:url'
 import { getBots } from '../utils/bot.js'
 import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
-import { hidePrivacyInfo } from '../utils/paimonFuction.js'
+import {
+  hidePrivacyInfo,
+  recognitionResultsByGemini,
+ } from '../utils/paimonFuction.js'
 
 let useSilk = false
 try {
@@ -156,7 +159,14 @@ ${translateLangLabels}
       }
     }
     if (isImg) {
-      let imgOcrText = await getImageOcrText(e)
+      let imgOcrText
+      // 呆毛版 gemini的识图结果
+        let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, e.img)
+        if (imgRecognitionByGeminiText) {
+          imgOcrText = [imgRecognitionByGeminiText]
+        } else
+        imgOcrText = await getImageOcrText(e)
+      
       multiText = Array.isArray(imgOcrText)
       if (imgOcrText) {
         pendingText = imgOcrText

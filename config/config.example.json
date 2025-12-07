@@ -157,8 +157,10 @@
   "amapKey": "",
   "azSerpKey": "",
   "serpSource": "off",
-  "extraUrl": "https://cpe.ikechan8370.com",
+  "extraUrl": "",
   "smartMode": false,
   "is_recallMsg": true,
-  "removeCQCodeFocus": true
+  "removeCQCodeFocus": true,
+  "at_otherUser": true,
+  "poke_userIDs": true
 }

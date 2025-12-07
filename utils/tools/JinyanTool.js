@@ -32,6 +32,14 @@ export class JinyanTool extends AbstractTool {
       ? isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
       : 'all'
     let group = await e.bot.pickGroup(groupId)
+
+    // 检查权限：只有主人/管理员，可以对其他群友生效
+    if (!(e.isMaster || e.sender.role == 'owner'|| e.sender.role == 'admin')) {
+      if (qq != e.sender.user_id) {
+        return 'Only the master or Group admin can block other users.'
+      }
+    }
+
     if (qq !== 'all') {
       let m = await group.getMemberMap()
       if (!m.has(qq)) {

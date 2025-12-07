@@ -36,6 +36,7 @@ import {
   hidePrivacyInfo,
   removeCQCode,
 } from '../utils/paimonFuction.js'
+import ChatCooldown from '../utils/chatCooldown.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -47,6 +48,7 @@ import {
   recognitionResultsByGemini,
   convertSentenceToArray,
   extractCharacterName,
+  splitString_Enter,
 } from '../utils/paimonFuction.js'
 
 /**
@@ -893,6 +895,17 @@ export class chatgpt extends plugin {
     let handler = this.e.runtime?.handler || {
       has: (arg1) => false
     }
+
+    /** 检查对话冷却 */
+    const cooldownResult = await ChatCooldown.check(e.user_id, e.group_id, e.isMaster)
+    if (!cooldownResult.canChat) {
+      logger.info(`[Chatgpt][ChatCooldown]${e.user_id}上一次对话未完成，跳过此次对话，超时时间剩余 ${cooldownResult.remainingTime} 秒`)
+      return false
+    }
+    // 标记对话开始
+    if (Config.switch_ChatCooldown)
+      await ChatCooldown.start(e.user_id, e.group_id)
+
     try {
       if (Config.debug) {
         logger.mark({ conversation })
@@ -941,6 +954,7 @@ export class chatgpt extends plugin {
       }
       let response = chatMessage?.text?.replace('\n\n\n', '\n')
       let postProcessors = await collectProcessors('post')
+      /** thinking 累积器，不断追加新的思考内容，以支持 Chain-of-Thought (CoT) 推理的模型 */
       let thinking = chatMessage.thinking_text
       for (let processor of postProcessors) {
         let output = await processor.processInner({
@@ -950,7 +964,7 @@ export class chatgpt extends plugin {
         thinking = output.thinking_text
       }
       if (handler.has('chatgpt.response.post')) {
-        logger.debug('调用后处理器: chatgpt.response.post')
+        logger.debug('调用后处理器: chatgpt.response.post') // 云崽平台的 handler: 调用所有 apps 文件夹中拥有 handler: [{ key: 'chatgpt.response.post',  fn: 'postHandler'}] 的方法
         handler.call('chatgpt.response.post', this.e, {
           content: response,
           thinking,
@@ -971,6 +985,13 @@ export class chatgpt extends plugin {
       // 移除 CQ
       if (Config.removeCQCodeFocus)
         response = removeCQCode(response);
+
+      // 处理某些工具 Prompt 中要求回复的 "<EMPTY>"
+      if (response.trim() === "<EMPTY>") {
+        // await this.reply('没有任何回复', true)
+        logger.info('[chatgpt]返回"<EMPTY>"')
+        return
+      }
 
       let emotion, emotionDegree
       if (Config.ttsMode === 'azure' && (use === 'claude' || use === 'bing') && await AzureTTS.getEmotionPrompt(e)) {
@@ -1366,7 +1387,7 @@ export class chatgpt extends plugin {
             // 多次回复
             const str_arr = convertSentenceToArray(responseText.join(''));
             for (let i = 0; i < str_arr.length; i++) {
-              await this.reply(str_arr[i]);
+              await this.reply(str_arr[i].trim());
               await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
@@ -1386,7 +1407,10 @@ export class chatgpt extends plugin {
             }
           }
           else {
-            await this.reply(responseText, e.isGroup)
+            if (Config.auto_makeForwardMsg && responseText.join('')?.length > Config.auto_makeForwardMsg)
+              this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
+            else
+              await this.reply(responseText, e.isGroup)
           }
           if (quotemessage.length > 0) {
             this.reply(await makeForwardMsg(this.e, quotemessage.map(msg => `${msg.text} - ${msg.url}`)))
@@ -1445,7 +1469,7 @@ export class chatgpt extends plugin {
           // 多次回复
           const str_arr = convertSentenceToArray(responseText.join(''));
           for (let i = 0; i < str_arr.length; i++) {
-            await this.reply(str_arr[i]);
+            await this.reply(str_arr[i].trim());
             await sleep_zz(Math.random() * 5000 + 2000);
           }
         }
@@ -1465,12 +1489,17 @@ export class chatgpt extends plugin {
           }
         }
         else {
-          this.reply(responseText, e.isGroup, {
-            btnData: {
-              use,
-              suggested: chatMessage.suggestedResponses
-            }
-          })
+          if (Config.auto_makeForwardMsg && responseText.join('')?.length > Config.auto_makeForwardMsg) {
+            this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, Config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
+          }
+          else {
+            this.reply(responseText, e.isGroup, {
+              btnData: {
+                use,
+                suggested: chatMessage.suggestedResponses
+              }
+            })
+          }
         }
         if (thinking) {
           if (Config.forwardReasoning) {
@@ -1503,6 +1532,8 @@ export class chatgpt extends plugin {
           await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
         }
       }
+    } finally {
+      ChatCooldown.end(e.user_id, e.group_id)
     }
   }
 
