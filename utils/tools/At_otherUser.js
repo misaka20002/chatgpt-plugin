@@ -67,5 +67,5 @@ export class AtOtherUserTool extends AbstractTool {
     }
   }
 
-  description = 'Mention (@) one or multiple group members by their QQ user IDs and send them a message. This tool can only be used in group chats. The message will be sent immediately when you call this tool, so do not repeat the message content in your response. If no extra description needed, just reply <EMPTY> at the next turn.'
+  description = 'Mention (@) one or multiple OTHER group members (not the current conversation user) by their QQ user IDs and send them a message. IMPORTANT: Only use this tool when you need to specifically mention/notify OTHER users in the group who are NOT the person you are currently talking to. For normal replies to the current conversation user, DO NOT use this tool. This tool can only be used in group chats. The message will be sent immediately when you call this tool, so do not repeat the message content in your response. If no extra description needed, just reply <EMPTY> at the next turn.'
 }
