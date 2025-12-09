@@ -5,7 +5,7 @@
 - ~~最清晰的Vits语音，支持中日英三语发音（感谢genshinvoice.top提供的api支持！）~~
 - 让机器人更真实地 cos 任意角色
 - 新增一些小玩意
-#### 欢迎加入交流群共同讨论 [285744328](https://qm.qq.com/q/nPegdVc8HC) 或 740335111 或 527540987
+#### 欢迎加入交流群共同讨论 [285744328](https://qm.qq.com/q/nPegdVc8HC) 或 [1022982073](https://qm.qq.com/q/tEqFnH0kTe)
 ## 更新记录：
 - vit2语音源新增Bert-VITS2源（感谢genshinvoice.top提供的api支持！）
 - 新增戳一戳
