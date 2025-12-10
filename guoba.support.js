@@ -1344,6 +1344,56 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          label: '智能模式 记忆设置',
+          component: 'Divider'
+        },
+        {
+          field: 'enableMemory',
+          label: '启用记忆系统',
+          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验。可用指令： #记忆帮助',
+          component: 'Switch'
+        },
+        {
+          field: 'maxMemoriesPerUser',
+          label: '单用户最大记忆数量',
+          bottomHelpMessage: '每个用户最多保存的记忆条数，超过后会删除最不重要的记忆。默认50条',
+          component: 'InputNumber',
+          componentProps: {
+            min: 10,
+            max: 200
+          }
+        },
+        {
+          field: 'maxTotalMemories',
+          label: '全局最大记忆数量',
+          bottomHelpMessage: '所有用户的记忆总和上限，超过后会删除最不重要的记忆。默认1000条',
+          component: 'InputNumber',
+          componentProps: {
+            min: 100,
+            max: 10000
+          }
+        },
+        {
+          field: 'memoryMinImportance',
+          label: '记忆最低重要性',
+          bottomHelpMessage: '附加到对话的记忆最低重要性等级（1-10），低于此等级的记忆不会被加入对话上下文。默认5',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 10
+          }
+        },
+        {
+          field: 'memoryContextLimit',
+          label: '对话记忆数量限制',
+          bottomHelpMessage: '每次对话最多附加多少条记忆到上下文中，按重要性排序。默认10条',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 50
+          }
+        },
+        {
           label: '小功能',
           component: 'SOFT_GROUP_BEGIN'
         },

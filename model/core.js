@@ -69,6 +69,7 @@ import { SandboxJSTool } from '../utils/tools/Sandbox_JS.js'
 import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
 import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
+import { MemoryTool } from '../utils/tools/MemoryTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -986,6 +987,11 @@ async function collectTools(e) {
   if (Config.switch_EmojiTool) {
     tools.push(...[new EmojiTool()])
     fullTools.push(...[new EmojiTool()])
+  }
+
+  if (Config.enableMemory) {
+    tools.push(new MemoryTool())
+    fullTools.push(new MemoryTool())
   }
 
   let systemAddition = ''

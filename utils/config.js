@@ -311,6 +311,13 @@ const defaultConfig = {
   switch_EmojiTool: false,
   switch_ChatCooldown: true,
 
+  // 记忆系统配置
+  enableMemory: false, // 是否启用记忆系统
+  maxMemoriesPerUser: 50, // 每个用户最大记忆数量
+  maxTotalMemories: 1000, // 全局最大记忆数量
+  memoryMinImportance: 5, // 附加到对话的最低重要性阈值（1-10）
+  memoryContextLimit: 10, // 每次对话附加的最大记忆数量
+
 }
 const _path = process.cwd()
 let config = {}
