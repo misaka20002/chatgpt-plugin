@@ -21,11 +21,11 @@ export class UserMemory {
 
       // 检查是否超过个人记忆限制
       if (userMemories.length >= Config.maxMemoriesPerUser) {
-        // 删除最不重要的记忆（重要性最低且时间最早）
+        // 删除最不重要的记忆（重要性最低且时间最早） // 修改了，现在仅考虑时间 不考虑重要性了
         userMemories.sort((a, b) => {
-          if (a.importance !== b.importance) {
-            return a.importance - b.importance
-          }
+          // if (a.importance !== b.importance) {
+          //   return a.importance - b.importance
+          // }
           return a.timestamp - b.timestamp
         })
         userMemories.shift() // 移除第一个（最不重要的）
@@ -36,43 +36,16 @@ export class UserMemory {
       memory.id = Date.now().toString() + Math.random().toString(36).substring(2, 9)
       userMemories.push(memory)
 
-      // 按重要性和时间排序（重要性高的在前，时间新的在前）
+      // 按重要性和时间排序（重要性高的在前，时间新的在前） // 修改了，现在仅考虑时间 不考虑重要性了
       userMemories.sort((a, b) => {
-        if (b.importance !== a.importance) {
-          return b.importance - a.importance
-        }
+        // if (b.importance !== a.importance) {
+        //   return b.importance - a.importance
+        // }
         return b.timestamp - a.timestamp
       })
 
       // 保存用户记忆
       await redis.set(userMemoryKey, JSON.stringify(userMemories))
-
-      // 检查全局记忆数量限制
-      const globalMemoryKey = 'CHATGPT:MEMORY:GLOBAL'
-      let globalMemories = await redis.get(globalMemoryKey)
-      globalMemories = globalMemories ? JSON.parse(globalMemories) : []
-
-      if (globalMemories.length >= Config.maxTotalMemories) {
-        // 删除全局最不重要的记忆
-        globalMemories.sort((a, b) => {
-          if (a.importance !== b.importance) {
-            return a.importance - b.importance
-          }
-          return a.timestamp - b.timestamp
-        })
-        globalMemories.shift()
-        logger.info('[Memory] 全局记忆已满，删除最不重要的记忆')
-      }
-
-      globalMemories.push(memory)
-      globalMemories.sort((a, b) => {
-        if (b.importance !== a.importance) {
-          return b.importance - a.importance
-        }
-        return b.timestamp - a.timestamp
-      })
-
-      await redis.set(globalMemoryKey, JSON.stringify(globalMemories))
 
       return {
         success: true,
@@ -147,14 +120,6 @@ export class UserMemory {
 
       if (memories.length < originalLength) {
         await redis.set(userMemoryKey, JSON.stringify(memories))
-
-        // 同时从全局记忆中删除
-        const globalMemoryKey = 'CHATGPT:MEMORY:GLOBAL'
-        let globalMemories = await redis.get(globalMemoryKey)
-        globalMemories = globalMemories ? JSON.parse(globalMemories) : []
-        globalMemories = globalMemories.filter(m => m.id !== memoryId)
-        await redis.set(globalMemoryKey, JSON.stringify(globalMemories))
-
         return true
       }
       return false
@@ -173,16 +138,6 @@ export class UserMemory {
     try {
       const userMemoryKey = `CHATGPT:MEMORY:USER:${userId}`
       await redis.del(userMemoryKey)
-
-      // 从全局记忆中删除该用户的记忆
-      const globalMemoryKey = 'CHATGPT:MEMORY:GLOBAL'
-      let globalMemories = await redis.get(globalMemoryKey)
-      if (globalMemories) {
-        globalMemories = JSON.parse(globalMemories)
-        globalMemories = globalMemories.filter(m => m.userId !== userId)
-        await redis.set(globalMemoryKey, JSON.stringify(globalMemories))
-      }
-
       return true
     } catch (err) {
       logger.error('[Memory] 清空用户记忆失败:', err)

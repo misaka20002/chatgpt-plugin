@@ -119,9 +119,16 @@ export class memoryManage extends plugin {
     }
 
     try {
-      const globalMemoryKey = 'CHATGPT:MEMORY:GLOBAL'
-      let allMemories = await redis.get(globalMemoryKey)
-      allMemories = allMemories ? JSON.parse(allMemories) : []
+      // 获取所有用户的记忆
+      const userMemoryKeys = await redis.keys('CHATGPT:MEMORY:USER:*')
+      let allMemories = []
+
+      for (const key of userMemoryKeys) {
+        const userMemories = await redis.get(key)
+        if (userMemories) {
+          allMemories.push(...JSON.parse(userMemories))
+        }
+      }
 
       // 筛选当前群的记忆
       const groupMemories = allMemories.filter(m => m.groupId === e.group_id)
@@ -402,10 +409,16 @@ export class memoryManage extends plugin {
     // }
 
     try {
-      // 获取全局记忆统计
-      const globalMemoryKey = 'CHATGPT:MEMORY:GLOBAL'
-      let allMemories = await redis.get(globalMemoryKey)
-      allMemories = allMemories ? JSON.parse(allMemories) : []
+      // 获取所有用户的记忆统计
+      const userMemoryKeys = await redis.keys('CHATGPT:MEMORY:USER:*')
+      let allMemories = []
+
+      for (const key of userMemoryKeys) {
+        const userMemories = await redis.get(key)
+        if (userMemories) {
+          allMemories.push(...JSON.parse(userMemories))
+        }
+      }
 
       if (allMemories.length === 0) {
         await e.reply('当前没有任何记忆', true)
@@ -433,11 +446,7 @@ export class memoryManage extends plugin {
         return
       }
 
-      // 清空全局记忆
-      await redis.del(globalMemoryKey)
-
       // 清空所有用户的个人记忆
-      const userMemoryKeys = await redis.keys('CHATGPT:MEMORY:USER:*')
       if (userMemoryKeys && userMemoryKeys.length > 0) {
         for (const key of userMemoryKeys) {
           await redis.del(key)
@@ -508,7 +517,6 @@ export class memoryManage extends plugin {
 
       msg += `\n配置信息：\n`
       msg += `  单用户上限：${Config.maxMemoriesPerUser} 条\n`
-      msg += `  全局上限：${Config.maxTotalMemories} 条\n`
       msg += `  对话最低重要性：${Config.memoryMinImportance}/10\n`
       msg += `  对话记忆数量：${Config.memoryContextLimit} 条`
 
@@ -530,11 +538,11 @@ export class memoryManage extends plugin {
       `#他的记忆 123456789 - 通过QQ号查看(主人)\n` +
       `#群记忆 - 查看当前群的记忆统计\n\n` +
       `【删除记忆】\n` +
+      `#清空所有记忆 - 清空所有用户的记忆(主人)\n` +
       `#清空我的记忆 - 清空自己的所有记忆\n` +
       `#清空他的记忆 @某人 - 清空某人的记忆(主人)\n` +
       `#删除记忆 QQ号 序号 - 删除指定记忆(主人)\n` +
       `例如：#删除记忆 123456789 3\n\n` +
-      `#清空所有记忆 - 清空所有用户的记忆(主人)\n` +
       `【统计信息】\n` +
       `#记忆统计 - 查看自己的记忆统计\n` +
       `#记忆统计 @某人 - 查看某人的统计(主人)\n\n` +
