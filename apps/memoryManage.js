@@ -119,14 +119,15 @@ export class memoryManage extends plugin {
     }
 
     try {
-      // 获取所有用户的记忆
+      // 获取所有用户的记忆 (从Hash表读取)
       const userMemoryKeys = await redis.keys('CHATGPT:MEMORY:USER:*')
       let allMemories = []
 
       for (const key of userMemoryKeys) {
-        const userMemories = await redis.get(key)
-        if (userMemories) {
-          allMemories.push(...JSON.parse(userMemories))
+        const memoriesHash = await redis.hGetAll(key)
+        if (memoriesHash && Object.keys(memoriesHash).length > 0) {
+          const memories = Object.values(memoriesHash).map(m => JSON.parse(m))
+          allMemories.push(...memories)
         }
       }
 
@@ -359,7 +360,7 @@ export class memoryManage extends plugin {
       let memoryToDelete = null
 
       // 判断是序号还是ID
-      if (/^\d{1,3}$/.test(memoryIdentifier)) {
+      if (/^\d{1,4}$/.test(memoryIdentifier)) {
         // 序号
         const index = parseInt(memoryIdentifier) - 1
         if (index < 0 || index >= memories.length) {
@@ -409,14 +410,15 @@ export class memoryManage extends plugin {
     // }
 
     try {
-      // 获取所有用户的记忆统计
+      // 获取所有用户的记忆统计 (从Hash表读取)
       const userMemoryKeys = await redis.keys('CHATGPT:MEMORY:USER:*')
       let allMemories = []
 
       for (const key of userMemoryKeys) {
-        const userMemories = await redis.get(key)
-        if (userMemories) {
-          allMemories.push(...JSON.parse(userMemories))
+        const memoriesHash = await redis.hGetAll(key)
+        if (memoriesHash && Object.keys(memoriesHash).length > 0) {
+          const memories = Object.values(memoriesHash).map(m => JSON.parse(m))
+          allMemories.push(...memories)
         }
       }
 
