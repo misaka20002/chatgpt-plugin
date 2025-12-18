@@ -310,6 +310,7 @@ const defaultConfig = {
   getPixivTool: false,
   switch_EmojiTool: false,
   switch_ChatCooldown: true,
+  gemini_temperature: 0.9,
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统
@@ -406,7 +407,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
+        const defaultArr = ['gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);

@@ -654,6 +654,12 @@ class Core {
         }
       })
       option.toolMode = (opt.settings.forceTool || Config.geminiForceToolKeywords?.find(k => prompt?.includes(k))) ? 'ANY' : 'AUTO'
+
+      // 导入更多 gemini config
+      option.temperature = Config.gemini_temperature
+      option.sf_markdownPic = Config.sf_markdownPic
+      option.auto_makeForwardMsg = Config.auto_makeForwardMsg      
+
       return await client.sendMessage(prompt, option)
     } else if (use === 'chatglm4') {
       const client = new ChatGLM4Client({

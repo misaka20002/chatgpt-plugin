@@ -6,7 +6,6 @@ import {
   splitString_Enter,
 } from '../utils/paimonFuction.js'
 
-import { Config } from '../utils/config.js'
 import {
   makeForwardMsg,
 } from '../utils/common.js'
@@ -380,9 +379,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       const replyText = responseContent.parts.find(i => i.text)?.text
       if (replyText && replyText.trim()) {
         // send reply first
-        logger.info('[chatgpt]functionCall附加的对话text: ' + replyText.trim())
+        // logger.info('[chatgpt]functionCall附加的对话text: ' + replyText.trim())
 
-        if (Config.sf_markdownPic) {
+        if (opt.sf_markdownPic) {
           // sf图片模式
           try {
             if (replyText.trim()) {
@@ -397,8 +396,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           }
         }
         else {
-          // if (Config.auto_makeForwardMsg && replyText.trim()?.length > Config.auto_makeForwardMsg) {
-            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), Config.auto_makeForwardMsg), `Tool回复 @${this.e.sender.card || this.e.sender.nickname}`));
+          // if (opt.auto_makeForwardMsg && replyText.trim()?.length > opt.auto_makeForwardMsg) {
+            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), opt.auto_makeForwardMsg), `Tool回复 @${this.e.sender.card || this.e.sender.nickname}`));
           // }
           // else {
           //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
