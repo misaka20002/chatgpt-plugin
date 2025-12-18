@@ -684,6 +684,17 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          field: 'gemini_temperature',
+          label: 'gemini 温度',
+          bottomHelpMessage: '用于控制回复内容的多样性，数值越大回复越加随机、多元化，数值越小回复越加保守；默认值 0.9',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 0.05,
+            max: 2
+          }
+        },
+        {
           field: 'geminiForceToolKeywords',
           label: 'gemini强制工具关键词',
           bottomHelpMessage: '智能模式中，gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
