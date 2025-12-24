@@ -121,5 +121,5 @@ export class EmojiTool extends AbstractTool {
     }
   }
 
-  description = 'Send an emoji/sticker image based on current emotion. Choose the emotion that best matches your current feeling or the conversation context. The image will be sent separately, so do not mention it in your text response.'
+  description = 'Send an emoji/sticker image based on current emotion. Choose the emotion that best matches your current feeling or the conversation context. The image will be sent separately, so do not mention it in your text response. IMPORTANT: This tool can only be called ONCE per conversation. Do not use it multiple times in a single chat session.'
 }
