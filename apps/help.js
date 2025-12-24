@@ -60,7 +60,12 @@ let helpData = [
         icon: 'smiley-wink',
         title: '#claude开启新对话+设定名',
         desc: '结束之前的对话，并开启一个新的Claude对话，如果设定名不为空的话，会使用这个设定。设定必须是设定列表中有的设定。'
-      }
+      },
+      {
+        icon: 'list',
+        title: '#我的记忆',
+        desc: '#群记忆 #记忆帮助'
+      },
     ]
   },
   {

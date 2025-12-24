@@ -311,6 +311,12 @@ const defaultConfig = {
   switch_EmojiTool: false,
   switch_ChatCooldown: true,
 
+  // 记忆系统配置
+  enableMemory: false, // 是否启用记忆系统
+  maxMemoriesPerUser: 20, // 每个用户最大记忆数量
+  memoryMinImportance: 1, // 附加到对话的最低重要性阈值（1-10）
+  memoryContextLimit: 10, // 每次对话附加的最大记忆数量
+
 }
 const _path = process.cwd()
 let config = {}
@@ -400,7 +406,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
+        const defaultArr = ['gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);
