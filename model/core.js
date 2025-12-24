@@ -69,6 +69,7 @@ import { SandboxJSTool } from '../utils/tools/Sandbox_JS.js'
 import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
 import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
+import { MemoryTool } from '../utils/tools/MemoryTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -656,6 +657,12 @@ class Core {
         }
       })
       option.toolMode = (opt.settings.forceTool || Config.geminiForceToolKeywords?.find(k => prompt?.includes(k))) ? 'ANY' : 'AUTO'
+
+      // 导入更多 gemini config
+      option.temperature = Config.gemini_temperature
+      option.sf_markdownPic = Config.sf_markdownPic
+      option.auto_makeForwardMsg = Config.auto_makeForwardMsg      
+
       return await client.sendMessage(prompt, option)
     } else if (use === 'chatglm4') {
       const client = new ChatGLM4Client({
@@ -989,6 +996,11 @@ async function collectTools(e) {
   if (Config.switch_EmojiTool) {
     tools.push(...[new EmojiTool()])
     fullTools.push(...[new EmojiTool()])
+  }
+
+  if (Config.enableMemory) {
+    tools.push(new MemoryTool())
+    fullTools.push(new MemoryTool())
   }
 
   let systemAddition = ''

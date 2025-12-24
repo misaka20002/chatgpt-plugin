@@ -30,6 +30,7 @@ export class SendGroupPokeTool extends AbstractTool {
 
     let successList = []
     let failList = []
+    let cooldownList = []
 
     // 遍历每个QQ号进行戳一戳
     for (let qq of qqNumbers) {
@@ -39,8 +40,22 @@ export class SendGroupPokeTool extends AbstractTool {
         continue
       }
 
+      // 检查冷却时间
+      const cooldownKey = `CHATGPT:GROUP_POKE_COOLDOWN:${e.group_id}:${qq}`
+      const lastPokeTime = await redis.get(cooldownKey)
+
+      if (lastPokeTime) {
+        const remainingTime = Math.ceil((10000 - (Date.now() - parseInt(lastPokeTime))) / 1000)
+        if (remainingTime > 0) {
+          cooldownList.push(`${qq} (cooldown: ${remainingTime}s)`)
+          continue
+        }
+      }
+
       try {
         await e.group.pokeMember(parseInt(qq))
+        // 设置冷却时间，10秒过期
+        await redis.set(cooldownKey, Date.now().toString(), { EX: 10 })
         successList.push(qq)
         // 添加延迟避免操作过快
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -52,6 +67,9 @@ export class SendGroupPokeTool extends AbstractTool {
     let result = []
     if (successList.length > 0) {
       result.push(`successfully poked: ${successList.join(', ')}`)
+    }
+    if (cooldownList.length > 0) {
+      result.push(`on cooldown: ${cooldownList.join(', ')}`)
     }
     if (failList.length > 0) {
       result.push(`failed to poke: ${failList.join(', ')}`)

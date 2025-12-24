@@ -906,6 +906,25 @@ export class chatgpt extends plugin {
     if (Config.switch_ChatCooldown)
       await ChatCooldown.start(e.user_id, e.group_id)
 
+    // 加载用户记忆（如果启用）
+    if (Config.enableMemory) {
+      try {
+        const { UserMemory } = await import('../utils/userMemory.js')
+        const memories = await UserMemory.getUserMemories(
+          e.user_id,
+          Config.memoryContextLimit,
+          Config.memoryMinImportance
+        )
+        if (memories && memories.length > 0) {
+          const memoryPrompt = UserMemory.formatMemoriesForPrompt(memories)
+          prompt += memoryPrompt
+          logger.info(`[Memory] 为用户 ${e.user_id} 加载了 ${memories.length} 条记忆`)
+        }
+      } catch (err) {
+        logger.error('[Memory] 加载记忆失败:', err)
+      }
+    }
+
     try {
       if (Config.debug) {
         logger.mark({ conversation })

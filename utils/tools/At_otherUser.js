@@ -11,11 +11,11 @@ export class AtOtherUserTool extends AbstractTool {
     properties: {
       userIds: {
         type: 'string',
-        description: '要At的用户QQ号，多个用户用英文逗号分隔，例如: "123456789,987654321"'
+        description: 'QQ user IDs to mention (@). For multiple users, separate with commas (e.g., "123456789,987654321").'
       },
       message: {
         type: 'string',
-        description: 'At群友时要说的话，需要符合你的人设'
+        description: 'The message content to send along with the mention. This message should align with your character personality.'
       }
     },
     required: ['userIds', 'message']
@@ -38,6 +38,11 @@ export class AtOtherUserTool extends AbstractTool {
 
       if (userIdList.length === 0) {
         return 'No valid user IDs provided'
+      }
+
+      // 检查是否包含当前对话用户自己
+      if (userIdList.includes(e.user_id.toString())) {
+        return 'Cannot mention the current conversation user. This tool is only for mentioning OTHER users in the group. For replying to the current user, use normal conversation response instead.'
       }
 
       let msg = []
@@ -67,5 +72,5 @@ export class AtOtherUserTool extends AbstractTool {
     }
   }
 
-  description = 'Mention (@) one or multiple group members by their QQ user IDs and send them a message. This tool can only be used in group chats. The message will be sent immediately when you call this tool, so do not repeat the message content in your response. If no extra description needed, just reply <EMPTY> at the next turn.'
+  description = 'Mention (@) one or multiple OTHER group members by their QQ user IDs and send them a message. CRITICAL RESTRICTIONS: 1) NEVER use this tool to mention the current conversation user (the person you are talking to) - attempting to do so will be rejected. This tool is EXCLUSIVELY for mentioning OTHER users who are NOT currently in the conversation. 2) For normal replies to the current user, use standard conversation responses instead. 3) Only works in group chats. 4) The message will be sent immediately upon calling this tool, so DO NOT repeat the message content in your subsequent response. If no extra description needed, just reply <EMPTY> at the next turn.'
 }

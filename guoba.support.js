@@ -684,6 +684,17 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          field: 'gemini_temperature',
+          label: 'gemini 温度',
+          bottomHelpMessage: '用于控制回复内容的多样性，数值越大回复越加随机、多元化，数值越小回复越加保守；默认值 0.9',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 0.05,
+            max: 2
+          }
+        },
+        {
           field: 'geminiForceToolKeywords',
           label: 'gemini强制工具关键词',
           bottomHelpMessage: '智能模式中，gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
@@ -1239,7 +1250,7 @@ export function supportGuoba() {
         {
           field: 'add_sf_image_edit',
           label: '工具新增-Gemini Image',
-          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口 #g谷歌编辑图片 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md',
+          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
           component: 'Switch'
         },
         {
@@ -1342,6 +1353,47 @@ export function supportGuoba() {
           label: '绘画添加作品名',
           bottomHelpMessage: '连接绘画插件时使作品角色添加*更多*作品名（只需要添加你的新角色即可），请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"last(_|\\\\s)order|misaka":"last order (Toaru Majutsu no Index), toddler","nahida":"nahida (genshin impact), toddler"}',
           component: 'InputTextArea'
+        },
+        {
+          label: '智能模式 记忆设置',
+          component: 'Divider'
+        },
+        {
+          field: 'enableMemory',
+          label: '启用记忆系统',
+          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验。可用指令： #记忆帮助',
+          component: 'Switch'
+        },
+        {
+          field: 'maxMemoriesPerUser',
+          label: '单用户最大记忆数量',
+          bottomHelpMessage: '每个用户最多保存的记忆条数，超过后会删除最早的记忆',
+          component: 'InputNumber',
+          componentProps: {
+            min: 10,
+            step: 1
+          }
+        },
+        {
+          field: 'memoryMinImportance',
+          label: '记忆最低重要性',
+          bottomHelpMessage: '附加到对话的记忆最低重要性等级（1-10），低于此等级的记忆不会被加入对话上下文',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            step: 1,
+            max: 10
+          }
+        },
+        {
+          field: 'memoryContextLimit',
+          label: '对话记忆数量限制',
+          bottomHelpMessage: '每次对话最多附加多少条记忆到上下文中，按重要性排序',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            step: 1
+          }
         },
         {
           label: '小功能',
