@@ -80,6 +80,11 @@ export class EmojiTool extends AbstractTool {
       return 'Invalid parameter: emotion is required'
     }
 
+    // 检查是否已经使用过该工具
+    if (e.ChatGPT_EmojiToolUsed) {
+      return 'Error: You have already called this tool once in the current function call chain. This tool can only be used once per message event. Do not call it again.'
+    }
+
     try {
       // 构建表情包文件夹路径
       const emojiDir = path.join(process.cwd(), 'data', 'chatgpt', 'sendEmojiTool', emotion)
@@ -104,6 +109,9 @@ export class EmojiTool extends AbstractTool {
       const randomFile = files[Math.floor(Math.random() * files.length)]
       const emojiPath = path.join(emojiDir, randomFile)
 
+      // 标记该工具已被使用
+      e.ChatGPT_EmojiToolUsed = true
+
       // 延迟发送（10-30秒随机）
       const delay = Math.floor(Math.random() * 20000) + 10000 // 10000-30000ms
 
@@ -121,5 +129,5 @@ export class EmojiTool extends AbstractTool {
     }
   }
 
-  description = 'Send an emoji/sticker image based on current emotion. Choose the emotion that best matches your current feeling or the conversation context. The image will be sent separately, so do not mention it in your text response. IMPORTANT: This tool can only be called ONCE per conversation. Do not use it multiple times in a single chat session.'
+  description = 'Send an emoji/sticker image based on current emotion. Choose the emotion that best matches your current feeling or the conversation context. The image will be sent separately, so do not mention it in your text response.'
 }
