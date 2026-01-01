@@ -33,7 +33,7 @@ export class Sf_image_edit extends AbstractTool {
     try {
       e.msg = `#g谷歌编辑图片 ` + prompt;
       await sf.gg_select_and_chat(e)
-      console.log('[ChatGPT][sf_image_edit]开始调用sf插件-#g谷歌编辑图片：\nmsg: ', e.msg)
+      // console.log('[ChatGPT][sf_image_edit]开始调用sf插件-#g谷歌编辑图片：\nmsg: ', e.msg)
       return 'draw success, picture has been sent.'
     } catch (err) {
       return 'draw failed due to unknown error'
