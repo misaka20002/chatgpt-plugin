@@ -80,6 +80,11 @@ export class EmojiTool extends AbstractTool {
       return 'Invalid parameter: emotion is required'
     }
 
+    // 验证emotion是否在支持的列表中
+    if (!EmojiTool.emotions.includes(emotion)) {
+      return `Unsupported emotion: "${emotion}". Please use one of the supported emotions: ${EmojiTool.emotions.join(', ')}`
+    }
+
     // // 检查是否已经使用过该工具
     // if (e.ChatGPT_EmojiToolUsed) {
     //   return 'Error: You have already called this tool once in the current function call chain. This tool can only be used once per message event. Do not call it again.'
