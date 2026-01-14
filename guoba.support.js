@@ -87,6 +87,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableRobotAt',
+          label: '是否允许机器人真at',
+          bottomHelpMessage: '开启后机器人的回复如果at群友会真的at；当Bot输出的文本中包含特定群友的昵称或群昵称时',
+          component: 'Switch'
+        },
+        {
           field: 'enableGroupContext',
           label: '是否允许机器人读取近期的群聊聊天记录',
           bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',
@@ -295,18 +301,6 @@ export function supportGuoba() {
           field: 'enforceMaster',
           label: '加强主人认知',
           bottomHelpMessage: '加强主人认知。希望机器人认清主人，避免NTR可开启。开启后可能会与自设定的内容有部分冲突。sydney模式可以放心开启',
-          component: 'Switch'
-        },
-        {
-          field: 'groupContextLength',
-          label: '允许机器人读取近期的最多群聊聊天记录条数。',
-          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
-          component: 'InputNumber'
-        },
-        {
-          field: 'enableRobotAt',
-          label: '是否允许机器人真at',
-          bottomHelpMessage: '开启后机器人的回复如果at群友会真的at',
           component: 'Switch'
         },
         {
@@ -1266,9 +1260,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableEmojiLikeTool',
+          label: '工具新增-智能贴表情',
+          bottomHelpMessage: '新增根据情绪智能贴qq表情，在群聊给别人消息点个心心之类的表情；可在Bot人设中加入“你将总是使用 emojiLike 工具”；如果你的适配器不支持，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          component: 'Switch'
+        },
+        {
           field: 'switch_EmojiTool',
           label: '工具新增-发送表情',
-          bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食',
+          bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食；3.可在Bot人设中加入“你将总是使用 sendEmoji 工具”',
           component: 'Switch'
         },
         {
