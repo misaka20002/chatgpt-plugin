@@ -64,7 +64,12 @@ export class PaimonChuo extends plugin {
             if (paimon_chou_cd > 0) redis.set(`Yz:PaimongChuoCD:${e.group_id}:${e.operator_id}`, 1, { EX: paimon_chou_cd });
         }
 
-        if (cfg.masterQQ.includes(e.target_id)) {
+        /** 戳一戳发起人是Bot */
+        const BotPoke = e.operator_id == e.self_id || e.operator_id == cfg.qq || e.operator_id == BotQQ || e.operator_id == getUin(e);
+        /** Bot被戳一戳 */
+        const BotBePoked = e.target_id == e.self_id || e.target_id == cfg.qq || e.target_id == BotQQ || e.target_id == getUin(e);
+
+        if (cfg.masterQQ.includes(e.target_id) && !BotPoke) {
             if (Config.debug) {
                 logger.mark('[戳一戳-戳主人生效]')
             }
@@ -88,7 +93,7 @@ export class PaimonChuo extends plugin {
             return true
         }
 
-        if (e.target_id == e.self_id || e.target_id == cfg.qq || e.target_id == BotQQ || e.target_id == getUin(e)) {
+        if (BotBePoked) {
             /**统计每日被戳次数 */
             let count = await redis.incr(`paimon_pokecount`);
             // redis记录每日被戳次数，次日零点过期

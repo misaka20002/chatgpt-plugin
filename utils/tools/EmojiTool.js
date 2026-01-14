@@ -80,6 +80,16 @@ export class EmojiTool extends AbstractTool {
       return 'Invalid parameter: emotion is required'
     }
 
+    // 验证emotion是否在支持的列表中
+    if (!EmojiTool.emotions.includes(emotion)) {
+      return `Unsupported emotion: "${emotion}". Please use one of the supported emotions: ${EmojiTool.emotions.join(', ')}`
+    }
+
+    // // 检查是否已经使用过该工具
+    // if (e.ChatGPT_EmojiToolUsed) {
+    //   return 'Error: You have already called this tool once in the current function call chain. This tool can only be used once per message event. Do not call it again.'
+    // }
+
     try {
       // 构建表情包文件夹路径
       const emojiDir = path.join(process.cwd(), 'data', 'chatgpt', 'sendEmojiTool', emotion)
@@ -103,6 +113,9 @@ export class EmojiTool extends AbstractTool {
       // 随机选择一个文件
       const randomFile = files[Math.floor(Math.random() * files.length)]
       const emojiPath = path.join(emojiDir, randomFile)
+
+      // // 标记该工具已被使用
+      // e.ChatGPT_EmojiToolUsed = true
 
       // 延迟发送（10-30秒随机）
       const delay = Math.floor(Math.random() * 20000) + 10000 // 10000-30000ms

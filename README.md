@@ -75,9 +75,28 @@
  - 全局语音模式：true
  - AI第一人称：派蒙 -->
 
-## 安装：
-```
+## 安装方法
+
+### 方法一 常规安装
+
+```bash
 git clone --depth=1 https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
+# 或使用 Git 代理：
+# git clone --depth=1 https://ghfast.top/https://github.com/misaka20002/chatgpt-plugin.git ./plugins/chatgpt-plugin/
+cd plugins/chatgpt-plugin
+pnpm i
+```
+
+### 方法二 切换原仓库版本到本仓库
+
+```bash
+cd plugins/chatgpt-plugin
+git remote set-url origin https://github.com/misaka20002/chatgpt-plugin.git
+# 或使用 Git 代理：
+# git remote set-url origin https://ghfast.top/https://github.com/misaka20002/chatgpt-plugin.git
+git fetch --all
+git reset --hard origin/main
+pnpm i
 ```
 
 ## 预览：

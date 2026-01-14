@@ -70,6 +70,7 @@ import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js
 import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
+import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1001,6 +1002,11 @@ async function collectTools(e) {
   if (Config.enableMemory) {
     tools.push(new MemoryTool())
     fullTools.push(new MemoryTool())
+  }
+
+  if (Config.enableEmojiLikeTool) {
+    tools.push(new EmojiLikeTool())
+    fullTools.push(new EmojiLikeTool())
   }
 
   let systemAddition = ''
