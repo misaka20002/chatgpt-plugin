@@ -310,6 +310,8 @@ const defaultConfig = {
   getPixivTool: false,
   switch_EmojiTool: false,
   switch_ChatCooldown: true,
+  gemini_temperature: 0.9,
+  enableEmojiLikeTool: true,
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统
