@@ -184,11 +184,12 @@ export class memes extends plugin {
 
   async memesUpdate(e) {
     await e.reply('yunzai-memes更新中')
-    if (fs.existsSync('data/memes/infos.json')) {
-      fs.unlinkSync('data/memes/infos.json')
-    }
-    if (fs.existsSync('data/memes/keyMap.json')) {
-      fs.unlinkSync('data/memes/keyMap.json')
+    // 清除所有缓存文件
+    const cacheFiles = ['data/memes/infos.json', 'data/memes/keyMap.json', 'data/memes/render_list.jpg']
+    for (const file of cacheFiles) {
+      if (fs.existsSync(file)) {
+        fs.unlinkSync(file)
+      }
     }
     try {
       await this.init()
@@ -223,24 +224,68 @@ export class memes extends plugin {
   }
 
   async memesList(e) {
-    if (Config.meme_turnOff) return false;
-    let resultFileLoc = 'data/memes/render_list1.jpg'
+    if (Config.meme_turnOff) return false
+
+    const resultFileLoc = 'data/memes/render_list.jpg'
+    const cacheMaxAge = 24 * 60 * 60 * 1000 // 24小时缓存
+
+    // 检查缓存是否有效
     if (fs.existsSync(resultFileLoc)) {
-      await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
-      return true
+      const stats = fs.statSync(resultFileLoc)
+      if (Date.now() - stats.mtimeMs < cacheMaxAge) {
+        await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
+        return true
+      }
     }
-    let response = await fetch(baseUrl + '/memes/render_list', {
-      method: 'POST'
+
+    // 构建带标签和排序的 meme 列表
+    const memeList = this.buildMemeListWithLabels()
+
+    const response = await fetch(`${baseUrl}/memes/render_list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        meme_list: memeList,
+        text_template: '{keywords}',
+        add_category_icon: true
+      })
     })
+
+    if (!response.ok) {
+      logger.error('[meme] render_list 请求失败:', response.status)
+      return false
+    }
+
     const resultBlob = await response.blob()
-    const resultArrayBuffer = await resultBlob.arrayBuffer()
-    const resultBuffer = Buffer.from(resultArrayBuffer)
-    await fs.writeFileSync(resultFileLoc, resultBuffer)
+    const resultBuffer = Buffer.from(await resultBlob.arrayBuffer())
+    fs.writeFileSync(resultFileLoc, resultBuffer)
     await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
-    setTimeout(async () => {
-      await fs.unlinkSync(resultFileLoc)
-    }, 3600)
     return true
+  }
+
+  /**
+   * 构建带标签的 meme 列表（按创建时间倒序,便于观察新增的表情，最近30天标记为 new）
+   * @returns {Array<{meme_key: string, disabled: boolean, labels: string[]}>}
+   */
+  buildMemeListWithLabels() {
+    const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000 // 30天
+    const now = Date.now()
+
+    return Object.entries(infos)
+      .map(([key, info]) => {
+        const createdTime = new Date(info.date_created).getTime()
+        return {
+          meme_key: key,
+          disabled: false,
+          labels: (now - createdTime) < NEW_THRESHOLD_MS ? ['new'] : [],
+          _sortKey: createdTime
+        }
+      })
+      .sort((a, b) => b._sortKey - a._sortKey)
+      .map(({ meme_key, disabled, labels }) => ({ meme_key, disabled, labels }))
   }
 
   /**
