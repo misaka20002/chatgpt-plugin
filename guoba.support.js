@@ -89,7 +89,13 @@ export function supportGuoba() {
         {
           field: 'enableRobotAt',
           label: '是否允许机器人真at',
-          bottomHelpMessage: '开启后机器人的回复如果at群友会真的at；当Bot输出的文本中包含特定群友的昵称或群昵称时',
+          bottomHelpMessage: '开启后机器人的回复如果at群友会真的at；原理：当Bot输出的文本中包含特定群友的昵称或群昵称时 转为 At 用户，经呆毛测试NTQQ平台已失效，推荐关闭。',
+          component: 'Switch'
+        },
+        {
+          field: 'isProcessCQAtCode',
+          label: 'At群友-提示词版',
+          bottomHelpMessage: '开启后机器人的回复如果at群友会真的at；原理：插件自动在系统提示词中写入At码并处理',
           component: 'Switch'
         },
         {
@@ -285,17 +291,6 @@ export function supportGuoba() {
           label: 'Bing开启思考',
           bottomHelpMessage: 'Copilot的思考功能。开启后无法搜索',
           component: 'Switch'
-        },
-        {
-          field: 'enableGroupContext',
-          label: '是否允许机器人读取近期的群聊聊天记录',
-          bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息',
-          component: 'Switch'
-        },
-        {
-          field: 'groupContextTip',
-          label: '机器人读取聊天记录时的后台prompt',
-          component: 'InputTextArea'
         },
         {
           field: 'enforceMaster',

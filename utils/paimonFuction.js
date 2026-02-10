@@ -383,7 +383,6 @@ export function hidePrivacyInfo(text) {
  */
 export function removeCQCode(msg) {
   if (!msg) return ''
-  // logger.info(`[chatgpt][removeCQCode][debug] ${msg}`) // Debug 几天研究 Bot 返回的真实 CQ 码
   // 如果是数组,递归处理每个元素
   if (Array.isArray(msg)) {
     return msg.map(item =>

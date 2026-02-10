@@ -79,9 +79,8 @@ export const roleMap = {
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
 /** 接入AP、Nai、SF绘画的prompt */
-const paintPropmtPrefix = 'It is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. 其中角色使用词条形式，例如 `klee (genshin impact)`。 Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
-// const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
-
+const paintPropmtPrefix = '\nIt is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. 其中角色使用词条形式，例如 `klee (genshin impact)`。 Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
+const isProcessCQAtCodePrompt = "\n如果你想要At某个用户，请在回复中使用格式 [CQ:at,id=用户id号]，例如 [CQ:at,id=123456]。注意：使用At码后不要再重复写用户昵称，直接继续你的回复内容即可。"
 
 async function handleSystem(e, system, settings) {
   if (settings.enableGroupContext) {
@@ -473,9 +472,14 @@ class Core {
       if (Config.isReplacePromptForSenderMsg) {
         opts.systemMessage = replacePromptForSenderMsg(e, opts.systemMessage);
       }
+
       // 呆毛版 连接画图插件
       if (Config.drawByJsonToPlugin) {
         opts.systemMessage += paintPropmtPrefix
+      }
+
+      if (Config.isProcessCQAtCode) {
+        opts.systemMessage += isProcessCQAtCodePrompt
       }
 
       if (opt.enableSmart) {
@@ -624,6 +628,10 @@ class Core {
         system += paintPropmtPrefix
       }
 
+      if (Config.isProcessCQAtCode) {
+        system += isProcessCQAtCodePrompt
+      }
+
       if (opt.settings.enableGroupContext && e.isGroup) {
         let chats = await getChatHistoryGroup(e, Config.groupContextLength)
         const namePlaceholder = '[name]'
@@ -659,7 +667,7 @@ class Core {
       // 导入更多 gemini config
       option.temperature = Config.gemini_temperature
       option.sf_markdownPic = Config.sf_markdownPic
-      option.auto_makeForwardMsg = Config.auto_makeForwardMsg      
+      option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
       return await client.sendMessage(prompt, option)
     } else if (use === 'chatglm4') {
@@ -691,6 +699,10 @@ class Core {
       // 呆毛版 连接画图插件
       if (Config.drawByJsonToPlugin) {
         system += paintPropmtPrefix
+      }
+
+      if (Config.isProcessCQAtCode) {
+        system += isProcessCQAtCodePrompt
       }
 
       if (Config.enableChatSuno) {

@@ -25,7 +25,7 @@ import {
 import fetch from 'node-fetch'
 import { deleteConversation, getConversations, getLatestMessageIdByConversationId } from '../utils/conversation.js'
 import { convertSpeaker, speakers } from '../utils/tts.js'
-import { convertFaces } from '../utils/face.js'
+import { convertFacesAndCQCode } from '../utils/face.js'
 import { ConversationManager, originalValues } from '../model/conversation.js'
 import XinghuoClient from '../utils/xinghuo/xinghuo.js'
 import { getProxy } from '../utils/proxy.js'
@@ -34,7 +34,6 @@ import Core from '../model/core.js'
 import { collectProcessors } from '../utils/postprocessors/BasicProcessor.js'
 import {
   hidePrivacyInfo,
-  removeCQCode,
 } from '../utils/paimonFuction.js'
 import ChatCooldown from '../utils/chatCooldown.js'
 
@@ -1001,10 +1000,6 @@ export class chatgpt extends plugin {
         return
       }
 
-      // 移除 CQ
-      if (Config.removeCQCodeFocus)
-        response = removeCQCode(response);
-
       // 处理某些工具 Prompt 中要求回复的 "<EMPTY>"
       if (response.trim() === "<EMPTY>") {
         // await this.reply('没有任何回复', true)
@@ -1394,7 +1389,7 @@ export class chatgpt extends plugin {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
             await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: isTrss ? 0 : 30 })
           }
-          let responseText = await convertFaces(response, Config.enableRobotAt, e)
+          let responseText = await convertFacesAndCQCode(response, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
           if (handler.has('chatgpt.markdown.convert')) {
             responseText = await handler.call('chatgpt.markdown.convert', this.e, {
               content: responseText,
@@ -1465,7 +1460,7 @@ export class chatgpt extends plugin {
           this.reply('今日对话已达上限')
           return false
         }
-        let responseText = await convertFaces(response, Config.enableRobotAt, e)
+        let responseText = await convertFacesAndCQCode(response, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
         if (handler.has('chatgpt.markdown.convert')) {
           responseText = await handler.call('chatgpt.markdown.convert', this.e, {
             content: responseText,

@@ -1,5 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
-import { convertFaces } from '../face.js'
+import { convertFacesAndCQCode } from '../face.js'
 import { getMasterQQ } from '../common.js'
 import { Config } from '../config.js'
 
@@ -47,7 +47,7 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
 
       if (isGroupExist) {
         let group = await e.bot.pickGroup(target)
-        await group.sendMsg(await convertFaces(msg, true, e))
+        await group.sendMsg(await convertFacesAndCQCode(msg, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e))
         return 'msg has been sent to group' + target
       } else {
         let masters = (await getMasterQQ())

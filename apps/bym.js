@@ -1,6 +1,6 @@
 import { Config } from '../utils/config.js'
 import { getChatHistoryGroup } from '../utils/chat.js'
-import { convertFaces } from '../utils/face.js'
+import { convertFacesAndCQCode } from '../utils/face.js'
 import { customSplitRegex, filterResponseChunk } from '../utils/text.js'
 import core, { roleMap } from '../model/core.js'
 import { formatDate } from '../utils/common.js'
@@ -93,7 +93,7 @@ export class bym extends plugin {
         if (text[text.indexOf(t) + t.length] === '？') {
           t += '？'
         }
-        let finalMsg = await convertFaces(t, true, e)
+        let finalMsg = await convertFacesAndCQCode(t, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
         logger.info(JSON.stringify(finalMsg))
         finalMsg = finalMsg.map(filterResponseChunk).filter(i => !!i)
         if (finalMsg && finalMsg.length > 0) {
