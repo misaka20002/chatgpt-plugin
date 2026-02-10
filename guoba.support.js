@@ -1245,7 +1245,7 @@ export function supportGuoba() {
         {
           field: 'at_otherUser',
           label: '工具新增-at群友',
-          bottomHelpMessage: '新增主动At其他群友的工具',
+          bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
           component: 'Switch'
         },
         {

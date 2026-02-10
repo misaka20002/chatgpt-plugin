@@ -161,6 +161,7 @@
   "smartMode": false,
   "is_recallMsg": true,
   "removeCQCodeFocus": true,
-  "at_otherUser": true,
+  "switch_atOtherUserTool": false,
+  "isProcessCQAtCode": true,
   "poke_userIDs": true
 }

@@ -303,7 +303,8 @@ const defaultConfig = {
 
   is_recallMsg: true,
   removeCQCodeFocus: true,
-  at_otherUser: true,
+  switch_atOtherUserTool: false,
+  isProcessCQAtCode: true,
   poke_userIDs: true,
   agent_SandboxSwitch: false,
   auto_makeForwardMsg: 2000,

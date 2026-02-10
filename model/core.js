@@ -472,12 +472,11 @@ class Core {
       if (Config.isReplacePromptForSenderMsg) {
         opts.systemMessage = replacePromptForSenderMsg(e, opts.systemMessage);
       }
-
       // 呆毛版 连接画图插件
       if (Config.drawByJsonToPlugin) {
         opts.systemMessage += paintPropmtPrefix
       }
-
+      // 呆毛版 CQ At 群友
       if (Config.isProcessCQAtCode) {
         opts.systemMessage += isProcessCQAtCodePrompt
       }
@@ -627,7 +626,7 @@ class Core {
       if (Config.drawByJsonToPlugin) {
         system += paintPropmtPrefix
       }
-
+      // 呆毛版 CQ At 群友
       if (Config.isProcessCQAtCode) {
         system += isProcessCQAtCodePrompt
       }
@@ -700,7 +699,7 @@ class Core {
       if (Config.drawByJsonToPlugin) {
         system += paintPropmtPrefix
       }
-
+      // 呆毛版 CQ At 群友
       if (Config.isProcessCQAtCode) {
         system += isProcessCQAtCodePrompt
       }
@@ -983,7 +982,7 @@ async function collectTools(e) {
     fullTools.push(...[new Sf_image_edit()])
   }
 
-  if (Config.at_otherUser) {
+  if (Config.switch_atOtherUserTool) {
     tools.push(...[new AtOtherUserTool()])
     fullTools.push(...[new AtOtherUserTool()])
   }
