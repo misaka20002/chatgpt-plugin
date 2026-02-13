@@ -377,6 +377,7 @@ function randomKeyStr(str, funcName) {
   return keyArr[randomIndex];
 }
 
+/** Config对象 */
 export const Config = new Proxy(config, {
   get(target, property) {
     if (property === 'save') { // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
