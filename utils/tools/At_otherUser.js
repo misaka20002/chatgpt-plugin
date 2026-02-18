@@ -1,8 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
+import { convertFacesAndCQCode } from '../face.js'
 import { Config } from '../config.js'
-import {
-  removeCQCode,
-} from '../paimonFuction.js'
 
 export class AtOtherUserTool extends AbstractTool {
   name = 'atOtherUser'
@@ -58,10 +56,8 @@ export class AtOtherUserTool extends AbstractTool {
       if (msg.length > 0) {
         msg.push(' ')
       }
-      msg.push(message)
-
-      if (Config.removeCQCodeFocus)
-        msg = removeCQCode(msg);
+      let msgArr = convertFacesAndCQCode(message, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
+      msg.push(...msgArr)
 
       // 发送消息
       await e.reply(msg)

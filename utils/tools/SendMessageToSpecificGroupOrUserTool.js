@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
-import { convertFaces } from '../face.js'
-import { getMasterQQ, getGroupList } from '../common.js'
+import { convertFacesAndCQCode } from '../face.js'
+import { getMasterQQ } from '../common.js'
 import { Config } from '../config.js'
 
 export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
@@ -30,7 +30,12 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
       ? defaultTarget
       : parseInt(targetGroupIdOrQQNumber) === e.bot.uin ? defaultTarget : parseInt(targetGroupIdOrQQNumber)
 
-    let groupList = await getGroupList(e)
+    let groupList
+    try {
+      groupList = await e.bot.getGroupList()
+    } catch (err) {
+      groupList = e.bot.gl
+    }
     try {
 
       // 判断groupList是Map还是Array
@@ -42,7 +47,7 @@ export class SendMessageToSpecificGroupOrUserTool extends AbstractTool {
 
       if (isGroupExist) {
         let group = await e.bot.pickGroup(target)
-        await group.sendMsg(await convertFaces(msg, true, e))
+        await group.sendMsg(await convertFacesAndCQCode(msg, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e))
         return 'msg has been sent to group' + target
       } else {
         let masters = (await getMasterQQ())

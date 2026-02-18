@@ -42,11 +42,6 @@ let infos = {}
  */
 let protectList = ['lash','do','beat_up','little_do','fast_do','qi','fast_qi']
 
-/**
- * meme 使用计数 Redis key 前缀
- */
-const MEME_USAGE_REDIS_PREFIX = 'Yz:paimon_meme_usage:'
-
 export class memes extends plugin {
   constructor() {
     let option = {
@@ -189,12 +184,11 @@ export class memes extends plugin {
 
   async memesUpdate(e) {
     await e.reply('yunzai-memes更新中')
-    // 清除所有缓存文件
-    const cacheFiles = ['data/memes/infos.json', 'data/memes/keyMap.json', 'data/memes/render_list.jpg']
-    for (const file of cacheFiles) {
-      if (fs.existsSync(file)) {
-        fs.unlinkSync(file)
-      }
+    if (fs.existsSync('data/memes/infos.json')) {
+      fs.unlinkSync('data/memes/infos.json')
+    }
+    if (fs.existsSync('data/memes/keyMap.json')) {
+      fs.unlinkSync('data/memes/keyMap.json')
     }
     try {
       await this.init()
@@ -229,112 +223,24 @@ export class memes extends plugin {
   }
 
   async memesList(e) {
-    if (Config.meme_turnOff) return false
-
-    const resultFileLoc = 'data/memes/render_list.jpg'
-    const cacheMaxAge = 24 * 60 * 60 * 1000 // 24小时缓存
-
-    // 检查缓存是否有效
+    if (Config.meme_turnOff) return false;
+    let resultFileLoc = 'data/memes/render_list1.jpg'
     if (fs.existsSync(resultFileLoc)) {
-      const stats = fs.statSync(resultFileLoc)
-      if (Date.now() - stats.mtimeMs < cacheMaxAge) {
-        await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
-        return true
-      }
+      await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
+      return true
     }
-
-    // 构建带标签和排序的 meme 列表
-    const memeList = await this.buildMemeListWithLabels()
-
-    const response = await fetch(`${baseUrl}/memes/render_list`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        meme_list: memeList,
-        text_template: '{keywords}',
-        add_category_icon: true
-      })
+    let response = await fetch(baseUrl + '/memes/render_list', {
+      method: 'POST'
     })
-
-    if (!response.ok) {
-      logger.error('[meme] render_list 请求失败:', response.status)
-      return false
-    }
-
     const resultBlob = await response.blob()
-    const resultBuffer = Buffer.from(await resultBlob.arrayBuffer())
-    fs.writeFileSync(resultFileLoc, resultBuffer)
+    const resultArrayBuffer = await resultBlob.arrayBuffer()
+    const resultBuffer = Buffer.from(resultArrayBuffer)
+    await fs.writeFileSync(resultFileLoc, resultBuffer)
     await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
+    setTimeout(async () => {
+      await fs.unlinkSync(resultFileLoc)
+    }, 3600)
     return true
-  }
-
-  /**
-   * 构建带标签的 meme 列表（按创建时间倒序,便于观察新增的表情）
-   * - new: 最近30天内创建
-   * - hot: 期限内使用超过30次
-   * @returns {Promise<Array<{meme_key: string, disabled: boolean, labels: string[]}>>}
-   */
-  async buildMemeListWithLabels() {
-    const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000 // 30天
-    const HOT_THRESHOLD = 30 // 使用次数阈值
-    const now = Date.now()
-
-    // 批量获取所有 meme 的使用计数
-    const memeKeys = Object.keys(infos)
-    const usageCounts = await this.getMemeUsageCounts(memeKeys)
-
-    return Object.entries(infos)
-      .map(([key, info]) => {
-        const createdTime = new Date(info.date_created).getTime()
-        const labels = []
-
-        if ((now - createdTime) < NEW_THRESHOLD_MS) labels.push('new')
-        if ((usageCounts[key] || 0) >= HOT_THRESHOLD) labels.push('hot')
-
-        return { meme_key: key, disabled: false, labels, _sortKey: createdTime }
-      })
-      .sort((a, b) => b._sortKey - a._sortKey)
-      .map(({ meme_key, disabled, labels }) => ({ meme_key, disabled, labels }))
-  }
-
-  /**
-   * 批量获取 meme 使用计数（只返回有使用记录的）
-   * @param {string[]} memeKeys - meme key 列表
-   * @returns {Promise<Record<string, number>>} - { meme_key: count }（仅包含 count > 0 的）
-   */
-  async getMemeUsageCounts(memeKeys) {
-    const counts = {}
-
-    if (memeKeys.length === 0) return counts
-
-    const redisKeys = memeKeys.map(key => `${MEME_USAGE_REDIS_PREFIX}${key}`)
-    try {
-      const results = await redis.mGet(redisKeys)
-      memeKeys.forEach((key, index) => {
-        const count = parseInt(results[index]) || 0
-        if (count > 0) counts[key] = count  // 只存非零值
-      })
-    } catch (err) {
-      logger.warn('[meme] 批量获取使用计数失败:', err.message)
-    }
-
-    return counts
-  }
-
-  /**
-   * 记录 meme 使用次数（3天过期，每次使用重置过期时间）
-   * @param {string} memeKey - meme 的 key
-   */
-  async recordMemeUsage(memeKey) {
-    const REDIS_KEY = `${MEME_USAGE_REDIS_PREFIX}${memeKey}`
-    const EXPIRE_SECONDS = 3 * 24 * 60 * 60 // 3天
-
-    // INCR + EXPIRE 保证计数增加并重置过期时间
-    await redis.incr(REDIS_KEY)
-    await redis.expire(REDIS_KEY, EXPIRE_SECONDS)
   }
 
   /**
@@ -565,11 +471,6 @@ export class memes extends plugin {
     await e.reply(segment.image("base64://" + resultBase64), reply)
     // fileLoc && await fs.unlinkSync(fileLoc)
     // await fs.unlinkSync(resultFileLoc)
-
-    // 异步记录 meme 使用次数
-    this.recordMemeUsage(targetCode).catch(err => {
-      logger.warn('[meme] 记录使用次数失败:', err.message)
-    })
   }
 }
 

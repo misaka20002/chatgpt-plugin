@@ -9,6 +9,8 @@ import {
 import {
   makeForwardMsg,
 } from '../utils/common.js'
+import { convertFacesAndCQCode } from '../utils/face.js'
+import { Config } from '../utils/config.js'
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
@@ -396,12 +398,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           }
         }
         else {
-          // if (opt.auto_makeForwardMsg && replyText.trim()?.length > opt.auto_makeForwardMsg) {
+          if (replyText.length > 1000) {
+            // if (opt.auto_makeForwardMsg && replyText.trim()?.length > opt.auto_makeForwardMsg) {
             this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), opt.auto_makeForwardMsg), `Tool回复 @${this.e.sender.card || this.e.sender.nickname}`));
-          // }
-          // else {
-          //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
-          // }
+            // }
+            // else {
+            //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
+            // }
+          } else {
+            this.e.reply(convertFacesAndCQCode(replyText, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e), true);
+          }
         }
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []

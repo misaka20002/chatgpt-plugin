@@ -1,4 +1,8 @@
 import _ from 'lodash'
+import {
+  removeCQCode,
+} from '../utils/paimonFuction.js'
+
 // import {segment} from "oicq";
 export const faceMap = {
   0: '惊讶',
@@ -464,7 +468,16 @@ export const faceMapReverse = {
   '/吃糖': '324'
 }
 
-export async function convertFaces (msg, handleAt = false, e) {
+/**
+ * 处理消息中的表情码和CQ at码
+ * @param {string} msg 原始文本
+ * @param {boolean} handleAt 是否处理@
+ * @param {boolean} isProcessCQAtCode 是否处理CQ at码
+ * @param {boolean} removeCQCodeFocus 移除CQ码
+ * @param {object} e 事件对象
+ * @returns {Array} 消息数组
+ */
+export async function convertFacesAndCQCode(msg, handleAt = false, isProcessCQAtCode = false, removeCQCodeFocus = false, e) {
   handleAt = e?.isGroup && handleAt
   let groupMembers
   let groupCardQQMap = {}
@@ -545,15 +558,81 @@ export async function convertFaces (msg, handleAt = false, e) {
   if (handleAt && tmpAt) {
     msgs.push(`@${tmpAt}`)
   }
+
+  // 处理 CQ at 码
+  if (isProcessCQAtCode) {
+    const cqAtRegex = /\[CQ:at,(?:id|qq)=(\d+)\]/gi
+    let finalMsgs = []
+
+    for (let item of msgs) {
+      // 只处理字符串类型的消息
+      if (typeof item === 'string') {
+        if (cqAtRegex.test(item)) {
+          cqAtRegex.lastIndex = 0
+          let lastIndex = 0
+          let match
+
+          while ((match = cqAtRegex.exec(item)) !== null) {
+            // 添加 CQ 码之前的文本
+            if (match.index > lastIndex) {
+              const beforeText = item.substring(lastIndex, match.index)
+              if (beforeText) {
+                finalMsgs.push(beforeText)
+              }
+            }
+            // 添加 segment.at
+            const userId = match[1]
+            finalMsgs.push(segment.at(userId))
+            lastIndex = match.index + match[0].length
+          }
+
+          // 添加最后剩余的文本
+          if (lastIndex < item.length) {
+            const remainingText = item.substring(lastIndex)
+            if (remainingText) {
+              finalMsgs.push(remainingText)
+            }
+          }
+        } else {
+          finalMsgs.push(item)
+        }
+      } else {
+        // 非字符串类型（如 segment.face, segment.at）直接添加
+        finalMsgs.push(item)
+      }
+    }
+    msgs = finalMsgs
+  }
+
+  // 移除 CQ
+  if (removeCQCodeFocus) {
+    msgs = removeCQCode(msgs);
+  }
+
+  // 在 At 后面的文本前添加空格
+  for (let i = 0; i < msgs.length - 1; i++) {
+    const currentItem = msgs[i];
+    const nextItem = msgs[i + 1];
+    // 判断当前是否为 at 对象
+    const isAtSegment = typeof currentItem === 'object' && currentItem.type === 'at';
+    // 如果当前是 At，且下一个是字符串
+    if (isAtSegment && typeof nextItem === 'string') {
+      // 如果字符串不是以空格开头，则补充空格
+      if (!nextItem.startsWith(' ')) {
+        msgs[i + 1] = ' ' + nextItem;
+      }
+    }
+  }
+
   return msgs
 }
 
-export function testConvertFaces () {
+export function testConvertFaces() {
   const toTest = [
     '你好啊[/微笑][惊讶]哈哈[/拜谢]'
   ]
   toTest.forEach(t => {
-    console.log(convertFaces(t))
+    console.log(convertFacesAndCQCode(t))
   })
 }
 

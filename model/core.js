@@ -78,13 +78,6 @@ export const roleMap = {
 }
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
-/** 接入AP、Nai、SF绘画的prompt */
-const paintPropmtPrefix = 'It is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. 其中角色使用词条形式，例如 `klee (genshin impact)`。 Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
-// const paintPropmtPrefix = 'If I ask you to generate picture prompt or painting, you need to reply with no more than 200 keywords in English suitable for Stable Difussion to generate picture. The returned message is in JSON format, with a structure of ```json{"Tools": "NovelAi", "tags": "Your tags", "msg": "Your reply matches your character settings in Chinese"}```.'
-
-function filterCQCodes(message) {
-  return message.replace(/\[CQ:[^\]]+\]/g, '')
-}
 
 async function handleSystem(e, system, settings) {
   if (settings.enableGroupContext) {
@@ -124,7 +117,7 @@ async function handleSystem(e, system, settings) {
               // 建议的回复太容易污染设定导致对话太固定跑偏了
               return ''
             }
-            return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+            return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
           })
           .join('\n')
       }
@@ -135,6 +128,27 @@ async function handleSystem(e, system, settings) {
     }
   }
   return system
+}
+
+/** 合并插件用系统提示词 */
+function mergeSystemPrompt(systemPrompt, e) {
+  // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
+  if (Config.isReplacePromptForSenderMsg) {
+    systemPrompt = replacePromptForSenderMsg(e, systemPrompt);
+  }
+  // 呆毛版 连接画图插件
+  if (Config.drawByJsonToPlugin) {
+    systemPrompt += '\nIt is important that If I ask you to create a picture prompt or painting, please respond in English in a format suitable for Stable Diffusion. The prompt should include: {Character Description}, {Scene}, {Mood}, {Camera Angle}, {Lighting}, {Art Style}, {Architectural Style}. 其中角色使用词条形式，例如 `klee (genshin impact)`。 Return the message in JSON format like this:```json{"Tools": "Stable_Diffusion", "tags": "Your painting prompt in English", "msg": "Your role assistant content."}```'
+  }
+  // 呆毛版 CQ At 群友
+  if (Config.isProcessCQAtCode) {
+    systemPrompt += "\n如果你想要At某个用户，请在回复中使用格式 [CQ:at,id=用户id号]，例如 [CQ:at,id=123456]。注意：使用At码后不要再重复写用户昵称，直接继续你的回复内容即可。"
+  }
+  // 已不可用
+  if (Config.enableChatSuno) {
+    systemPrompt += '如果我要求你生成音乐或写歌，你需要回复适合Suno生成音乐的信息。请使用Verse、Chorus、Bridge、Outro和End等关键字对歌词进行分段，如[Verse 1]。音乐信息需要使用markdown包裹的JSON格式回复给我，结构为```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```。'
+  }
+  return systemPrompt
 }
 
 class Core {
@@ -188,6 +202,9 @@ class Core {
           }
         })
       let system = opt.system.bing
+
+      system = mergeSystemPrompt(system, e)
+
       if (opt.settings.enableGroupContext && e.isGroup) {
         let chats = await getChatHistoryGroup(e, Config.groupContextLength)
         const namePlaceholder = '[name]'
@@ -204,7 +221,7 @@ class Core {
           system += chats
             .map(chat => {
               let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
             })
             .join('\n')
         }
@@ -291,6 +308,9 @@ class Core {
           const defaultBotName = 'GeminiPro'
           const groupContextTip = Config.groupContextTip
           let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
+
+          option.system = mergeSystemPrompt(option.system, e)
+
           option.system = option.system.replaceAll(namePlaceholder, botName || defaultBotName) +
             ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
           option.system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
@@ -301,7 +321,7 @@ class Core {
             option.system += chats
               .map(chat => {
                 let sender = chat.sender || {}
-                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+                return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
               })
               .join('\n')
           }
@@ -399,7 +419,7 @@ class Core {
         e,
         chatId: conversation?.conversationId,
         image: image ? image[0] : undefined,
-        system: opt.system.xh
+        system: mergeSystemPrompt(opt.system.xh, e)
       })
       return response
     } else if (use === 'azure') {
@@ -472,14 +492,7 @@ class Core {
         option = Object.assign(option, conversation)
       }
 
-      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
-      if (Config.isReplacePromptForSenderMsg) {
-        opts.systemMessage = replacePromptForSenderMsg(e, opts.systemMessage);
-      }
-      // 呆毛版 连接画图插件
-      if (Config.drawByJsonToPlugin) {
-        opts.systemMessage += paintPropmtPrefix
-      }
+      opts.systemMessage = mergeSystemPrompt(opts.systemMessage, e)
 
       if (opt.enableSmart) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
@@ -495,9 +508,6 @@ class Core {
         }
         promptAddition && (prompt += promptAddition)
         option.systemMessage = await handleSystem(e, opts.systemMessage, opt.settings)
-        if (Config.enableChatSuno) {
-          option.systemMessage += '如果我要求你生成音乐或写歌，你需要回复适合Suno生成音乐的信息。请使用Verse、Chorus、Bridge、Outro和End等关键字对歌词进行分段，如[Verse 1]。音乐信息需要使用markdown包裹的JSON格式回复给我，结构为```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```。'
-        }
         systemAddition && (option.systemMessage += systemAddition)
         opts.completionParams.tools = Object.keys(funcMap).map(k => ({
           type: 'function',
@@ -618,14 +628,7 @@ class Core {
       }
       let system = opt.system.gemini
 
-      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
-      if (Config.isReplacePromptForSenderMsg) {
-        system = replacePromptForSenderMsg(e, system);
-      }
-      // 呆毛版 连接画图插件
-      if (Config.drawByJsonToPlugin) {
-        system += paintPropmtPrefix
-      }
+      system = mergeSystemPrompt(system, e)
 
       if (opt.settings.enableGroupContext && e.isGroup) {
         let chats = await getChatHistoryGroup(e, Config.groupContextLength)
@@ -643,13 +646,10 @@ class Core {
           system += chats
             .map(chat => {
               let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${filterCQCodes(chat.raw_message)}`
+              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
             })
             .join('\n')
         }
-      }
-      if (Config.enableChatSuno) {
-        system += 'If I ask you to generate music or write songs, you need to reply with information suitable for Suno to generate music. Please use keywords such as Verse, Chorus, Bridge, Outro, and End to segment the lyrics, such as [Verse 1], The returned message is in JSON format, with a structure of ```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```.'
       }
       option.system = system
       option.replyPureTextCallback = opt.settings.replyPureTextCallback || (async (msg) => {
@@ -662,7 +662,7 @@ class Core {
       // 导入更多 gemini config
       option.temperature = Config.gemini_temperature
       option.sf_markdownPic = Config.sf_markdownPic
-      option.auto_makeForwardMsg = Config.auto_makeForwardMsg      
+      option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
       return await client.sendMessage(prompt, option)
     } else if (use === 'chatglm4') {
@@ -687,18 +687,8 @@ class Core {
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, opt.settings)
 
-      // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
-      if (Config.isReplacePromptForSenderMsg) {
-        system = replacePromptForSenderMsg(e, system);
-      }
-      // 呆毛版 连接画图插件
-      if (Config.drawByJsonToPlugin) {
-        system += paintPropmtPrefix
-      }
+      system = mergeSystemPrompt(system, e)
 
-      if (Config.enableChatSuno) {
-        system += 'If I ask you to generate music or write songs, you need to reply with information suitable for Suno to generate music. Please use keywords such as Verse, Chorus, Bridge, Outro, and End to segment the lyrics, such as [Verse 1], The returned song information needs to be wrapped in JSON format and sent to me in Markdown format. The message structure is ` ` JSON {"option": "Suno", "tags": "style", "title": "title of The Song", "lyrics": "lyrics"} `.'
-      }
       logger.debug(system)
       let opts = {
         apiBaseUrl: Config.openAiBaseUrl,
@@ -974,7 +964,7 @@ async function collectTools(e) {
     fullTools.push(...[new Sf_image_edit()])
   }
 
-  if (Config.at_otherUser) {
+  if (Config.switch_atOtherUserTool) {
     tools.push(...[new AtOtherUserTool()])
     fullTools.push(...[new AtOtherUserTool()])
   }
