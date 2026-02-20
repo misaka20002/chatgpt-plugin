@@ -2,7 +2,7 @@ import { Config, defaultOpenAIAPI } from '../utils/config.js'
 import {
   extractContentFromFile,
   formatDate,
-  getImg,
+  parseSourceImg,
   getMasterQQ, getMaxModelTokens,
   getUin,
   getUserData,
@@ -326,7 +326,7 @@ class Core {
               .join('\n')
           }
         }
-        let img = await getImg(e)
+        let img = await parseSourceImg(e)
         if (img && img.length > 0) {
           const response = await fetch(img[0])
           const base64Image = Buffer.from(await response.arrayBuffer()).toString('base64')
@@ -414,7 +414,7 @@ class Core {
         cache: cacheOptions
       })
       // 获取图片资源
-      const image = await getImg(e)
+      const image = await parseSourceImg(e)
       let response = await client.sendMessage(prompt, {
         e,
         chatId: conversation?.conversationId,
@@ -610,7 +610,7 @@ class Core {
       }
 
       if (!Config.recognitionByGemini) {
-        const image = await getImg(e)
+        const image = await parseSourceImg(e)
         let imageUrl = image ? image[0] : undefined
         if (imageUrl) {
           const response = await fetch(imageUrl)
@@ -1017,7 +1017,7 @@ async function collectTools(e) {
     }
   }
   let promptAddition = ''
-  let img = await getImg(e)
+  let img = await parseSourceImg(e)
   if (img?.length > 0) {
     // tools.push(new ImageCaptionTool())
     // tools.push(new ProcessPictureTool())

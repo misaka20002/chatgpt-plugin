@@ -11,7 +11,7 @@ import {
   generateAudio,
   getDefaultReplySetting,
   getImageOcrText,
-  getImg,
+  parseSourceImg,
   getUin,
   getUserData,
   getUserReplySetting,
@@ -727,7 +727,7 @@ export class chatgpt extends plugin {
     let useTTS = !!userSetting.useTTS
 
     /** 呆毛版：对话获取At用户头像 ocr/识图 */
-    const isImg = await getImg(e)
+    const isImg = await parseSourceImg(e)
 
     // 导入 引用消息 msg
     if (e.sourceMsg) {
