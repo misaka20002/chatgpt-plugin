@@ -42,7 +42,27 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
           return "媒体链接下载失败或已失效。"
         }
 
-        const base64Data = Buffer.from(await response.arrayBuffer()).toString('base64')
+        // 媒体下载大小限制
+        const limitMB = Config.mediaMaxSizeInMB || 10;
+        const maxSizeInBytes = limitMB * 1024 * 1024;
+
+        const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
+
+        if (headerLen) {
+          const contentLength = parseInt(headerLen);
+          if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
+            return `媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+          }
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        // 实际下载后二次检查 防止 header 缺失或不准确的情况
+        if (arrayBuffer.byteLength > maxSizeInBytes) {
+          return `下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
+        }
+
+        const base64Data = Buffer.from(arrayBuffer).toString('base64')
         if (!base64Data) {
           return "媒体文件为空或链接失效。"
         }

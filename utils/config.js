@@ -312,6 +312,7 @@ const defaultConfig = {
   switch_EmojiTool: false,
   switch_ChatCooldown: true,
   gemini_temperature: 0.9,
+  mediaMaxSizeInMB: 5,
   enableEmojiLikeTool: true,
 
   // 记忆系统配置

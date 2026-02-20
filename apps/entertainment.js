@@ -673,7 +673,7 @@ async vqa (e) {
       
       // 获取 Content-Type，如果获取不到则根据类型给默认值
       let mimeType = response.headers.get('content-type')
-      if (!mimeType) {
+      if (!mimeType || mimeType === 'application/octet-stream') {
         mimeType = isVideo ? 'video/mp4' : 'image/jpeg'
       }
 
