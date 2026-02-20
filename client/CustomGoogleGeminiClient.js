@@ -406,6 +406,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
             // }
           } else {
+            logger.info("[chatgpt][functionCall附加的对话text] Processing...")
             this.e.reply(convertFacesAndCQCode(replyText, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e), true);
           }
         }

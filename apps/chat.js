@@ -645,23 +645,23 @@ export class chatgpt extends plugin {
       for (const item of whitelist) {
         if (!item) continue // 跳过空项
 
-        // 格式：群号^QQ号 (例如：123456^123456)
-        if (item.includes('^')) {
-          const [group, qq] = item.split('^')
-          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
-            chatPermission = true
-            break
-          }
-        }
-        // 格式：^QQ号 (例如：^123456)
-        else if (item.startsWith('^')) {
+        // 优先判断：格式：^QQ号 (例如：^123456) - 全局白名单
+        if (item.startsWith('^')) {
           const qq = item.slice(1)
           if (qq === e.sender.user_id.toString()) {
             chatPermission = true
             break
           }
         }
-        // 格式：群号 (例如：123456)
+        // 其次判断：格式：群号^QQ号 (例如：123456^123456) - 指定群白名单
+        else if (item.includes('^')) {
+          const [group, qq] = item.split('^')
+          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
+            chatPermission = true
+            break
+          }
+        }
+        // 最后判断：格式：群号 (例如：123456) - 整群白名单
         else if (e.isGroup && item === e.group_id.toString()) {
           chatPermission = true
           break
@@ -674,21 +674,21 @@ export class chatgpt extends plugin {
       for (const item of blacklist) {
         if (!item) continue // 跳过空项
 
-        // 格式：群号^QQ号 (例如：123456^123456)
-        if (item.includes('^')) {
-          const [group, qq] = item.split('^')
-          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
-            return false
-          }
-        }
-        // 格式：^QQ号 (例如：^123456)
-        else if (item.startsWith('^')) {
+        // 优先判断：格式：^QQ号 (例如：^123456) - 全局黑名单
+        if (item.startsWith('^')) {
           const qq = item.slice(1)
           if (qq === e.sender.user_id.toString()) {
             return false
           }
         }
-        // 格式：群号 (例如：123456)
+        // 其次判断：格式：群号^QQ号 (例如：123456^123456) - 指定群黑名单
+        else if (item.includes('^')) {
+          const [group, qq] = item.split('^')
+          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
+            return false
+          }
+        }
+        // 最后判断：格式：群号 (例如：123456) - 整群黑名单
         else if (e.isGroup && item === e.group_id.toString()) {
           return false
         }
