@@ -44,7 +44,7 @@ export class RecognitionResultsByGeminiTool extends AbstractTool {
       finalImageUrl = `https://q1.qlogo.cn/g?b=qq&s=160&nk=${qq}`
       logger.info(`[智能模式][Gemini识别] 识别QQ头像: ${qq}`)
     } else {
-      logger.info(`[智能模式][Gemini识别] 识别源 - 图片: ${finalImageUrl || '无'}, 视频: ${finalVideoUrl || '无'}`)
+      // logger.info(`[智能模式][Gemini识别] 识别源 - 图片: ${finalImageUrl || '无'}, 视频: ${finalVideoUrl || '无'}`)
     }
 
     // 2. 校验输入

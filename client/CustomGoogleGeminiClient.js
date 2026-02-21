@@ -194,14 +194,6 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           data: opt.media.data
         }
       })
-    } else if (opt.video) {
-      // 简写视频参数
-      thisMessage.parts.push({
-        inline_data: {
-          mime_type: 'video/mp4',
-          data: opt.video
-        }
-      })
     } else if (opt.image) {
       // 旧版图片参数兼容
       thisMessage.parts.push({
@@ -429,7 +421,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             // }
           } else {
             logger.info("[chatgpt][functionCall附加的对话text] Processing...")
-            this.e.reply(convertFacesAndCQCode(replyText, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e), true);
+            this.e.reply((await convertFacesAndCQCode(replyText.trim(), Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e)), true);
           }
         }
       }

@@ -649,7 +649,7 @@ export function supportGuoba() {
         {
           field: 'gemini_vqa_model',
           label: 'gemini识图模型',
-          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini识图工具 和 对话中图片识别-gemini；默认值：gemini-2.0-flash',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别工具 和 对话中图片识别-gemini；默认值：gemini-2.5-flash',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -657,8 +657,8 @@ export function supportGuoba() {
         },
         {
           field: 'recognitionByGemini',
-          label: '对话中图片识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（用于无识图能力的接口）；如果对话时使用gemini-2.5及以上的模型时，这个功能和"对话中图片OCR"都不用开了！ 使用方法：1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
+          label: '对话中媒体识别',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识多媒体结果（用于无识图能力的接口）；如果对话时使用gemini-2.5及以上的模型时，这个功能和"对话中图片OCR"都不用开了！ 使用方法：1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含多媒体和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
           component: 'Switch'
         },
         {
@@ -669,8 +669,8 @@ export function supportGuoba() {
         },
         {
           field: 'mediaMaxSizeInMB',
-          label: '媒体识别容量限制',
-          bottomHelpMessage: '智能模式对话中 gemini recognize_media Tool (基于 gemini 接口的图片/视频内容识别工具) 最大识别容量大小的限制，注意 token 的使用',
+          label: '媒体识别大小限制',
+          bottomHelpMessage: '智能模式对话中 gemini recognize_media Tool (基于 gemini 接口的图片/视频内容识别工具) 最大识别大小的限制，注意 token 的使用',
           helpMessage: '单位：MB',
           component: 'InputNumber',
           componentProps: {

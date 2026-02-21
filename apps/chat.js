@@ -738,7 +738,7 @@ export class chatgpt extends plugin {
     if (Config.imgOcr && !!isImg) {
       let imgOcrText = await getImageOcrText(e)
       if (imgOcrText) {
-        prompt = prompt + '拿出了一张图片上面写着:"'
+        prompt = prompt + '引用消息中图片的OCR结果:"'
         for (let imgOcrTextKey in imgOcrText) {
           prompt += imgOcrText[imgOcrTextKey]
         }
@@ -751,14 +751,23 @@ export class chatgpt extends plugin {
       // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
       const atMessage = e.message?.find(item => item?.type === "at" && item?.qq != getUin(e));
       if (atMessage && !e.theImgIsGetFromSource)
-        prompt = `这张照片上的${atMessage?.text ? `人是${atMessage?.text?.replace(/^@/g, '')}，` : ''}${atMessage?.qq ? `QQ号是${atMessage?.qq}。` : ''}` + prompt
+        prompt = `消息中At的${atMessage?.text ? `人是${atMessage?.text?.replace(/^@/g, '')}，` : ''}${atMessage?.qq ? `Ta的QQ号是${atMessage?.qq}。` : ''}` + prompt
     }
 
     // 呆毛版 gemini的识图结果 + prompt
-    if (Config.recognitionByGemini && !!isImg) {
-      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, isImg)
+    if (Config.recognitionByGemini) {
+      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, (e.img || []), (e.get_Video || []).map(v => v.url))
       if (imgRecognitionByGeminiText) {
-        prompt = '拿出了一张照片，上面的内容是："' + imgRecognitionByGeminiText + '"' + prompt
+        prompt = (e.senderNickname ? `${e.senderNickname}(ID:${e.senderUser_id})` : "") + (e.sourceMsg || "") + '消息中多媒体内容识别信息："' + imgRecognitionByGeminiText + '"\n' + prompt
+      }
+    }
+    else {
+      if (!!e.get_Video) {
+        // 如果引用了视频，则告知引用了视频 // 不直接上传视频避免 token 的浪费，传递 url 供 RecognitionResultsByGeminiTool 智能模式工具调用即可（实际上开启了群聊上下文后ai也可以在上下文中找到视频url）
+        prompt = prompt + "\n" + (e.senderUser_id ? `${e.senderNickname}(ID:${e.senderUser_id})发送的视频：` : "") + JSON.stringify(e.get_Video);
+      }
+      if (e.theImgIsGetFromSource && !!isImg) {
+        prompt = prompt + "\n" + (e.senderUser_id ? `${e.senderNickname}(ID:${e.senderUser_id})发送的该图片` : "");
       }
     }
 

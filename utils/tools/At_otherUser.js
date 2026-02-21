@@ -56,7 +56,7 @@ export class AtOtherUserTool extends AbstractTool {
       if (msg.length > 0) {
         msg.push(' ')
       }
-      let msgArr = convertFacesAndCQCode(message, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
+      let msgArr = await convertFacesAndCQCode(message, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
       msg.push(...msgArr)
 
       // 发送消息
