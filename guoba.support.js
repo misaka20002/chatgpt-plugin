@@ -1195,7 +1195,7 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '1、选择模型内置请确认你的API模型支持图片上传；2、推荐配置 gemini内容识别模型 以支持图片和视频识别',
+          bottomHelpMessage: '推荐使用并配置 gemini内容识别模型 以支持图片和视频识别；“模型内置”选项需要自行判断你的API支持图片识别。',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
@@ -1260,15 +1260,9 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'add_sf_image_edit',
-          label: '工具新增-Gemini Image',
-          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
-          component: 'Switch'
-        },
-        {
-          field: 'at_otherUser',
-          label: '工具新增-at群友',
-          bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
+          field: 'ScheduleTask_Tool',
+          label: '工具新增-定时工具',
+          bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制仅限群聊可用、每个用户仅能储存1条定时任务并且最大定时为1个月；修改后重启生效',
           component: 'Switch'
         },
         {
@@ -1287,6 +1281,18 @@ export function supportGuoba() {
           field: 'switch_EmojiTool',
           label: '工具新增-发送表情',
           bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食；3.可在Bot人设中加入“你将总是使用 sendEmoji 工具”',
+          component: 'Switch'
+        },
+        {
+          field: 'add_sf_image_edit',
+          label: '工具新增-Gemini Image',
+          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
+          component: 'Switch'
+        },
+        {
+          field: 'at_otherUser',
+          label: '工具新增-at群友',
+          bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
           component: 'Switch'
         },
         {

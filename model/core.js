@@ -71,6 +71,7 @@ import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResult
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
+import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1002,6 +1003,11 @@ async function collectTools(e) {
   if (Config.mediaRecognitionSource === "Gemini") {
     tools.push(new RecognitionResultsByGeminiTool())
     fullTools.push(new RecognitionResultsByGeminiTool())
+  }
+
+  if (Config.ScheduleTask_Tool) {
+    tools.push(new ScheduleTaskTool())
+    fullTools.push(new ScheduleTaskTool())
   }
 
   let systemAddition = ''

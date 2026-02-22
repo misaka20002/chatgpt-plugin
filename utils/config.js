@@ -315,6 +315,7 @@ const defaultConfig = {
   mediaMaxSizeInMB: 5,
   enableEmojiLikeTool: true,
   mediaRecognitionSource: "Gemini",
+  ScheduleTask_Tool: true,
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统
