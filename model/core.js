@@ -326,9 +326,9 @@ class Core {
               .join('\n')
           }
         }
-        let img = await parseSourceImg(e)
-        if (img && img.length > 0) {
-          const response = await fetch(img[0])
+        // let img = await parseSourceImg(e)
+        if (e.img && e.img.length > 0) {
+          const response = await fetch(e.img[0])
           const base64Image = Buffer.from(await response.arrayBuffer()).toString('base64')
           opt.image = base64Image
         }
@@ -414,11 +414,11 @@ class Core {
         cache: cacheOptions
       })
       // 获取图片资源
-      const image = await parseSourceImg(e)
+      // const image = await parseSourceImg(e)
       let response = await client.sendMessage(prompt, {
         e,
         chatId: conversation?.conversationId,
-        image: image ? image[0] : undefined,
+        image: e.img ? e.img[0] : undefined,
         system: mergeSystemPrompt(opt.system.xh, e)
       })
       return response
@@ -610,8 +610,8 @@ class Core {
       }
 
       if (!Config.recognitionByGemini) {
-        const image = await parseSourceImg(e)
-        let imageUrl = image ? image[0] : undefined
+        // const image = await parseSourceImg(e)
+        let imageUrl = e.img ? e.img[0] : undefined
         if (imageUrl) {
           const response = await fetch(imageUrl)
           const base64Image = Buffer.from(await response.arrayBuffer())
@@ -1017,11 +1017,11 @@ async function collectTools(e) {
     }
   }
   let promptAddition = ''
-  let img = await parseSourceImg(e)
-  if (img?.length > 0) {
+  // let img = await parseSourceImg(e)
+  if (e.img?.length > 0) {
     // tools.push(new ImageCaptionTool())
     // tools.push(new ProcessPictureTool())
-    promptAddition += `\nthe url of the picture(s) above: ${img.join(', ')}`
+    promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`
   } else {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
     tools.push(new SerpImageTool_by_baidu())
