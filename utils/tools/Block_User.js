@@ -8,16 +8,16 @@ export class BlockUserTool extends AbstractTool {
     properties: {
       action: {
         type: 'string',
-        enum: ['block', 'unblock'],
-        description: 'Action to perform: block or unblock a user'
+        enum: ['block', 'unblock', 'check'],
+        description: 'Action to perform: block, unblock, or check status of a user'
       },
       userId: {
         type: 'string',
-        description: 'The QQ number of the user to be blocked or unblocked'
+        description: 'The QQ number of the user to be blocked, unblocked, or checked'
       },
       duration: {
         type: 'number',
-        description: 'Duration of the block in minutes, valid range is 30-720 minutes (only for block action)'
+        description: 'Duration of the block in minutes, recommended range is 30-720 minutes (only for block action)'
       },
       reason: {
         type: 'string',
@@ -38,14 +38,43 @@ export class BlockUserTool extends AbstractTool {
     // 检查权限：只有主人/管理员，可以对其他群友生效
     if (!(e.isMaster || e.sender.role == 'owner' || e.sender.role == 'admin')) {
       if (userId !== e.sender.user_id.toString()) {
-        return 'Only the master or Group admin can block/unblock other users.'
+        return 'Only the master or Group admin can block/unblock/check other users.'
       }
     }
 
     const key = `CHATGPT:blockUser:${userId}`
 
     try {
-      if (action === 'unblock') {
+      if (action === 'check') {
+        // 获取剩余时间（秒）
+        const ttl = await redis.ttl(key)
+
+        // ttl 返回 -2 表示 key 不存在（未被拉黑）
+        // ttl 返回 -1 表示 key 存在但没有过期时间（永久）
+        if (ttl === -2) {
+          return `User ${userId} is not currently blocked.`
+        }
+
+        // 读取一下拉黑原因
+        const dataStr = await redis.get(key)
+        let blockReason = ''
+        if (dataStr) {
+          try {
+            const data = JSON.parse(dataStr)
+            blockReason = data.reason ? ` Reason: ${data.reason}.` : ''
+          } catch (e) { }
+        }
+
+        if (ttl === -1) {
+          return `User ${userId} is blocked permanently.${blockReason}`
+        }
+
+        // 格式化剩余时间
+        const leftMin = Math.floor(ttl / 60)
+        const leftSec = ttl % 60
+        return `User ${userId} is blocked. Remaining time: ${leftMin}m ${leftSec}s.${blockReason}`
+      }
+      else if (action === 'unblock') {
         // 解除拉黑
         const exists = await redis.exists(key)
         if (!exists) {
@@ -56,7 +85,8 @@ export class BlockUserTool extends AbstractTool {
       } else {
         // 拉黑用户
         // 验证拉黑时长
-        if (!duration || duration < 30 || duration > 720) {
+        duration = parseInt(duration);
+        if (isNaN(duration) || duration <= 0) {
           duration = 30;
         }
 
@@ -84,6 +114,5 @@ export class BlockUserTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you need to block or unblock a user from chatting. For blocking, the user will not be able to chat for the specified duration (30-720 minutes). For unblocking, it removes the block immediately.'
+  description = 'Useful when you need to block, unblock, or check the block status of a user. For blocking, the user will not be able to chat for the specified duration. Use "check" action to see remaining time.'
 }
-
