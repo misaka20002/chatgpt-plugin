@@ -746,12 +746,17 @@ export class chatgpt extends plugin {
       }
     }
 
-    // 呆毛版 在 prompt 中替换文本使用 e.at 信息
-    if (Config.isReplacePromptForSenderMsg) {
-      // 搜索 e 对象中的 message 数组，找到 type 为 "at" 的对象，返回其内容
-      const atMessage = e.message?.find(item => item?.type === "at" && item?.qq != getUin(e));
-      if (atMessage && !e.theImgIsGetFromSource)
-        prompt = `消息中At的${atMessage?.text ? `人是${atMessage?.text?.replace(/^@/g, '')}，` : ''}${atMessage?.qq ? `Ta的QQ号是${atMessage?.qq}。` : ''}` + prompt
+    // 处理消息中的 e.at 信息
+    if (true) {
+      const atMessages = e.message?.filter(item => item?.type === "at" && item?.qq != getUin(e));
+      if (atMessages && atMessages.length > 0 && !e.theImgIsGetFromSource) {
+        const atInfoList = atMessages.map(at => {
+          const name = at.text ? at.text.replace(/^@/g, '') : '未知群友';
+          const qq = at.qq ? `(QQ:${at.qq})` : '';
+          return `${name}${qq}`;
+        });
+        prompt = `消息中At的人有：${atInfoList.join('、')}。\n` + prompt;
+      }
     }
 
     // 呆毛版 gemini的识图结果 + prompt

@@ -55,7 +55,7 @@
   "huggingFaceReverseProxy": "",
   "tts_First_person": "派蒙",
   "chat_for_First_person": true,
-  "isReplacePromptForSenderMsg": true,
+  "isReplacePromptForSenderMsg": false,
   "drawByJsonToPlugin": false,
   "drawToolS": false,
   "nai3PluginToPaintPrefix": "toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ",
