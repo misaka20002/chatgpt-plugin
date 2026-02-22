@@ -648,8 +648,8 @@ export function supportGuoba() {
         },
         {
           field: 'gemini_vqa_model',
-          label: 'gemini识图模型',
-          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别工具 和 对话中图片识别-gemini；默认值：gemini-2.5-flash',
+          label: 'gemini内容识别模型',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别工具 和 对话中图片识别-gemini；支持图片和视频识别；默认值：gemini-2.5-flash',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -1191,6 +1191,18 @@ export function supportGuoba() {
         //   bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
         //   component: 'Input'
         // },
+        {
+          field: 'mediaRecognitionSource',
+          label: '内容识别来源',
+          component: 'Select',
+          bottomHelpMessage: '1、选择模型内置请确认你的API模型支持图片上传；2、推荐配置 gemini内容识别模型 以支持图片和视频识别',
+          componentProps: {
+            options: [
+              { label: '模型内置', value: 'Orignal' },
+              { label: 'Gemini', value: 'Gemini' },
+            ]
+          }
+        },
         {
           field: 'imgOcr',
           label: '对话中图片OCR',
