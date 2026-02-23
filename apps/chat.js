@@ -576,7 +576,7 @@ export class chatgpt extends plugin {
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
     }
-    if (!this.canGPT_blackAndWhitelist(e)) return false
+    if (!(await this.canGPT_blackAndWhitelist(e))) return false
 
     await this.abstractChat(e, prompt, use, forcePictureMode)
   }
@@ -621,16 +621,19 @@ export class chatgpt extends plugin {
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
       return false
     }
-    if (!this.canGPT_blackAndWhitelist(e)) return false
+    if (!(await this.canGPT_blackAndWhitelist(e))) return false
 
     await this.abstractChat(e, prompt, use)
   }
 
-  /** 黑白名单过滤后可进行对话 */
-  canGPT_blackAndWhitelist(e) {
+  /** 黑白名单过滤及速率限制后可进行对话 */
+  async canGPT_blackAndWhitelist(e) {
     // 黑白名单过滤对话
     let [whitelist = [], blacklist = []] = [Config.whitelist, Config.blacklist]
     let chatPermission = false // 对话许可
+
+    const userId = e.sender?.user_id?.toString() || ''
+    const groupId = e.isGroup && e.group_id ? e.group_id.toString() : ''
 
     // 处理字符串格式的白名单和黑名单，支持英文逗号分割
     if (typeof whitelist === 'string') {
@@ -648,7 +651,7 @@ export class chatgpt extends plugin {
         // 优先判断：格式：^QQ号 (例如：^123456) - 全局白名单
         if (item.startsWith('^')) {
           const qq = item.slice(1)
-          if (qq === e.sender.user_id.toString()) {
+          if (qq === userId) {
             chatPermission = true
             break
           }
@@ -656,13 +659,13 @@ export class chatgpt extends plugin {
         // 其次判断：格式：群号^QQ号 (例如：123456^123456) - 指定群白名单
         else if (item.includes('^')) {
           const [group, qq] = item.split('^')
-          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
+          if (e.isGroup && group === groupId && qq === userId) {
             chatPermission = true
             break
           }
         }
         // 最后判断：格式：群号 (例如：123456) - 整群白名单
-        else if (e.isGroup && item === e.group_id.toString()) {
+        else if (e.isGroup && item === groupId) {
           chatPermission = true
           break
         }
@@ -674,31 +677,59 @@ export class chatgpt extends plugin {
       for (const item of blacklist) {
         if (!item) continue // 跳过空项
 
+        let isBlacklisted = false
+
         // 优先判断：格式：^QQ号 (例如：^123456) - 全局黑名单
         if (item.startsWith('^')) {
           const qq = item.slice(1)
-          if (qq === e.sender.user_id.toString()) {
-            return false
-          }
+          if (qq === userId) isBlacklisted = true
         }
         // 其次判断：格式：群号^QQ号 (例如：123456^123456) - 指定群黑名单
         else if (item.includes('^')) {
           const [group, qq] = item.split('^')
-          if (e.isGroup && group === e.group_id.toString() && qq === e.sender.user_id.toString()) {
-            return false
-          }
+          if (e.isGroup && group === groupId && qq === userId) isBlacklisted = true
         }
         // 最后判断：格式：群号 (例如：123456) - 整群黑名单
-        else if (e.isGroup && item === e.group_id.toString()) {
+        else if (e.isGroup && item === groupId) {
+          // isBlacklisted = true
+        }
+
+        if (isBlacklisted) {
+          logger.info(`[Chatgpt][对话拦截] 用户匹配到黑名单(${item})，拒绝对话 (用户:${userId} 群:${groupId})`)
           return false
         }
       }
     }
 
     // 当白名单设置不为空的时候，使用白名单加黑名单模式
-    if (whitelist.length > 0 && !chatPermission) return false
+    if (whitelist.length > 0 && !chatPermission) {
+      // logger.info(`[Chatgpt][对话拦截] 用户不在白名单中，拒绝对话 (用户:${userId} 群:${groupId})`)
+      return false
+    }
 
-    // 黑白名单过滤后可进行对话
+    // 速率限制检查
+    if (!e.isMaster && Config.rateLimiting && Config.rateLimiting > 0) {
+      try {
+        const redisKey = `CHATGPT:rateLimit_fifteen:${userId}`
+        const currentCount = await redis.incr(redisKey)
+
+        // 只有首次访问(值为1)时才设置 15分钟(900秒) 的过期时间，超时后 Redis 会自动释放容量
+        if (currentCount === 1) {
+          await redis.expire(redisKey, 900)
+        }
+
+        // 判断是否超过配置的速率限制
+        if (currentCount > Config.rateLimiting) {
+          logger.info(`[Chatgpt][对话拦截] 用户 ${userId} 触发速率限制：15分钟内对话(${currentCount}次)超过了上限(${Config.rateLimiting}次)，拒绝对话`)
+          return false
+        }
+      } catch (err) {
+        // 如果 Redis 出现异常，打印错误日志，为了容灾可以默认放行 (避免因 redis 崩溃导致全部功能停摆)
+        logger.error(`[Chatgpt][Redis 速率限制出错] ${err}`)
+      }
+    }
+
+    // 黑白名单过滤及速率限制后可进行对话
     return true;
   }
 

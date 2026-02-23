@@ -91,7 +91,7 @@ export class ScheduleTaskPlugin extends plugin {
 
                 // 植入chatgpt插件
                 const chatgptTask = new chatgpt(mockE);
-                mockE.msg = `设定的定时提醒已触发：\n${taskData.content}`;
+                mockE.msg = `${taskData.nickname}(ID:${taskData.user_id})设定的定时提醒已触发：\n${taskData.content}`;
                 // 【核心修复】：手动为插件实例挂载上下文 e，补足云崽框架原本做的事！
                 chatgptTask.e = mockE;
 
@@ -107,7 +107,7 @@ export class ScheduleTaskPlugin extends plugin {
                 // if (!mockE.isMaster && mockE.isPrivate && !Config.enablePrivateChat) {
                 //     return false
                 // }
-                if (!chatgptTask.canGPT_blackAndWhitelist(mockE)) continue;
+                if (!(await chatgptTask.canGPT_blackAndWhitelist(mockE))) continue;
 
                 // 捕获单个任务执行的异常，避免一个任务报错中断后续所有正常任务
                 try {

@@ -316,6 +316,7 @@ const defaultConfig = {
   enableEmojiLikeTool: true,
   mediaRecognitionSource: "Gemini",
   ScheduleTask_Tool: true,
+  rateLimiting: 0,
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统

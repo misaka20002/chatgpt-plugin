@@ -81,6 +81,17 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'rateLimiting',
+          label: '对话速率限制',
+          bottomHelpMessage: '在15分钟内某用户与AI超过这个次数限制后将拒绝对话；主人不受限制；设置为0关闭。',
+          helpMessage: '单位：次',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 1
+          }
+        },
+        {
           field: 'switch_ChatCooldown',
           label: '不允许并发对话',
           bottomHelpMessage: '不允许并发对话，用户要等待上一次对话完成后才可以触发下一次对话；每个群单独计算，主人不受限制',
@@ -1195,24 +1206,30 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '推荐使用并配置 gemini内容识别模型 以支持图片和视频识别；“模型内置”选项需要自行判断你的API支持图片识别。',
+          bottomHelpMessage: '推荐使用并配置 gemini内容识别模型 以支持图片和视频识别（将以工具形式按需识别视频以节约token）；“模型内置”选项需要自行判断你的API支持图片识别。',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
-              { label: 'Gemini', value: 'Gemini' },
+              { label: 'Gemini内容识别工具', value: 'Gemini' },
             ]
           }
         },
         {
           field: 'imgOcr',
           label: '对话中图片OCR',
-          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；该项效果不好，建议关闭，去开启“对话-gemini-呆毛版 对话中图片识别”',
+          bottomHelpMessage: '调用本地适配器imageOcr图片文字识别功能（需要适配器支持）；推荐关闭该功能',
           component: 'Switch'
         },
         {
           field: 'amapKey',
           label: '高德APIKey',
           bottomHelpMessage: '智能模式时，用于查询天气',
+          component: 'Input'
+        },
+        {
+          field: 'githubAPIKey',
+          label: 'github Access Token',
+          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
           component: 'Input'
         },
         {
@@ -1244,12 +1261,6 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
-          field: 'githubAPIKey',
-          label: 'github Access Token',
-          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
-          component: 'Input'
-        },
-        {
           label: '智能模式 工具设置',
           component: 'Divider'
         },
@@ -1262,7 +1273,7 @@ export function supportGuoba() {
         {
           field: 'ScheduleTask_Tool',
           label: '工具新增-定时工具',
-          bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制仅限群聊可用、每个用户仅能储存1条定时任务并且最大定时为1个月；修改后重启生效',
+          bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制仅限群聊可用、每个用户仅能储存1条定时任务并且最大定时为1个月；推荐开启 “全局-At群友-提示词版” 或 “工具新增-at群友” 以第一时间获取ai通知；修改该选项后重启生效',
           component: 'Switch'
         },
         {
