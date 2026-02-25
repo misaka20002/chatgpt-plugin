@@ -78,16 +78,17 @@ export class ScheduleTaskPlugin extends plugin {
                     Bot.prepareEvent(mockE)
                 }
 
-                // // 发送定时内容
-                // const messageToSend = [
-                //     segment.at(taskData.user_id),
-                //     `\n叮！您设定的定时提醒已触发：\n${taskData.content}`
-                // ]
+                // 设置 abstractChat() 因为LLM API出错后回复的定时内容
+                const messageToSend = [
+                    segment.at(taskData.user_id),
+                    `\n叮！您设定的定时提醒：\n${taskData.content}`
+                ]
                 // if (mockE.reply) {
                 //     mockE.reply(messageToSend)
                 // } else {
                 //     logger.warn(`[ChatGPT-定时任务] 找不到群 ${taskData.group_id} 的发送方法，Bot可能掉线或群不存在。`)
                 // }
+                mockE.checkAndExecuteContent = messageToSend;
 
                 // 植入chatgpt插件
                 const chatgptTask = new chatgpt(mockE);
@@ -109,12 +110,7 @@ export class ScheduleTaskPlugin extends plugin {
                 // }
                 if (!(await chatgptTask.canGPT_blackAndWhitelist(mockE))) continue;
 
-                // 捕获单个任务执行的异常，避免一个任务报错中断后续所有正常任务
-                try {
-                    await chatgptTask.abstractChat(mockE, mockE.msg, use)
-                } catch (chatErr) {
-                    logger.error(`[ChatGPT-定时任务] 任务 ${taskData.content} 执行异常:`, chatErr);
-                }
+                await chatgptTask.abstractChat(mockE, mockE.msg, use)
             }
         } catch (err) {
             logger.error(`[ChatGPT-定时任务插件] 发生错误: ${err}`);

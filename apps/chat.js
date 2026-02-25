@@ -1590,6 +1590,9 @@ export class chatgpt extends plugin {
         } else {
           await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
         }
+        if (e.checkAndExecuteContent?.length) {
+          await this.reply(e.checkAndExecuteContent);
+        }
       }
     } finally {
       ChatCooldown.end(e.user_id, e.group_id)

@@ -1,5 +1,5 @@
 import { Config } from '../utils/config.js'
-// import { getImg } from '../utils/common.js'
+// import { parseSourceImg } from '../utils/common.js'
 import fetch from 'node-fetch'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
 
