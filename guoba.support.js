@@ -141,7 +141,7 @@ export function supportGuoba() {
           field: 'conversationPreserveTime',
           label: '对话保留时长',
           helpMessage: '单位：秒',
-          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。',
+          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。注意：如果你设置过 0 的话，需要手动清空历史记录 #结束全部对话',
           component: 'InputNumber',
           componentProps: {
             min: 0
