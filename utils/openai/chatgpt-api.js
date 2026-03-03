@@ -142,7 +142,7 @@ var ChatGPTAPI = /** @class */ (function () {
         if (opts === void 0) { opts = {}; }
         if (role === void 0) { role = 'user'; }
         return __awaiter(this, void 0, void 0, function () {
-            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, message, latestQuestion, _c, messages, maxTokens, numTokens, result, responseP;
+            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, message, latestQuestion, extraMessages, normalizedExtraMessages, lastInputMessageId, i, extra, extraId, _c, messages, maxTokens, numTokens, result, responseP;
             var _this = this;
             return __generator(this, function (_d) {
                 switch (_d.label) {
@@ -164,7 +164,24 @@ var ChatGPTAPI = /** @class */ (function () {
                             toolCallId: opts.toolCallId
                         };
                         latestQuestion = message;
-                        return [4 /*yield*/, this._buildMessages(text, role, opts, completionParams)];
+                        extraMessages = Array.isArray(opts.extraMessages) ? opts.extraMessages : [];
+                        normalizedExtraMessages = [];
+                        lastInputMessageId = messageId;
+                        for (i = 0; i < extraMessages.length; i++) {
+                            extra = extraMessages[i] || {};
+                            extraId = extra.messageId || uuidv4();
+                            normalizedExtraMessages.push({
+                                role: extra.role || role,
+                                id: extraId,
+                                conversationId: conversationId,
+                                parentMessageId: lastInputMessageId,
+                                text: typeof extra.text === 'string' ? extra.text : String(extra.text || ''),
+                                name: extra.name,
+                                toolCallId: extra.toolCallId
+                            });
+                            lastInputMessageId = extraId;
+                        }
+                        return [4 /*yield*/, this._buildMessages(text, role, opts, completionParams, normalizedExtraMessages)];
                     case 1:
                         _c = _d.sent(), messages = _c.messages, maxTokens = _c.maxTokens, numTokens = _c.numTokens;
                         console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
@@ -172,7 +189,7 @@ var ChatGPTAPI = /** @class */ (function () {
                             role: 'assistant',
                             id: uuidv4(),
                             conversationId: conversationId,
-                            parentMessageId: messageId,
+                            parentMessageId: lastInputMessageId,
                             text: '',
                             thinking_text: '',
                             functionCall: undefined,
@@ -246,21 +263,39 @@ var ChatGPTAPI = /** @class */ (function () {
                                                             }
                                                         }
                                                         else if (delta.tool_calls && delta.tool_calls.length > 0) {
-                                                            var fc = delta.tool_calls[0].function;
-                                                            if (fc.name) {
-                                                                result.functionCall = {
-                                                                    name: fc.name,
-                                                                    arguments: fc.arguments
-                                                                };
-                                                                // 同时设置 toolCalls 以支持新的格式
-                                                                result.toolCalls = delta.tool_calls;
+                                                            if (!result.toolCalls) {
+                                                                result.toolCalls = [];
                                                             }
-                                                            else {
-                                                                result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments;
-                                                                // 更新 toolCalls 中的参数
-                                                                if (result.toolCalls && result.toolCalls.length > 0) {
-                                                                    result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments;
+                                                            for (var _i = 0, _b = delta.tool_calls; _i < _b.length; _i++) {
+                                                                var partialToolCall = _b[_i];
+                                                                var index = typeof partialToolCall.index === 'number' ? partialToolCall.index : result.toolCalls.length;
+                                                                if (!result.toolCalls[index]) {
+                                                                    result.toolCalls[index] = {
+                                                                        id: partialToolCall.id || '',
+                                                                        type: partialToolCall.type || 'function',
+                                                                        function: { name: '', arguments: '' }
+                                                                    };
                                                                 }
+                                                                if (partialToolCall.id) {
+                                                                    result.toolCalls[index].id = partialToolCall.id;
+                                                                }
+                                                                if (partialToolCall.type) {
+                                                                    result.toolCalls[index].type = partialToolCall.type;
+                                                                }
+                                                                if (partialToolCall.function) {
+                                                                    if (!result.toolCalls[index].function) {
+                                                                        result.toolCalls[index].function = { name: '', arguments: '' };
+                                                                    }
+                                                                    if (partialToolCall.function.name) {
+                                                                        result.toolCalls[index].function.name = (result.toolCalls[index].function.name || '') + partialToolCall.function.name;
+                                                                    }
+                                                                    if (partialToolCall.function.arguments) {
+                                                                        result.toolCalls[index].function.arguments = (result.toolCalls[index].function.arguments || '') + partialToolCall.function.arguments;
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (result.toolCalls.length > 0) {
+                                                                result.functionCall = result.toolCalls.map(function (tool) { return tool.function; })[0];
                                                             }
                                                         }
                                                         else {
@@ -346,7 +381,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                 }
                             });
                         }); }).then(function (message) { return __awaiter(_this, void 0, void 0, function () {
-                            var promptTokens, completionTokens, err_2;
+                            var promptTokens, completionTokens, err_2, latestQuestionForStore, extraMessagesForStore;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
@@ -368,10 +403,14 @@ var ChatGPTAPI = /** @class */ (function () {
                                     case 3:
                                         err_2 = _a.sent();
                                         return [3 /*break*/, 4];
-                                    case 4: return [2 /*return*/, Promise.all([
-                                            this._upsertMessage(latestQuestion),
-                                            this._upsertMessage(message)
-                                        ]).then(function () { return message; })];
+                                    case 4:
+                                        latestQuestionForStore = this._compactMessageForHistory(latestQuestion);
+                                        extraMessagesForStore = normalizedExtraMessages.map(function (m) { return _this._compactMessageForHistory(m); });
+                                        return [2 /*return*/, Promise.all(__spreadArray(__spreadArray([
+                                                this._upsertMessage(latestQuestionForStore)
+                                            ], extraMessagesForStore.map(function (m) { return _this._upsertMessage(m); }), true), [
+                                                this._upsertMessage(message)
+                                            ], false)).then(function () { return message; })];
                                 }
                             });
                         }); });
@@ -421,9 +460,9 @@ var ChatGPTAPI = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams) {
+    ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams, additionalMessages) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, maxTokens;
+            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, currentInputMessages, i, inputMessage, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, fallbackText, maxTokens;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -440,15 +479,31 @@ var ChatGPTAPI = /** @class */ (function () {
                             });
                         }
                         systemMessageOffset = messages.length;
-                        nextMessages = text
-                            ? messages.concat([
-                                {
-                                    role: role,
-                                    content: text,
-                                    name: opts.name,
-                                    tool_call_id: opts.toolCallId
+                        currentInputMessages = [];
+                        if (text) {
+                            currentInputMessages.push({
+                                role: role,
+                                content: text,
+                                name: opts.name,
+                                tool_call_id: opts.toolCallId
+                            });
+                        }
+                        if (Array.isArray(additionalMessages) && additionalMessages.length > 0) {
+                            for (i = 0; i < additionalMessages.length; i++) {
+                                inputMessage = additionalMessages[i];
+                                if (!inputMessage) {
+                                    continue;
                                 }
-                            ])
+                                currentInputMessages.push({
+                                    role: inputMessage.role,
+                                    content: inputMessage.text || '',
+                                    name: inputMessage.name,
+                                    tool_call_id: inputMessage.toolCallId
+                                });
+                            }
+                        }
+                        nextMessages = currentInputMessages.length > 0
+                            ? messages.concat(currentInputMessages)
                             : messages;
                         functionToken = 0;
                         numTokens = functionToken;
@@ -527,16 +582,12 @@ var ChatGPTAPI = /** @class */ (function () {
                         if (true) return [3 /*break*/, 1];
                         _d.label = 9;
                     case 9:
-                        if (!(text && messages.length <= systemMessageOffset)) return [3 /*break*/, 11];
-                        messages = [
-                            {
-                                role: role,
-                                content: text,
-                                name: opts.name,
-                                tool_call_id: opts.toolCallId
-                            }
-                        ];
-                        return [4 /*yield*/, this._getTokenCount(text)];
+                        if (!(currentInputMessages.length > 0 && messages.length <= systemMessageOffset)) return [3 /*break*/, 11];
+                        messages = currentInputMessages.slice();
+                        fallbackText = currentInputMessages
+                            .map(function (m) { return typeof m.content === 'string' ? m.content : ''; })
+                            .join('\n');
+                        return [4 /*yield*/, this._getTokenCount(fallbackText)];
                     case 10:
                         numTokens = _d.sent();
                         _d.label = 11;
@@ -583,6 +634,24 @@ var ChatGPTAPI = /** @class */ (function () {
                 }
             });
         });
+    };
+    ChatGPTAPI.prototype._compactMessageForHistory = function (message) {
+        if (!message) {
+            return message;
+        }
+        if (message.role !== 'tool' && message.role !== 'function') {
+            return message;
+        }
+        var toolName = (message.name || 'tool').toString().slice(0, 64);
+        var rawText = typeof message.text === 'string'
+            ? message.text
+            : String(message.text || '');
+        var normalized = rawText.replace(/\s+/g, ' ').trim();
+        var maxLen = 260;
+        var shortText = normalized.length > maxLen
+            ? "".concat(normalized.slice(0, maxLen), "...(truncated)")
+            : normalized;
+        return __assign(__assign({}, message), { text: "[tool:".concat(toolName, "] ").concat(shortText), detail: undefined, functionCall: undefined, toolCalls: undefined });
     };
     return ChatGPTAPI;
 }());

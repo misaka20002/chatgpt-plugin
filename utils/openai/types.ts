@@ -53,6 +53,13 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
+    extraMessages?: Array<{
+        role: Role
+        text: string
+        name?: string
+        toolCallId?: string
+        messageId?: string
+    }>
 }
 
 export type MessageActionType = 'next' | 'variant'

@@ -153,6 +153,40 @@ function mergeSystemPrompt(systemPrompt, e) {
   return systemPrompt
 }
 
+async function compactConsumedToolCallMessage(messageId) {
+  if (!messageId) return
+  try {
+    const message = await getMessageById(messageId)
+    if (!message || message.role !== 'assistant') return
+
+    if (Array.isArray(message.toolCalls) && message.toolCalls.length > 0) {
+      const compactToolCalls = message.toolCalls.map(toolCall => ({
+        ...toolCall,
+        function: {
+          name: toolCall?.function?.name || '',
+          arguments: '{}'
+        }
+      }))
+      message.toolCalls = compactToolCalls
+      message.functionCall = compactToolCalls[0]?.function
+      message.text = message.text || '[tool_calls handled]'
+      await upsertMessage(message)
+      return
+    }
+
+    if (message.functionCall) {
+      message.functionCall = {
+        name: message.functionCall.name || '',
+        arguments: '{}'
+      }
+      message.text = message.text || '[tool_call handled]'
+      await upsertMessage(message)
+    }
+  } catch (err) {
+    logger.debug('[chatgpt] compact consumed tool_call message failed:', err)
+  }
+}
+
 class Core {
   async sendMessage(prompt, conversation = {}, use, e, opt = {
     enableSmart: Config.smartMode,
@@ -806,64 +840,132 @@ class Core {
               await this.reply(msg.text.replace('\n\n\n', '\n'))
             }
 
-            let name, args, toolCallId;
-
+            const currentCalls = []
             if (msg.toolCalls && msg.toolCalls.length > 0) {
-              // 处理新的 toolCalls 格式
-              const toolCall = msg.toolCalls[0];
-              name = toolCall.function.name;
-              args = JSON.parse(toolCall.function.arguments || '{}');
-              toolCallId = toolCall.id
-            } else if (msg.functionCall) {
-              // 处理旧的 functionCall 格式
-              name = msg.functionCall.name;
-              args = JSON.parse(msg.functionCall.arguments || '{}');
+              for (const toolCall of msg.toolCalls) {
+                const name = toolCall?.function?.name?.trim()
+                if (!name) continue
+                let args = {}
+                try {
+                  args = JSON.parse(toolCall?.function?.arguments || '{}') || {}
+                } catch (err) {
+                  logger.warn(`[chatgpt] invalid tool call args for ${name}, fallback to empty object`)
+                  args = {}
+                }
+                if (typeof args !== 'object' || Array.isArray(args) || args === null) {
+                  args = {}
+                }
+                currentCalls.push({
+                  name,
+                  args,
+                  toolCallId: toolCall.id
+                })
+              }
+            } else if (msg.functionCall && msg.functionCall.name) {
+              let args = {}
+              try {
+                args = JSON.parse(msg.functionCall.arguments || '{}') || {}
+              } catch (err) {
+                logger.warn(`[chatgpt] invalid function_call args for ${msg.functionCall.name}, fallback to empty object`)
+                args = {}
+              }
+              if (typeof args !== 'object' || Array.isArray(args) || args === null) {
+                args = {}
+              }
+              currentCalls.push({
+                name: msg.functionCall.name.trim(),
+                args,
+                toolCallId: undefined
+              })
             } else {
-              // 如果没有工具调用，跳出循环
-              break;
+              break
             }
-            const toolSignature = `${name}:${JSON.stringify(args)}`
-            if (seenToolCallSignatures.has(toolSignature)) {
-              logger.warn(`[chatgpt] repeated tool call detected (${toolSignature}), break to avoid loop`)
-              msg.text = '<EMPTY>'
+
+            if (currentCalls.length === 0) {
               msg.functionCall = undefined
               msg.toolCalls = undefined
               break
             }
-            seenToolCallSignatures.add(toolSignature)
 
-            // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
-            if (!args.groupId) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
+            const toolOutputs = []
+            for (const call of currentCalls) {
+              const name = call.name
+              const args = call.args || {}
+              const toolSignature = `${name}:${JSON.stringify(args)}`
+              let functionResult
+
+              if (seenToolCallSignatures.has(toolSignature)) {
+                logger.warn(`[chatgpt] repeated tool call detected (${toolSignature}), block this call`)
+                functionResult = `Tool call blocked due to repetition: ${name}`
+              } else {
+                seenToolCallSignatures.add(toolSignature)
+
+                const toolExecutor = fullFuncMap[name]
+                if (!toolExecutor) {
+                  logger.warn(`[chatgpt] tool not found: ${name}`)
+                  functionResult = `Tool "${name}" is not available.`
+                } else {
+                  if (!args.groupId) {
+                    args.groupId = e.group_id + '' || e.sender.user_id + ''
+                  }
+                  try {
+                    parseInt(args.groupId)
+                  } catch (err) {
+                    args.groupId = e.group_id + '' || e.sender.user_id + ''
+                  }
+
+                  try {
+                    functionResult = await toolExecutor.exec.bind(this)(Object.assign({
+                      isAdmin,
+                      sender
+                    }, args), e)
+                  } catch (err) {
+                    logger.error(`[chatgpt] tool execution failed: ${name}`, err)
+                    functionResult = `Tool "${name}" execution failed: ${err.message || err.stack || String(err)}`
+                  }
+                }
+              }
+
+              if (typeof functionResult !== 'string') {
+                try {
+                  functionResult = JSON.stringify(functionResult)
+                } catch (err) {
+                  functionResult = String(functionResult)
+                }
+              }
+              logger.mark(`function ${name} execution result: ${functionResult}`)
+              toolOutputs.push({
+                name,
+                role: call.toolCallId ? 'tool' : 'function',
+                toolCallId: call.toolCallId,
+                content: functionResult
+              })
             }
-            try {
-              parseInt(args.groupId)
-            } catch (err) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
+
+            if (toolOutputs.length === 0) {
+              msg.text = msg.text || '<EMPTY>'
+              msg.functionCall = undefined
+              msg.toolCalls = undefined
+              break
             }
-            let functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
-              isAdmin,
-              sender
-            }, args), e)
-            logger.mark(`function ${name} execution result: ${functionResult}`)
+
+            const consumedToolCallMessageId = msg.id
             option.parentMessageId = msg.id
-            option.name = name
-            option.toolCallId = toolCallId
+            option.name = toolOutputs[0].name
+            option.toolCallId = toolOutputs[0].toolCallId
+            option.extraMessages = toolOutputs.slice(1).map(output => ({
+              role: output.role,
+              name: output.name,
+              text: output.content,
+              toolCallId: output.toolCallId
+            }))
+
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
-            msg = await this.chatGPTApi.sendMessage(functionResult, option, toolCallId ? 'tool' : 'function')
+            msg = await this.chatGPTApi.sendMessage(toolOutputs[0].content, option, toolOutputs[0].role)
+            option.extraMessages = undefined
+            await compactConsumedToolCallMessage(consumedToolCallMessageId)
             logger.info(msg)
-
-            // 如果是函数返回结果，则跳出循环
-            if (msg.conversation && msg.conversation.length > 0) {
-              const lastMessage = msg.conversation[msg.conversation.length - 1]
-              if (lastMessage.role === 'function' && lastMessage.name === name) {
-                // 清除工具调用相关字段，避免循环
-                msg.functionCall = undefined
-                msg.toolCalls = undefined
-                break
-              }
-            }
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
