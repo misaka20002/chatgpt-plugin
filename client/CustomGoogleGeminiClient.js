@@ -115,6 +115,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     functionResponse?: FunctionResponse | FunctionResponse[],
    *     system: string?,
    *     image: string?,
+   *     video: string?,
+   *     media: { mimeType: string, data: string }?,
    *     maxOutputTokens: number?,
    *     temperature: number?,
    *     topP: number?,
@@ -176,12 +178,24 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           parentMessageId: opt.parentMessageId || undefined
         }
       : {
-          role: 'user',
-          parts: text ? [{ text }] : [],
-          id: idThis,
-          parentMessageId: opt.parentMessageId || undefined
+        role: 'user',
+        parts: text ? [{ text }] : [],
+        id: idThis,
+        parentMessageId: opt.parentMessageId || undefined
+      }
+
+    // 逻辑：优先使用 media (带明确类型)，其次 video (默认为MP4)，最后 fallback 到 image (默认为JPEG)
+    // 推荐以后都使用 opt.media
+    if (opt.media) {
+      // 支持通用媒体类型（视频、不同格式图片）
+      thisMessage.parts.push({
+        inline_data: {
+          mime_type: opt.media.mimeType, // 例如 'video/mp4' 或 'image/png'
+          data: opt.media.data
         }
-    if (opt.image) {
+      })
+    } else if (opt.image) {
+      // 旧版图片参数兼容
       thisMessage.parts.push({
         inline_data: {
           mime_type: 'image/jpeg',
@@ -406,7 +420,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
             // }
           } else {
-            this.e.reply(convertFacesAndCQCode(replyText, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e), true);
+            logger.info("[chatgpt][functionCall附加的对话text] Processing...")
+            this.e.reply((await convertFacesAndCQCode(replyText.trim(), Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e)), true);
           }
         }
       }

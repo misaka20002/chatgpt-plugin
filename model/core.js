@@ -2,7 +2,7 @@ import { Config, defaultOpenAIAPI } from '../utils/config.js'
 import {
   extractContentFromFile,
   formatDate,
-  getImg,
+  parseSourceImg,
   getMasterQQ, getMaxModelTokens,
   getUin,
   getUserData,
@@ -71,6 +71,7 @@ import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResult
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
+import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -326,9 +327,9 @@ class Core {
               .join('\n')
           }
         }
-        let img = await getImg(e)
-        if (img && img.length > 0) {
-          const response = await fetch(img[0])
+        // let img = await parseSourceImg(e)
+        if (e.img && e.img.length > 0) {
+          const response = await fetch(e.img[0])
           const base64Image = Buffer.from(await response.arrayBuffer()).toString('base64')
           opt.image = base64Image
         }
@@ -414,11 +415,11 @@ class Core {
         cache: cacheOptions
       })
       // 获取图片资源
-      const image = await getImg(e)
+      // const image = await parseSourceImg(e)
       let response = await client.sendMessage(prompt, {
         e,
         chatId: conversation?.conversationId,
-        image: image ? image[0] : undefined,
+        image: e.img ? e.img[0] : undefined,
         system: mergeSystemPrompt(opt.system.xh, e)
       })
       return response
@@ -610,8 +611,8 @@ class Core {
       }
 
       if (!Config.recognitionByGemini) {
-        const image = await getImg(e)
-        let imageUrl = image ? image[0] : undefined
+        // const image = await parseSourceImg(e)
+        let imageUrl = e.img ? e.img[0] : undefined
         if (imageUrl) {
           const response = await fetch(imageUrl)
           const base64Image = Buffer.from(await response.arrayBuffer())
@@ -921,7 +922,7 @@ async function collectTools(e) {
     new SetTitleTool(),
     new GithubAPITool(),
     new BlockUserTool(),
-    new RecognitionResultsByGeminiTool(),
+    // new RecognitionResultsByGeminiTool(),
   ]
   // todo 3.0再重构tool的插拔和管理
   let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
@@ -946,7 +947,7 @@ async function collectTools(e) {
     new QueryUserinfoTool(), // 查看用户 e.sender 工具
     new GithubAPITool(),
     new BlockUserTool(),
-    new RecognitionResultsByGeminiTool(),
+    // new RecognitionResultsByGeminiTool(),
   ]
 
   if (!Config.disable_sendMessage_tool) {
@@ -999,6 +1000,16 @@ async function collectTools(e) {
     fullTools.push(new EmojiLikeTool())
   }
 
+  if (Config.mediaRecognitionSource === "Gemini") {
+    tools.push(new RecognitionResultsByGeminiTool())
+    fullTools.push(new RecognitionResultsByGeminiTool())
+  }
+
+  if (Config.ScheduleTask_Tool) {
+    tools.push(new ScheduleTaskTool())
+    fullTools.push(new ScheduleTaskTool())
+  }
+
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
@@ -1017,11 +1028,11 @@ async function collectTools(e) {
     }
   }
   let promptAddition = ''
-  let img = await getImg(e)
-  if (img?.length > 0) {
+  // let img = await parseSourceImg(e)
+  if (e.img?.length > 0) {
     // tools.push(new ImageCaptionTool())
     // tools.push(new ProcessPictureTool())
-    promptAddition += `\nthe url of the picture(s) above: ${img.join(', ')}`
+    promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`
   } else {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
     tools.push(new SerpImageTool_by_baidu())

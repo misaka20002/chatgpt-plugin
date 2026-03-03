@@ -4,7 +4,7 @@ import { generateHello } from '../utils/randomMessage.js'
 import { generateVitsAudio } from '../utils/tts.js'
 import fs from 'fs'
 import { emojiRegex, googleRequestUrl } from '../utils/emoj/index.js'
-import { getImageOcrText, getImg, makeForwardMsg, mkdirs, renderUrl, generateAudio } from '../utils/common.js'
+import { getImageOcrText, parseSourceImg, makeForwardMsg, mkdirs, renderUrl, generateAudio } from '../utils/common.js'
 import uploadRecord from '../utils/uploadRecord.js'
 import { makeWordcloud } from '../utils/wordcloud/wordcloud.js'
 import { translate, translateLangSupports } from '../utils/translate.js'
@@ -137,7 +137,7 @@ ${translateLangLabels}
     const match = e.msg.trim().match(regExp)
     let languageCode = match[2] === '译' ? 'auto' : match[2]
     let pendingText = match[3]
-    const isImg = !!(await getImg(e))?.length
+    const isImg = !!(await parseSourceImg(e))?.length
     let result = []
     let multiText = false
     if (languageCode !== 'auto' && !translateLangLabelAbbrS.includes(languageCode)) {
@@ -621,8 +621,7 @@ ${translateLangLabels}
     return true
   }
 
-  async vqa (e) {
-
+async vqa (e) {
     // 只有主人才可以用识图功能
     if (Config.gemini_vqa_needMaster && !e.isMaster) return false
 
@@ -630,11 +629,20 @@ ${translateLangLabels}
       e.reply('需要配置Gemini密钥以使用识图')
       return
     }
-    let img = await getImg(e)
-    if (!img?.[0]) {
-      await e.reply('请发送或引用一张图片', e.isGroup)
+
+    // 1. 获取图片源
+    let img = await parseSourceImg(e)
+    
+    // 2. 获取视频源 (根据你的描述，视频url在 e.get_Video 中)
+    // 假设 get_Video 是一个数组，取第一个
+    let videoUrl = e.get_Video && e.get_Video.length > 0 ? e.get_Video[0].url : null
+
+    // 3. 校验是否有内容
+    if (!img?.[0] && !videoUrl) {
+      await e.reply('请发送或引用一张图片或视频', e.isGroup)
       return false
     }
+
     let client = new CustomGoogleGeminiClient({
       e,
       userId: e.sender.user_id,
@@ -643,17 +651,49 @@ ${translateLangLabels}
       baseUrl: Config.geminiBaseUrl,
       debug: Config.debug
     })
-    const response = await fetch(img[0])
-    const base64Image = Buffer.from(await response.arrayBuffer())
-    let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') || 'describe this image in Simplified Chinese'
+
     try {
+      // 确定要使用的 URL 和 媒体类型提示
+      let targetUrl = ''
+      let isVideo = false
+
+      if (videoUrl) {
+        targetUrl = videoUrl
+        isVideo = true
+      } else {
+        targetUrl = img[0]
+      }
+
+      // 下载媒体资源
+      const response = await fetch(targetUrl)
+      if (!response.ok) throw new Error('下载媒体资源失败')
+      
+      const buffer = await response.arrayBuffer()
+      const base64Data = Buffer.from(buffer).toString('base64')
+      
+      // 获取 Content-Type，如果获取不到则根据类型给默认值
+      let mimeType = response.headers.get('content-type')
+      if (!mimeType || mimeType === 'application/octet-stream') {
+        mimeType = isVideo ? 'video/mp4' : 'image/jpeg'
+      }
+
+      // 处理提示词
+      let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') || 
+                (isVideo ? 'describe this video in Simplified Chinese' : 'describe this image in Simplified Chinese')
+
+      // 发送请求，使用 media 参数
       let res = await client.sendMessage(msg, {
-        image: base64Image.toString('base64')
+        media: {
+          mimeType: mimeType,
+          data: base64Data
+        }
       })
+      
       await e.reply(res.text, true)
     } catch (err) {
-      await e.reply('❌识图失败：' + hidePrivacyInfo(err.message), true)
+      await e.reply('❌识别失败：' + hidePrivacyInfo(err.message), true)
     }
     return true
   }
+
 }

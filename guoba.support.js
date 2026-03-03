@@ -81,6 +81,17 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'rateLimiting',
+          label: '对话速率限制',
+          bottomHelpMessage: '在15分钟内某用户与AI超过这个次数限制后将拒绝对话；主人不受限制；设置为0关闭。',
+          helpMessage: '单位：次',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 1
+          }
+        },
+        {
           field: 'switch_ChatCooldown',
           label: '不允许并发对话',
           bottomHelpMessage: '不允许并发对话，用户要等待上一次对话完成后才可以触发下一次对话；每个群单独计算，主人不受限制',
@@ -130,7 +141,7 @@ export function supportGuoba() {
           field: 'conversationPreserveTime',
           label: '对话保留时长',
           helpMessage: '单位：秒',
-          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。',
+          bottomHelpMessage: '每个人发起的对话保留时长。超过这个时长没有进行对话，再进行对话将开启新的对话。注意：如果你设置过 0 的话，需要手动清空历史记录 #结束全部对话',
           component: 'InputNumber',
           componentProps: {
             min: 0
@@ -648,8 +659,8 @@ export function supportGuoba() {
         },
         {
           field: 'gemini_vqa_model',
-          label: 'gemini识图模型',
-          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini识图工具 和 对话中图片识别-gemini；默认值：gemini-2.0-flash',
+          label: 'gemini内容识别模型',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别工具 和 对话中图片识别-gemini；支持图片和视频识别；默认值：gemini-2.5-flash',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -657,15 +668,26 @@ export function supportGuoba() {
         },
         {
           field: 'recognitionByGemini',
-          label: '对话中图片识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识图结果（用于无识图能力的接口）（如果对话时使用gemini-2.5及以上的模型时，这个功能和"对话中图片OCR"都不用开了）；使用方法：1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含图片和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
+          label: '对话中媒体识别',
+          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识多媒体结果（用于无识图能力的接口）；如果对话时使用gemini-2.5及以上的模型时，这个功能和"对话中图片OCR"都不用开了！ 使用方法：1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含多媒体和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
           component: 'Switch'
         },
         {
           field: 'gemini_vqa_needMaster',
           label: '只有主人才能#识图',
-          bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”',
+          bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”；注意： #识图 指令不受“媒体识别容量限制”控制',
           component: 'Switch'
+        },
+        {
+          field: 'mediaMaxSizeInMB',
+          label: '媒体识别大小限制',
+          bottomHelpMessage: '智能模式对话中 gemini recognize_media Tool (基于 gemini 接口的图片/视频内容识别工具) 最大识别大小的限制，注意 token 的使用',
+          helpMessage: '单位：MB',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            step: 1
+          }
         },
         {
           field: 'geminiPrompt',
@@ -1181,15 +1203,33 @@ export function supportGuoba() {
         //   component: 'Input'
         // },
         {
+          field: 'mediaRecognitionSource',
+          label: '内容识别来源',
+          component: 'Select',
+          bottomHelpMessage: '推荐使用并配置 gemini内容识别模型 以支持图片和视频识别（将以工具形式按需识别视频以节约token）；“模型内置”选项需要自行判断你的API支持图片识别。',
+          componentProps: {
+            options: [
+              { label: '模型内置', value: 'Orignal' },
+              { label: 'Gemini内容识别工具', value: 'Gemini' },
+            ]
+          }
+        },
+        {
           field: 'imgOcr',
           label: '对话中图片OCR',
-          bottomHelpMessage: '识别消息中图片的文字内容，需要同时包含图片和消息才生效，调用已配置的“智能模式url”或本地适配器imageOcr功能；该项效果不好，建议关闭，去开启“对话-gemini-呆毛版 对话中图片识别”',
+          bottomHelpMessage: '调用本地适配器imageOcr图片文字识别功能（需要适配器支持）；推荐关闭该功能',
           component: 'Switch'
         },
         {
           field: 'amapKey',
           label: '高德APIKey',
           bottomHelpMessage: '智能模式时，用于查询天气',
+          component: 'Input'
+        },
+        {
+          field: 'githubAPIKey',
+          label: 'github Access Token',
+          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
           component: 'Input'
         },
         {
@@ -1221,12 +1261,6 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
-          field: 'githubAPIKey',
-          label: 'github Access Token',
-          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
-          component: 'Input'
-        },
-        {
           label: '智能模式 工具设置',
           component: 'Divider'
         },
@@ -1237,15 +1271,9 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'add_sf_image_edit',
-          label: '工具新增-Gemini Image',
-          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
-          component: 'Switch'
-        },
-        {
-          field: 'at_otherUser',
-          label: '工具新增-at群友',
-          bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
+          field: 'ScheduleTask_Tool',
+          label: '工具新增-定时工具',
+          bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制仅限群聊可用、每个用户仅能储存1条定时任务并且最大定时为1个月；推荐开启 “全局-At群友-提示词版” 或 “工具新增-at群友” 以第一时间获取ai通知；修改该选项后重启生效',
           component: 'Switch'
         },
         {
@@ -1264,6 +1292,18 @@ export function supportGuoba() {
           field: 'switch_EmojiTool',
           label: '工具新增-发送表情',
           bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食；3.可在Bot人设中加入“你将总是使用 sendEmoji 工具”',
+          component: 'Switch'
+        },
+        {
+          field: 'add_sf_image_edit',
+          label: '工具新增-Gemini Image',
+          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
+          component: 'Switch'
+        },
+        {
+          field: 'at_otherUser',
+          label: '工具新增-at群友',
+          bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
           component: 'Switch'
         },
         {
@@ -1436,7 +1476,7 @@ export function supportGuoba() {
         {
           field: 'isReplacePromptForSenderMsg',
           label: '呆毛版 设定拓展',
-          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_groupid_ 替换为 当前群号或私聊； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；若At用户，将附上at用户的名称和qq号。以下2个选项与该选项不兼容：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
+          bottomHelpMessage: '（仅限API(openai)、gemini、通义千问使用）将设定中所有 _sender_name_ 替换为 用户昵称； _sender_groupid_ 替换为 当前群号或私聊； _sender_id_ 替换为 用户user_id； _sender_gender_ 替换为 用户性别； _sender_age_ 替换为 用户年龄； _sender_area_ 替换为 用户居住地； _sender_role_ 替换为 用户组别（群组/管理员/群友）； _sender_title_ 替换为 用户头衔； _date_ 替换为 当前日期； _time_ 替换为 当前时间；以下2个选项与该选项不兼容：“是否允许机器人读取近期的群聊聊天记录”与“机器人读取聊天记录时的后台prompt”',
           component: 'Switch'
         },
         {

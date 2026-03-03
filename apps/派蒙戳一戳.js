@@ -348,11 +348,11 @@ export class PaimonChuo extends plugin {
                         await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
                         break;
                     case 7:
-                        await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bq_img"))))
-                        break;
-                    case 8:
                         await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bqwebp"))))
                         break;
+                    case 8:
+                        // await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bq_img"))))
+                        // break;
                     case 9:
                     case 10:
                         const randomPlayingMsg = await generate_msg_randomPlayingMsg()
@@ -1759,7 +1759,7 @@ let ciku = [
 function getRandomUrl(type) {
     const urls = {
         "ecy": [ // 二次元
-            "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
+            // "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
             "https://api.fuchenboke.cn/api/dongman.php",
             // "https://i18.net/api.php?fl=dongman",
             // "https://i18.net/acg.php",
@@ -1773,13 +1773,13 @@ function getRandomUrl(type) {
             "https://www.dmoe.cc/random.php", // 返回下载图片的
             "https://moe.jitsu.top/api",
             "https://api.horosama.com/random.php",
-            "https://api.likepoems.com/img/pc",
-            "https://api.likepoems.com/img/pe",
-            "https://api.likepoems.com/img/pixiv",
+            // "https://api.likepoems.com/img/pc",
+            // "https://api.likepoems.com/img/pe",
+            // "https://api.likepoems.com/img/pixiv",
             "https://v2.xxapi.cn/api/randomAcgPic?type=pc&return=302",
             "https://v2.xxapi.cn/api/randomAcgPic?type=wap&return=302",
             "https://api.suyanw.cn/api/comic/api.php", // 返回下载图片的
-            "https://cdn.seovx.com/d/?mom=302",
+            // "https://cdn.seovx.com/d/?mom=302",
         ],
         "scy": [ // 三次元
             "https://api.btstu.cn/sjbz/api.php",
@@ -1788,12 +1788,12 @@ function getRandomUrl(type) {
             "https://t.alcy.cc/fj", // 三次元 webp格式
             "https://api.btstu.cn/sjbz/api.php",
             "https://api.lolimi.cn/API/tup/xjj.php",
-            "https://api.likepoems.com/img/nature",
-            "https://api.likepoems.com/img/bing",
+            // "https://api.likepoems.com/img/nature",
+            // "https://api.likepoems.com/img/bing",
             "https://v2.xxapi.cn/api/meinvpic?return=302",
             "https://v2.xxapi.cn/api/baisi?return=302",
             "https://api.suyanw.cn/api/ksxjj",
-            "https://cdn.seovx.com/?mom=302",
+            // "https://cdn.seovx.com/?mom=302",
         ],
         "ecywebp": [ // 二次元 webp格式
             "https://t.mwm.moe/mp",
@@ -1806,16 +1806,13 @@ function getRandomUrl(type) {
             "https://www.loliapi.com/acg",
             // "http://api.mysqil.com/pc.php",
             // "http://api.mysqil.com/pe.php",
-            "https://api.rls.ovh/horizontal", // avif格式
-            "https://api.rls.ovh/vertical",
+            // "https://api.rls.ovh/horizontal", // avif格式
+            // "https://api.rls.ovh/vertical",
         ],
         "scywebp": [ // 三次元 webp格式
             "",
         ],
         "bq_img": [ // 表情
-            // "http://api.zhilaohu.icu/xnn",
-            // "http://api.zhilaohu.icu/chajun",
-            "https://api.likepoems.com/img/mc",
         ],
         "bqwebp": [
             "https://t.alcy.cc/xhl",
