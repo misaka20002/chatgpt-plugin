@@ -519,7 +519,18 @@ class Core {
           this.qwenApi = new QwenApi(opts)
           msg = await this.qwenApi.sendMessage(prompt, option)
           logger.info(msg)
+          const seenToolCallSignatures = new Set()
+          let toolCallStep = 0
+          const maxToolCallSteps = 4
           while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
+            toolCallStep++
+            if (toolCallStep > maxToolCallSteps) {
+              logger.warn(`[chatgpt][qwen] tool call exceeded max steps(${maxToolCallSteps}), break to avoid infinite loop`)
+              msg.text = msg.text || '<EMPTY>'
+              msg.functionCall = undefined
+              msg.toolCalls = undefined
+              break
+            }
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
             }
@@ -539,6 +550,15 @@ class Core {
               // 如果没有工具调用，跳出循环
               break;
             }
+            const toolSignature = `${name}:${JSON.stringify(args)}`
+            if (seenToolCallSignatures.has(toolSignature)) {
+              logger.warn(`[chatgpt][qwen] repeated tool call detected (${toolSignature}), break to avoid loop`)
+              msg.text = '<EMPTY>'
+              msg.functionCall = undefined
+              msg.toolCalls = undefined
+              break
+            }
+            seenToolCallSignatures.add(toolSignature)
 
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
@@ -685,6 +705,17 @@ class Core {
       let promptPrefix = `You are ${Config.assistantLabel} ${useCast?.api || opt.system.api || defaultPropmtPrefix}
         Current date: ${currentDate}`
       let maxModelTokens = getMaxModelTokens(completionParams.model)
+      const maxResponseCapByModel = Math.max(256, Math.min(4096, Math.floor(maxModelTokens * 0.4)))
+      const maxResponseTokens = Math.max(
+        256,
+        Math.min(
+          Config.apiMaxToken,
+          maxResponseCapByModel
+        )
+      )
+      if (Config.apiMaxToken > maxResponseTokens) {
+        logger.warn(`[chatgpt] apiMaxToken(${Config.apiMaxToken}) exceeds safe range for model context(${maxModelTokens}), clamped to ${maxResponseTokens}`)
+      }
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, opt.settings)
 
@@ -702,7 +733,7 @@ class Core {
         assistantLabel: Config.assistantLabel,
         fetch: newFetch,
         maxModelTokens,
-        maxResponseTokens: Config.apiMaxToken
+        maxResponseTokens
       }
       let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
       if (opts.apiBaseUrl !== defaultOpenAIAPI && openAIAccessible && !Config.openAiForceUseReverse) {
@@ -758,26 +789,47 @@ class Core {
           logger.info(msg)
 
           // 检查是否有工具调用
+          const seenToolCallSignatures = new Set()
+          let toolCallStep = 0
+          const maxToolCallSteps = 4
           while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
+            toolCallStep++
+            if (toolCallStep > maxToolCallSteps) {
+              logger.warn(`[chatgpt] tool call exceeded max steps(${maxToolCallSteps}), break to avoid infinite loop`)
+              msg.text = msg.text || '<EMPTY>'
+              msg.functionCall = undefined
+              msg.toolCalls = undefined
+              break
+            }
             if (msg.text) {
               await this.reply(msg.text.replace('\n\n\n', '\n'))
             }
 
-            let name, args;
+            let name, args, toolCallId;
 
-            if (msg.functionCall) {
-              // 处理旧的 functionCall 格式
-              name = msg.functionCall.name;
-              args = JSON.parse(msg.functionCall.arguments);
-            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
+            if (msg.toolCalls && msg.toolCalls.length > 0) {
               // 处理新的 toolCalls 格式
               const toolCall = msg.toolCalls[0];
               name = toolCall.function.name;
-              args = JSON.parse(toolCall.function.arguments);
+              args = JSON.parse(toolCall.function.arguments || '{}');
+              toolCallId = toolCall.id
+            } else if (msg.functionCall) {
+              // 处理旧的 functionCall 格式
+              name = msg.functionCall.name;
+              args = JSON.parse(msg.functionCall.arguments || '{}');
             } else {
               // 如果没有工具调用，跳出循环
               break;
             }
+            const toolSignature = `${name}:${JSON.stringify(args)}`
+            if (seenToolCallSignatures.has(toolSignature)) {
+              logger.warn(`[chatgpt] repeated tool call detected (${toolSignature}), break to avoid loop`)
+              msg.text = '<EMPTY>'
+              msg.functionCall = undefined
+              msg.toolCalls = undefined
+              break
+            }
+            seenToolCallSignatures.add(toolSignature)
 
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
@@ -795,9 +847,10 @@ class Core {
             logger.mark(`function ${name} execution result: ${functionResult}`)
             option.parentMessageId = msg.id
             option.name = name
+            option.toolCallId = toolCallId
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
-            msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
+            msg = await this.chatGPTApi.sendMessage(functionResult, option, toolCallId ? 'tool' : 'function')
             logger.info(msg)
 
             // 如果是函数返回结果，则跳出循环

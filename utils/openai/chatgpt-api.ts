@@ -164,7 +164,8 @@ export class ChatGPTAPI {
             conversationId,
             parentMessageId,
             text,
-            name: opts.name
+            name: opts.name,
+            toolCallId: opts.toolCallId
         }
 
         const latestQuestion = message
@@ -446,7 +447,8 @@ export class ChatGPTAPI {
                 {
                     role,
                     content: text,
-                    name: opts.name
+                    name: opts.name,
+                    tool_call_id: opts.toolCallId
                 }
             ])
             : messages
@@ -507,6 +509,9 @@ export class ChatGPTAPI {
                         case 'function':
                             // leave behind
                             return prompt
+                        case 'tool':
+                            // leave behind
+                            return prompt
                         case 'assistant':
                             return prompt
                         default:
@@ -544,20 +549,41 @@ export class ChatGPTAPI {
             }
 
             const parentMessageRole = parentMessage.role || 'user'
+            const parentToolCalls = parentMessage.toolCalls
+              ? parentMessage.toolCalls
+              : undefined
+            const parentFunctionCall = !parentToolCalls && parentMessage.functionCall
+              ? parentMessage.functionCall
+              : undefined
 
             nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
                 {
                     role: parentMessageRole,
-                    content: parentMessage.text,
+                    content: parentMessage.text || '',
                     name: parentMessage.name,
-                    function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                  // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
+                    function_call: parentFunctionCall,
+                    tool_calls: parentToolCalls,
+                    tool_call_id: parentMessage.toolCallId
                 },
                 ...nextMessages.slice(systemMessageOffset)
             ])
 
             parentMessageId = parentMessage.parentMessageId
         } while (true)
+
+        // 兜底：如果因为上下文过长导致仅保留了 system 消息（或空），至少要保留当前输入消息，
+        // 否则工具返回结果会被丢弃，模型会反复发起同一个 tool call。
+        if (text && messages.length <= systemMessageOffset) {
+            messages = [
+                {
+                    role,
+                    content: text,
+                    name: opts.name,
+                    tool_call_id: opts.toolCallId
+                }
+            ]
+            numTokens = await this._getTokenCount(text)
+        }
 
         // Use up to 4096 tokens (prompt + response), but try to leave 1000 tokens
         // for the response.

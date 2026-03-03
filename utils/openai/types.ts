@@ -1,7 +1,7 @@
 // @ts-ignore
 import Keyv from 'keyv'
 
-export type Role = 'user' | 'assistant' | 'system' | 'function'
+export type Role = 'user' | 'assistant' | 'system' | 'function' | 'tool'
 // @ts-ignore
 import fetch from 'node-fetch'
 export type FetchFn = typeof fetch
@@ -41,6 +41,7 @@ export type SendMessageOptions = {
      * function role name
      */
     name?: string
+    toolCallId?: string
     parentMessageId?: string
     conversationId?: string
     messageId?: string
@@ -84,6 +85,7 @@ export interface ChatMessage {
     conversationId?: string
     functionCall?: openai.FunctionCall,
     toolCalls?: openai.ToolCall[],
+    toolCallId?: string,
 }
 
 export class ChatGPTError extends Error {
@@ -242,7 +244,8 @@ export namespace openai {
          */
         name?: string
         function_call?: FunctionCall
-        tool_calls?: ToolCall,
+        tool_calls?: ToolCall[]
+        tool_call_id?: string
         // required todo
         // tool_choice?: 'none' | 'auto' | 'required'
     }
@@ -268,6 +271,7 @@ export namespace openai {
         readonly User: 'user'
         readonly Assistant: 'assistant'
         readonly Function: 'function'
+        readonly Tool: 'tool'
     }
     export declare type ChatCompletionRequestMessageRoleEnum =
         (typeof ChatCompletionRequestMessageRoleEnum)[keyof typeof ChatCompletionRequestMessageRoleEnum]

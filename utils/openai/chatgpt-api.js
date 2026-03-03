@@ -160,7 +160,8 @@ var ChatGPTAPI = /** @class */ (function () {
                             conversationId: conversationId,
                             parentMessageId: parentMessageId,
                             text: text,
-                            name: opts.name
+                            name: opts.name,
+                            toolCallId: opts.toolCallId
                         };
                         latestQuestion = message;
                         return [4 /*yield*/, this._buildMessages(text, role, opts, completionParams)];
@@ -444,7 +445,8 @@ var ChatGPTAPI = /** @class */ (function () {
                                 {
                                     role: role,
                                     content: text,
-                                    name: opts.name
+                                    name: opts.name,
+                                    tool_call_id: opts.toolCallId
                                 }
                             ])
                             : messages;
@@ -460,6 +462,9 @@ var ChatGPTAPI = /** @class */ (function () {
                                 case 'user':
                                     return prompt.concat(["".concat(userLabel, ":\n").concat(message.content)]);
                                 case 'function':
+                                    // leave behind
+                                    return prompt;
+                                case 'tool':
                                     // leave behind
                                     return prompt;
                                 case 'assistant':
@@ -509,10 +514,11 @@ var ChatGPTAPI = /** @class */ (function () {
                         nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
                             {
                                 role: parentMessageRole,
-                                content: parentMessage.text,
+                                content: parentMessage.text || '',
                                 name: parentMessage.name,
-                                function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                                // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
+                                function_call: parentMessage.toolCalls ? undefined : (parentMessage.functionCall ? parentMessage.functionCall : undefined),
+                                tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined,
+                                tool_call_id: parentMessage.toolCallId
                             }
                         ], nextMessages.slice(systemMessageOffset), true));
                         parentMessageId = parentMessage.parentMessageId;
@@ -521,6 +527,20 @@ var ChatGPTAPI = /** @class */ (function () {
                         if (true) return [3 /*break*/, 1];
                         _d.label = 9;
                     case 9:
+                        if (!(text && messages.length <= systemMessageOffset)) return [3 /*break*/, 11];
+                        messages = [
+                            {
+                                role: role,
+                                content: text,
+                                name: opts.name,
+                                tool_call_id: opts.toolCallId
+                            }
+                        ];
+                        return [4 /*yield*/, this._getTokenCount(text)];
+                    case 10:
+                        numTokens = _d.sent();
+                        _d.label = 11;
+                    case 11:
                         maxTokens = Math.max(1, Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens));
                         return [2 /*return*/, { messages: messages, maxTokens: maxTokens, numTokens: numTokens }];
                 }
