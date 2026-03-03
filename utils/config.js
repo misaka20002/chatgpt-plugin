@@ -269,6 +269,10 @@ const defaultConfig = {
   // 触发对话的概率，百分比。比如5%就写5
   bymRate: 5,
   bymDisableGroup: [],
+  // 在线表情包工具接口前缀，可用 {tags} 占位符；例如：
+  // http://your-domain/api/v1/external/images/random?api_key=YOUR_KEY&tags={tags}&count=1
+  switch_onlineEmojiTool: false,
+  onlineEmojiApiPrefix: '',
   // 伪人模式触发骂人反击的关键词
   bymFuckList: [
     '艹'

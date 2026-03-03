@@ -1295,6 +1295,18 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'switch_onlineEmojiTool',
+          label: '工具新增-在线表情包',
+          bottomHelpMessage: '新增在线随机表情包工具 sendOnlineEmoji（按AI当前情绪自动映射中文标签，如生气/高兴）。需要同时配置“在线表情包URL前缀”。',
+          component: 'Switch'
+        },
+        {
+          field: 'onlineEmojiApiPrefix',
+          label: '在线表情包URL前缀',
+          bottomHelpMessage: '支持 {tags} 占位符。示例：http://your-domain/api/v1/external/images/random?api_key=YOUR_KEY&tags={tags}&count=1 。若不写 {tags}，工具会自动覆盖或追加 tags 参数。',
+          component: 'Input'
+        },
+        {
           field: 'add_sf_image_edit',
           label: '工具新增-Gemini Image',
           bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',

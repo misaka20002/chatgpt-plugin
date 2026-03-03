@@ -71,6 +71,7 @@ import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResult
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
+import { OnlineEmojiTool } from '../utils/tools/OnlineEmojiTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 
 export const roleMap = {
@@ -1041,6 +1042,11 @@ async function collectTools(e) {
   if (Config.switch_EmojiTool) {
     tools.push(...[new EmojiTool()])
     fullTools.push(...[new EmojiTool()])
+  }
+
+  if (Config.switch_onlineEmojiTool && Config.onlineEmojiApiPrefix) {
+    tools.push(...[new OnlineEmojiTool()])
+    fullTools.push(...[new OnlineEmojiTool()])
   }
 
   if (Config.enableMemory) {
