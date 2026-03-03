@@ -13,17 +13,7 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
 export async function recognitionResultsByGemini(e, img = [], video = []) {
   if (Config.geminiKey) {
     // 确定目标 URL 和类型
-    let targetUrl = null
-    let isVideo = false
-
-    // 优先识别视频url
-    if (video && video.length > 0) {
-      targetUrl = video[0]
-      isVideo = true
-    } else if (img && img.length > 0) {
-      targetUrl = img[0]
-      isVideo = false
-    }
+    let { targetUrl, isVideo } = getMediaTargetUrl(e);
 
     if (targetUrl) {
       let client = new CustomGoogleGeminiClient({
@@ -503,4 +493,30 @@ export function splitString_Enter(str, chunkSize = 1000) {
     result.push(currentChunk);
   }
   return result;
+}
+
+/**
+ * 从传入的对象中提取目标URL和类型，优先返回单个视频URL，无视频时返回单个图片URL
+ * @param {Object} e - 包含视频/图片URL的源对象
+ * @returns {Object} 包含目标URL和类型的对象 { targetUrl: string|null, isVideo: boolean }
+ */
+export function getMediaTargetUrl(e) {
+  let targetUrl = null
+  let isVideo = false
+
+  const videoUrl = e.get_Video && Array.isArray(e.get_Video) && e.get_Video.length > 0
+    ? e.get_Video[0].url
+    : null;
+
+  if (videoUrl) {
+    targetUrl = videoUrl
+    isVideo = true
+  } else {
+    if (e.img && Array.isArray(e.img) && e.img.length > 0) {
+      targetUrl = e.img[0]
+      isVideo = false
+    }
+  }
+
+  return { targetUrl, isVideo }
 }
