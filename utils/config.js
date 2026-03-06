@@ -315,6 +315,7 @@ const defaultConfig = {
   mediaMaxSizeInMB: 5,
   enableEmojiLikeTool: true,
   mediaRecognitionSource: "Gemini",
+  gemini_fallbackModel: "gemini-2.5-flash",
   ScheduleTask_Tool: true,
   rateLimiting: 0,
 

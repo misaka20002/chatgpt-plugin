@@ -96,7 +96,7 @@ export const HarmBlockThreshold = {
  */
 
 export class CustomGoogleGeminiClient extends GoogleGeminiClient {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.model = props.model
     this.baseUrl = props.baseUrl || BASEURL
@@ -125,11 +125,43 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     toolMode: 'AUTO' | 'ANY' | 'NONE'
    *     search: boolean,
    *     codeExecution: boolean,
+   *     retryConfig: {origRetry?: number, fallbackModel?: string, fallbackRetry?: number, isFallback?: boolean},
    * }} opt
-   * @param {number} retryTime 重试次数
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
-  async sendMessage (text, opt = {}, retryTime = 10) {
+  async sendMessage(text, opt = {}) {
+    /** 重试配置 */
+    const retryConfig = {
+      origRetry: 5,
+      fallbackModel: Config.gemini_fallbackModel || 'gemini-2.5-flash',
+      fallbackRetry: 5,
+      isFallback: false,
+      ...opt.retryConfig // 允许外部覆盖默认值，并在递归中透传状态
+    };
+
+    const executeRetry = async (logMsg, terminalAction) => {
+      const nextOpt = { ...opt, retryConfig };
+      if (!retryConfig.isFallback) {
+        if (retryConfig.origRetry > 0) {
+          retryConfig.origRetry--;
+          logger.warn(`[chatgpt] ${logMsg} 。模型[${this.model}]重试剩余 ${retryConfig.origRetry} 次`);
+          return this.sendMessage(text, nextOpt);
+        } else {
+          logger.warn(`[chatgpt][备用模型] 切换至模型[${retryConfig.fallbackModel}]`);
+          retryConfig.isFallback = true;
+          return this.sendMessage(text, nextOpt);
+        }
+      } else {
+        if (retryConfig.fallbackRetry > 0) {
+          retryConfig.fallbackRetry--;
+          logger.warn(`[chatgpt][备用模型] ${logMsg} 。模型[${retryConfig.fallbackModel}]重试剩余 ${retryConfig.fallbackRetry} 次`);
+          return this.sendMessage(text, nextOpt);
+        } else {
+          return terminalAction();
+        }
+      }
+    };
+
     if (!opt.toolChain) {
       opt.toolChain = {
         depth: 0,
@@ -165,18 +197,18 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     const thisMessage = opt.functionResponse?.length > 0
       ? {
-          role: 'user',
-          // parts: [{
-          //   functionResponse: opt.functionResponse
-          // }],
-          parts: opt.functionResponse.map(i => {
-            return {
-              functionResponse: i
-            }
-          }),
-          id: idThis,
-          parentMessageId: opt.parentMessageId || undefined
-        }
+        role: 'user',
+        // parts: [{
+        //   functionResponse: opt.functionResponse
+        // }],
+        parts: opt.functionResponse.map(i => {
+          return {
+            functionResponse: i
+          }
+        }),
+        id: idThis,
+        parentMessageId: opt.parentMessageId || undefined
+      }
       : {
         role: 'user',
         parts: text ? [{ text }] : [],
@@ -204,7 +236,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       })
     }
     history.push(_.cloneDeep(thisMessage))
-    let url = `${this.baseUrl}/v1beta/models/${this.model}:generateContent`
+
+    // retryConfig 根据是否处于备用模式决定使用的模型名称
+    const modelToUse = retryConfig.isFallback ? retryConfig.fallbackModel : this.model;
+    let url = `${this.baseUrl}/v1beta/models/${modelToUse}:generateContent`
+
     let body = {
       // 不去兼容官方的简单格式了，直接用，免得function还要转换
       /**
@@ -212,26 +248,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
        */
       contents: history,
       safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.OFF
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.OFF
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.OFF
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.OFF
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-          threshold: HarmBlockThreshold.BLOCK_NONE
-        }
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.OFF },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.OFF },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.OFF },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.OFF },
+        { category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, threshold: HarmBlockThreshold.BLOCK_NONE }
       ],
       generationConfig: {
         maxOutputTokens: opt.maxOutputTokens || 4096,
@@ -257,9 +278,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       // ANY要笑死人的效果
       let mode = opt.toolMode || 'AUTO'
       let lastFuncName = (/** @type {FunctionResponse[] | undefined}**/ opt.functionResponse)?.map(rsp => rsp.name)
-      const mustSendNextTurn = [
-        'searchImage', 'searchMusic', 'searchVideo'
-      ]
+      const mustSendNextTurn = ['searchImage', 'searchMusic', 'searchVideo']
       if (lastFuncName && lastFuncName?.find(name => mustSendNextTurn.includes(name))) {
         mode = 'ANY'
       }
@@ -296,13 +315,13 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         'x-goog-api-key': this._key
       }
     })
+
+    // 应用新的 executeRetry 处理错误
     if (result.status !== 200) {
       const errorText = await result.text()
-      if (retryTime <= 0) {
+      return await executeRetry(`Gemini API 错误 (${result.status}), 错误信息: ${errorText}`, () => {
         throw new Error(errorText)
-      }
-      logger.warn(`[chatgpt] Gemini API 错误 (${result.status}),进行重试。错误信息: ${errorText}`)
-      return this.sendMessage(text, opt, --retryTime)
+      });
     }
     /**
      * @type {Content | undefined}
@@ -315,63 +334,53 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (this.debug) {
       console.log(JSON.stringify(response))
     }
-    
+
     // 检查响应中是否包含错误
     if (response.error) {
-      if (retryTime <= 0) {
+      return await executeRetry(`Gemini API 返回错误: ${JSON.stringify(response.error)}`, () => {
         throw new Error(JSON.stringify(response.error))
-      }
-      logger.warn(`[chatgpt] Gemini API 返回错误,进行重试。错误信息: ${JSON.stringify(response.error)}`)
-      return this.sendMessage(text, opt, --retryTime)
+      });
     }
-    
+
     // 检查 candidates 是否存在
     if (!response.candidates || response.candidates.length === 0) {
-      if (retryTime <= 0) {
+      return await executeRetry(`API 返回的 candidates 为空`, () => {
         throw new Error('API 返回的 candidates 为空,重试次数已用完')
-      }
-      logger.warn('[chatgpt] API 返回的 candidates 为空,进行重试。')
-      return this.sendMessage(text, opt, --retryTime)
+      });
     }
-    
+
     responseContent = response.candidates[0].content
     let groundingMetadata = response.candidates[0].groundingMetadata
     if (response.candidates[0].finishReason === 'MALFORMED_FUNCTION_CALL') {
-      if (retryTime <= 0) {
+      return await executeRetry(`遇到 MALFORMED_FUNCTION_CALL 错误`, () => {
         throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误,重试次数已用完')
-      }
-      logger.warn('[chatgpt] 遇到 MALFORMED_FUNCTION_CALL 错误,进行重试。')
-      return this.sendMessage(text, opt, --retryTime)
+      });
     }
-    
+
     // 检查 responseContent 是否为空
     if (!responseContent || !responseContent.parts || responseContent.parts.length === 0) {
-      if (retryTime <= 0) {
+      return await executeRetry(`responseContent.parts 为空`, () => {
         throw new Error('responseContent.parts 为空,重试次数已用完')
-      }
-      logger.warn('[chatgpt] responseContent.parts 为空,进行重试。')
-      return this.sendMessage(text, opt, --retryTime)
+      });
     }
-    
+
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
-      
+
       const repeatedTool = toolNames.find(name => opt.toolChain.calledTools.includes(name));
-      
+
       if (opt.toolChain.depth >= 2 || repeatedTool) {
         const responseText = responseContent.parts.find(i => i.text)?.text;
-        if(!responseText){
-          if (retryTime <= 0) {
+        if (!responseText) {
+          return await executeRetry(`responseContent.parts 中未找到文本内容`, () => {
             return {
               text: '操作已完成',
               conversationId: '',
               parentMessageId: idThis,
               id: idModel
             };
-          }
-          logger.warn('[chatgpt] responseContent.parts 中未找到文本内容,进行重试。');
-          return this.sendMessage(text, opt, --retryTime);
+          });
         }
         return {
           text: responseText,
@@ -383,7 +392,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       // functionCall - 提取所有的 functionCall 部分（保留原始顺序）
       const functionCallParts = responseContent.parts.filter(i => i.functionCall)
       const functionCall = functionCallParts.map(i => i.functionCall)
-      
+
       // 提取 thoughtSignatures - 按照文档规则处理
       // 单次调用：第一个 functionCall 包含签名
       // 并行调用：只有第一个 functionCall 包含签名
@@ -391,7 +400,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       const thoughtSignatures = functionCallParts
         .map(part => part.functionCall?.thoughtSignature)
         .filter(sig => sig !== undefined && sig !== null)
-      
+
       const replyText = responseContent.parts.find(i => i.text)?.text
       if (replyText && replyText.trim()) {
         // send reply first
@@ -440,7 +449,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             content: null
           }
         }
-        
+
         // 关键：保留 thoughtSignature
         // 根据文档：
         // - 单次调用：只有一个签名，添加到唯一的 response
@@ -449,7 +458,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         if (fc.thoughtSignature) {
           functionResponse.thoughtSignature = fc.thoughtSignature
         }
-        
+
         if (!chosenTool) {
           // 根本没有这个工具！
           functionResponse.response.content = {
@@ -504,6 +513,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         parentMessageId: idThis
       })
       await this.upsertMessage(respMessage)
+
+      // 函数调用产生的下一次对话不再传带有降级进度的 opt.retryConfig，重新应用默认的初始重试配置
       return await this.sendMessage('', responseOpt)
     }
     if (responseContent) {
@@ -544,7 +555,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
  * @param {Content} responseContent
  * @returns {{final: string, responseContent}}
  */
-function handleSearchResponse (responseContent) {
+function handleSearchResponse(responseContent) {
   let final = ''
 
   // 如果 responseContent 不存在或没有 parts,直接返回

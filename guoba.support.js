@@ -651,7 +651,16 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-2.0-flash；推荐：gemini-exp-1206,gemini-2.0-flash-thinking-exp-01-21；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
+          bottomHelpMessage: '默认值：gemini-2.5-flash；推荐：gemini-exp-1206,gemini-2.0-flash-thinking-exp-01-21；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
+          component: 'Select',
+          componentProps: {
+            options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
+          }
+        },
+        {
+          field: 'gemini_fallbackModel',
+          label: '失败回退模型',
+          bottomHelpMessage: '模型返回错误后改用这个备用模型尝试，默认值：gemini-2.5-flash；',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
