@@ -327,29 +327,29 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳随机表情包生效]')
                 }
-                let mutetype = Math.ceil(Math.random() * 14)
+                let mutetype = Math.ceil(Math.random() * 15)
                 switch (mutetype) {
                     case 1:
-                        await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
-                        break;
+                        // await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
+                        // break;
                     case 2:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
-                        break;
+                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
+                        // break;
                     case 3:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
-                        break;
+                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
+                        // break;
                     case 4:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
-                        break;
+                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
+                        // break;
                     case 5:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
-                        break;
-                    case 6:
-                        await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
-                        break;
-                    case 7:
                         await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bqwebp"))))
                         break;
+                    case 6:
+                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
+                        // break;
+                    case 7:
+                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
+                        // break;
                     case 8:
                         // await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bq_img"))))
                         // break;
@@ -401,7 +401,7 @@ export class PaimonChuo extends plugin {
                                 },
                             ]
                             // 轮到派蒙撅你咯
-                            if (Math.random() < 0.1) {
+                            if (Math.random() < 0.2) {
                                 const botinfo = await e.bot.getGroupMemberInfo?.(e.group_id, e.self_id) || await e.bot.pickMember?.(e.group_id, e.self_id)
                                 e.sender = botinfo
                                 e.user_id = e.self_id
@@ -1782,11 +1782,11 @@ function getRandomUrl(type) {
             // "https://cdn.seovx.com/d/?mom=302",
         ],
         "scy": [ // 三次元
-            "https://api.btstu.cn/sjbz/api.php",
+            // "https://api.btstu.cn/sjbz/api.php",
             // "https://i18.net/cos.php",
             // "https://i18.net/bing.php",
             "https://t.alcy.cc/fj", // 三次元 webp格式
-            "https://api.btstu.cn/sjbz/api.php",
+            // "https://api.btstu.cn/sjbz/api.php",
             "https://api.lolimi.cn/API/tup/xjj.php",
             // "https://api.likepoems.com/img/nature",
             // "https://api.likepoems.com/img/bing",
