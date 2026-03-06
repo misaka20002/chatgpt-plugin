@@ -752,6 +752,7 @@ export class chatgpt extends plugin {
     }
 
     /** 备份用户最初的 e.msg */
+    const rawUserMsgForMemory = String(e.msg || '')
     e.msg_bak_2 = e.msg
 
     let userSetting = await getUserReplySetting(this.e)
@@ -954,6 +955,10 @@ export class chatgpt extends plugin {
     if (Config.enableMemory) {
       try {
         const { UserMemory } = await import('../utils/userMemory.js')
+        const autoExtractResult = await UserMemory.autoExtractAndSaveFromMessage(e, rawUserMsgForMemory)
+        if (autoExtractResult.saved > 0) {
+          logger.info(`[Memory] 自动提取保存 ${autoExtractResult.saved} 条记忆 - 用户 ${e.user_id}`)
+        }
         const memories = await UserMemory.getUserMemories(
           e.user_id,
           Config.memoryContextLimit,

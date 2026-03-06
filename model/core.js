@@ -1183,6 +1183,9 @@ async function collectTools(e) {
   }
 
   let systemAddition = ''
+  if (Config.enableMemory) {
+    systemAddition += '\nWhen user reveals stable profile/preference/emotion/event information that helps future conversations, call save_memory once with concise content and proper importance (4-9). Avoid trivial or duplicate memories.'
+  }
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
     if (botInfo.role !== 'member') {

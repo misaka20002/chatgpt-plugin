@@ -90,6 +90,178 @@ export class UserMemory {
     }
   }
 
+  static _normalizeMemoryText(text = '') {
+    return String(text || '')
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/[，。！？、,.!?;:：；"'`~@#$%^&*()_\-+=\[\]{}<>]/g, '')
+      .trim()
+  }
+
+  static _isDuplicateMemory(candidate, existingMemories = []) {
+    if (!candidate || !candidate.content) return true
+    const next = this._normalizeMemoryText(candidate.content)
+    if (!next) return true
+    return existingMemories.some(m => {
+      if (!m || m.memoryType !== candidate.memoryType) return false
+      const old = this._normalizeMemoryText(m.content)
+      if (!old) return false
+      return old === next || old.includes(next) || next.includes(old)
+    })
+  }
+
+  static _extractMemoriesFromUserMessage(text = '') {
+    const source = String(text || '').trim()
+    if (!source) return []
+    if (source.startsWith('#')) return []
+    if (source.length < 6 || source.length > 220) return []
+
+    const pushUnique = (arr, item) => {
+      if (!item || !item.content) return
+      const key = `${item.memoryType}:${this._normalizeMemoryText(item.content)}`
+      if (!arr.some(x => `${x.memoryType}:${this._normalizeMemoryText(x.content)}` === key)) {
+        arr.push(item)
+      }
+    }
+
+    const result = []
+    let m
+
+    // 用户画像
+    m = source.match(/(?:我叫|我是|本人是|我现在是)([^，。！？\n]{1,24})/)
+    if (m?.[1]) {
+      pushUnique(result, {
+        memoryType: 'user_profile',
+        content: `用户自述身份：${m[1].trim()}`,
+        importance: 6,
+        tags: ['身份']
+      })
+    }
+
+    m = source.match(/(?:我在|我住在|我来自|来自)([^，。！？\n]{1,24})/)
+    if (m?.[1]) {
+      pushUnique(result, {
+        memoryType: 'user_profile',
+        content: `用户所在地：${m[1].trim()}`,
+        importance: 5,
+        tags: ['地区']
+      })
+    }
+
+    // 偏好
+    m = source.match(/(?:我喜欢|我最喜欢|我爱|我偏好)([^，。！？\n]{1,30})/)
+    if (m?.[1]) {
+      pushUnique(result, {
+        memoryType: 'preference',
+        content: `用户偏好：喜欢${m[1].trim()}`,
+        importance: 5,
+        tags: ['喜欢']
+      })
+    }
+
+    m = source.match(/(?:我讨厌|我不喜欢)([^，。！？\n]{1,30})/)
+    if (m?.[1]) {
+      pushUnique(result, {
+        memoryType: 'preference',
+        content: `用户偏好：不喜欢${m[1].trim()}`,
+        importance: 5,
+        tags: ['不喜欢']
+      })
+    }
+
+    // 情绪
+    m = source.match(/我(?:今天|现在|最近)?(?:真的|有点|挺|很|太)?(开心|高兴|兴奋|难过|伤心|生气|烦|焦虑|崩溃|抑郁|委屈|紧张)/)
+    if (m?.[1]) {
+      pushUnique(result, {
+        memoryType: 'emotional_memory',
+        content: `用户当前情绪：${m[1].trim()}`,
+        importance: 6,
+        tags: ['情绪']
+      })
+    }
+
+    // 事件/约定
+    if (/(明天|后天|今晚|下周|周[一二三四五六日天]|\d{1,2}[点时分])/.test(source)
+      && /(提醒|记得|要|约|安排|考试|面试|开会|上课|打卡|ddl|截止)/i.test(source)) {
+      const snippet = source.length > 80 ? `${source.slice(0, 80)}...(truncated)` : source
+      pushUnique(result, {
+        memoryType: 'event',
+        content: `用户提到待办/时间安排：${snippet}`,
+        importance: 7,
+        tags: ['待办', '时间']
+      })
+    }
+
+    // 明确要求记住
+    if (/(请记住|记一下|记住这件事|别忘了)/.test(source)) {
+      const snippet = source.length > 80 ? `${source.slice(0, 80)}...(truncated)` : source
+      pushUnique(result, {
+        memoryType: 'event',
+        content: `用户要求记住：${snippet}`,
+        importance: 8,
+        tags: ['用户要求']
+      })
+    }
+
+    return result.slice(0, 2)
+  }
+
+  static async autoExtractAndSaveFromMessage(e, text = '') {
+    try {
+      if (!Config.enableMemory) {
+        return { success: false, saved: 0, reason: 'memory_disabled' }
+      }
+      const userId = e?.user_id || e?.sender?.user_id
+      if (!userId) {
+        return { success: false, saved: 0, reason: 'missing_user_id' }
+      }
+
+      const cooldownKey = `CHATGPT:MEMORY:AUTO_COOLDOWN:${userId}`
+      const inCooldown = await redis.get(cooldownKey)
+      if (inCooldown) {
+        return { success: true, saved: 0, reason: 'cooldown' }
+      }
+
+      const candidates = this._extractMemoriesFromUserMessage(text)
+      if (!candidates.length) {
+        return { success: true, saved: 0, reason: 'no_candidate' }
+      }
+
+      const existingMemories = await this.getUserMemories(userId, 100, 1)
+      let saved = 0
+
+      for (const candidate of candidates) {
+        if (this._isDuplicateMemory(candidate, existingMemories)) continue
+        const memory = {
+          timestamp: Date.now(),
+          date: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+          userId,
+          groupId: e?.group_id || null,
+          isGroup: Boolean(e?.isGroup),
+          userMsg: String(text || ''),
+          userName: e?.sender?.card || e?.sender?.nickname || '未知',
+          memoryType: candidate.memoryType,
+          content: candidate.content,
+          importance: candidate.importance,
+          tags: Array.isArray(candidate.tags) ? candidate.tags : []
+        }
+        const saveRet = await this.saveMemory(memory)
+        if (saveRet?.success) {
+          saved++
+          existingMemories.unshift(memory)
+        }
+      }
+
+      if (saved > 0) {
+        await redis.set(cooldownKey, '1', { EX: 90 })
+      }
+      return { success: true, saved, reason: saved > 0 ? 'saved' : 'all_duplicate' }
+    } catch (err) {
+      logger.error('[Memory] 自动提取记忆失败:', err)
+      return { success: false, saved: 0, reason: err.message || 'unknown_error' }
+    }
+  }
+
   /**
    * 根据标签搜索记忆
    * @param {string} userId - 用户ID
