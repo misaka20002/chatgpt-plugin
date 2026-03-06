@@ -142,7 +142,7 @@ var ChatGPTAPI = /** @class */ (function () {
         if (opts === void 0) { opts = {}; }
         if (role === void 0) { role = 'user'; }
         return __awaiter(this, void 0, void 0, function () {
-            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, message, latestQuestion, extraMessages, normalizedExtraMessages, lastInputMessageId, i, extra, extraId, _c, messages, maxTokens, numTokens, result, responseP;
+            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, primaryInputContent, message, latestQuestion, extraMessages, normalizedExtraMessages, lastInputMessageId, i, extra, extraId, _c, messages, maxTokens, numTokens, result, responseP;
             var _this = this;
             return __generator(this, function (_d) {
                 switch (_d.label) {
@@ -154,12 +154,14 @@ var ChatGPTAPI = /** @class */ (function () {
                             abortController = new AbortController();
                             abortSignal = abortController.signal;
                         }
+                        primaryInputContent = this._buildInputContent(role, text, opts.imageUrls);
                         message = {
                             role: role,
                             id: messageId,
                             conversationId: conversationId,
                             parentMessageId: parentMessageId,
                             text: text,
+                            content: primaryInputContent,
                             name: opts.name,
                             toolCallId: opts.toolCallId
                         };
@@ -176,6 +178,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                 conversationId: conversationId,
                                 parentMessageId: lastInputMessageId,
                                 text: typeof extra.text === 'string' ? extra.text : String(extra.text || ''),
+                                content: typeof extra.text === 'string' ? extra.text : String(extra.text || ''),
                                 name: extra.name,
                                 toolCallId: extra.toolCallId
                             });
@@ -463,7 +466,7 @@ var ChatGPTAPI = /** @class */ (function () {
     ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams, additionalMessages) {
         var _this = this;
         return __awaiter(this, void 0, void 0, function () {
-            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, currentInputMessages, inputContent, i, inputMessage, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, fallbackText, maxTokens;
+            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, currentInputMessages, hasPrimaryTextInput, hasPrimaryImageInput, inputContent, i, inputMessage, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, fallbackText, maxTokens;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -481,10 +484,14 @@ var ChatGPTAPI = /** @class */ (function () {
                         }
                         systemMessageOffset = messages.length;
                         currentInputMessages = [];
-                        if (text) {
-                            inputContent = (role === 'user' && Array.isArray(opts.imageUrls) && opts.imageUrls.length > 0)
-                                ? this._buildMultimodalUserContent(text, opts.imageUrls)
-                                : text;
+                        hasPrimaryTextInput = typeof text === 'string'
+                            ? text.length > 0
+                            : Boolean(text);
+                        hasPrimaryImageInput = role === 'user'
+                            && Array.isArray(opts.imageUrls)
+                            && opts.imageUrls.length > 0;
+                        if (hasPrimaryTextInput || hasPrimaryImageInput) {
+                            inputContent = this._buildInputContent(role, text, opts.imageUrls);
                             currentInputMessages.push({
                                 role: role,
                                 content: inputContent,
@@ -500,7 +507,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                 }
                                 currentInputMessages.push({
                                     role: inputMessage.role,
-                                    content: inputMessage.text || '',
+                                    content: inputMessage.content !== undefined ? inputMessage.content : (inputMessage.text || ''),
                                     name: inputMessage.name,
                                     tool_call_id: inputMessage.toolCallId
                                 });
@@ -574,7 +581,7 @@ var ChatGPTAPI = /** @class */ (function () {
                         nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
                             {
                                 role: parentMessageRole,
-                                content: parentMessage.text || '',
+                                content: parentMessage.content !== undefined ? parentMessage.content : (parentMessage.text || ''),
                                 name: parentMessage.name,
                                 function_call: parentMessage.toolCalls ? undefined : (parentMessage.functionCall ? parentMessage.functionCall : undefined),
                                 tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined,
@@ -679,9 +686,38 @@ var ChatGPTAPI = /** @class */ (function () {
         }
         return parts;
     };
+    ChatGPTAPI.prototype._buildInputContent = function (role, text, imageUrls) {
+        if (role === 'user' && Array.isArray(imageUrls) && imageUrls.length > 0) {
+            return this._buildMultimodalUserContent(text, imageUrls);
+        }
+        return text;
+    };
     ChatGPTAPI.prototype._compactMessageForHistory = function (message) {
         if (!message) {
             return message;
+        }
+        if (message.role === 'user' && Array.isArray(message.content)) {
+            var compactParts = [];
+            var imageCount = 0;
+            for (var _i = 0, _a = message.content; _i < _a.length; _i++) {
+                var part = _a[_i];
+                if (!part || typeof part !== 'object') {
+                    continue;
+                }
+                if (part.type === 'text') {
+                    var text = String(part.text || '').trim();
+                    compactParts.push({
+                        type: 'text',
+                        text: text.length > 500 ? "".concat(text.slice(0, 500), "...(truncated)") : text
+                    });
+                    continue;
+                }
+                if (part.type === 'image_url' && imageCount < 1) {
+                    compactParts.push(part);
+                    imageCount++;
+                }
+            }
+            return __assign(__assign({}, message), { content: compactParts });
         }
         if (message.role !== 'tool' && message.role !== 'function') {
             return message;

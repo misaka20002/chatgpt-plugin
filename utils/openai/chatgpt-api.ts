@@ -157,6 +157,7 @@ export class ChatGPTAPI {
             abortController = new AbortController()
             abortSignal = abortController.signal
         }
+        const primaryInputContent = this._buildInputContent(role, text, opts.imageUrls)
 
         const message: types.ChatMessage = {
             role,
@@ -164,6 +165,7 @@ export class ChatGPTAPI {
             conversationId,
             parentMessageId,
             text,
+            content: primaryInputContent,
             name: opts.name,
             toolCallId: opts.toolCallId
         }
@@ -180,6 +182,7 @@ export class ChatGPTAPI {
                 conversationId,
                 parentMessageId: lastInputMessageId,
                 text: typeof extraMessage?.text === 'string' ? extraMessage.text : String(extraMessage?.text || ''),
+                content: typeof extraMessage?.text === 'string' ? extraMessage.text : String(extraMessage?.text || ''),
                 name: extraMessage?.name,
                 toolCallId: extraMessage?.toolCallId
             })
@@ -483,10 +486,14 @@ export class ChatGPTAPI {
 
         const systemMessageOffset = messages.length
         const currentInputMessages: types.openai.ChatCompletionRequestMessage[] = []
-        if (text) {
-            const inputContent = (role === 'user' && Array.isArray(opts.imageUrls) && opts.imageUrls.length > 0)
-                ? this._buildMultimodalUserContent(text, opts.imageUrls)
-                : text
+        const hasPrimaryTextInput = typeof text === 'string'
+            ? text.length > 0
+            : Boolean(text)
+        const hasPrimaryImageInput = role === 'user'
+            && Array.isArray(opts.imageUrls)
+            && opts.imageUrls.length > 0
+        if (hasPrimaryTextInput || hasPrimaryImageInput) {
+            const inputContent = this._buildInputContent(role, text, opts.imageUrls)
             currentInputMessages.push({
                 role,
                 content: inputContent,
@@ -499,7 +506,7 @@ export class ChatGPTAPI {
                 if (!inputMessage) continue
                 currentInputMessages.push({
                     role: inputMessage.role,
-                    content: inputMessage.text || '',
+                    content: inputMessage.content ?? inputMessage.text || '',
                     name: inputMessage.name,
                     tool_call_id: inputMessage.toolCallId
                 })
@@ -617,7 +624,7 @@ export class ChatGPTAPI {
             nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
                 {
                     role: parentMessageRole,
-                    content: parentMessage.text || '',
+                    content: parentMessage.content ?? parentMessage.text || '',
                     name: parentMessage.name,
                     function_call: parentFunctionCall,
                     tool_calls: parentToolCalls,
@@ -701,8 +708,38 @@ export class ChatGPTAPI {
         return parts
     }
 
+    protected _buildInputContent(role: Role, text: string, imageUrls?: string[]): string | openai.ChatCompletionContentPart[] {
+        if (role === 'user' && Array.isArray(imageUrls) && imageUrls.length > 0) {
+            return this._buildMultimodalUserContent(text, imageUrls)
+        }
+        return text
+    }
+
     protected _compactMessageForHistory(message: types.ChatMessage): types.ChatMessage {
         if (!message) return message
+        if (message.role === 'user' && Array.isArray(message.content)) {
+            const compactParts: openai.ChatCompletionContentPart[] = []
+            let imageCount = 0
+            for (const part of message.content) {
+                if (!part || typeof part !== 'object') continue
+                if (part.type === 'text') {
+                    const text = String(part.text || '').trim()
+                    compactParts.push({
+                        type: 'text',
+                        text: text.length > 500 ? `${text.slice(0, 500)}...(truncated)` : text
+                    })
+                    continue
+                }
+                if (part.type === 'image_url' && imageCount < 1) {
+                    compactParts.push(part)
+                    imageCount++
+                }
+            }
+            return {
+                ...message,
+                content: compactParts
+            }
+        }
         if (message.role !== 'tool' && message.role !== 'function') {
             return message
         }

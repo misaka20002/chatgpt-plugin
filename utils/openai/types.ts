@@ -78,6 +78,7 @@ export type SendMessageBrowserOptions = {
 export interface ChatMessage {
     id: string
     text: string
+    content?: string | openai.ChatCompletionContentPart[]
     thinking_text?: string
     role: Role
     name?: string

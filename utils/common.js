@@ -788,8 +788,9 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
     }
 
     for (const val of reply) {
-      if (val.type == 'image' || i.type === 'mface') {
-        i.push(val.url)
+      // mface(大表情/GIF等) 与 image 统一按图片来源处理
+      if (val.type == 'image' || val.type === 'mface') {
+        if (val.url) i.push(val.url)
       }
       if (val.type == 'text') {
         text.push(val.text)

@@ -805,10 +805,10 @@ class Core {
         await parseSourceImg(e, false)
       }
       if (Array.isArray(e.img) && e.img.length > 0) {
-        option.imageUrls = e.img
+        option.imageUrls = [...new Set(e.img
           .map(url => String(url || '').trim())
           .filter(url => /^(https?:\/\/|data:image\/)/i.test(url))
-          .slice(0, 6)
+        )].slice(0, 4)
       }
       if (opt.enableSmart) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
@@ -1204,7 +1204,16 @@ async function collectTools(e) {
   if (e.img?.length > 0) {
     // tools.push(new ImageCaptionTool())
     // tools.push(new ProcessPictureTool())
-    promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`
+    const imageUrls = e.img
+      .map(url => String(url || '').trim())
+      .filter(url => /^(https?:\/\/|data:image\/)/i.test(url))
+      .slice(0, 1)
+    if (imageUrls.length > 0) {
+      promptAddition += `\nattached image url(for tool usage): ${imageUrls[0]}`
+      if (e.img.length > 1) {
+        promptAddition += `\n(extra attached images omitted: ${e.img.length - 1})`
+      }
+    }
   } else {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
     tools.push(new SerpImageTool_by_baidu())
