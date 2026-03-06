@@ -268,7 +268,7 @@ export function supportGuoba() {
         {
           field: 'openAiBaseUrl',
           label: 'OpenAI API/反代地址',
-          bottomHelpMessage: 'OpenAI兼容API服务器地址。注意要带上/v1。默认为https://api.openai.com/v1',
+          bottomHelpMessage: 'OpenAI兼容API服务器地址。插件在执行对话时将拼接 /chat/completions ；默认值为 https://api.openai.com/v1',
           component: 'Input'
         },
         {
@@ -290,6 +290,7 @@ export function supportGuoba() {
           component: 'InputNumber',
           componentProps: {
             min: 0,
+            step: 0.1,
             max: 2
           }
         },
