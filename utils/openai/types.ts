@@ -53,6 +53,7 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
+    imageUrls?: string[]
     extraMessages?: Array<{
         role: Role
         text: string
@@ -206,6 +207,19 @@ export type MessageContent = {
 export type MessageMetadata = any
 
 export namespace openai {
+    export type ChatCompletionContentPart =
+      | {
+        type: 'text'
+        text: string
+      }
+      | {
+        type: 'image_url'
+        image_url: {
+          url: string
+          detail?: 'auto' | 'low' | 'high'
+        }
+      }
+
     export interface CreateChatCompletionDeltaResponse {
         id: string
         object: 'chat.completion.chunk'
@@ -243,7 +257,7 @@ export namespace openai {
          * @type {string}
          * @memberof ChatCompletionRequestMessage
          */
-        content: string
+        content: string | ChatCompletionContentPart[]
         /**
          * The name of the user in a multi-user chat
          * @type {string}

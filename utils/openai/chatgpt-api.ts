@@ -484,9 +484,12 @@ export class ChatGPTAPI {
         const systemMessageOffset = messages.length
         const currentInputMessages: types.openai.ChatCompletionRequestMessage[] = []
         if (text) {
+            const inputContent = (role === 'user' && Array.isArray(opts.imageUrls) && opts.imageUrls.length > 0)
+                ? this._buildMultimodalUserContent(text, opts.imageUrls)
+                : text
             currentInputMessages.push({
                 role,
-                content: text,
+                content: inputContent,
                 name: opts.name,
                 tool_call_id: opts.toolCallId
             })
@@ -555,11 +558,12 @@ export class ChatGPTAPI {
         do {
             const prompt = nextMessages
                 .reduce((prompt, message) => {
+                    const messageText = this._contentToPromptText(message.content)
                     switch (message.role) {
                         case 'system':
-                            return prompt.concat([`Instructions:\n${message.content}`])
+                            return prompt.concat([`Instructions:\n${messageText}`])
                         case 'user':
-                            return prompt.concat([`${userLabel}:\n${message.content}`])
+                            return prompt.concat([`${userLabel}:\n${messageText}`])
                         case 'function':
                             // leave behind
                             return prompt
@@ -569,7 +573,7 @@ export class ChatGPTAPI {
                         case 'assistant':
                             return prompt
                         default:
-                            return message.content ? prompt.concat([`${assistantLabel}:\n${message.content}`]) : prompt
+                            return messageText ? prompt.concat([`${assistantLabel}:\n${messageText}`]) : prompt
                     }
                 }, [] as string[])
                 .join('\n\n')
@@ -630,7 +634,7 @@ export class ChatGPTAPI {
         if (currentInputMessages.length > 0 && messages.length <= systemMessageOffset) {
             messages = currentInputMessages.slice()
             const fallbackText = currentInputMessages
-                .map(m => typeof m.content === 'string' ? m.content : '')
+                .map(m => this._contentToPromptText(m.content))
                 .join('\n')
             numTokens = await this._getTokenCount(fallbackText)
         }
@@ -666,6 +670,35 @@ export class ChatGPTAPI {
         message: types.ChatMessage
     ): Promise<void> {
         await this._messageStore.set(message.id, message)
+    }
+
+    protected _contentToPromptText(content: string | openai.ChatCompletionContentPart[]): string {
+        if (typeof content === 'string') return content
+        if (!Array.isArray(content)) return ''
+        return content.map(part => {
+            if (!part || typeof part !== 'object') return ''
+            if (part.type === 'text') return part.text || ''
+            if (part.type === 'image_url') return '[image]'
+            return ''
+        }).filter(Boolean).join('\n')
+    }
+
+    protected _buildMultimodalUserContent(text: string, imageUrls: string[]): openai.ChatCompletionContentPart[] {
+        const parts: openai.ChatCompletionContentPart[] = []
+        parts.push({ type: 'text', text: text || '' })
+        const cleanUrls = (Array.isArray(imageUrls) ? imageUrls : [])
+            .map(u => String(u || '').trim())
+            .filter(u => /^(https?:\/\/|data:image\/)/i.test(u))
+            .slice(0, 6)
+        for (const url of cleanUrls) {
+            parts.push({
+                type: 'image_url',
+                image_url: {
+                    url
+                }
+            })
+        }
+        return parts
     }
 
     protected _compactMessageForHistory(message: types.ChatMessage): types.ChatMessage {

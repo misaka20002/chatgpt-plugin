@@ -461,8 +461,9 @@ var ChatGPTAPI = /** @class */ (function () {
         configurable: true
     });
     ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams, additionalMessages) {
+        var _this = this;
         return __awaiter(this, void 0, void 0, function () {
-            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, currentInputMessages, i, inputMessage, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, fallbackText, maxTokens;
+            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, currentInputMessages, inputContent, i, inputMessage, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, fallbackText, maxTokens;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -481,9 +482,12 @@ var ChatGPTAPI = /** @class */ (function () {
                         systemMessageOffset = messages.length;
                         currentInputMessages = [];
                         if (text) {
+                            inputContent = (role === 'user' && Array.isArray(opts.imageUrls) && opts.imageUrls.length > 0)
+                                ? this._buildMultimodalUserContent(text, opts.imageUrls)
+                                : text;
                             currentInputMessages.push({
                                 role: role,
-                                content: text,
+                                content: inputContent,
                                 name: opts.name,
                                 tool_call_id: opts.toolCallId
                             });
@@ -511,11 +515,12 @@ var ChatGPTAPI = /** @class */ (function () {
                     case 1:
                         prompt_1 = nextMessages
                             .reduce(function (prompt, message) {
+                            var messageText = _this._contentToPromptText(message.content);
                             switch (message.role) {
                                 case 'system':
-                                    return prompt.concat(["Instructions:\n".concat(message.content)]);
+                                    return prompt.concat(["Instructions:\n".concat(messageText)]);
                                 case 'user':
-                                    return prompt.concat(["".concat(userLabel, ":\n").concat(message.content)]);
+                                    return prompt.concat(["".concat(userLabel, ":\n").concat(messageText)]);
                                 case 'function':
                                     // leave behind
                                     return prompt;
@@ -525,7 +530,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                 case 'assistant':
                                     return prompt;
                                 default:
-                                    return message.content ? prompt.concat(["".concat(assistantLabel, ":\n").concat(message.content)]) : prompt;
+                                    return messageText ? prompt.concat(["".concat(assistantLabel, ":\n").concat(messageText)]) : prompt;
                             }
                         }, [])
                             .join('\n\n');
@@ -585,7 +590,7 @@ var ChatGPTAPI = /** @class */ (function () {
                         if (!(currentInputMessages.length > 0 && messages.length <= systemMessageOffset)) return [3 /*break*/, 11];
                         messages = currentInputMessages.slice();
                         fallbackText = currentInputMessages
-                            .map(function (m) { return typeof m.content === 'string' ? m.content : ''; })
+                            .map(function (m) { return _this._contentToPromptText(m.content); })
                             .join('\n');
                         return [4 /*yield*/, this._getTokenCount(fallbackText)];
                     case 10:
@@ -634,6 +639,45 @@ var ChatGPTAPI = /** @class */ (function () {
                 }
             });
         });
+    };
+    ChatGPTAPI.prototype._contentToPromptText = function (content) {
+        if (typeof content === 'string') {
+            return content;
+        }
+        if (!Array.isArray(content)) {
+            return '';
+        }
+        return content
+            .map(function (part) {
+            if (!part || typeof part !== 'object') {
+                return '';
+            }
+            if (part.type === 'text') {
+                return part.text || '';
+            }
+            if (part.type === 'image_url') {
+                return '[image]';
+            }
+            return '';
+        })
+            .filter(Boolean)
+            .join('\n');
+    };
+    ChatGPTAPI.prototype._buildMultimodalUserContent = function (text, imageUrls) {
+        var parts = [];
+        parts.push({ type: 'text', text: text || '' });
+        var cleanUrls = (Array.isArray(imageUrls) ? imageUrls : [])
+            .map(function (u) { return String(u || '').trim(); })
+            .filter(function (u) { return /^(https?:\/\/|data:image\/)/i.test(u); })
+            .slice(0, 6);
+        for (var _i = 0, cleanUrls_1 = cleanUrls; _i < cleanUrls_1.length; _i++) {
+            var url = cleanUrls_1[_i];
+            parts.push({
+                type: 'image_url',
+                image_url: { url: url }
+            });
+        }
+        return parts;
     };
     ChatGPTAPI.prototype._compactMessageForHistory = function (message) {
         if (!message) {

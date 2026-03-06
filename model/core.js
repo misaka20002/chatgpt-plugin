@@ -800,6 +800,16 @@ class Core {
         }
         option = Object.assign(option, conversation)
       }
+      // 仅复用 parseSourceImg 解析后的 e.img，不做额外图片链接解析
+      if (!Array.isArray(e.img) || e.img.length === 0) {
+        await parseSourceImg(e, false)
+      }
+      if (Array.isArray(e.img) && e.img.length > 0) {
+        option.imageUrls = e.img
+          .map(url => String(url || '').trim())
+          .filter(url => /^(https?:\/\/|data:image\/)/i.test(url))
+          .slice(0, 6)
+      }
       if (opt.enableSmart) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
         let sender = e.sender.user_id
@@ -962,6 +972,7 @@ class Core {
 
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
+            option.imageUrls = undefined
             msg = await this.chatGPTApi.sendMessage(toolOutputs[0].content, option, toolOutputs[0].role)
             option.extraMessages = undefined
             await compactConsumedToolCallMessage(consumedToolCallMessageId)
