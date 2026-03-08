@@ -639,8 +639,29 @@ export class ChatGPTAPI {
         // 兜底：如果因为上下文过长导致仅保留了 system 消息（或空），至少要保留当前输入消息，
         // 否则工具返回结果会被丢弃，模型会反复发起同一个 tool call。
         if (currentInputMessages.length > 0 && messages.length <= systemMessageOffset) {
-            messages = currentInputMessages.slice()
-            const fallbackText = currentInputMessages
+            const requiresToolParent = currentInputMessages
+                .some(m => m.role === 'tool' && !!m.tool_call_id)
+            if (requiresToolParent && opts.parentMessageId) {
+                const fallbackParent = await this._getMessageById(opts.parentMessageId)
+                if (fallbackParent) {
+                    messages = [
+                        {
+                            role: fallbackParent.role || 'assistant',
+                            content: fallbackParent.content ?? fallbackParent.text || '',
+                            name: fallbackParent.name,
+                            function_call: fallbackParent.toolCalls ? undefined : (fallbackParent.functionCall || undefined),
+                            tool_calls: fallbackParent.toolCalls || undefined,
+                            tool_call_id: fallbackParent.toolCallId
+                        },
+                        ...currentInputMessages
+                    ]
+                } else {
+                    messages = currentInputMessages.slice()
+                }
+            } else {
+                messages = currentInputMessages.slice()
+            }
+            const fallbackText = messages
                 .map(m => this._contentToPromptText(m.content))
                 .join('\n')
             numTokens = await this._getTokenCount(fallbackText)

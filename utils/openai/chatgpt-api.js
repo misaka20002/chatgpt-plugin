@@ -594,16 +594,38 @@ var ChatGPTAPI = /** @class */ (function () {
                         if (true) return [3 /*break*/, 1];
                         _d.label = 9;
                     case 9:
-                        if (!(currentInputMessages.length > 0 && messages.length <= systemMessageOffset)) return [3 /*break*/, 11];
+                        if (!(currentInputMessages.length > 0 && messages.length <= systemMessageOffset)) return [3 /*break*/, 12];
+                        if (!currentInputMessages.some(function (m) { return m.role === 'tool' && !!m.tool_call_id; })) return [3 /*break*/, 11];
+                        if (!opts.parentMessageId) return [3 /*break*/, 11];
+                        return [4 /*yield*/, this._getMessageById(opts.parentMessageId)];
+                    case 10:
+                        parentMessage = _d.sent();
+                        if (parentMessage) {
+                            messages = __spreadArray([{
+                                    role: parentMessage.role || 'assistant',
+                                    content: parentMessage.content !== undefined ? parentMessage.content : (parentMessage.text || ''),
+                                    name: parentMessage.name,
+                                    function_call: parentMessage.toolCalls ? undefined : (parentMessage.functionCall ? parentMessage.functionCall : undefined),
+                                    tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined,
+                                    tool_call_id: parentMessage.toolCallId
+                                }], currentInputMessages, true);
+                        }
+                        else {
+                            messages = currentInputMessages.slice();
+                        }
+                        return [3 /*break*/, 12];
+                    case 11:
                         messages = currentInputMessages.slice();
-                        fallbackText = currentInputMessages
+                        _d.label = 12;
+                    case 12:
+                        fallbackText = messages
                             .map(function (m) { return _this._contentToPromptText(m.content); })
                             .join('\n');
                         return [4 /*yield*/, this._getTokenCount(fallbackText)];
-                    case 10:
+                    case 13:
                         numTokens = _d.sent();
-                        _d.label = 11;
-                    case 11:
+                        _d.label = 14;
+                    case 14:
                         maxTokens = Math.max(1, Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens));
                         return [2 /*return*/, { messages: messages, maxTokens: maxTokens, numTokens: numTokens }];
                 }

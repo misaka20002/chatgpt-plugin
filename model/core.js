@@ -962,18 +962,52 @@ class Core {
             const consumedToolCallMessageId = msg.id
             option.parentMessageId = msg.id
             option.name = toolOutputs[0].name
-            option.toolCallId = toolOutputs[0].toolCallId
+            const parentToolCallMessage = await getMessageById(consumedToolCallMessageId)
+            const parentToolCallIds = new Set(
+              (parentToolCallMessage?.toolCalls || [])
+                .map(toolCall => toolCall?.id)
+                .filter(Boolean)
+            )
+            const canUseToolRole = toolOutputs.length > 0
+              && toolOutputs.every(output => output.toolCallId)
+              && parentToolCallIds.size > 0
+              && toolOutputs.every(output => parentToolCallIds.has(output.toolCallId))
+            const primaryRole = canUseToolRole ? 'tool' : 'function'
+
+            option.toolCallId = canUseToolRole ? toolOutputs[0].toolCallId : undefined
             option.extraMessages = toolOutputs.slice(1).map(output => ({
-              role: output.role,
+              role: canUseToolRole ? output.role : 'function',
               name: output.name,
               text: output.content,
-              toolCallId: output.toolCallId
+              toolCallId: canUseToolRole ? output.toolCallId : undefined
             }))
 
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
             option.imageUrls = undefined
-            msg = await this.chatGPTApi.sendMessage(toolOutputs[0].content, option, toolOutputs[0].role)
+            try {
+              msg = await this.chatGPTApi.sendMessage(toolOutputs[0].content, option, primaryRole)
+            } catch (err) {
+              const errMsg = err?.message || String(err)
+              const toolCallIdMismatch = /No tool call found for function call output with call_id/i.test(errMsg)
+              if (!toolCallIdMismatch) {
+                throw err
+              }
+
+              logger.warn('[chatgpt] tool_call_id mismatch detected, retrying with legacy function role')
+              const retryOption = {
+                ...option,
+                parentMessageId: consumedToolCallMessageId,
+                name: toolOutputs[0].name,
+                toolCallId: undefined,
+                extraMessages: toolOutputs.slice(1).map(output => ({
+                  role: 'function',
+                  name: output.name,
+                  text: output.content
+                }))
+              }
+              msg = await this.chatGPTApi.sendMessage(toolOutputs[0].content, retryOption, 'function')
+            }
             option.extraMessages = undefined
             await compactConsumedToolCallMessage(consumedToolCallMessageId)
             logger.info(msg)
