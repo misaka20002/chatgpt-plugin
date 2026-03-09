@@ -716,26 +716,6 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'geminiForceToolKeywords',
-          label: 'gemini强制工具关键词',
-          bottomHelpMessage: '智能模式中，gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
-          component: 'GTags',
-          componentProps: {
-            placeholder: '请输入强制工具关键词',
-            allowAdd: true,
-            allowDel: true,
-            showPrompt: true,
-            promptProps: {
-              content: '添加新的强制工具关键词',
-              okText: '添加',
-              rules: [
-                { required: true, message: '强制工具关键词不能为空' }
-              ]
-            },
-            valueParser: (value) => value.split(',') || []
-          }
-        },
-        {
           label: '语音',
           component: 'SOFT_GROUP_BEGIN'
         },
@@ -1205,6 +1185,26 @@ export function supportGuoba() {
           label: '智能模式 开关',
           bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳；需要设置“智能模式url”',
           component: 'Switch'
+        },
+        {
+          field: 'geminiForceToolKeywords',
+          label: '强制工具关键词',
+          bottomHelpMessage: '强制工具/Agent关键词；包含这里关键词的问题一定会调用工具；目前支持 API、Gemini 接口',
+          component: 'GTags',
+          componentProps: {
+            placeholder: '请输入强制工具关键词',
+            allowAdd: true,
+            allowDel: true,
+            showPrompt: true,
+            promptProps: {
+              content: '添加新的强制工具关键词',
+              okText: '添加',
+              rules: [
+                { required: true, message: '强制工具关键词不能为空' }
+              ]
+            },
+            valueParser: (value) => value.split(',') || []
+          }
         },
         // {
         //   field: 'extraUrl',

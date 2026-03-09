@@ -755,6 +755,15 @@ class Core {
           type: "function",
           function: funcMap[k].function
         }))
+
+        if (Config.geminiForceToolKeywords && Array.isArray(Config.geminiForceToolKeywords)) {
+          let inputText = prompt || e.msg || "";
+          if (Config.geminiForceToolKeywords.some(keyword => inputText.includes(keyword))) {
+            // "required" 是 OpenAI 官方参数，意为强制模型必须调用 tools 里的至少一个工具
+            option.completionParams.tool_choice = "required";
+          }
+        }
+
         let msg
         try {
           msg = await this.chatGPTApi.sendMessage(prompt, option)
@@ -800,6 +809,12 @@ class Core {
             logger.mark(`function ${name} execution result: ${functionResult}`)
             option.parentMessageId = msg.id
             option.name = name
+
+            // 拿到工具结果后重置 tool_choice 参数，允许大模型输出自然语言回答，防止死循环无限调用工具
+            if (option.completionParams && option.completionParams.tool_choice === "required") {
+              option.completionParams.tool_choice = "auto";
+            }
+
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
             msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
