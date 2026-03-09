@@ -704,11 +704,14 @@ class Core {
         maxModelTokens,
         maxResponseTokens: Config.apiMaxToken
       }
-      let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
-      if (opts.apiBaseUrl !== defaultOpenAIAPI && openAIAccessible && !Config.openAiForceUseReverse) {
-        // 如果配了proxy(或者不在国内)，而且有反代，但是没开启强制反代,将baseurl删掉
-        delete opts.apiBaseUrl
+      if (!Config.openAiForceUseReverse) {
+        let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
+        if (opts.apiBaseUrl !== defaultOpenAIAPI && openAIAccessible) {
+          // 如果配了proxy(或者不在国内)，而且有反代，但是没开启强制反代,将baseurl删掉
+          delete opts.apiBaseUrl
+        }
       }
+
       // const client = new OpenAI({
       //   apiKey: Config.apiKey,
       //   baseURL: opts.apiBaseUrl,
@@ -755,7 +758,9 @@ class Core {
         let msg
         try {
           msg = await this.chatGPTApi.sendMessage(prompt, option)
-          logger.info(msg)
+
+          if (Config.debug) // 避免控制台刷屏
+            logger.info(msg)
 
           // 检查是否有工具调用
           while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
@@ -798,7 +803,9 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
             msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
-            logger.info(msg)
+
+            if (Config.debug) // 避免控制台刷屏
+              logger.info(msg)
 
             // 如果是函数返回结果，则跳出循环
             if (msg.conversation && msg.conversation.length > 0) {

@@ -274,7 +274,7 @@ export function supportGuoba() {
         {
           field: 'openAiForceUseReverse',
           label: '强制使用API地址',
-          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接',
+          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接；使用第三方API时请开启',
           component: 'Switch'
         },
         {
