@@ -39,8 +39,7 @@ import ChatCooldown from '../utils/chatCooldown.js'
 
 let version = Config.version
 let proxy = getProxy()
-// const isTrss = Array.isArray(Bot.uin)
-const isTrss = !Config.is_recallMsg
+const isTrss = Array.isArray(Bot.uin)
 const sleep_zz = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 import {
@@ -48,6 +47,7 @@ import {
   convertSentenceToArray,
   extractCharacterName,
   splitString_Enter,
+  processCQMessage,
 } from '../utils/paimonFuction.js'
 
 /**
@@ -511,9 +511,9 @@ export class chatgpt extends plugin {
         return false
       }
       if (e.user_id == getUin(e)) return false
-      prompt = msg.trim()
+      prompt = isTrss ? processCQMessage(e.raw_message, getUin(e)) : msg.trim()
       try {
-        if (e.isGroup) {
+        if (e.isGroup && !isTrss) {
           let mm = this.e.bot.gml
           let me = mm.get(getUin(e)) || {}
           let card = me.card
@@ -569,8 +569,6 @@ export class chatgpt extends plugin {
     // 获取用户配置
     const userData = await getUserData(e.user_id)
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
-    // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
-    prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
 
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
@@ -605,7 +603,7 @@ export class chatgpt extends plugin {
     //   }
     //   return false
     // }
-    let prompt = msg.trim()
+    let prompt = isTrss ? processCQMessage(e.raw_message, getUin(e)) : msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
       logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
@@ -614,8 +612,6 @@ export class chatgpt extends plugin {
     // 获取用户配置
     const userData = await getUserData(e.user_id)
     const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
-    // 自动化插件本月已发送xx条消息更新太快，由于延迟和缓存问题导致不同客户端不一样，at文本和获取的card不一致。因此单独处理一下
-    prompt = prompt.replace(/^｜本月已发送\d+条消息/, '')
 
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
@@ -778,11 +774,12 @@ export class chatgpt extends plugin {
     }
 
     // 处理消息中的 e.at 信息
-    if (true) {
+    if (!isTrss) { // isTrss 的传入的 prompt 从 e.msg 改为 e.raw_message 了
       const atMessages = e.message?.filter(item => item?.type === "at" && item?.qq != getUin(e));
       if (atMessages && atMessages.length > 0 && !e.theImgIsGetFromSource) {
         const atInfoList = atMessages.map(at => {
-          const name = at.text ? at.text.replace(/^@/g, '') : '未知群友';
+          const nickName = at.name || at.text;
+          const name = nickName ? nickName.replace(/^@/g, '') : '未知群友';
           const qq = at.qq ? `(QQ:${at.qq})` : '';
           return `${name}${qq}`;
         });
@@ -817,7 +814,7 @@ export class chatgpt extends plugin {
     let confirm = await redis.get('CHATGPT:CONFIRM')
     let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
     if (confirmOn) {
-      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: isTrss ? 0 : 30 })
+      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: !Config.is_recallMsg ? 0 : 30 })
     }
 
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -1432,7 +1429,7 @@ export class chatgpt extends plugin {
         // 先把“xx知道哦”回复发出去，避免过久等待合成语音
         if (Config.alsoSendText || ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
           if (Config.ttsMode === 'vits-uma-genshin-honkai' && ttsResponse.length > parseInt(Config.ttsAutoFallbackThreshold)) {
-            await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: isTrss ? 0 : 30 })
+            await this.reply(`${Config.tts_First_person}知道哦`, true, { recallMsg: !Config.is_recallMsg ? 0 : 30 })
           }
           let responseText = await convertFacesAndCQCode(response, Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, e)
           if (handler.has('chatgpt.markdown.convert')) {
@@ -1482,7 +1479,7 @@ export class chatgpt extends plugin {
         if (sendable) {
           await this.reply(sendable)
         } else {
-          await this.reply(`${Config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: isTrss ? 0 : 30 })
+          await this.reply(`${Config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: !Config.is_recallMsg ? 0 : 30 })
         }
       } else if (forcePictureMode || userSetting.usePicture || (Config.autoUsePicture && response.length > Config.autoUsePictureThreshold)) {
         try {
@@ -1581,14 +1578,14 @@ export class chatgpt extends plugin {
       }
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)
-        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
+        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: !Config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
       } else {
         let errorMessage = err?.message || err?.data?.message || (typeof (err) === 'object' ? JSON.stringify(err) : err) || '未能确认错误类型！'
         errorMessage = hidePrivacyInfo(errorMessage);
         if (forcePictureMode || userSetting.usePicture || (Config.autoUsePicture && errorMessage.length > Config.autoUsePictureThreshold)) {
           await this.renderImage(e, use, `出现异常,错误信息如下 \n \`\`\`${errorMessage}\`\`\``, prompt)
         } else {
-          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: isTrss ? 0 : (e.isGroup ? 30 : 0) })
+          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: !Config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
         }
         if (e.checkAndExecuteContent?.length) {
           await this.reply(e.checkAndExecuteContent);
