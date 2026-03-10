@@ -771,8 +771,14 @@ class Core {
           if (Config.debug) // 避免控制台刷屏
             logger.info(msg)
 
-          // 检查是否有工具调用
-          while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
+          /** 工具调用计数器 */
+          let toolCallCount = 0
+          /** 工具调用最大次数 */
+          const maxToolCalls = 3
+
+          while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
+            toolCallCount++  // 每次进入循环计数
+
             if (msg.text) {
               await this.reply(msg.text.replace('\n\n\n', '\n'))
             }
@@ -821,17 +827,10 @@ class Core {
 
             if (Config.debug) // 避免控制台刷屏
               logger.info(msg)
+          }
 
-            // 如果是函数返回结果，则跳出循环
-            if (msg.conversation && msg.conversation.length > 0) {
-              const lastMessage = msg.conversation[msg.conversation.length - 1]
-              if (lastMessage.role === 'function' && lastMessage.name === name) {
-                // 清除工具调用相关字段，避免循环
-                msg.functionCall = undefined
-                msg.toolCalls = undefined
-                break
-              }
-            }
+          if (toolCallCount >= maxToolCalls) {
+            logger.warn(`工具调用已达上限 ${maxToolCalls} 次，强制终止工具循环`)
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
