@@ -132,9 +132,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
   async sendMessage(text, opt = {}) {
     /** 重试配置 */
     const retryConfig = {
-      origRetry: 5,
+      origRetry: 3,
       fallbackModel: Config.gemini_fallbackModel || 'gemini-2.5-flash',
-      fallbackRetry: 5,
+      fallbackRetry: 3,
       isFallback: false,
       ...opt.retryConfig // 允许外部覆盖默认值，并在递归中透传状态
     };

@@ -180,7 +180,7 @@ class Core {
     }
     const userData = await getUserData(e.user_id)
     const useCast = userData.cast || {}
-    if (use === 'bing') {
+    if (use === 'bing') { // 使用接口 ##############################
       const cacheOptions = {
         namespace: Config.toneStyle,
         store: new KeyvFile({ filename: 'cache.json' })
@@ -250,7 +250,7 @@ class Core {
         parentMessageId: replyMessage.id
 
       }
-    } else if (use === 'api3') {
+    } else if (use === 'api3') { // 使用接口 ##############################
       // official without cloudflare
       let accessToken = await redis.get('CHATGPT:TOKEN')
       // if (!accessToken) {
@@ -281,7 +281,7 @@ class Core {
         logger.warn('发送语音失败', err)
       })
       return sendMessageResult
-    } else if (use === 'claude') {
+    } else if (use === 'claude') { // 使用接口 ##############################
       // slack已经不可用，移除
       let keys = Config.claudeApiKey?.split(/[,;]/).map(key => key.trim()).filter(key => key)
       let choiceIndex = Math.floor(Math.random() * keys.length)
@@ -361,7 +361,7 @@ class Core {
         key = keys[choiceIndex]
         logger.info(`使用API Key：${key}`)
       }
-    } else if (use === 'claude2') {
+    } else if (use === 'claude2') { // 使用接口 ##############################
       let { conversationId } = conversation
       let client = new ClaudeAIClient({
         organizationId: Config.claudeAIOrganizationId,
@@ -400,7 +400,7 @@ class Core {
         let conv = await client.createConversation()
         return await client.sendMessage(prompt, conv.uuid, attachments)
       }
-    } else if (use === 'xh') {
+    } else if (use === 'xh') { // 使用接口 ##############################
       const cacheOptions = {
         namespace: 'xh',
         store: new KeyvFile({ filename: 'cache.json' })
@@ -423,7 +423,7 @@ class Core {
         system: mergeSystemPrompt(opt.system.xh, e)
       })
       return response
-    } else if (use === 'azure') {
+    } else if (use === 'azure') { // 使用接口 ##############################
       let azureModel
       try {
         azureModel = await import('@azure/openai')
@@ -446,7 +446,7 @@ class Core {
         text: completion.content,
         message: completion
       }
-    } else if (use === 'qwen') {
+    } else if (use === 'qwen') { // 使用接口 ##############################
       let completionParams = {
         parameters: {
           top_p: Config.qwenTopP || 0.5,
@@ -588,7 +588,7 @@ class Core {
         }
         return msg
       }
-    } else if (use === 'gemini') {
+    } else if (use === 'gemini') { // 使用接口 ##############################
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
@@ -666,7 +666,7 @@ class Core {
       option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
       return await client.sendMessage(prompt, option)
-    } else if (use === 'chatglm4') {
+    } else if (use === 'chatglm4') { // 使用接口 ##############################
       const client = new ChatGLM4Client({
         refreshToken: Config.chatglmRefreshToken
       })
@@ -675,7 +675,7 @@ class Core {
         this.reply(segment.image(resp.image), true)
       }
       return resp
-    } else {
+    } else { // 使用接口 ##############################
       // openai api
       let completionParams = {}
       if (Config.model) {
@@ -756,16 +756,17 @@ class Core {
           function: funcMap[k].function
         }))
 
-        if (Config.geminiForceToolKeywords && Array.isArray(Config.geminiForceToolKeywords)) {
-          let inputText = prompt || e.msg || "";
-          if (Config.geminiForceToolKeywords.some(keyword => inputText.includes(keyword))) {
-            // "required" 是 OpenAI 官方参数，意为强制模型必须调用 tools 里的至少一个工具
-            option.completionParams.tool_choice = "required";
-          }
-        }
-
         let msg
         try {
+          // 强制调用工具 // 可能有用吧
+          if (Config.geminiForceToolKeywords && Array.isArray(Config.geminiForceToolKeywords)) {
+            let inputText = prompt || e.msg || "";
+            if (Config.geminiForceToolKeywords.some(keyword => inputText.includes(keyword))) {
+              // "required" 是 OpenAI 官方参数，意为强制模型必须调用 tools 里的至少一个工具
+              option.completionParams.tool_choice = "required";
+            }
+          }
+
           msg = await this.chatGPTApi.sendMessage(prompt, option)
 
           if (Config.debug) // 避免控制台刷屏
@@ -774,13 +775,13 @@ class Core {
           /** 工具调用计数器 */
           let toolCallCount = 0
           /** 工具调用最大次数 */
-          const maxToolCalls = 5
+          const maxToolCalls = 5 // API 接口太蠢了，总是无限循环函数
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
             toolCallCount++  // 每次进入循环计数
 
             if (msg.text) {
-              await this.reply(msg.text.replace('\n\n\n', '\n'))
+              await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
             }
 
             let name, args;
@@ -818,7 +819,7 @@ class Core {
 
             // 拿到工具结果后重置 tool_choice 参数，允许大模型输出自然语言回答，防止死循环无限调用工具
             if (option.completionParams && option.completionParams.tool_choice === "required") {
-              option.completionParams.tool_choice = "auto";
+              delete option.completionParams.tool_choice;
             }
 
             // 不然普通用户可能会被openai限速
@@ -827,6 +828,17 @@ class Core {
 
             if (Config.debug) // 避免控制台刷屏
               logger.info(msg)
+
+            // // 如果是函数返回结果，则跳出循环
+            // if (msg.conversation && msg.conversation.length > 0) {
+            //   const lastMessage = msg.conversation[msg.conversation.length - 1]
+            //   if (lastMessage.role === 'function' && lastMessage.name === name) {
+            //     // 清除工具调用相关字段，避免循环
+            //     msg.functionCall = undefined
+            //     msg.toolCalls = undefined
+            //     break
+            //   }
+            // }
           }
 
           if (toolCallCount >= maxToolCalls) {
