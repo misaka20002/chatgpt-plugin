@@ -7,7 +7,7 @@ export const originalValues = ['星火', '通义千问', '克劳德', '克劳德
 export const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', 'api', 'api3', 'api3', 'chatglm', 'gemini', 'gemini', 'chatglm4']
 
 export class ConversationManager {
-  async endConversation (e) {
+  async endConversation(e) {
     const userData = await getUserData(e.user_id)
     const match = e.msg.trim().match('^#?(.*)(结束|新开|摧毁|毁灭|完结)对话')
     console.log(match[1])
@@ -131,7 +131,7 @@ export class ConversationManager {
     } else {
       let at = ats[0]
       let qq = at.qq
-      let atUser = _.trimStart(at.text, '@')
+      let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@')
       if (use === 'api3') {
         await redis.del(`CHATGPT:QQ_CONVERSATION:${qq}`)
         await this.reply(`${atUser}已退出TA当前的对话，TA仍可以@我进行聊天以开启新的对话`, true)
@@ -216,7 +216,7 @@ export class ConversationManager {
     }
   }
 
-  async endAllConversations (e) {
+  async endAllConversations(e) {
     const match = e.msg.trim().match('^#?(.*)(结束|新开|摧毁|毁灭|完结)全部对话')
     console.log(match[1])
     let use

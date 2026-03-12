@@ -7,7 +7,10 @@ import fs from 'fs'
 import path from 'node:path'
 import _ from 'lodash'
 import { Config } from '../utils/config.js'
-import { hidePrivacyInfo } from '../utils/paimonFuction.js'
+import {
+  hidePrivacyInfo,
+  getUserDetailedInfo,
+} from '../utils/paimonFuction.js'
 
 if (!global.segment) {
   global.segment = (await import('oicq')).segment
@@ -40,7 +43,12 @@ let infos = {}
 /**
  * 主人保护list 如['lash','do','beat_up','little_do']
  */
-let protectList = ['lash', 'do', 'beat_up', 'little_do']
+let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_qi']
+
+/**
+ * meme 使用计数 Redis key 前缀
+ */
+const MEME_USAGE_REDIS_PREFIX = 'Yz:paimon_meme_usage:'
 
 export class memes extends plugin {
   constructor() {
@@ -184,11 +192,12 @@ export class memes extends plugin {
 
   async memesUpdate(e) {
     await e.reply('yunzai-memes更新中')
-    if (fs.existsSync('data/memes/infos.json')) {
-      fs.unlinkSync('data/memes/infos.json')
-    }
-    if (fs.existsSync('data/memes/keyMap.json')) {
-      fs.unlinkSync('data/memes/keyMap.json')
+    // 清除所有缓存文件
+    const cacheFiles = ['data/memes/infos.json', 'data/memes/keyMap.json', 'data/memes/render_list.jpg']
+    for (const file of cacheFiles) {
+      if (fs.existsSync(file)) {
+        fs.unlinkSync(file)
+      }
     }
     try {
       await this.init()
@@ -223,24 +232,112 @@ export class memes extends plugin {
   }
 
   async memesList(e) {
-    if (Config.meme_turnOff) return false;
-    let resultFileLoc = 'data/memes/render_list1.jpg'
+    if (Config.meme_turnOff) return false
+
+    const resultFileLoc = 'data/memes/render_list.jpg'
+    const cacheMaxAge = 24 * 60 * 60 * 1000 // 24小时缓存
+
+    // 检查缓存是否有效
     if (fs.existsSync(resultFileLoc)) {
-      await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
-      return true
+      const stats = fs.statSync(resultFileLoc)
+      if (Date.now() - stats.mtimeMs < cacheMaxAge) {
+        await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
+        return true
+      }
     }
-    let response = await fetch(baseUrl + '/memes/render_list', {
-      method: 'POST'
+
+    // 构建带标签和排序的 meme 列表
+    const memeList = await this.buildMemeListWithLabels()
+
+    const response = await fetch(`${baseUrl}/memes/render_list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        meme_list: memeList,
+        text_template: '{keywords}',
+        add_category_icon: true
+      })
     })
+
+    if (!response.ok) {
+      logger.error('[meme] render_list 请求失败:', response.status)
+      return false
+    }
+
     const resultBlob = await response.blob()
-    const resultArrayBuffer = await resultBlob.arrayBuffer()
-    const resultBuffer = Buffer.from(resultArrayBuffer)
-    await fs.writeFileSync(resultFileLoc, resultBuffer)
+    const resultBuffer = Buffer.from(await resultBlob.arrayBuffer())
+    fs.writeFileSync(resultFileLoc, resultBuffer)
     await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
-    setTimeout(async () => {
-      await fs.unlinkSync(resultFileLoc)
-    }, 3600)
     return true
+  }
+
+  /**
+   * 构建带标签的 meme 列表（按创建时间倒序,便于观察新增的表情）
+   * - new: 最近30天内创建
+   * - hot: 期限内使用超过30次
+   * @returns {Promise<Array<{meme_key: string, disabled: boolean, labels: string[]}>>}
+   */
+  async buildMemeListWithLabels() {
+    const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000 // 30天
+    const HOT_THRESHOLD = 30 // 使用次数阈值
+    const now = Date.now()
+
+    // 批量获取所有 meme 的使用计数
+    const memeKeys = Object.keys(infos)
+    const usageCounts = await this.getMemeUsageCounts(memeKeys)
+
+    return Object.entries(infos)
+      .map(([key, info]) => {
+        const createdTime = new Date(info.date_created).getTime()
+        const labels = []
+
+        if ((now - createdTime) < NEW_THRESHOLD_MS) labels.push('new')
+        if ((usageCounts[key] || 0) >= HOT_THRESHOLD) labels.push('hot')
+
+        return { meme_key: key, disabled: false, labels, _sortKey: createdTime }
+      })
+      .sort((a, b) => b._sortKey - a._sortKey)
+      .map(({ meme_key, disabled, labels }) => ({ meme_key, disabled, labels }))
+  }
+
+  /**
+   * 批量获取 meme 使用计数（只返回有使用记录的）
+   * @param {string[]} memeKeys - meme key 列表
+   * @returns {Promise<Record<string, number>>} - { meme_key: count }（仅包含 count > 0 的）
+   */
+  async getMemeUsageCounts(memeKeys) {
+    const counts = {}
+
+    if (memeKeys.length === 0) return counts
+
+    const redisKeys = memeKeys.map(key => `${MEME_USAGE_REDIS_PREFIX}${key}`)
+    try {
+      const results = await redis.mGet(redisKeys)
+      memeKeys.forEach((key, index) => {
+        const count = parseInt(results[index]) || 0
+        if (count > 0) counts[key] = count  // 只存非零值
+      })
+    } catch (err) {
+      logger.warn('[meme] 批量获取使用计数失败:', err.message)
+    }
+
+    return counts
+  }
+
+  /**
+   * 记录 meme 使用次数（3天过期，每次使用重置过期时间）
+   * @param {string} memeKey - meme 的 key
+   */
+  async recordMemeUsage(memeKey) {
+    const REDIS_KEY = `${MEME_USAGE_REDIS_PREFIX}${memeKey}`
+    const EXPIRE_SECONDS = 3 * 24 * 60 * 60 // 3天
+
+    // INCR + EXPIRE 保证计数增加并重置过期时间
+    await redis.incr(REDIS_KEY)
+    await redis.expire(REDIS_KEY, EXPIRE_SECONDS)
   }
 
   /**
@@ -264,9 +361,9 @@ export class memes extends plugin {
   }
 
   /**
-   * #memes
-   * @param e oicq传递的事件参数e
-   */
+     * #memes
+     * @param e oicq传递的事件参数e
+     */
   async memes(e) {
     if (Config.meme_turnOff) return false;
 
@@ -282,11 +379,11 @@ export class memes extends plugin {
     // console.log(e)
     let msg = e.msg.replace('#', '')
     /**
-   * 智能匹配最长关键词
-   * @param {string} msg 用户消息
-   * @param {Object} keyMap 关键词映射对象
-   * @returns {string} 匹配到的最长关键词，如果没有匹配则返回null
-   */
+     * 智能匹配最长关键词
+     * @param {string} msg 用户消息
+     * @param {Object} keyMap 关键词映射对象
+     * @returns {string} 匹配到的最长关键词，如果没有匹配则返回null
+     */
     function findLongestMatchingKey(msg, keyMap) {
       // 找出所有匹配消息开头的关键词
       const matchingKeys = Object.keys(keyMap).filter(k => msg.startsWith(k));
@@ -306,11 +403,25 @@ export class memes extends plugin {
       await e.reply(detail(targetCode))
       return true
     }
+
     let [text, args = ''] = text1.split('#')
-    let userInfos
     let formData = new FormData()
     let info = infos[targetCode]
     let fileLoc
+
+    // 提取 @ 信息并获取用户详情缓存
+    const atMessages = e.message.filter(m => m.type === 'at');
+    let atUsers = [];
+    for (let atMsg of atMessages) {
+      let user = await getUserDetailedInfo(e, atMsg.qq);
+      atUsers.push({
+        qq: atMsg.qq,
+        text: user?.card || atMsg.text || '',
+        gender: user?.gender || 'unknown'
+      });
+    }
+    const hasAt = atUsers.length > 0;
+
     if (info.params_type.max_images > 0) {
       // 可以有图，来从回复、发送和头像找图
       let imgUrls = []
@@ -336,11 +447,11 @@ export class memes extends plugin {
       } else if (e.img) {
         // 一起发的图
         imgUrls.push(...e.img)
-      } else if (e.message.filter(m => m.type === 'at').length > 0) {
+      } else if (hasAt) {
         // 艾特的用户的头像
-        let ats = e.message.filter(m => m.type === 'at')
-        imgUrls = ats.map(at => at.qq).map(qq => `https://q1.qlogo.cn/g?b=qq&s=160&nk=${qq}`)
+        imgUrls = atUsers.map(at => `https://q1.qlogo.cn/g?b=qq&s=160&nk=${at.qq}`)
       }
+
       if (!imgUrls || imgUrls.length === 0) {
         // 如果都没有，用发送者的头像
         imgUrls = [await getAvatar(e)]
@@ -348,10 +459,9 @@ export class memes extends plugin {
       if (imgUrls.length < info.params_type.min_images && imgUrls.indexOf(await getAvatar(e)) === -1) {
         // 如果数量不够，补上发送者头像，且放到最前面
         let me = [await getAvatar(e)]
-
         imgUrls = me.concat(imgUrls)
-        // imgUrls.push(`https://q1.qlogo.cn/g?b=qq&s=160&nk=${e.msg.sender.user_id}`)
       }
+
       logger.debug('imgUrls:', imgUrls)
       if (protectList.includes(targetCode) && masterProtectDo) {
         let me = [await getAvatar(e)]
@@ -389,12 +499,14 @@ export class memes extends plugin {
         formData.append('images', new File([buffer], `avatar_${i}.jpg`, { type: 'image/jpeg' }))
       }
     }
+
     if (text && info.params_type.max_texts === 0) {
       return false
     }
+
     if (!text && info.params_type.min_texts > 0) {
-      if (e.message.filter(m => m.type === 'at').length > 0) {
-        text = _.trim(e.message.filter(m => m.type === 'at')[0].text, '@')
+      if (hasAt) {
+        text = atUsers[0].text
       } else {
         text = e.sender.card || e.sender.nickname
       }
@@ -407,30 +519,18 @@ export class memes extends plugin {
     texts.forEach(t => {
       formData.append('texts', t)
     })
+
     if (info.params_type.max_texts > 0 && formData.getAll('texts').length === 0) {
-      if (formData.getAll('texts').length < info.params_type.max_texts) {
-        if (e.message.filter(m => m.type === 'at').length > 0) {
-          formData.append('texts', _.trim(e.message.filter(m => m.type === 'at')[0].text, '@'))
-        } else {
-          formData.append('texts', e.sender.card || e.sender.nickname)
-        }
+      if (hasAt) {
+        formData.append('texts', atUsers[0].text)
+      } else {
+        formData.append('texts', e.sender.card || e.sender.nickname)
       }
     }
-    if (e.message.filter(m => m.type === 'at').length > 0) {
-      userInfos = e.message.filter(m => m.type === 'at')
-      let mm = await e.group.getMemberMap()
-      userInfos.forEach(ui => {
-        let user = mm.get(ui.qq)
-        if (user) {
-          ui.gender = user.sex
-          ui.text = user.card || user.nickname
-        }
-      })
-    }
-    if (!userInfos) {
-      userInfos = [{ text: e.sender.card || e.sender.nickname, gender: e.sender.sex }]
-    }
+
+    let userInfos = hasAt ? atUsers : [{ text: e.sender.card || e.sender.nickname, gender: e.sender.sex }]
     args = handleArgs(targetCode, args, userInfos)
+
     if (args) {
       formData.set('args', args)
     }
@@ -438,7 +538,9 @@ export class memes extends plugin {
     if (checkFileSize(images)) {
       return this.e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
     }
+
     logger.info('派蒙meme表情制作:\ninput', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
+
     let response
     try {
       response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
@@ -471,6 +573,11 @@ export class memes extends plugin {
     await e.reply(segment.image("base64://" + resultBase64), reply)
     // fileLoc && await fs.unlinkSync(fileLoc)
     // await fs.unlinkSync(resultFileLoc)
+
+    // 异步记录 meme 使用次数
+    this.recordMemeUsage(targetCode).catch(err => {
+      logger.warn('[meme] 记录使用次数失败:', err.message)
+    })
   }
 }
 

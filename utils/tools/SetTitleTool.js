@@ -24,14 +24,15 @@ export class SetTitleTool extends AbstractTool {
   description = 'Useful when you want to give someone a title in the group(群头衔)'
 
   func = async function (opts, e) {
-    let { qq, title, groupId } = opts
+    let { qq, title, groupId, sender, isAdmin } = opts
     qq = isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
     groupId = isNaN(groupId) || !groupId ? e.group_id : parseInt(groupId.trim())
 
-    // 检查权限：只有主人/管理员，可以对其他群友生效
-    if (!(e.isMaster || e.sender.role == 'owner'|| e.sender.role == 'admin')) {
-      if (qq != e.sender.user_id) {
-        return 'Only the master or Group admin can block other users.'
+    // 检查权限：只有主人/该群的管理员，可以对其他群友生效
+    const hasAdminPermission = e.isMaster || (isAdmin && e.group_id == groupId)
+    if (!hasAdminPermission) {
+      if (qq != sender) {
+        return 'Only the master or Group admin can setTitle for other users.'
       }
     }
 
