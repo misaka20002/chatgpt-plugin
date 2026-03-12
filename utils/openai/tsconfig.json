@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
-    "module": "node16",
-    "moduleResolution": "node16",
-    "esModuleInterop": true,
-    "lib": ["es2020", "dom"],
-    "target": "es2020"
+    "module": "es2020",
+    "moduleResolution": "node",
+    "esModuleInterop": true
   }
 }

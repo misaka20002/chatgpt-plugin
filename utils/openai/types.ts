@@ -52,8 +52,6 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
-    image?: string       // base64
-    imageType?: string   // mime type
 }
 
 export type MessageActionType = 'next' | 'variant'
