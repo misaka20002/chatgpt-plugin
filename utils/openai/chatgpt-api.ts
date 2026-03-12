@@ -157,6 +157,7 @@ export class ChatGPTAPI {
             abortController = new AbortController()
             abortSignal = abortController.signal
         }
+        const primaryInputContent = this._buildInputContent(role, text, opts.imageUrls)
 
         const message: types.ChatMessage = {
             role,
@@ -164,23 +165,43 @@ export class ChatGPTAPI {
             conversationId,
             parentMessageId,
             text,
-            name: opts.name
+            content: primaryInputContent,
+            name: opts.name,
+            toolCallId: opts.toolCallId
         }
 
         const latestQuestion = message
+        const extraMessages = Array.isArray(opts.extraMessages) ? opts.extraMessages : []
+        const normalizedExtraMessages: types.ChatMessage[] = []
+        let lastInputMessageId = messageId
+        for (const extraMessage of extraMessages) {
+            const extraId = extraMessage?.messageId || uuidv4()
+            normalizedExtraMessages.push({
+                role: extraMessage?.role || role,
+                id: extraId,
+                conversationId,
+                parentMessageId: lastInputMessageId,
+                text: typeof extraMessage?.text === 'string' ? extraMessage.text : String(extraMessage?.text || ''),
+                content: typeof extraMessage?.text === 'string' ? extraMessage.text : String(extraMessage?.text || ''),
+                name: extraMessage?.name,
+                toolCallId: extraMessage?.toolCallId
+            })
+            lastInputMessageId = extraId
+        }
 
         const { messages, maxTokens, numTokens } = await this._buildMessages(
             text,
             role,
             opts,
-            completionParams
+            completionParams,
+            normalizedExtraMessages
         )
         console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
         const result: types.ChatMessage & { conversation: openai.ChatCompletionRequestMessage[] } = {
             role: 'assistant',
             id: uuidv4(),
             conversationId,
-            parentMessageId: messageId,
+            parentMessageId: lastInputMessageId,
             text: '',
             thinking_text: '',
             functionCall: undefined,
@@ -260,21 +281,41 @@ export class ChatGPTAPI {
                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments
                                             }
                                         } else if (delta.tool_calls && delta.tool_calls.length > 0) {
-                                          let fc = delta.tool_calls[0].function
-                                          if (fc.name) {
-                                            result.functionCall = {
-                                              name: fc.name,
-                                              arguments: fc.arguments
+                                            if (!result.toolCalls) {
+                                                result.toolCalls = []
                                             }
-                                            // 同时设置 toolCalls 以支持新的格式
-                                            result.toolCalls = delta.tool_calls
-                                          } else {
-                                            result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments
-                                            // 更新 toolCalls 中的参数
-                                            if (result.toolCalls && result.toolCalls.length > 0) {
-                                              result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments
+                                            for (const partialToolCall of delta.tool_calls) {
+                                                const index = typeof partialToolCall.index === 'number'
+                                                    ? partialToolCall.index
+                                                    : result.toolCalls.length
+                                                if (!result.toolCalls[index]) {
+                                                    result.toolCalls[index] = {
+                                                        id: partialToolCall.id || '',
+                                                        type: partialToolCall.type || 'function',
+                                                        function: { name: '', arguments: '' }
+                                                    }
+                                                }
+                                                if (partialToolCall.id) {
+                                                    result.toolCalls[index].id = partialToolCall.id
+                                                }
+                                                if (partialToolCall.type) {
+                                                    result.toolCalls[index].type = partialToolCall.type
+                                                }
+                                                if (partialToolCall.function) {
+                                                    if (!result.toolCalls[index].function) {
+                                                        result.toolCalls[index].function = { name: '', arguments: '' }
+                                                    }
+                                                    if (partialToolCall.function.name) {
+                                                        result.toolCalls[index].function.name = (result.toolCalls[index].function.name || '') + partialToolCall.function.name
+                                                    }
+                                                    if (partialToolCall.function.arguments) {
+                                                        result.toolCalls[index].function.arguments = (result.toolCalls[index].function.arguments || '') + partialToolCall.function.arguments
+                                                    }
+                                                }
                                             }
-                                          }
+                                            if (result.toolCalls.length > 0) {
+                                                result.functionCall = result.toolCalls.map(tool => tool.function)[0]
+                                            }
                                         } else {
                                             result.delta = delta.content
                                             if (delta?.content) result.text += delta.content
@@ -377,8 +418,11 @@ export class ChatGPTAPI {
                 }
             }
 
+            const latestQuestionForStore = this._compactMessageForHistory(latestQuestion)
+            const extraMessagesForStore = normalizedExtraMessages.map(m => this._compactMessageForHistory(m))
             return Promise.all([
-                this._upsertMessage(latestQuestion),
+                this._upsertMessage(latestQuestionForStore),
+                ...extraMessagesForStore.map(m => this._upsertMessage(m)),
                 this._upsertMessage(message)
             ]).then(() => message)
         })
@@ -423,7 +467,7 @@ export class ChatGPTAPI {
 
     protected async _buildMessages(text: string, role: Role, opts: types.SendMessageOptions, completionParams: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
-    >) {
+    >, additionalMessages: types.ChatMessage[] = []) {
         const { systemMessage = this._systemMessage } = opts
         let { parentMessageId } = opts
 
@@ -441,14 +485,36 @@ export class ChatGPTAPI {
         }
 
         const systemMessageOffset = messages.length
-        let nextMessages = text
-            ? messages.concat([
-                {
-                    role,
-                    content: text,
-                    name: opts.name
-                }
-            ])
+        const currentInputMessages: types.openai.ChatCompletionRequestMessage[] = []
+        const hasPrimaryTextInput = typeof text === 'string'
+            ? text.length > 0
+            : Boolean(text)
+        const hasPrimaryImageInput = role === 'user'
+            && Array.isArray(opts.imageUrls)
+            && opts.imageUrls.length > 0
+        if (hasPrimaryTextInput || hasPrimaryImageInput) {
+            const inputContent = this._buildInputContent(role, text, opts.imageUrls)
+            currentInputMessages.push({
+                role,
+                content: inputContent,
+                name: opts.name,
+                tool_call_id: opts.toolCallId
+            })
+        }
+        if (Array.isArray(additionalMessages) && additionalMessages.length > 0) {
+            for (const inputMessage of additionalMessages) {
+                if (!inputMessage) continue
+                currentInputMessages.push({
+                    role: inputMessage.role,
+                    content: inputMessage.content ?? inputMessage.text || '',
+                    name: inputMessage.name,
+                    tool_call_id: inputMessage.toolCallId
+                })
+            }
+        }
+
+        let nextMessages = currentInputMessages.length > 0
+            ? messages.concat(currentInputMessages)
             : messages
 
         let functionToken = 0
@@ -499,18 +565,22 @@ export class ChatGPTAPI {
         do {
             const prompt = nextMessages
                 .reduce((prompt, message) => {
+                    const messageText = this._contentToPromptText(message.content)
                     switch (message.role) {
                         case 'system':
-                            return prompt.concat([`Instructions:\n${message.content}`])
+                            return prompt.concat([`Instructions:\n${messageText}`])
                         case 'user':
-                            return prompt.concat([`${userLabel}:\n${message.content}`])
+                            return prompt.concat([`${userLabel}:\n${messageText}`])
                         case 'function':
+                            // leave behind
+                            return prompt
+                        case 'tool':
                             // leave behind
                             return prompt
                         case 'assistant':
                             return prompt
                         default:
-                            return message.content ? prompt.concat([`${assistantLabel}:\n${message.content}`]) : prompt
+                            return messageText ? prompt.concat([`${assistantLabel}:\n${messageText}`]) : prompt
                     }
                 }, [] as string[])
                 .join('\n\n')
@@ -544,20 +614,58 @@ export class ChatGPTAPI {
             }
 
             const parentMessageRole = parentMessage.role || 'user'
+            const parentToolCalls = parentMessage.toolCalls
+              ? parentMessage.toolCalls
+              : undefined
+            const parentFunctionCall = !parentToolCalls && parentMessage.functionCall
+              ? parentMessage.functionCall
+              : undefined
 
             nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
                 {
                     role: parentMessageRole,
-                    content: parentMessage.text,
+                    content: parentMessage.content ?? parentMessage.text || '',
                     name: parentMessage.name,
-                    function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                  // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
+                    function_call: parentFunctionCall,
+                    tool_calls: parentToolCalls,
+                    tool_call_id: parentMessage.toolCallId
                 },
                 ...nextMessages.slice(systemMessageOffset)
             ])
 
             parentMessageId = parentMessage.parentMessageId
         } while (true)
+
+        // 兜底：如果因为上下文过长导致仅保留了 system 消息（或空），至少要保留当前输入消息，
+        // 否则工具返回结果会被丢弃，模型会反复发起同一个 tool call。
+        if (currentInputMessages.length > 0 && messages.length <= systemMessageOffset) {
+            const requiresToolParent = currentInputMessages
+                .some(m => m.role === 'tool' && !!m.tool_call_id)
+            if (requiresToolParent && opts.parentMessageId) {
+                const fallbackParent = await this._getMessageById(opts.parentMessageId)
+                if (fallbackParent) {
+                    messages = [
+                        {
+                            role: fallbackParent.role || 'assistant',
+                            content: fallbackParent.content ?? fallbackParent.text || '',
+                            name: fallbackParent.name,
+                            function_call: fallbackParent.toolCalls ? undefined : (fallbackParent.functionCall || undefined),
+                            tool_calls: fallbackParent.toolCalls || undefined,
+                            tool_call_id: fallbackParent.toolCallId
+                        },
+                        ...currentInputMessages
+                    ]
+                } else {
+                    messages = currentInputMessages.slice()
+                }
+            } else {
+                messages = currentInputMessages.slice()
+            }
+            const fallbackText = messages
+                .map(m => this._contentToPromptText(m.content))
+                .join('\n')
+            numTokens = await this._getTokenCount(fallbackText)
+        }
 
         // Use up to 4096 tokens (prompt + response), but try to leave 1000 tokens
         // for the response.
@@ -590,5 +698,87 @@ export class ChatGPTAPI {
         message: types.ChatMessage
     ): Promise<void> {
         await this._messageStore.set(message.id, message)
+    }
+
+    protected _contentToPromptText(content: string | openai.ChatCompletionContentPart[]): string {
+        if (typeof content === 'string') return content
+        if (!Array.isArray(content)) return ''
+        return content.map(part => {
+            if (!part || typeof part !== 'object') return ''
+            if (part.type === 'text') return part.text || ''
+            if (part.type === 'image_url') return '[image]'
+            return ''
+        }).filter(Boolean).join('\n')
+    }
+
+    protected _buildMultimodalUserContent(text: string, imageUrls: string[]): openai.ChatCompletionContentPart[] {
+        const parts: openai.ChatCompletionContentPart[] = []
+        parts.push({ type: 'text', text: text || '' })
+        const cleanUrls = (Array.isArray(imageUrls) ? imageUrls : [])
+            .map(u => String(u || '').trim())
+            .filter(u => /^(https?:\/\/|data:image\/)/i.test(u))
+            .slice(0, 6)
+        for (const url of cleanUrls) {
+            parts.push({
+                type: 'image_url',
+                image_url: {
+                    url
+                }
+            })
+        }
+        return parts
+    }
+
+    protected _buildInputContent(role: Role, text: string, imageUrls?: string[]): string | openai.ChatCompletionContentPart[] {
+        if (role === 'user' && Array.isArray(imageUrls) && imageUrls.length > 0) {
+            return this._buildMultimodalUserContent(text, imageUrls)
+        }
+        return text
+    }
+
+    protected _compactMessageForHistory(message: types.ChatMessage): types.ChatMessage {
+        if (!message) return message
+        if (message.role === 'user' && Array.isArray(message.content)) {
+            const compactParts: openai.ChatCompletionContentPart[] = []
+            let imageCount = 0
+            for (const part of message.content) {
+                if (!part || typeof part !== 'object') continue
+                if (part.type === 'text') {
+                    const text = String(part.text || '').trim()
+                    compactParts.push({
+                        type: 'text',
+                        text: text.length > 500 ? `${text.slice(0, 500)}...(truncated)` : text
+                    })
+                    continue
+                }
+                if (part.type === 'image_url' && imageCount < 1) {
+                    compactParts.push(part)
+                    imageCount++
+                }
+            }
+            return {
+                ...message,
+                content: compactParts
+            }
+        }
+        if (message.role !== 'tool' && message.role !== 'function') {
+            return message
+        }
+        const toolName = (message.name || 'tool').toString().slice(0, 64)
+        const rawText = typeof message.text === 'string'
+            ? message.text
+            : String(message.text || '')
+        const normalized = rawText.replace(/\s+/g, ' ').trim()
+        const maxLen = 260
+        const shortText = normalized.length > maxLen
+            ? `${normalized.slice(0, maxLen)}...(truncated)`
+            : normalized
+        return {
+            ...message,
+            text: `[tool:${toolName}] ${shortText}`,
+            detail: undefined,
+            functionCall: undefined,
+            toolCalls: undefined
+        }
     }
 }

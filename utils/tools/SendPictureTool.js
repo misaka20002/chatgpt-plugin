@@ -1,5 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
-import { getMasterQQ } from '../common.js'
+import { getMasterQQ, getGroupList } from '../common.js'
 import { Config } from '../config.js'
 
 export class SendPictureTool extends AbstractTool {
@@ -39,12 +39,7 @@ export class SendPictureTool extends AbstractTool {
     let pictures = urlOfPicture.trim().split(' ')
     logger.mark('pictures to send: ', pictures)
     pictures = pictures.map(img => segment.image(img))
-    let groupList
-    try {
-      groupList = await e.bot.getGroupList()
-    } catch (err) {
-      groupList = e.bot.gl
-    }
+    let groupList = await getGroupList(e)
     let errs = []
     try {
       // 判断groupList是Map还是Array

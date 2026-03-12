@@ -1,7 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { generateVitsAudio } from '../tts.js'
 import { Config } from '../config.js'
-import { generateAudio, generateAzureAudio } from '../common.js'
+import { generateAudio, generateAzureAudio, getGroupList } from '../common.js'
 import VoiceVoxTTS from '../tts/voicevox.js'
 import uploadRecord from '../uploadRecord.js'
 
@@ -102,12 +102,7 @@ export class SendAudioMessageTool extends AbstractTool {
       return `audio generation failed,  error: ${JSON.stringify(err)}`
     }
     if (sendable) {
-      let groupList
-      try {
-        groupList = await e.bot.getGroupList()
-      } catch (err) {
-        groupList = e.bot.gl
-      }
+      let groupList = await getGroupList(e)
       try {
         // 判断groupList是Map还是Array
         const isGroupExist = groupList instanceof Map

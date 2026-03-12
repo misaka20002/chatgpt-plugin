@@ -1,4 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
+import { getGroupList } from '../common.js'
 
 export class SendAvatarTool extends AbstractTool {
   name = 'sendAvatar'
@@ -27,12 +28,7 @@ export class SendAvatarTool extends AbstractTool {
     const target = isNaN(targetGroupIdOrQQNumber) || !targetGroupIdOrQQNumber
       ? defaultTarget
       : parseInt(targetGroupIdOrQQNumber) === e.bot.uin ? defaultTarget : parseInt(targetGroupIdOrQQNumber)
-    let groupList
-    try {
-      groupList = await e.bot.getGroupList()
-    } catch (err) {
-      groupList = e.bot.gl
-    }
+    let groupList = await getGroupList(e)
     console.log('sendAvatar', target, pictures)
 
     // 判断groupList是Map还是Array

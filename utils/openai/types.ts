@@ -1,7 +1,7 @@
 // @ts-ignore
 import Keyv from 'keyv'
 
-export type Role = 'user' | 'assistant' | 'system' | 'function'
+export type Role = 'user' | 'assistant' | 'system' | 'function' | 'tool'
 // @ts-ignore
 import fetch from 'node-fetch'
 export type FetchFn = typeof fetch
@@ -41,6 +41,7 @@ export type SendMessageOptions = {
      * function role name
      */
     name?: string
+    toolCallId?: string
     parentMessageId?: string
     conversationId?: string
     messageId?: string
@@ -52,6 +53,14 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
+    imageUrls?: string[]
+    extraMessages?: Array<{
+        role: Role
+        text: string
+        name?: string
+        toolCallId?: string
+        messageId?: string
+    }>
 }
 
 export type MessageActionType = 'next' | 'variant'
@@ -69,6 +78,7 @@ export type SendMessageBrowserOptions = {
 export interface ChatMessage {
     id: string
     text: string
+    content?: string | openai.ChatCompletionContentPart[]
     thinking_text?: string
     role: Role
     name?: string
@@ -84,6 +94,7 @@ export interface ChatMessage {
     conversationId?: string
     functionCall?: openai.FunctionCall,
     toolCalls?: openai.ToolCall[],
+    toolCallId?: string,
 }
 
 export class ChatGPTError extends Error {
@@ -197,6 +208,19 @@ export type MessageContent = {
 export type MessageMetadata = any
 
 export namespace openai {
+    export type ChatCompletionContentPart =
+      | {
+        type: 'text'
+        text: string
+      }
+      | {
+        type: 'image_url'
+        image_url: {
+          url: string
+          detail?: 'auto' | 'low' | 'high'
+        }
+      }
+
     export interface CreateChatCompletionDeltaResponse {
         id: string
         object: 'chat.completion.chunk'
@@ -234,7 +258,7 @@ export namespace openai {
          * @type {string}
          * @memberof ChatCompletionRequestMessage
          */
-        content: string
+        content: string | ChatCompletionContentPart[]
         /**
          * The name of the user in a multi-user chat
          * @type {string}
@@ -242,7 +266,8 @@ export namespace openai {
          */
         name?: string
         function_call?: FunctionCall
-        tool_calls?: ToolCall,
+        tool_calls?: ToolCall[]
+        tool_call_id?: string
         // required todo
         // tool_choice?: 'none' | 'auto' | 'required'
     }
@@ -268,6 +293,7 @@ export namespace openai {
         readonly User: 'user'
         readonly Assistant: 'assistant'
         readonly Function: 'function'
+        readonly Tool: 'tool'
     }
     export declare type ChatCompletionRequestMessageRoleEnum =
         (typeof ChatCompletionRequestMessageRoleEnum)[keyof typeof ChatCompletionRequestMessageRoleEnum]

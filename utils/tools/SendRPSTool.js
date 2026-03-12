@@ -1,4 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
+import { getGroupList } from '../common.js'
 
 export class SendRPSTool extends AbstractTool {
   name = 'sendRPS'
