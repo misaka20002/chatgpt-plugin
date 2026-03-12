@@ -730,6 +730,15 @@ class Core {
         }
         // systemMessage: promptPrefix
       }
+
+      // 上传图片
+      if (e.img && e.img[0]) {
+        const response = await fetch(e.img[0])
+        const base64Image = Buffer.from(await response.arrayBuffer()).toString('base64')
+        option.image = base64Image
+        option.imageType = 'image/jpeg' // 可按需判断
+      }
+
       option.systemMessage = system
       if (conversation) {
         if (!conversation.conversationId) {

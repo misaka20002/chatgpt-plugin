@@ -3,11 +3,11 @@ import pTimeout from 'p-timeout'
 import QuickLRU from 'quick-lru'
 import { v4 as uuidv4 } from 'uuid'
 
-import * as tokenizer from './tokenizer'
-import * as types from './types'
+import * as tokenizer from './tokenizer.js'
+import * as types from './types.js'
 import globalFetch from 'node-fetch'
-import { fetchSSE } from './fetch-sse'
-import {openai, Role} from "./types";
+import { fetchSSE } from './fetch-sse.js'
+import { openai, Role } from './types.js'
 
 const CHATGPT_MODEL = 'gpt-4o-mini'
 
@@ -441,11 +441,24 @@ export class ChatGPTAPI {
         }
 
         const systemMessageOffset = messages.length
+
+        const userContent: any = opts.image
+            ? [
+                { type: 'text', text },
+                {
+                    type: 'image_url',
+                    image_url: {
+                        url: `data:${opts.imageType || 'image/jpeg'};base64,${opts.image}`
+                    }
+                }
+            ]
+            : text
+
         let nextMessages = text
             ? messages.concat([
                 {
                     role,
-                    content: text,
+                    content: userContent,
                     name: opts.name
                 }
             ])
