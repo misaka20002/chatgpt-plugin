@@ -28,51 +28,44 @@ export class JinyanTool extends AbstractTool {
   func = async function (opts, e) {
     let { qq, groupId, time = '600', sender, isAdmin, isPunish } = opts
     groupId = isNaN(groupId) || !groupId ? e.group_id : parseInt(groupId.trim())
-    qq = qq !== 'all'
-      ? isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
-      : 'all'
-    let group = await e.bot.pickGroup(groupId)
+    qq = qq == 'all' ? 'all' : (isNaN(qq) || !qq ? sender : parseInt(qq.trim()))
 
-    // 检查权限：只有主人/管理员，可以对其他群友生效
-    if (!(e.isMaster || e.sender.role == 'owner'|| e.sender.role == 'admin')) {
-      if (qq != e.sender.user_id) {
-        return 'Only the master or Group admin can block other users.'
-      }
-    }
+    time = parseInt(String(time).trim())
+    if (time < 60 && time !== 0) time = 60
+    if (time > 86400 * 30) time = 86400 * 30
 
-    if (qq !== 'all') {
-      let m = await group.getMemberMap()
-      if (!m.has(qq)) {
-        return `failed, the user ${qq} is not in group ${groupId}`
-      }
-      if (m.get(e.bot.uin).role === 'member') {
-        return `failed, you, not user, don't have permission to mute other in group ${groupId}`
-      }
-    }
-    time = parseInt(time.trim())
-    if (time < 60 && time !== 0) {
-      time = 60
-    }
-    if (time > 86400 * 30) {
-      time = 86400 * 30
-    }
-    if (isAdmin) {
-      if (qq === 'all') {
-        return 'you cannot mute all because the master doesn\'t allow it'
-      } else {
-        // qq = isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
-        await group.muteMember(qq, time)
-      }
-    } else {
-      if (qq === 'all') {
+    // 检查权限：只有主人/该群的管理员，可以对其他群友生效
+    const hasAdminPermission = e.isMaster || (isAdmin && e.group_id == groupId)
+
+    // 处理禁言全体逻辑
+    if (qq === 'all') {
+      if (!hasAdminPermission) {
         return 'the user is not admin, he can\'t mute all. the user should be punished'
-      } else if (qq == sender) {
-        await group.muteMember(qq, time)
-      } else {
-        return 'the user is not admin, he can\'t let you mute other people.'
       }
+      return 'you cannot mute all because the master doesn\'t allow it'
     }
-    if (isPunish === 'true') {
+
+    // 处理禁言个人逻辑
+    if (!hasAdminPermission && qq != sender) {
+      return 'Only the master or Group admin can block other users.'
+    }
+
+    let group = await e.bot.pickGroup(groupId)
+    let m = await group.getMemberMap()
+
+    if (!m.has(qq)) {
+      return `failed, the user ${qq} is not in group ${groupId}`
+    }
+
+    if (m.get(e.bot.uin)?.role === 'member') {
+      return `failed, you, not user, don't have permission to mute other in group ${groupId}`
+    }
+
+    // 执行禁言操作
+    await group.muteMember(qq, time)
+
+    // 构造结果返回
+    if (String(isPunish) === 'true') {
       return `the user ${qq} has been muted for ${time} seconds as punishment because of his 不正当行为`
     }
     return `the user ${qq} has been muted for ${time} seconds`

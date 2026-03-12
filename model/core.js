@@ -774,7 +774,7 @@ class Core {
           /** 工具调用计数器 */
           let toolCallCount = 0
           /** 工具调用最大次数 */
-          const maxToolCalls = 3
+          const maxToolCalls = 5
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
             toolCallCount++  // 每次进入循环计数

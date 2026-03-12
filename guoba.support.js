@@ -256,7 +256,7 @@ export function supportGuoba() {
         {
           field: 'model',
           label: 'OpenAI 模型',
-          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。可用指令： #chatgpt[开启|关闭]API流',
+          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。可用指令：  #chatgpt切换API #chatgpt[开启|关闭]API流',
           component: 'Input'
         },
         {
@@ -1183,7 +1183,7 @@ export function supportGuoba() {
         {
           field: 'smartMode',
           label: '智能模式 开关',
-          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳；需要设置“智能模式url”',
+          bottomHelpMessage: '支持对话 Api、千问、Gemini。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
           component: 'Switch'
         },
         {
