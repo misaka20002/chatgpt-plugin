@@ -317,7 +317,7 @@ export class chatgpt extends plugin {
       for (let u = 0; u < ats.length; u++) {
         let at = ats[u]
         let qq = at.qq
-        let atUser = _.trimStart(at.text, '@')
+        let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@');
         let conversationId = await redis.get('CHATGPT:QQ_CONVERSATION:' + qq)
         if (conversationId) {
           let deleteResponse = await deleteConversation(conversationId)
@@ -1836,7 +1836,7 @@ export class chatgpt extends plugin {
     } else if (use === 'api3') {
       let at = ats[0]
       let qq = at.qq
-      let atUser = _.trimStart(at.text, '@')
+      let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@')
       let conversationId = await redis.get('CHATGPT:QQ_CONVERSATION:' + qq)
       if (!conversationId) {
         await this.reply(`${atUser}当前未开启对话，无法加入`, true)
@@ -1847,7 +1847,7 @@ export class chatgpt extends plugin {
     } else {
       let at = ats[0]
       let qq = at.qq
-      let atUser = _.trimStart(at.text, '@')
+      let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@')
       let target = await redis.get('CHATGPT:CONVERSATIONS:' + qq)
       await redis.set('CHATGPT:CONVERSATIONS:' + e.sender.user_id, target)
       await this.reply(`加入${atUser}的对话成功`)
