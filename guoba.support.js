@@ -222,7 +222,7 @@ export function supportGuoba() {
         {
           field: 'is_recallMsg',
           label: '撤回错误消息',
-          bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {
@@ -1289,13 +1289,13 @@ export function supportGuoba() {
         {
           field: 'poke_userIDs',
           label: '工具新增-戳一戳',
-          bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {
           field: 'enableEmojiLikeTool',
           label: '工具新增-智能贴表情',
-          bottomHelpMessage: '新增根据情绪智能贴qq表情，在群聊给别人消息点个心心之类的表情；可在Bot人设中加入“你将总是使用 emojiLike 工具”；如果你的适配器不支持，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '新增根据情绪智能贴qq表情，在群聊给别人消息点个心心之类的表情；可在Bot人设中加入“你将总是使用 emojiLike 工具”；如果你的适配器不支持，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {
@@ -1633,7 +1633,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_Fighting_Back',
           label: '反击概率',
-          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'InputNumber',
           componentProps: {
             readonly: true,
