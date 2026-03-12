@@ -214,7 +214,7 @@ class Core {
     }
     const userData = await getUserData(e.user_id)
     const useCast = userData.cast || {}
-    if (use === 'bing') {
+    if (use === 'bing') { // 使用接口 ############################
       const cacheOptions = {
         namespace: Config.toneStyle,
         store: new KeyvFile({ filename: 'cache.json' })
@@ -284,7 +284,7 @@ class Core {
         parentMessageId: replyMessage.id
 
       }
-    } else if (use === 'api3') {
+    } else if (use === 'api3') { // 使用接口 ############################
       // official without cloudflare
       let accessToken = await redis.get('CHATGPT:TOKEN')
       // if (!accessToken) {
@@ -315,7 +315,7 @@ class Core {
         logger.warn('发送语音失败', err)
       })
       return sendMessageResult
-    } else if (use === 'claude') {
+    } else if (use === 'claude') { // 使用接口 ############################
       // slack已经不可用，移除
       let keys = Config.claudeApiKey?.split(/[,;]/).map(key => key.trim()).filter(key => key)
       let choiceIndex = Math.floor(Math.random() * keys.length)
@@ -395,7 +395,7 @@ class Core {
         key = keys[choiceIndex]
         logger.info(`使用API Key：${key}`)
       }
-    } else if (use === 'claude2') {
+    } else if (use === 'claude2') { // 使用接口 ############################
       let { conversationId } = conversation
       let client = new ClaudeAIClient({
         organizationId: Config.claudeAIOrganizationId,
@@ -434,7 +434,7 @@ class Core {
         let conv = await client.createConversation()
         return await client.sendMessage(prompt, conv.uuid, attachments)
       }
-    } else if (use === 'xh') {
+    } else if (use === 'xh') { // 使用接口 ############################
       const cacheOptions = {
         namespace: 'xh',
         store: new KeyvFile({ filename: 'cache.json' })
@@ -457,7 +457,7 @@ class Core {
         system: mergeSystemPrompt(opt.system.xh, e)
       })
       return response
-    } else if (use === 'azure') {
+    } else if (use === 'azure') { // 使用接口 ############################
       let azureModel
       try {
         azureModel = await import('@azure/openai')
@@ -480,7 +480,7 @@ class Core {
         text: completion.content,
         message: completion
       }
-    } else if (use === 'qwen') {
+    } else if (use === 'qwen') { // 使用接口 ############################
       let completionParams = {
         parameters: {
           top_p: Config.qwenTopP || 0.5,
@@ -552,7 +552,8 @@ class Core {
         try {
           this.qwenApi = new QwenApi(opts)
           msg = await this.qwenApi.sendMessage(prompt, option)
-          logger.info(msg)
+          if (Config.debug) // 避免控制台刷屏
+            logger.info(msg)
           const seenToolCallSignatures = new Set()
           let toolCallStep = 0
           const maxToolCallSteps = 4
@@ -613,7 +614,8 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
             msg = await this.qwenApi.sendMessage(functionResult, option, 'tool')
-            logger.info(msg)
+            if (Config.debug) // 避免控制台刷屏
+              logger.info(msg)
 
             // 如果是函数返回结果，则跳出循环
             if (msg.conversation && msg.conversation.length > 0) {
@@ -642,7 +644,7 @@ class Core {
         }
         return msg
       }
-    } else if (use === 'gemini') {
+    } else if (use === 'gemini') { // 使用接口 ############################
       let client = new CustomGoogleGeminiClient({
         e,
         userId: e.sender.user_id,
@@ -720,7 +722,7 @@ class Core {
       option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
       return await client.sendMessage(prompt, option)
-    } else if (use === 'chatglm4') {
+    } else if (use === 'chatglm4') { // 使用接口 ############################
       const client = new ChatGLM4Client({
         refreshToken: Config.chatglmRefreshToken
       })
@@ -729,7 +731,7 @@ class Core {
         this.reply(segment.image(resp.image), true)
       }
       return resp
-    } else {
+    } else { // 使用接口 ############################
       // openai api
       let completionParams = {}
       if (Config.model) {
@@ -802,11 +804,7 @@ class Core {
         }
         option = Object.assign(option, conversation)
       }
-      // 仅复用 parseSourceImg 解析后的 e.img，不做额外图片链接解析
-      if (!Array.isArray(e.img) || e.img.length === 0) {
-        await parseSourceImg(e, false)
-      }
-      if (Array.isArray(e.img) && e.img.length > 0) {
+      if (e.img && e.img.length > 0) {
         option.imageUrls = [...new Set(e.img
           .map(url => String(url || '').trim())
           .filter(url => /^(https?:\/\/|data:image\/)/i.test(url))
@@ -997,7 +995,7 @@ class Core {
 
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
-            option.imageUrls = undefined
+            delete option.imageUrls
             try {
               msg = await this.chatGPTApi.sendMessage(toolOutputs[0].content, option, primaryRole)
             } catch (err) {
@@ -1023,7 +1021,8 @@ class Core {
             }
             option.extraMessages = undefined
             await compactConsumedToolCallMessage(consumedToolCallMessageId)
-            logger.info(msg)
+            if (Config.debug) // 避免控制台刷屏
+              logger.info(msg)
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
@@ -1249,16 +1248,7 @@ async function collectTools(e) {
   if (e.img?.length > 0) {
     // tools.push(new ImageCaptionTool())
     // tools.push(new ProcessPictureTool())
-    const imageUrls = e.img
-      .map(url => String(url || '').trim())
-      .filter(url => /^(https?:\/\/|data:image\/)/i.test(url))
-      .slice(0, 1)
-    if (imageUrls.length > 0) {
-      promptAddition += `\nattached image url(for tool usage): ${imageUrls[0]}`
-      if (e.img.length > 1) {
-        promptAddition += `\n(extra attached images omitted: ${e.img.length - 1})`
-      }
-    }
+    promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`
   } else {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
     tools.push(new SerpImageTool_by_baidu())
