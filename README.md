@@ -34,7 +34,7 @@
 - 戳一戳功能
   - 整合#chatgpt设置AI第一人称 和锅巴控制
   - 最完善的戳一戳功能，整合数十种api
-  - **反戳** 功能需要适配器支持Napcat语法，推荐使用 [呆毛版的Trss-Onebot适配器](https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange)
+  - **反戳** 功能需要适配器支持Napcat语法，推荐使用 [呆毛版的Trss-Onebot适配器](https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC)
 - ~~自动偷取发送表情包功能、自动复读和打断复读~~  已将功能转移到 [SF-插件](https://github.com/AIGC-Yunzai/siliconflow-plugin)
   - 在锅巴开启关闭
 <!-- - 随机语音打招呼功能
