@@ -16,6 +16,7 @@ import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
 import {
   hidePrivacyInfo,
   recognitionResultsByGemini,
+  getMediaTargetUrl,
  } from '../utils/paimonFuction.js'
 
 let useSilk = false
@@ -653,16 +654,8 @@ async vqa (e) {
     })
 
     try {
-      // 确定要使用的 URL 和 媒体类型提示
-      let targetUrl = ''
-      let isVideo = false
 
-      if (videoUrl) {
-        targetUrl = videoUrl
-        isVideo = true
-      } else {
-        targetUrl = img[0]
-      }
+      let { targetUrl, isVideo } = getMediaTargetUrl(e);
 
       // 下载媒体资源
       const response = await fetch(targetUrl)

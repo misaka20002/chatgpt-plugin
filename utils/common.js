@@ -18,22 +18,22 @@ import https from 'https'
 let pdfjsLib
 try {
   pdfjsLib = (await import('pdfjs-dist')).default
-} catch (err) { }
+} catch (err) {}
 
 let mammoth
 try {
   mammoth = (await import('mammoth')).default
-} catch (err) { }
+} catch (err) {}
 
 let XLSX
 try {
   XLSX = (await import('xlsx')).default
-} catch (err) { }
+} catch (err) {}
 
 let PPTX
 try {
   PPTX = (await import('nodejs-pptx')).default
-} catch (err) { }
+} catch (err) {}
 
 let _puppeteer
 try {
@@ -54,7 +54,7 @@ try {
 }
 
 let localIP = ''
-export function escapeHtml(str) {
+export function escapeHtml (str) {
   const htmlEntities = {
     '&': '&amp;',
     '<': '&lt;',
@@ -66,7 +66,7 @@ export function escapeHtml(str) {
   return str.replace(/[&<>"'/]/g, (match) => htmlEntities[match])
 }
 
-export function randomString(length = 5) {
+export function randomString (length = 5) {
   let str = ''
   for (let i = 0; i < length; i++) {
     str += lodash.random(36).toString(36)
@@ -74,7 +74,7 @@ export function randomString(length = 5) {
   return str.substr(0, length)
 }
 
-export async function tryTimes(promiseFn, maxTries = 10) {
+export async function tryTimes (promiseFn, maxTries = 10) {
   try {
     return await promiseFn()
   } catch (e) {
@@ -86,12 +86,12 @@ export async function tryTimes(promiseFn, maxTries = 10) {
   }
 }
 
-export async function makeForwardMsg(e, msg = [], dec = '') {
+export async function makeForwardMsg (e, msg = [], dec = '') {
   return common.makeForwardMsg(e, msg, dec)
 }
 
 // @see https://github.com/sindresorhus/p-timeout
-export async function pTimeout(
+export async function pTimeout (
   promise,
   options
 ) {
@@ -107,7 +107,7 @@ export async function pTimeout(
   const cancelablePromise = new Promise((resolve, reject) => {
     if (typeof milliseconds !== 'number' || Math.sign(milliseconds) !== 1) {
       throw new TypeError(
-        `Expected \`milliseconds\` to be a positive number, got \`${milliseconds}\``
+          `Expected \`milliseconds\` to be a positive number, got \`${milliseconds}\``
       )
     }
 
@@ -141,11 +141,11 @@ export async function pTimeout(
         }
 
         const errorMessage =
-          typeof message === 'string'
-            ? message
-            : `Promise timed out after ${milliseconds} milliseconds`
+              typeof message === 'string'
+                ? message
+                : `Promise timed out after ${milliseconds} milliseconds`
         const timeoutError =
-          message instanceof Error ? message : new Error(errorMessage)
+              message instanceof Error ? message : new Error(errorMessage)
 
         if (typeof promise.cancel === 'function') {
           promise.cancel()
@@ -155,15 +155,15 @@ export async function pTimeout(
       },
       milliseconds
     )
-      ; (async () => {
-        try {
-          resolve(await promise)
-        } catch (error) {
-          reject(error)
-        } finally {
-          customTimers.clearTimeout.call(undefined, timer)
-        }
-      })()
+    ;(async () => {
+      try {
+        resolve(await promise)
+      } catch (error) {
+        reject(error)
+      } finally {
+        customTimers.clearTimeout.call(undefined, timer)
+      }
+    })()
   })
 
   cancelablePromise.clear = () => {
@@ -176,31 +176,31 @@ export async function pTimeout(
 /**
  TODO: Remove below function and just 'reject(signal.reason)' when targeting Node 18.
  */
-function getAbortedReason(signal) {
+function getAbortedReason (signal) {
   const reason =
-    signal.reason === undefined
-      ? getDOMException('This operation was aborted.')
-      : signal.reason
+      signal.reason === undefined
+        ? getDOMException('This operation was aborted.')
+        : signal.reason
 
   return reason instanceof Error ? reason : getDOMException(reason)
 }
 /**
  TODO: Remove AbortError and just throw DOMException when targeting Node 18.
  */
-function getDOMException(errorMessage) {
+function getDOMException (errorMessage) {
   return globalThis.DOMException === undefined
     ? new Error(errorMessage)
     : new DOMException(errorMessage)
 }
 
-export async function checkPnpm() {
+export async function checkPnpm () {
   let npm = 'npm'
   let ret = await execSync('pnpm -v')
   if (ret.stdout) npm = 'pnpm'
   return npm
 }
 
-async function execSync(cmd) {
+async function execSync (cmd) {
   return new Promise((resolve, reject) => {
     exec(cmd, { windowsHide: true }, (error, stdout, stderr) => {
       resolve({ error, stdout, stderr })
@@ -208,7 +208,7 @@ async function execSync(cmd) {
   })
 }
 
-export function mkdirs(dirname) {
+export function mkdirs (dirname) {
   if (fs.existsSync(dirname)) {
     return true
   } else {
@@ -219,7 +219,7 @@ export function mkdirs(dirname) {
   }
 }
 
-export function formatDate(date) {
+export function formatDate (date) {
   const year = date.getFullYear()
   const month = date.getMonth() + 1 // Note that getMonth() returns a zero-based index
   const day = date.getDate()
@@ -230,14 +230,14 @@ export function formatDate(date) {
   return formattedDate
 }
 
-export function formatDate2(date) {
+export function formatDate2 (date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
 }
-export async function getMasterQQ() {
+export async function getMasterQQ () {
   return (await import('../../../lib/config/config.js')).default.masterQQ
 }
 
@@ -254,7 +254,7 @@ export async function getMasterQQ() {
  * @param renderCfg.beforeRender({data}) 可改写渲染的data数据
  * @returns {Promise<boolean>}
  */
-export async function render(e, pluginKey, htmlPath, data = {}, renderCfg = {}) {
+export async function render (e, pluginKey, htmlPath, data = {}, renderCfg = {}) {
   // 处理传入的path
   htmlPath = htmlPath.replace(/.html$/, '')
   let paths = lodash.filter(htmlPath.split('/'), (p) => !!p)
@@ -309,7 +309,7 @@ export async function render(e, pluginKey, htmlPath, data = {}, renderCfg = {}) 
   return renderCfg.retType === 'msgId' ? ret : true
 }
 
-export async function renderUrl(e, url, renderCfg = {}) {
+export async function renderUrl (e, url, renderCfg = {}) {
   // 云渲染
   if (Config.cloudRender) {
     url = url.replace(`127.0.0.1:${Config.serverPort || 3321}`, Config.serverHost || `${await getPublicIP()}:${Config.serverPort || 3321}`)
@@ -353,7 +353,7 @@ export async function renderUrl(e, url, renderCfg = {}) {
   const page = await _puppeteer.browser.newPage()
   let base64
   try {
-    await page.goto(url, { timeout: 120000, waitUntil: 'networkidle0' })
+    await page.goto(url, { timeout: 120000 , waitUntil: 'networkidle0' })
     await page.setViewport(renderCfg.Viewport || {
       width: 1280,
       height: 720
@@ -381,7 +381,7 @@ export async function renderUrl(e, url, renderCfg = {}) {
   return renderCfg.retType === 'msgId' ? ret : true
 }
 
-export function getDefaultReplySetting() {
+export function getDefaultReplySetting () {
   return {
     usePicture: Config.defaultUsePicture,
     useTTS: Config.defaultUseTTS,
@@ -391,7 +391,7 @@ export function getDefaultReplySetting() {
   }
 }
 
-export function parseDuration(duration) {
+export function parseDuration (duration) {
   const timeMap = {
     秒: 1,
     分: 60,
@@ -423,7 +423,7 @@ export function parseDuration(duration) {
   return num * timeMap[unit]
 }
 
-export function formatDuration(duration) {
+export function formatDuration (duration) {
   const timeMap = {
     小时: 60 * 60,
     分钟: 60,
@@ -450,7 +450,7 @@ export function formatDuration(duration) {
  * 判断服务器所在地是否为中国
  * @returns {Promise<boolean>}
  */
-export async function isCN() {
+export async function isCN () {
   if (await redis.get('CHATGPT:COUNTRY_CODE')) {
     return await redis.get('CHATGPT:COUNTRY_CODE') === 'CN'
   } else {
@@ -467,7 +467,7 @@ export async function isCN() {
   }
 }
 
-export function limitString(str, maxLength, addDots = true) {
+export function limitString (str, maxLength, addDots = true) {
   if (str.length <= maxLength) {
     return str
   } else {
@@ -488,7 +488,7 @@ export function limitString(str, maxLength, addDots = true) {
  * @param text
  * @returns {string}
  */
-export function wrapTextByLanguage(text) {
+export function wrapTextByLanguage (text) {
   // 根据标点符号分割句子
   const symbols = /([。！？，])/
   let sentences = text.split(symbols)
@@ -562,7 +562,7 @@ export function wrapTextByLanguage(text) {
 
 // console.log(wrapTextByLanguage('你好，这里是哈哈，こんにちは，Hello！'))
 
-export function maskQQ(qq) {
+export function maskQQ (qq) {
   if (!qq) {
     return '未知'
   }
@@ -571,7 +571,7 @@ export function maskQQ(qq) {
   return newqq
 }
 
-export function completeJSON(input) {
+export function completeJSON (input) {
   let result = {}
 
   let inJson = false
@@ -631,7 +631,7 @@ export function completeJSON(input) {
   return result
 }
 
-export async function isImage(link) {
+export async function isImage (link) {
   try {
     let response = await fetch(link)
     let body = await response.arrayBuffer()
@@ -643,7 +643,7 @@ export async function isImage(link) {
   }
 }
 
-export async function getPublicIP() {
+export async function getPublicIP () {
   try {
     if (localIP === '') {
       const res = await fetch('https://api.ipify.org?format=json')
@@ -656,7 +656,7 @@ export async function getPublicIP() {
   }
 }
 
-export async function getUserData(user) {
+export async function getUserData (user) {
   const dir = 'resources/ChatGPTCache/user'
   const filename = `${user}.json`
   const filepath = path.join(dir, filename)
@@ -680,22 +680,22 @@ export async function getUserData(user) {
   }
 }
 
-export function getVoicevoxRoleList() {
+export function getVoicevoxRoleList () {
   return voxRoleList.map(item => item.name).join(',')
 }
 
-export function getAzureRoleList() {
+export function getAzureRoleList () {
   return azureRoleList.map(item => item.roleInfo + (item?.emotion ? '-> 支持：' + Object.keys(item.emotion).join('，') + ' 情绪。' : '')).join('\n\n')
 }
 
-export async function getVitsRoleList(e) {
+export async function getVitsRoleList (e) {
   const [firstHalf, secondHalf] = [vitsRoleList.slice(0, Math.floor(vitsRoleList.length / 2)).join('、'), vitsRoleList.slice(Math.floor(vitsRoleList.length / 2)).join('、')]
   const [chunk1, chunk2] = [firstHalf.match(/[^、]+(?:、[^、]+){0,30}/g), secondHalf.match(/[^、]+(?:、[^、]+){0,30}/g)]
   const list = [await makeForwardMsg(e, chunk1, 'vits角色列表1'), await makeForwardMsg(e, chunk2, 'vits角色列表2')]
   return await makeForwardMsg(e, list, 'vits角色列表')
 }
 
-export async function getUserReplySetting(e) {
+export async function getUserReplySetting (e) {
   let userSetting = await redis.get(`CHATGPT:USER:${e.sender.user_id}`)
   if (userSetting) {
     userSetting = JSON.parse(userSetting)
@@ -788,9 +788,8 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
     }
 
     for (const val of reply) {
-      // mface(大表情/GIF等) 与 image 统一按图片来源处理
-      if (val.type == 'image' || val.type === 'mface') {
-        if (val.url) i.push(val.url)
+      if (val.type == 'image') {
+        i.push(val.url)
       }
       if (val.type == 'text') {
         text.push(val.text)
@@ -833,7 +832,7 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
   return e.img;
 }
 
-export async function getImageOcrText(e) {
+export async function getImageOcrText (e) {
   const img = await parseSourceImg(e)
   if (img) {
     try {
@@ -886,25 +885,30 @@ export async function getImageOcrText(e) {
   }
 }
 
-export function getMaxModelTokens(model = 'gpt-3.5-turbo') {
-  if (model.startsWith('gpt-3.5-turbo')) {
-    if (model.includes('16k')) {
-      return 16000
-    } else if (model.includes('0613') || model.includes('0314')) {
-      return 4000
-    } else {
-      return 16000
+export function getModelTokenInfo (model = 'gpt-3.5-turbo') {
+  const normalizedModel = (model || 'gpt-3.5-turbo').toLowerCase()
+
+  if (normalizedModel.startsWith('gpt-3.5-turbo')) {
+    if (normalizedModel.includes('16k')) {
+      return { maxTokens: 16000, estimated: false }
+    } else if (normalizedModel.includes('0613') || normalizedModel.includes('0314')) {
+      return { maxTokens: 4000, estimated: false }
     }
-  } else {
-    if (model.includes('32k')) {
-      return 32000
-    } else {
-      return 16000
-    }
+    return { maxTokens: 16000, estimated: false }
   }
+
+  if (normalizedModel.includes('32k')) {
+    return { maxTokens: 32000, estimated: false }
+  }
+
+  return { maxTokens: 4096, estimated: true }
 }
 
-export function getUin(e) {
+export function getMaxModelTokens (model = 'gpt-3.5-turbo') {
+  return getModelTokenInfo(model).maxTokens
+}
+
+export function getUin (e) {
   if (e?.self_id) return e.self_id
   if (e?.bot?.uin) return e.bot.uin
   if (Array.isArray(Bot.uin)) {
@@ -919,21 +923,6 @@ export function getUin(e) {
   } else return Bot.uin
 }
 
-export async function getGroupList(e) {
-  let groupList
-  try {
-    groupList = await e.bot.getGroupList()
-  } catch (err) {
-    groupList = e.bot.gl
-  }
-  //onebot getGroupList方法返回的array，需要转换为map 等同于e.bot.gl
-  if (Array.isArray(groupList)) {
-    return e.bot.gl
-  } else {
-    return groupList
-  }
-}
-
 /**
  * 生成当前语音模式下可发送的音频信息
  * @param e - 上下文对象
@@ -942,7 +931,7 @@ export async function getGroupList(e) {
  * @param emotionDegree - AzureTTSMode中的发言人情绪强度
  * @returns {Promise<{file: string, type: string}|undefined|boolean>}
  */
-export async function generateAudio(e, pendingText, speakingEmotion, emotionDegree = 1) {
+export async function generateAudio (e, pendingText, speakingEmotion, emotionDegree = 1) {
   if (!Config.ttsSpace && !Config.azureTTSKey && !Config.voicevoxSpace) return false
   let wav
   const speaker = getUserSpeaker(await getUserReplySetting(e))
@@ -1006,7 +995,7 @@ export async function generateAudio(e, pendingText, speakingEmotion, emotionDegr
  * @param ignoreEncode - 不在客户端处理编码
  * @returns {Promise<{file: string, type: string}|boolean>}
  */
-export async function generateAzureAudio(pendingText, role = '随机', speakingEmotion, emotionDegree = 1, ignoreEncode = false) {
+export async function generateAzureAudio (pendingText, role = '随机', speakingEmotion, emotionDegree = 1, ignoreEncode = false) {
   if (!Config.azureTTSKey) return false
   let speaker
   try {
@@ -1060,7 +1049,7 @@ export async function generateAzureAudio(pendingText, role = '随机', speakingE
     return false
   }
 }
-export function getUserSpeaker(userSetting) {
+export function getUserSpeaker (userSetting) {
   if (Config.ttsMode === 'vits-uma-genshin-honkai') {
     return convertSpeaker(userSetting.ttsRole || Config.defaultTTSRole)
   } else if (Config.ttsMode === 'azure') {
@@ -1077,7 +1066,7 @@ export function getUserSpeaker(userSetting) {
  * @param ignoreCertificateError 忽略证书错误
  * @return {Promise<string>} 最终下载文件的存储位置
  */
-export async function getOrDownloadFile(destPath, url, ignoreCertificateError = true) {
+export async function getOrDownloadFile (destPath, url, ignoreCertificateError = true) {
   const _path = process.cwd()
   let dest = path.join(_path, 'data', 'chatgpt', destPath)
   const p = path.dirname(dest)
@@ -1098,7 +1087,7 @@ export async function getOrDownloadFile(destPath, url, ignoreCertificateError = 
  * @param headers
  * @returns {Promise<string>} 最终下载文件的存储位置
  */
-export async function downloadFile(url, destPath, absolute = false, ignoreCertificateError = true, headers) {
+export async function downloadFile (url, destPath, absolute = false, ignoreCertificateError = true, headers) {
   let init = {}
   if (headers) {
     init.headers = headers
@@ -1133,7 +1122,7 @@ export async function downloadFile(url, destPath, absolute = false, ignoreCertif
   return dest
 }
 
-export function isPureText(filename) {
+export function isPureText (filename) {
   const ext = path.extname(filename).toLowerCase()
 
   // List of file extensions that can be treated as pure text
@@ -1158,7 +1147,7 @@ export function isPureText(filename) {
  * @param e
  * @returns {Promise<{}>} 提取的文本内容和文件名
  */
-export async function extractContentFromFile(fileMsgElem, e) {
+export async function extractContentFromFile (fileMsgElem, e) {
   logger.info('filename: ' + fileMsgElem.name)
   let fileType = isPureText(fileMsgElem.name)
   if (fileType) {
@@ -1311,7 +1300,7 @@ export async function extractContentFromFile(fileMsgElem, e) {
  * @param email
  * @returns {string}
  */
-export function maskEmail(email) {
+export function maskEmail (email) {
   // 使用正则表达式匹配电子邮件地址的用户名和域名部分
   const regex = /^([^@]+)@([^@]+)$/
   const match = email.match(regex)
@@ -1341,7 +1330,7 @@ export function maskEmail(email) {
  * @param str
  * @returns {*|string}
  */
-function maskString(str) {
+function maskString (str) {
   // 如果字符串长度小于等于2，直接返回原字符串
   if (str.length <= 2) {
     return str

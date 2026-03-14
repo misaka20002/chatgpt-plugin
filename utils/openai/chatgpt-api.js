@@ -19,8 +19,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -65,6 +65,24 @@ import { fetchSSE } from './fetch-sse.js';
 var CHATGPT_MODEL = 'gpt-4o-mini';
 var USER_LABEL_DEFAULT = 'User';
 var ASSISTANT_LABEL_DEFAULT = 'ChatGPT';
+var TOOL_LABEL_DEFAULT = 'Tool';
+function extractTextContent(content) {
+    if (!content) {
+        return '';
+    }
+    return typeof content === 'string'
+        ? content
+        : content.filter(function (part) { return part.type === 'text'; }).map(function (part) { return part.text; }).join('\n');
+}
+function getStoredMessageRole(role) {
+    if (role === 'tool' || role === 'assistant' || role === 'system') {
+        return role;
+    }
+    if (role === 'function') {
+        return 'function';
+    }
+    return 'user';
+}
 var ChatGPTAPI = /** @class */ (function () {
     /**
      * Creates a new client wrapper around OpenAI's chat completion API, mimicing the official ChatGPT webapp's functionality as closely as possible.
@@ -82,13 +100,13 @@ var ChatGPTAPI = /** @class */ (function () {
      * @param fetch - Optional override for the `fetch` implementation to use. Defaults to the global `fetch` function.
      */
     function ChatGPTAPI(opts) {
-        var apiKey = opts.apiKey, apiOrg = opts.apiOrg, _a = opts.apiBaseUrl, apiBaseUrl = _a === void 0 ? 'https://api.openai.com/v1' : _a, _b = opts.debug, debug = _b === void 0 ? false : _b, messageStore = opts.messageStore, completionParams = opts.completionParams, systemMessage = opts.systemMessage, _c = opts.maxModelTokens, maxModelTokens = _c === void 0 ? 4000 : _c, _d = opts.maxResponseTokens, maxResponseTokens = _d === void 0 ? 8192 : _d, getMessageById = opts.getMessageById, upsertMessage = opts.upsertMessage, _e = opts.fetch, fetch = _e === void 0 ? globalFetch : _e;
+        var apiKey = opts.apiKey, apiOrg = opts.apiOrg, _a = opts.apiBaseUrl, apiBaseUrl = _a === void 0 ? 'https://api.openai.com/v1' : _a, _b = opts.debug, debug = _b === void 0 ? false : _b, messageStore = opts.messageStore, completionParams = opts.completionParams, systemMessage = opts.systemMessage, _c = opts.maxModelTokens, maxModelTokens = _c === void 0 ? 4096 : _c, _d = opts.maxResponseTokens, maxResponseTokens = _d === void 0 ? 8192 : _d, getMessageById = opts.getMessageById, upsertMessage = opts.upsertMessage, _e = opts.fetch, fetch = _e === void 0 ? globalFetch : _e;
         this._apiKey = apiKey;
         this._apiOrg = apiOrg;
         this._apiBaseUrl = apiBaseUrl;
         this._debug = !!debug;
         this._fetch = fetch;
-        this._completionParams = __assign({ model: CHATGPT_MODEL, temperature: 1, top_p: 1.0 }, completionParams);
+        this._completionParams = __assign({ model: CHATGPT_MODEL, temperature: 0.8, top_p: 1.0, presence_penalty: 1.0 }, completionParams);
         this._systemMessage = systemMessage;
         if (this._systemMessage === undefined) {
             var currentDate = new Date().toISOString().split('T')[0];
@@ -116,6 +134,88 @@ var ChatGPTAPI = /** @class */ (function () {
             throw new Error('Invalid "fetch" is not a function');
         }
     }
+    ChatGPTAPI.prototype._toRequestMessage = function (message) {
+        var storedRole = getStoredMessageRole(message.role);
+        var content = message.originalContent || message.text;
+        var hasToolCalls = !!(message.toolCalls && message.toolCalls.length);
+        if (storedRole === 'function') {
+            return null;
+        }
+        if (storedRole === 'tool') {
+            if (!message.toolCallId) {
+                return null;
+            }
+            return {
+                role: 'tool',
+                content: content || '',
+                tool_call_id: message.toolCallId
+            };
+        }
+        return {
+            role: storedRole,
+            content: content || '',
+            name: storedRole === 'user' ? message.name : undefined,
+            function_call: storedRole === 'assistant' && !hasToolCalls ? message.functionCall : undefined,
+            tool_calls: storedRole === 'assistant' ? message.toolCalls : undefined
+        };
+    };
+    ChatGPTAPI.prototype._getMessageTokenEstimate = function (message) {
+        return __awaiter(this, void 0, void 0, function () {
+            var contentString, nonTextTokens, _i, _a, part, promptLine, tokenCount;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        contentString = extractTextContent(message.content);
+                        nonTextTokens = 0;
+                        if (Array.isArray(message.content)) {
+                            for (_i = 0, _a = message.content; _i < _a.length; _i++) {
+                                part = _a[_i];
+                                if (part.type === 'image_url')
+                                    nonTextTokens += 85;
+                                if (part.type === 'input_audio')
+                                    nonTextTokens += 100;
+                            }
+                        }
+                        promptLine = '';
+                        switch (message.role) {
+                            case 'system':
+                                promptLine = "Instructions:\n".concat(contentString);
+                                break;
+                            case 'user':
+                                promptLine = "".concat(USER_LABEL_DEFAULT, ":\n").concat(contentString);
+                                break;
+                            case 'assistant':
+                                promptLine = "".concat(ASSISTANT_LABEL_DEFAULT, ":\n").concat(contentString);
+                                break;
+                            case 'tool':
+                                promptLine = "".concat(TOOL_LABEL_DEFAULT, ":\n").concat(contentString);
+                                break;
+                        }
+                        return [4 /*yield*/, this._getTokenCount(promptLine)];
+                    case 1:
+                        tokenCount = (_b.sent()) + nonTextTokens;
+                        if (!message.function_call) return [3 /*break*/, 3];
+                        return [4 /*yield*/, this._getTokenCount(JSON.stringify(message.function_call))];
+                    case 2:
+                        tokenCount += _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        if (!message.tool_calls) return [3 /*break*/, 5];
+                        return [4 /*yield*/, this._getTokenCount(JSON.stringify(message.tool_calls))];
+                    case 4:
+                        tokenCount += _b.sent();
+                        _b.label = 5;
+                    case 5:
+                        if (!message.tool_call_id) return [3 /*break*/, 7];
+                        return [4 /*yield*/, this._getTokenCount(message.tool_call_id)];
+                    case 6:
+                        tokenCount += _b.sent();
+                        _b.label = 7;
+                    case 7: return [2 /*return*/, tokenCount];
+                }
+            });
+        });
+    };
     /**
      * Sends a message to the OpenAI chat completions endpoint, waits for the response
      * to resolve, and returns the response.
@@ -126,7 +226,7 @@ var ChatGPTAPI = /** @class */ (function () {
      *
      * Set `debug: true` in the `ChatGPTAPI` constructor to log more info on the full prompt sent to the OpenAI chat completions API. You can override the `systemMessage` in `opts` to customize the assistant's instructions.
      *
-     * @param message - The prompt message to send
+     * @param content - The prompt message to send: 多模态消息体封装：将传给 sendMessage 的参数从单纯的 string 放开为 string | ChatCompletionContentPart[]。你现在可以在上层应用构建好 [{ type: 'text', text: '描述一下这个图' }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,....' } }]
      * @param opts.parentMessageId - Optional ID of the previous message in the conversation (defaults to `undefined`)
      * @param opts.conversationId - Optional ID of the conversation (defaults to `undefined`)
      * @param opts.messageId - Optional ID of the message to send (defaults to a random UUID)
@@ -138,12 +238,12 @@ var ChatGPTAPI = /** @class */ (function () {
      *
      * @returns The response from ChatGPT
      */
-    ChatGPTAPI.prototype.sendMessage = function (text, opts, role) {
-        if (opts === void 0) { opts = {}; }
-        if (role === void 0) { role = 'user'; }
-        return __awaiter(this, void 0, void 0, function () {
-            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, primaryInputContent, message, latestQuestion, extraMessages, normalizedExtraMessages, lastInputMessageId, i, extra, extraId, _c, messages, maxTokens, numTokens, result, responseP;
+    ChatGPTAPI.prototype.sendMessage = function (content_1) {
+        return __awaiter(this, arguments, void 0, function (content, opts, role) {
+            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, currentMessages, message, _c, messages, maxTokens, numTokens, result, responseP;
             var _this = this;
+            if (opts === void 0) { opts = {}; }
+            if (role === void 0) { role = 'user'; }
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -154,37 +254,27 @@ var ChatGPTAPI = /** @class */ (function () {
                             abortController = new AbortController();
                             abortSignal = abortController.signal;
                         }
-                        primaryInputContent = this._buildInputContent(role, text, opts.imageUrls);
-                        message = {
-                            role: role,
-                            id: messageId,
-                            conversationId: conversationId,
-                            parentMessageId: parentMessageId,
-                            text: text,
-                            content: primaryInputContent,
-                            name: opts.name,
-                            toolCallId: opts.toolCallId
-                        };
-                        latestQuestion = message;
-                        extraMessages = Array.isArray(opts.extraMessages) ? opts.extraMessages : [];
-                        normalizedExtraMessages = [];
-                        lastInputMessageId = messageId;
-                        for (i = 0; i < extraMessages.length; i++) {
-                            extra = extraMessages[i] || {};
-                            extraId = extra.messageId || uuidv4();
-                            normalizedExtraMessages.push({
-                                role: extra.role || role,
-                                id: extraId,
+                        currentMessages = __spreadArray([], (opts.appendMessages || []), true);
+                        if (content !== null) {
+                            if (role === 'tool' && !opts.toolCallId) {
+                                throw new Error('tool role message requires toolCallId');
+                            }
+                            message = {
+                                role: role,
+                                id: messageId,
                                 conversationId: conversationId,
-                                parentMessageId: lastInputMessageId,
-                                text: typeof extra.text === 'string' ? extra.text : String(extra.text || ''),
-                                content: typeof extra.text === 'string' ? extra.text : String(extra.text || ''),
-                                name: extra.name,
-                                toolCallId: extra.toolCallId
-                            });
-                            lastInputMessageId = extraId;
+                                parentMessageId: currentMessages.length > 0 ? currentMessages[currentMessages.length - 1].id : parentMessageId,
+                                text: extractTextContent(content),
+                                originalContent: content,
+                                name: role === 'user' ? opts.name : undefined,
+                                toolCallId: role === 'tool' ? opts.toolCallId : undefined
+                            };
+                            currentMessages.push(message);
                         }
-                        return [4 /*yield*/, this._buildMessages(text, role, opts, completionParams, normalizedExtraMessages)];
+                        if (currentMessages.length === 0) {
+                            throw new Error('sendMessage requires content or appendMessages');
+                        }
+                        return [4 /*yield*/, this._buildMessages(currentMessages, opts, completionParams)];
                     case 1:
                         _c = _d.sent(), messages = _c.messages, maxTokens = _c.maxTokens, numTokens = _c.numTokens;
                         console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
@@ -192,7 +282,7 @@ var ChatGPTAPI = /** @class */ (function () {
                             role: 'assistant',
                             id: uuidv4(),
                             conversationId: conversationId,
-                            parentMessageId: lastInputMessageId,
+                            parentMessageId: currentMessages[currentMessages.length - 1].id,
                             text: '',
                             thinking_text: '',
                             functionCall: undefined,
@@ -210,19 +300,15 @@ var ChatGPTAPI = /** @class */ (function () {
                                             'Content-Type': 'application/json',
                                             Authorization: "Bearer ".concat(this._apiKey)
                                         };
-                                        body = __assign(__assign(__assign({ max_completion_tokens: maxTokens }, this._completionParams), completionParams), { messages: messages, stream: stream });
-
+                                        body = __assign(__assign(__assign({ max_tokens: maxTokens }, this._completionParams), completionParams), { messages: messages, stream: stream });
                                         // 如果存在 functions，将其转换为 tools 格式
                                         if (body.functions && body.functions.length > 0) {
-                                            body.tools = body.functions.map(function(func) {
-                                                return {
-                                                    type: "function",
-                                                    function: func
-                                                };
-                                            });
+                                            body.tools = body.functions.map(function (func) { return ({
+                                                type: "function",
+                                                function: func
+                                            }); });
                                             delete body.functions;
                                         }
-                                        
                                         if (this._debug) {
                                             console.log(JSON.stringify(body));
                                         }
@@ -244,6 +330,13 @@ var ChatGPTAPI = /** @class */ (function () {
                                                 var _a;
                                                 if (data === '[DONE]') {
                                                     result.text = result.text.trim();
+                                                    if (result.functionCall && (!result.toolCalls || result.toolCalls.length === 0)) {
+                                                        result.toolCalls = [{
+                                                                id: "call_".concat(uuidv4()),
+                                                                type: 'function',
+                                                                function: result.functionCall
+                                                            }];
+                                                    }
                                                     result.conversation = messages;
                                                     return resolve(result);
                                                 }
@@ -270,35 +363,33 @@ var ChatGPTAPI = /** @class */ (function () {
                                                                 result.toolCalls = [];
                                                             }
                                                             for (var _i = 0, _b = delta.tool_calls; _i < _b.length; _i++) {
-                                                                var partialToolCall = _b[_i];
-                                                                var index = typeof partialToolCall.index === 'number' ? partialToolCall.index : result.toolCalls.length;
-                                                                if (!result.toolCalls[index]) {
-                                                                    result.toolCalls[index] = {
-                                                                        id: partialToolCall.id || '',
-                                                                        type: partialToolCall.type || 'function',
-                                                                        function: { name: '', arguments: '' }
+                                                                var incomingToolCall = _b[_i];
+                                                                var toolCallIndex = incomingToolCall.index || 0;
+                                                                if (!result.toolCalls[toolCallIndex]) {
+                                                                    result.toolCalls[toolCallIndex] = {
+                                                                        id: incomingToolCall.id || "call_".concat(uuidv4()),
+                                                                        type: 'function',
+                                                                        function: {
+                                                                            name: (incomingToolCall.function && incomingToolCall.function.name) || '',
+                                                                            arguments: (incomingToolCall.function && incomingToolCall.function.arguments) || ''
+                                                                        }
                                                                     };
                                                                 }
-                                                                if (partialToolCall.id) {
-                                                                    result.toolCalls[index].id = partialToolCall.id;
-                                                                }
-                                                                if (partialToolCall.type) {
-                                                                    result.toolCalls[index].type = partialToolCall.type;
-                                                                }
-                                                                if (partialToolCall.function) {
-                                                                    if (!result.toolCalls[index].function) {
-                                                                        result.toolCalls[index].function = { name: '', arguments: '' };
+                                                                else {
+                                                                    if (incomingToolCall.id) {
+                                                                        result.toolCalls[toolCallIndex].id = incomingToolCall.id;
                                                                     }
-                                                                    if (partialToolCall.function.name) {
-                                                                        result.toolCalls[index].function.name = (result.toolCalls[index].function.name || '') + partialToolCall.function.name;
+                                                                    if (incomingToolCall.function && incomingToolCall.function.name) {
+                                                                        result.toolCalls[toolCallIndex].function.name = incomingToolCall.function.name;
                                                                     }
-                                                                    if (partialToolCall.function.arguments) {
-                                                                        result.toolCalls[index].function.arguments = (result.toolCalls[index].function.arguments || '') + partialToolCall.function.arguments;
+                                                                    if (incomingToolCall.function && incomingToolCall.function.arguments) {
+                                                                        result.toolCalls[toolCallIndex].function.arguments =
+                                                                            (result.toolCalls[toolCallIndex].function.arguments || '') + incomingToolCall.function.arguments;
                                                                     }
                                                                 }
                                                             }
                                                             if (result.toolCalls.length > 0) {
-                                                                result.functionCall = result.toolCalls.map(function (tool) { return tool.function; })[0];
+                                                                result.functionCall = result.toolCalls[0].function;
                                                             }
                                                         }
                                                         else {
@@ -353,12 +444,18 @@ var ChatGPTAPI = /** @class */ (function () {
                                         if ((_a = response === null || response === void 0 ? void 0 : response.choices) === null || _a === void 0 ? void 0 : _a.length) {
                                             message_1 = response.choices[0].message;
                                             if (message_1.content) {
-                                                result.text = message_1.content;
+                                                result.text = typeof message_1.content === 'string' ? message_1.content : message_1.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+                                                result.originalContent = message_1.content;
                                             }
-                                            if (message_1.function_call && message_1.function_call !== null) {
+                                            else if (message_1.function_call && message_1.function_call !== null) {
                                                 result.functionCall = message_1.function_call;
+                                                result.toolCalls = [{
+                                                        id: "call_".concat(uuidv4()),
+                                                        type: 'function',
+                                                        function: message_1.function_call
+                                                    }];
                                             }
-                                            if (message_1.tool_calls && message_1.tool_calls.length > 0) {
+                                            else if (message_1.tool_calls && message_1.tool_calls.length > 0) {
                                                 // 设置 functionCall 以兼容旧代码
                                                 result.functionCall = message_1.tool_calls.map(function (tool) { return tool.function; })[0];
                                                 // 同时设置 toolCalls 以支持新的格式
@@ -384,7 +481,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                 }
                             });
                         }); }).then(function (message) { return __awaiter(_this, void 0, void 0, function () {
-                            var promptTokens, completionTokens, err_2, latestQuestionForStore, extraMessagesForStore;
+                            var promptTokens, completionTokens, err_2;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
@@ -406,14 +503,9 @@ var ChatGPTAPI = /** @class */ (function () {
                                     case 3:
                                         err_2 = _a.sent();
                                         return [3 /*break*/, 4];
-                                    case 4:
-                                        latestQuestionForStore = this._compactMessageForHistory(latestQuestion);
-                                        extraMessagesForStore = normalizedExtraMessages.map(function (m) { return _this._compactMessageForHistory(m); });
-                                        return [2 /*return*/, Promise.all(__spreadArray(__spreadArray([
-                                                this._upsertMessage(latestQuestionForStore)
-                                            ], extraMessagesForStore.map(function (m) { return _this._upsertMessage(m); }), true), [
-                                                this._upsertMessage(message)
-                                            ], false)).then(function () { return message; })];
+                                    case 4: return [2 /*return*/, Promise.all(__spreadArray(__spreadArray([], currentMessages.map(function (currentMessage) { return _this._upsertMessage(currentMessage); }), true), [
+                                            this._upsertMessage(message)
+                                        ], false)).then(function () { return message; })];
                                 }
                             });
                         }); });
@@ -463,174 +555,80 @@ var ChatGPTAPI = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams, additionalMessages) {
-        var _this = this;
-        return __awaiter(this, void 0, void 0, function () {
-            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, currentInputMessages, hasPrimaryTextInput, hasPrimaryImageInput, inputContent, i, inputMessage, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, fallbackText, maxTokens;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
-                    case 0:
-                        _a = opts.systemMessage, systemMessage = _a === void 0 ? this._systemMessage : _a;
-                        parentMessageId = opts.parentMessageId;
-                        userLabel = USER_LABEL_DEFAULT;
-                        assistantLabel = ASSISTANT_LABEL_DEFAULT;
-                        maxNumTokens = this._maxModelTokens - this._maxResponseTokens;
-                        messages = [];
-                        if (systemMessage) {
-                            messages.push({
-                                role: 'system',
-                                content: systemMessage
-                            });
-                        }
-                        systemMessageOffset = messages.length;
-                        currentInputMessages = [];
-                        hasPrimaryTextInput = typeof text === 'string'
-                            ? text.length > 0
-                            : Boolean(text);
-                        hasPrimaryImageInput = role === 'user'
-                            && Array.isArray(opts.imageUrls)
-                            && opts.imageUrls.length > 0;
-                        if (hasPrimaryTextInput || hasPrimaryImageInput) {
-                            inputContent = this._buildInputContent(role, text, opts.imageUrls);
-                            currentInputMessages.push({
-                                role: role,
-                                content: inputContent,
-                                name: opts.name,
-                                tool_call_id: opts.toolCallId
-                            });
-                        }
-                        if (Array.isArray(additionalMessages) && additionalMessages.length > 0) {
-                            for (i = 0; i < additionalMessages.length; i++) {
-                                inputMessage = additionalMessages[i];
-                                if (!inputMessage) {
-                                    continue;
-                                }
-                                currentInputMessages.push({
-                                    role: inputMessage.role,
-                                    content: inputMessage.content !== undefined ? inputMessage.content : (inputMessage.text || ''),
-                                    name: inputMessage.name,
-                                    tool_call_id: inputMessage.toolCallId
-                                });
-                            }
-                        }
-                        nextMessages = currentInputMessages.length > 0
-                            ? messages.concat(currentInputMessages)
-                            : messages;
-                        functionToken = 0;
-                        numTokens = functionToken;
-                        _d.label = 1;
-                    case 1:
-                        prompt_1 = nextMessages
-                            .reduce(function (prompt, message) {
-                            var messageText = _this._contentToPromptText(message.content);
-                            switch (message.role) {
-                                case 'system':
-                                    return prompt.concat(["Instructions:\n".concat(messageText)]);
-                                case 'user':
-                                    return prompt.concat(["".concat(userLabel, ":\n").concat(messageText)]);
-                                case 'function':
-                                    // leave behind
-                                    return prompt;
-                                case 'tool':
-                                    // leave behind
-                                    return prompt;
-                                case 'assistant':
-                                    return prompt;
-                                default:
-                                    return messageText ? prompt.concat(["".concat(assistantLabel, ":\n").concat(messageText)]) : prompt;
-                            }
-                        }, [])
-                            .join('\n\n');
-                        return [4 /*yield*/, this._getTokenCount(prompt_1)];
-                    case 2:
-                        nextNumTokensEstimate = _d.sent();
-                        _i = 0, _b = nextMessages
-                            .filter(function (m) { return m.function_call; });
-                        _d.label = 3;
-                    case 3:
-                        if (!(_i < _b.length)) return [3 /*break*/, 6];
-                        m1 = _b[_i];
-                        _c = nextNumTokensEstimate;
-                        return [4 /*yield*/, this._getTokenCount(JSON.stringify(m1.function_call) || '')];
-                    case 4:
-                        nextNumTokensEstimate = _c + _d.sent();
-                        _d.label = 5;
-                    case 5:
-                        _i++;
-                        return [3 /*break*/, 3];
-                    case 6:
-                        isValidPrompt = nextNumTokensEstimate + functionToken <= maxNumTokens;
-                        if (prompt_1 && !isValidPrompt) {
-                            return [3 /*break*/, 9];
-                        }
-                        messages = nextMessages;
-                        numTokens = nextNumTokensEstimate + functionToken;
-                        if (!isValidPrompt) {
-                            return [3 /*break*/, 9];
-                        }
-                        if (!parentMessageId) {
-                            return [3 /*break*/, 9];
-                        }
-                        return [4 /*yield*/, this._getMessageById(parentMessageId)];
-                    case 7:
-                        parentMessage = _d.sent();
-                        if (!parentMessage) {
-                            return [3 /*break*/, 9];
-                        }
-                        parentMessageRole = parentMessage.role || 'user';
-                        nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
-                            {
-                                role: parentMessageRole,
-                                content: parentMessage.content !== undefined ? parentMessage.content : (parentMessage.text || ''),
-                                name: parentMessage.name,
-                                function_call: parentMessage.toolCalls ? undefined : (parentMessage.functionCall ? parentMessage.functionCall : undefined),
-                                tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined,
-                                tool_call_id: parentMessage.toolCallId
-                            }
-                        ], nextMessages.slice(systemMessageOffset), true));
-                        parentMessageId = parentMessage.parentMessageId;
-                        _d.label = 8;
-                    case 8:
-                        if (true) return [3 /*break*/, 1];
-                        _d.label = 9;
-                    case 9:
-                        if (!(currentInputMessages.length > 0 && messages.length <= systemMessageOffset)) return [3 /*break*/, 12];
-                        if (!currentInputMessages.some(function (m) { return m.role === 'tool' && !!m.tool_call_id; })) return [3 /*break*/, 11];
-                        if (!opts.parentMessageId) return [3 /*break*/, 11];
-                        return [4 /*yield*/, this._getMessageById(opts.parentMessageId)];
-                    case 10:
-                        parentMessage = _d.sent();
-                        if (parentMessage) {
-                            messages = __spreadArray([{
-                                    role: parentMessage.role || 'assistant',
-                                    content: parentMessage.content !== undefined ? parentMessage.content : (parentMessage.text || ''),
-                                    name: parentMessage.name,
-                                    function_call: parentMessage.toolCalls ? undefined : (parentMessage.functionCall ? parentMessage.functionCall : undefined),
-                                    tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined,
-                                    tool_call_id: parentMessage.toolCallId
-                                }], currentInputMessages, true);
-                        }
-                        else {
-                            messages = currentInputMessages.slice();
-                        }
-                        return [3 /*break*/, 12];
-                    case 11:
-                        messages = currentInputMessages.slice();
-                        _d.label = 12;
-                    case 12:
-                        fallbackText = messages
-                            .map(function (m) { return _this._contentToPromptText(m.content); })
-                            .join('\n');
-                        return [4 /*yield*/, this._getTokenCount(fallbackText)];
-                    case 13:
-                        numTokens = _d.sent();
-                        _d.label = 14;
-                    case 14:
-                        maxTokens = Math.max(1, Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens));
-                        return [2 /*return*/, { messages: messages, maxTokens: maxTokens, numTokens: numTokens }];
-                }
+    ChatGPTAPI.prototype._buildMessages = async function (currentMessages, opts, completionParams) {
+        var _a, _b;
+        var systemMessage = (_a = opts.systemMessage) !== null && _a !== void 0 ? _a : this._systemMessage;
+        var parentMessageId = (_b = currentMessages[0]) === null || _b === void 0 ? void 0 : _b.parentMessageId;
+        var promptBudget = this._maxResponseTokens < this._maxModelTokens
+            ? this._maxModelTokens - this._maxResponseTokens
+            : this._maxModelTokens - 1;
+        var messages = [];
+        if (systemMessage) {
+            messages.push({
+                role: 'system',
+                content: systemMessage
             });
-        });
+        }
+        var systemMessageOffset = messages.length;
+        var currentRequestMessages = currentMessages
+            .map(function (message) { return this._toRequestMessage(message); }, this)
+            .filter(Boolean);
+        var nextMessages = messages.concat(currentRequestMessages);
+        var functionToken = 0;
+        var numTokens = functionToken;
+        while (true) {
+            var nextNumTokensEstimate = functionToken;
+            for (var _i = 0, nextMessages_1 = nextMessages; _i < nextMessages_1.length; _i++) {
+                var message = nextMessages_1[_i];
+                nextNumTokensEstimate += await this._getMessageTokenEstimate(message);
+            }
+            var isValidPrompt = nextNumTokensEstimate <= promptBudget;
+            var includesOnlyCurrentTurn = nextMessages.length === systemMessageOffset + currentRequestMessages.length;
+            if (includesOnlyCurrentTurn || isValidPrompt) {
+                messages = nextMessages;
+                numTokens = nextNumTokensEstimate;
+            }
+            if (!isValidPrompt || !parentMessageId) {
+                break;
+            }
+            var parentMessage = await this._getMessageById(parentMessageId);
+            if (!parentMessage) {
+                break;
+            }
+            var storedRole = getStoredMessageRole(parentMessage.role);
+            if (storedRole === 'tool') {
+                var toolHistoryMessages = [];
+                var cursor = parentMessage;
+                while (cursor && getStoredMessageRole(cursor.role) === 'tool') {
+                    toolHistoryMessages.unshift(cursor);
+                    cursor = cursor.parentMessageId ? await this._getMessageById(cursor.parentMessageId) : undefined;
+                }
+                parentMessageId = cursor === null || cursor === void 0 ? void 0 : cursor.parentMessageId;
+                var assistantRequestMessage = cursor ? this._toRequestMessage(cursor) : null;
+                var toolRequestMessages = toolHistoryMessages
+                    .map(function (message) { return this._toRequestMessage(message); }, this)
+                    .filter(Boolean);
+                if ((assistantRequestMessage === null || assistantRequestMessage === void 0 ? void 0 : assistantRequestMessage.role) !== 'assistant' ||
+                    !((assistantRequestMessage === null || assistantRequestMessage === void 0 ? void 0 : assistantRequestMessage.tool_calls) && assistantRequestMessage.tool_calls.length) ||
+                    toolRequestMessages.length !== toolHistoryMessages.length) {
+                    continue;
+                }
+                nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray(__spreadArray([
+                    assistantRequestMessage
+                ], toolRequestMessages, true), nextMessages.slice(systemMessageOffset), true));
+                continue;
+            }
+            var parentRequestMessage = this._toRequestMessage(parentMessage);
+            parentMessageId = parentMessage.parentMessageId;
+            if (!parentRequestMessage) {
+                continue;
+            }
+            nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
+                parentRequestMessage
+            ], nextMessages.slice(systemMessageOffset), true));
+        }
+        var maxTokens = Math.max(1, this._maxResponseTokens);
+        return { messages: messages, maxTokens: maxTokens, numTokens: numTokens };
     };
     ChatGPTAPI.prototype._getTokenCount = function (text) {
         return __awaiter(this, void 0, void 0, function () {
@@ -668,92 +666,6 @@ var ChatGPTAPI = /** @class */ (function () {
                 }
             });
         });
-    };
-    ChatGPTAPI.prototype._contentToPromptText = function (content) {
-        if (typeof content === 'string') {
-            return content;
-        }
-        if (!Array.isArray(content)) {
-            return '';
-        }
-        return content
-            .map(function (part) {
-            if (!part || typeof part !== 'object') {
-                return '';
-            }
-            if (part.type === 'text') {
-                return part.text || '';
-            }
-            if (part.type === 'image_url') {
-                return '[image]';
-            }
-            return '';
-        })
-            .filter(Boolean)
-            .join('\n');
-    };
-    ChatGPTAPI.prototype._buildMultimodalUserContent = function (text, imageUrls) {
-        var parts = [];
-        parts.push({ type: 'text', text: text || '' });
-        var cleanUrls = (Array.isArray(imageUrls) ? imageUrls : [])
-            .map(function (u) { return String(u || '').trim(); })
-            .filter(function (u) { return /^(https?:\/\/|data:image\/)/i.test(u); })
-            .slice(0, 6);
-        for (var _i = 0, cleanUrls_1 = cleanUrls; _i < cleanUrls_1.length; _i++) {
-            var url = cleanUrls_1[_i];
-            parts.push({
-                type: 'image_url',
-                image_url: { url: url }
-            });
-        }
-        return parts;
-    };
-    ChatGPTAPI.prototype._buildInputContent = function (role, text, imageUrls) {
-        if (role === 'user' && Array.isArray(imageUrls) && imageUrls.length > 0) {
-            return this._buildMultimodalUserContent(text, imageUrls);
-        }
-        return text;
-    };
-    ChatGPTAPI.prototype._compactMessageForHistory = function (message) {
-        if (!message) {
-            return message;
-        }
-        if (message.role === 'user' && Array.isArray(message.content)) {
-            var compactParts = [];
-            var imageCount = 0;
-            for (var _i = 0, _a = message.content; _i < _a.length; _i++) {
-                var part = _a[_i];
-                if (!part || typeof part !== 'object') {
-                    continue;
-                }
-                if (part.type === 'text') {
-                    var text = String(part.text || '').trim();
-                    compactParts.push({
-                        type: 'text',
-                        text: text.length > 500 ? "".concat(text.slice(0, 500), "...(truncated)") : text
-                    });
-                    continue;
-                }
-                if (part.type === 'image_url' && imageCount < 1) {
-                    compactParts.push(part);
-                    imageCount++;
-                }
-            }
-            return __assign(__assign({}, message), { content: compactParts });
-        }
-        if (message.role !== 'tool' && message.role !== 'function') {
-            return message;
-        }
-        var toolName = (message.name || 'tool').toString().slice(0, 64);
-        var rawText = typeof message.text === 'string'
-            ? message.text
-            : String(message.text || '');
-        var normalized = rawText.replace(/\s+/g, ' ').trim();
-        var maxLen = 260;
-        var shortText = normalized.length > maxLen
-            ? "".concat(normalized.slice(0, maxLen), "...(truncated)")
-            : normalized;
-        return __assign(__assign({}, message), { text: "[tool:".concat(toolName, "] ").concat(shortText), detail: undefined, functionCall: undefined, toolCalls: undefined });
     };
     return ChatGPTAPI;
 }());

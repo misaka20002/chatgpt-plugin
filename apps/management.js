@@ -85,7 +85,7 @@ export class ChatgptManagement extends plugin {
         //   permission: 'master'
         // },
         {
-          reg: '^#chatgpt切换API$',
+          reg: '^#chatgpt切换(API|api)$',
           fnc: 'useOpenAIAPIBasedSolution',
           permission: 'master'
         },
@@ -95,7 +95,7 @@ export class ChatgptManagement extends plugin {
         //   permission: 'master'
         // },
         {
-          reg: '^#chatgpt切换API3$',
+          reg: '^#chatgpt切换(API|api)$',
           fnc: 'useReversedAPIBasedSolution2',
           permission: 'master'
         },
@@ -125,7 +125,7 @@ export class ChatgptManagement extends plugin {
           permission: 'master'
         },
         {
-          reg: '^#chatgpt切换azure$',
+          reg: '^#chatgpt切换(AZURE|azure)$',
           fnc: 'useAzureBasedSolution',
           permission: 'master'
         },
@@ -140,12 +140,12 @@ export class ChatgptManagement extends plugin {
           permission: 'master'
         },
         {
-          reg: '^#chatgpt(必应|Bing)切换',
+          reg: '^#chatgpt(必应|Bing|bing)切换',
           fnc: 'changeBingTone',
           permission: 'master'
         },
         {
-          reg: '^#chatgpt(必应|Bing)(开启|关闭)建议(回复)?',
+          reg: '^#chatgpt(必应|Bing|bing)(开启|关闭)建议(回复)?',
           fnc: 'bingOpenSuggestedResponses',
           permission: 'master'
         },

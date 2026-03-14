@@ -1,7 +1,7 @@
 // @ts-ignore
 import Keyv from 'keyv'
 
-export type Role = 'user' | 'assistant' | 'system' | 'function' | 'tool'
+export type Role = 'user' | 'assistant' | 'system' | 'tool'
 // @ts-ignore
 import fetch from 'node-fetch'
 export type FetchFn = typeof fetch
@@ -45,6 +45,7 @@ export type SendMessageOptions = {
     parentMessageId?: string
     conversationId?: string
     messageId?: string
+    appendMessages?: ChatMessage[]
     stream?: boolean
     systemMessage?: string
     timeoutMs?: number
@@ -53,14 +54,6 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
-    imageUrls?: string[]
-    extraMessages?: Array<{
-        role: Role
-        text: string
-        name?: string
-        toolCallId?: string
-        messageId?: string
-    }>
 }
 
 export type MessageActionType = 'next' | 'variant'
@@ -78,14 +71,14 @@ export type SendMessageBrowserOptions = {
 export interface ChatMessage {
     id: string
     text: string
-    content?: string | openai.ChatCompletionContentPart[]
+    originalContent?: string | openai.ChatCompletionContentPart[]
     thinking_text?: string
     role: Role
     name?: string
     delta?: string
     detail?:
-        | openai.CreateChatCompletionResponse
-        | CreateChatCompletionStreamResponse
+    | openai.CreateChatCompletionResponse
+    | CreateChatCompletionStreamResponse
 
     // relevant for both ChatGPTAPI and ChatGPTUnofficialProxyAPI
     parentMessageId?: string
@@ -94,7 +87,7 @@ export interface ChatMessage {
     conversationId?: string
     functionCall?: openai.FunctionCall,
     toolCalls?: openai.ToolCall[],
-    toolCallId?: string,
+    toolCallId?: string
 }
 
 export class ChatGPTError extends Error {
@@ -209,18 +202,30 @@ export type MessageMetadata = any
 
 export namespace openai {
     export type ChatCompletionContentPart =
-      | {
+        | ChatCompletionContentPartText
+        | ChatCompletionContentPartImage
+        | ChatCompletionContentPartInputAudio
+
+    export interface ChatCompletionContentPartText {
         type: 'text'
         text: string
-      }
-      | {
+    }
+
+    export interface ChatCompletionContentPartImage {
         type: 'image_url'
         image_url: {
-          url: string
-          detail?: 'auto' | 'low' | 'high'
+            url: string // URL 或者 data:image/jpeg;base64,...
+            detail?: 'auto' | 'low' | 'high'
         }
-      }
+    }
 
+    export interface ChatCompletionContentPartInputAudio {
+        type: 'input_audio'
+        input_audio: {
+            data: string
+            format: 'mp3' | 'wav' | 'pcm16' | string
+        }
+    }
     export interface CreateChatCompletionDeltaResponse {
         id: string
         object: 'chat.completion.chunk'
@@ -255,7 +260,7 @@ export namespace openai {
         role: ChatCompletionRequestMessageRoleEnum
         /**
          * The contents of the message
-         * @type {string}
+         * @type {string|Array}
          * @memberof ChatCompletionRequestMessage
          */
         content: string | ChatCompletionContentPart[]
@@ -266,7 +271,7 @@ export namespace openai {
          */
         name?: string
         function_call?: FunctionCall
-        tool_calls?: ToolCall[]
+        tool_calls?: ToolCall,
         tool_call_id?: string
         // required todo
         // tool_choice?: 'none' | 'auto' | 'required'
@@ -278,21 +283,21 @@ export namespace openai {
     }
 
     export interface ToolCall {
-      id: string
-      type: "function"
-      function: FunctionCall
+        id: string
+        type: "function"
+        function: FunctionCall
+        index?: number
     }
 
     export interface Tools {
-      type: "function" | string,
-      function: Function
+        type: "function" | string,
+        function: Function
     }
 
     export declare const ChatCompletionRequestMessageRoleEnum: {
         readonly System: 'system'
         readonly User: 'user'
         readonly Assistant: 'assistant'
-        readonly Function: 'function'
         readonly Tool: 'tool'
     }
     export declare type ChatCompletionRequestMessageRoleEnum =

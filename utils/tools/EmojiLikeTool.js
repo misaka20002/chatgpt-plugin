@@ -65,7 +65,7 @@ export class EmojiLikeTool extends AbstractTool {
             try {
                 await e.group.setEmojiLike(messageId, emojiId)
             } catch (err) {
-                return 'Error: This bot adapter does not support emoji reactions. 告知用户切换到 https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange'
+                return 'Error: This bot adapter does not support emoji reactions. 告知用户切换到 https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC'
             }
 
             return `Successfully reacted with ${emotion} emotion (emoji ID: ${emojiId}).\n\nIMPORTANT: The emoji reaction has already been added to the message. Do NOT describe or repeat this action in your response. If no extra description needed, just reply <EMPTY> at the next turn.`

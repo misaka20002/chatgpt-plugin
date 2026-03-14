@@ -7,7 +7,10 @@ import fs from 'fs'
 import path from 'node:path'
 import _ from 'lodash'
 import { Config } from '../utils/config.js'
-import { hidePrivacyInfo } from '../utils/paimonFuction.js'
+import {
+  hidePrivacyInfo,
+  getUserDetailedInfo,
+} from '../utils/paimonFuction.js'
 
 if (!global.segment) {
   global.segment = (await import('oicq')).segment
@@ -40,7 +43,7 @@ let infos = {}
 /**
  * 主人保护list 如['lash','do','beat_up','little_do']
  */
-let protectList = ['lash','do','beat_up','little_do','fast_do','qi','fast_qi']
+let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_qi']
 
 /**
  * meme 使用计数 Redis key 前缀
@@ -57,7 +60,7 @@ export class memes extends plugin {
       /** https://oicqjs.github.io/oicq/#events */
       event: 'message',
       /** 优先级，数字越小等级越高 */
-      priority: 50,
+      priority: 5000,
       rule: [
         {
           /** 命令正则匹配 */
@@ -358,9 +361,9 @@ export class memes extends plugin {
   }
 
   /**
-   * #memes
-   * @param e oicq传递的事件参数e
-   */
+     * #memes
+     * @param e oicq传递的事件参数e
+     */
   async memes(e) {
     if (Config.meme_turnOff) return false;
 
@@ -376,11 +379,11 @@ export class memes extends plugin {
     // console.log(e)
     let msg = e.msg.replace('#', '')
     /**
-   * 智能匹配最长关键词
-   * @param {string} msg 用户消息
-   * @param {Object} keyMap 关键词映射对象
-   * @returns {string} 匹配到的最长关键词，如果没有匹配则返回null
-   */
+     * 智能匹配最长关键词
+     * @param {string} msg 用户消息
+     * @param {Object} keyMap 关键词映射对象
+     * @returns {string} 匹配到的最长关键词，如果没有匹配则返回null
+     */
     function findLongestMatchingKey(msg, keyMap) {
       // 找出所有匹配消息开头的关键词
       const matchingKeys = Object.keys(keyMap).filter(k => msg.startsWith(k));
@@ -400,11 +403,25 @@ export class memes extends plugin {
       await e.reply(detail(targetCode))
       return true
     }
+
     let [text, args = ''] = text1.split('#')
-    let userInfos
     let formData = new FormData()
     let info = infos[targetCode]
     let fileLoc
+
+    // 提取 @ 信息并获取用户详情缓存
+    const atMessages = e.message.filter(m => m.type === 'at');
+    let atUsers = [];
+    for (let atMsg of atMessages) {
+      let user = await getUserDetailedInfo(e, atMsg.qq);
+      atUsers.push({
+        qq: atMsg.qq,
+        text: user?.card || atMsg.name || atMsg.text || '',
+        gender: user?.gender || 'unknown'
+      });
+    }
+    const hasAt = atUsers.length > 0;
+
     if (info.params_type.max_images > 0) {
       // 可以有图，来从回复、发送和头像找图
       let imgUrls = []
@@ -430,11 +447,11 @@ export class memes extends plugin {
       } else if (e.img) {
         // 一起发的图
         imgUrls.push(...e.img)
-      } else if (e.message.filter(m => m.type === 'at').length > 0) {
+      } else if (hasAt) {
         // 艾特的用户的头像
-        let ats = e.message.filter(m => m.type === 'at')
-        imgUrls = ats.map(at => at.qq).map(qq => `https://q1.qlogo.cn/g?b=qq&s=160&nk=${qq}`)
+        imgUrls = atUsers.map(at => `https://q1.qlogo.cn/g?b=qq&s=160&nk=${at.qq}`)
       }
+
       if (!imgUrls || imgUrls.length === 0) {
         // 如果都没有，用发送者的头像
         imgUrls = [await getAvatar(e)]
@@ -442,10 +459,9 @@ export class memes extends plugin {
       if (imgUrls.length < info.params_type.min_images && imgUrls.indexOf(await getAvatar(e)) === -1) {
         // 如果数量不够，补上发送者头像，且放到最前面
         let me = [await getAvatar(e)]
-
         imgUrls = me.concat(imgUrls)
-        // imgUrls.push(`https://q1.qlogo.cn/g?b=qq&s=160&nk=${e.msg.sender.user_id}`)
       }
+
       logger.debug('imgUrls:', imgUrls)
       if (protectList.includes(targetCode) && masterProtectDo) {
         let me = [await getAvatar(e)]
@@ -483,12 +499,14 @@ export class memes extends plugin {
         formData.append('images', new File([buffer], `avatar_${i}.jpg`, { type: 'image/jpeg' }))
       }
     }
+
     if (text && info.params_type.max_texts === 0) {
       return false
     }
+
     if (!text && info.params_type.min_texts > 0) {
-      if (e.message.filter(m => m.type === 'at').length > 0) {
-        text = _.trim(e.message.filter(m => m.type === 'at')[0].text, '@')
+      if (hasAt) {
+        text = atUsers[0].text
       } else {
         text = e.sender.card || e.sender.nickname
       }
@@ -501,30 +519,18 @@ export class memes extends plugin {
     texts.forEach(t => {
       formData.append('texts', t)
     })
+
     if (info.params_type.max_texts > 0 && formData.getAll('texts').length === 0) {
-      if (formData.getAll('texts').length < info.params_type.max_texts) {
-        if (e.message.filter(m => m.type === 'at').length > 0) {
-          formData.append('texts', _.trim(e.message.filter(m => m.type === 'at')[0].text, '@'))
-        } else {
-          formData.append('texts', e.sender.card || e.sender.nickname)
-        }
+      if (hasAt) {
+        formData.append('texts', atUsers[0].text)
+      } else {
+        formData.append('texts', e.sender.card || e.sender.nickname)
       }
     }
-    if (e.message.filter(m => m.type === 'at').length > 0) {
-      userInfos = e.message.filter(m => m.type === 'at')
-      let mm = await e.group.getMemberMap()
-      userInfos.forEach(ui => {
-        let user = mm.get(ui.qq)
-        if (user) {
-          ui.gender = user.sex
-          ui.text = user.card || user.nickname
-        }
-      })
-    }
-    if (!userInfos) {
-      userInfos = [{ text: e.sender.card || e.sender.nickname, gender: e.sender.sex }]
-    }
+
+    let userInfos = hasAt ? atUsers : [{ text: e.sender.card || e.sender.nickname, gender: e.sender.sex }]
     args = handleArgs(targetCode, args, userInfos)
+
     if (args) {
       formData.set('args', args)
     }
@@ -532,7 +538,9 @@ export class memes extends plugin {
     if (checkFileSize(images)) {
       return this.e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
     }
+
     logger.info('派蒙meme表情制作:\ninput', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
+
     let response
     try {
       response = await fetch(baseUrl + '/memes/' + targetCode + '/', {

@@ -222,7 +222,7 @@ export function supportGuoba() {
         {
           field: 'is_recallMsg',
           label: '撤回错误消息',
-          bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {
@@ -256,7 +256,7 @@ export function supportGuoba() {
         {
           field: 'model',
           label: 'OpenAI 模型',
-          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。可用指令： #chatgpt[开启|关闭]API流',
+          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。可用指令：  #chatgpt切换API #chatgpt[开启|关闭]API流',
           component: 'Input'
         },
         {
@@ -268,13 +268,13 @@ export function supportGuoba() {
         {
           field: 'openAiBaseUrl',
           label: 'OpenAI API/反代地址',
-          bottomHelpMessage: 'OpenAI兼容API服务器地址。注意要带上/v1。默认为https://api.openai.com/v1',
+          bottomHelpMessage: 'OpenAI兼容API服务器地址。插件在执行对话时将拼接 /chat/completions ；默认值为 https://api.openai.com/v1',
           component: 'Input'
         },
         {
           field: 'openAiForceUseReverse',
           label: '强制使用API地址',
-          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接',
+          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接；使用第三方API时请开启',
           component: 'Switch'
         },
         {
@@ -290,6 +290,7 @@ export function supportGuoba() {
           component: 'InputNumber',
           componentProps: {
             min: 0,
+            step: 0.1,
             max: 2
           }
         },
@@ -651,7 +652,16 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-2.0-flash；推荐：gemini-exp-1206,gemini-2.0-flash-thinking-exp-01-21；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
+          bottomHelpMessage: '默认值：gemini-2.5-flash；推荐：gemini-exp-1206,gemini-2.0-flash-thinking-exp-01-21；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
+          component: 'Select',
+          componentProps: {
+            options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
+          }
+        },
+        {
+          field: 'gemini_fallbackModel',
+          label: '失败回退模型',
+          bottomHelpMessage: '模型返回错误后改用这个备用模型尝试，默认值：gemini-2.5-flash；',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -660,17 +670,11 @@ export function supportGuoba() {
         {
           field: 'gemini_vqa_model',
           label: 'gemini内容识别模型',
-          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别工具 和 对话中图片识别-gemini；支持图片和视频识别；默认值：gemini-2.5-flash',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别和工具；支持图片和视频识别；默认值：gemini-2.5-flash',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
-        },
-        {
-          field: 'recognitionByGemini',
-          label: '对话中媒体识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识多媒体结果（用于无识图能力的接口）；如果对话时使用gemini-2.5及以上的模型时，这个功能和"对话中图片OCR"都不用开了！ 使用方法：1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含多媒体和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
-          component: 'Switch'
         },
         {
           field: 'gemini_vqa_needMaster',
@@ -703,26 +707,6 @@ export function supportGuoba() {
             min: 0,
             step: 0.05,
             max: 2
-          }
-        },
-        {
-          field: 'geminiForceToolKeywords',
-          label: 'gemini强制工具关键词',
-          bottomHelpMessage: '智能模式中，gemini强制工具关键词，包含这里关键词的问题一定会调用工具。',
-          component: 'GTags',
-          componentProps: {
-            placeholder: '请输入强制工具关键词',
-            allowAdd: true,
-            allowDel: true,
-            showPrompt: true,
-            promptProps: {
-              content: '添加新的强制工具关键词',
-              okText: '添加',
-              rules: [
-                { required: true, message: '强制工具关键词不能为空' }
-              ]
-            },
-            valueParser: (value) => value.split(',') || []
           }
         },
         {
@@ -1193,8 +1177,28 @@ export function supportGuoba() {
         {
           field: 'smartMode',
           label: '智能模式 开关',
-          bottomHelpMessage: '仅建议gpt-4-32k和gpt-3.5-turbo-16k-0613开启，gpt-4-0613、gemini也可。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳；需要设置“智能模式url”',
+          bottomHelpMessage: '支持对话 Api、千问、Gemini。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
           component: 'Switch'
+        },
+        {
+          field: 'geminiForceToolKeywords',
+          label: '强制工具关键词',
+          bottomHelpMessage: '强制工具/Agent关键词；包含这里关键词的问题一定会调用工具；目前支持 API、Gemini 接口',
+          component: 'GTags',
+          componentProps: {
+            placeholder: '请输入强制工具关键词',
+            allowAdd: true,
+            allowDel: true,
+            showPrompt: true,
+            promptProps: {
+              content: '添加新的强制工具关键词',
+              okText: '添加',
+              rules: [
+                { required: true, message: '强制工具关键词不能为空' }
+              ]
+            },
+            valueParser: (value) => value.split(',') || []
+          }
         },
         // {
         //   field: 'extraUrl',
@@ -1206,7 +1210,7 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '推荐使用并配置 gemini内容识别模型 以支持图片和视频识别（将以工具形式按需识别视频以节约token）；“模型内置”选项需要自行判断你的API支持图片识别。',
+          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别工具”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
@@ -1271,6 +1275,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'mediaRecognitionGeminiTool',
+          label: '工具新增-Gemini内容识别',
+          bottomHelpMessage: '新增Gemini内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型',
+          component: 'Switch'
+        },
+        {
           field: 'ScheduleTask_Tool',
           label: '工具新增-定时工具',
           bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制仅限群聊可用、每个用户仅能储存1条定时任务并且最大定时为1个月；推荐开启 “全局-At群友-提示词版” 或 “工具新增-at群友” 以第一时间获取ai通知；修改该选项后重启生效',
@@ -1279,13 +1289,13 @@ export function supportGuoba() {
         {
           field: 'poke_userIDs',
           label: '工具新增-戳一戳',
-          bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {
           field: 'enableEmojiLikeTool',
           label: '工具新增-智能贴表情',
-          bottomHelpMessage: '新增根据情绪智能贴qq表情，在群聊给别人消息点个心心之类的表情；可在Bot人设中加入“你将总是使用 emojiLike 工具”；如果你的适配器不支持，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '新增根据情绪智能贴qq表情，在群聊给别人消息点个心心之类的表情；可在Bot人设中加入“你将总是使用 emojiLike 工具”；如果你的适配器不支持，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {
@@ -1308,7 +1318,7 @@ export function supportGuoba() {
         },
         {
           field: 'add_sf_image_edit',
-          label: '工具新增-Gemini Image',
+          label: '工具新增-Gemini Banana',
           bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
           component: 'Switch'
         },
@@ -1635,7 +1645,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_Fighting_Back',
           label: '反击概率',
-          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/Trss-Yunzai-lagrange',
+          bottomHelpMessage: '戳一戳响应概率，自动计算，1减去上面所有的概率剩余的就是反击概率；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'InputNumber',
           componentProps: {
             readonly: true,
@@ -1715,7 +1725,7 @@ export function supportGuoba() {
         {
           field: 'enableBYM',
           label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复；此开关重启生效；（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
           component: 'Switch'
         },
         {

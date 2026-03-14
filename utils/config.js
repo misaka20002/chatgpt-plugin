@@ -141,7 +141,6 @@ const defaultConfig = {
   // api_fish_control_defaultUseTTS: false,
   fishApiKey: "",
   fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
-  recognitionByGemini: false,
   tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
   meme_baseUrl: "https://misaka20001-memegenerator.hf.space",
@@ -318,7 +317,9 @@ const defaultConfig = {
   gemini_temperature: 0.9,
   mediaMaxSizeInMB: 5,
   enableEmojiLikeTool: true,
-  mediaRecognitionSource: "Gemini",
+  mediaRecognitionSource: "Orignal",
+  mediaRecognitionGeminiTool: true,
+  gemini_fallbackModel: "gemini-2.5-flash",
   ScheduleTask_Tool: true,
   rateLimiting: 0,
 
@@ -418,7 +419,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-3.1-pro-preview', 'gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
+        const defaultArr = ['gemini-3.1-pro-preview', 'gemini-3.1-flash-lite-preview', 'gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);

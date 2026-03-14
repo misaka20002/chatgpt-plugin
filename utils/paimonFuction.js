@@ -13,17 +13,7 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
 export async function recognitionResultsByGemini(e, img = [], video = []) {
   if (Config.geminiKey) {
     // 确定目标 URL 和类型
-    let targetUrl = null
-    let isVideo = false
-
-    // 优先识别视频url
-    if (video && video.length > 0) {
-      targetUrl = video[0]
-      isVideo = true
-    } else if (img && img.length > 0) {
-      targetUrl = img[0]
-      isVideo = false
-    }
+    let { targetUrl, isVideo } = getMediaTargetUrl(e);
 
     if (targetUrl) {
       let client = new CustomGoogleGeminiClient({
@@ -503,4 +493,185 @@ export function splitString_Enter(str, chunkSize = 1000) {
     result.push(currentChunk);
   }
   return result;
+}
+
+/**
+ * 从传入的对象中提取目标URL和类型，优先返回单个视频URL，无视频时返回单个图片URL
+ * @param {Object} e - 包含视频/图片URL的源对象
+ * @returns {Object} 包含目标URL和类型的对象 { targetUrl: string|null, isVideo: boolean }
+ */
+export function getMediaTargetUrl(e) {
+  let targetUrl = null
+  let isVideo = false
+
+  const videoUrl = e.get_Video && Array.isArray(e.get_Video) && e.get_Video.length > 0
+    ? e.get_Video[0].url
+    : null;
+
+  if (videoUrl) {
+    targetUrl = videoUrl
+    isVideo = true
+  } else {
+    if (e.img && Array.isArray(e.img) && e.img.length > 0) {
+      targetUrl = e.img[0]
+      isVideo = false
+    }
+  }
+
+  return { targetUrl, isVideo }
+}
+
+/**
+ * 处理 raw_message 中的 CQ 码
+ * - 删除所有非 CQ:at 的 CQ 码
+ * - 如果传入的 qq 号与某个 CQ:at 中的 qq 匹配，删除第一个匹配到的 CQ:at
+ *
+ * @param {string} rawMessage - 原始消息字符串
+ * @param {string} targetQQ - （可选）要匹配并删除的 QQ 号，删除第一个匹配到的 CQ:at （用于 At Bot 启动的对话）
+ * @returns {string} 处理后的消息字符串
+ */
+export function processCQMessage(rawMessage, targetQQ) {
+  // 删除所有非 CQ:at 的 CQ 码
+  let result = rawMessage.replace(/\[CQ:(?!at\b)[^\]]*\]/g, '');
+  // 找到第一个 qq 匹配的 CQ:at，删除它
+  if (targetQQ !== undefined && targetQQ !== null) {
+    const qqStr = String(targetQQ);
+    // 匹配 CQ:at，捕获其中的 qq 字段
+    const cqAtRegex = /\[CQ:at,qq=(\d+)[^\]]*\]/g;
+    let firstMatchDeleted = false;
+    result = result.replace(cqAtRegex, (match, qq) => {
+      if (!firstMatchDeleted && qq === qqStr) {
+        firstMatchDeleted = true;
+        return ''; // 删除第一个匹配到的
+      }
+      return match; // 其余保留
+    });
+  }
+  // 清理多余空格
+  result = result.replace(/\s+/g, ' ').trim();
+  return result;
+}
+
+/**
+ * @description: 获取指定用户的详细信息对象
+ * @param {*} e 如果要获取指定群的群聊信息，传递：{ isGroup: true, group_id: group_id }
+ * @param {*} qq 指定的QQ号
+ * @return {Object} 获取到的用户信息对象，包含 card, name, gender, age, role, level, join_time, last_sent_time, title
+ */
+export async function getUserDetailedInfo(e, qq = null) {
+  qq = qq || e.user_id;
+
+  // 辅助函数：格式化提取你需要的数据，并保留原始对象供调试
+  const formatResult = (info, sourceName) => {
+    // 兼容某些适配器把信息包裹在 sender 属性里的情况
+    const data = info.sender ? { ...info, ...info.sender } : info;
+
+    // 优先取群名片，其次取昵称，都没有则取QQ号
+    const nickname = data.nickname || String(qq);
+    const card = data.card || nickname;
+
+    // 在 OICQ/ICQQ 等常见框架中，性别字段通常是 sex 或 gender (一般值为 'male', 'female', 'unknown')
+    const gender = data.sex || data.gender || 'unknown';
+
+    return {
+      card: card,
+      name: nickname,
+      gender: gender,
+      age: data.age ?? 'unknown',      // 年龄
+      role: data.role || 'unknown',    // 群身份 (owner:群主, admin:管理, member:成员)
+      source: sourceName,              // 记录是哪个代码块成功获取到了数据，极大地缩短你的排错时间
+      level: info.level, // 成员的群等级
+      join_time: info.join_time, // 成员的入群时间 单位 时间戳
+      last_sent_time: info.last_sent_time, // 成员的上次发言时间 单位 时间戳
+      title: info.title, // 成员的群头衔
+      // rawInfo: info                    // 返回完整的原始对象，供你使用 console.log 打印查看还能取到啥
+    };
+  };
+
+  // 如果e是群聊消息，则尝试获取群名片等信息
+  if (e && e.isGroup) {
+    // 1. 优先使用 gml (群成员列表) 获取
+    try {
+      const gml = await e.bot?.gml;
+      if (gml) {
+        const groupMembers = gml.get(e.group_id);
+        if (groupMembers) {
+          const member = groupMembers.get(qq);
+          if (member && (member.card || member.nickname)) {
+            return formatResult(member, 'gml');
+          }
+        }
+      }
+    } catch (err) { }
+
+    // 2. 喵崽版
+    try {
+      const usrinfo = await e.bot.getGroupMemberInfo?.(e.group_id, qq) || await e.bot.pickMember?.(e.group_id, qq);
+      if (usrinfo && (usrinfo.card || usrinfo.nickname)) {
+        return formatResult(usrinfo, 'e.bot.getGroupMemberInfo / pickMember');
+      }
+    } catch (err) { }
+
+    // 3. 其他适配器版 - 单开qq
+    try {
+      const member = await Bot.getGroupMemberInfo?.(e.group_id, qq) || await Bot.pickMember?.(e.group_id, qq);
+      if (member != undefined) {
+        const userName_Bot = member.card || member.sender?.card || member.nickname || member.sender?.nickname;
+        if (userName_Bot) {
+          return formatResult(member, 'Bot.getGroupMemberInfo (单开)');
+        }
+      }
+    } catch (err) { }
+
+    // 4. 其他适配器版 - 多开qq
+    try {
+      const memberInfo = await executeBotMethod('pickMember', e.group_id, qq);
+      const userName_Bot = extractProperty(memberInfo, 'card').value || extractProperty(memberInfo, 'nickname').value;
+      if (userName_Bot) {
+        return formatResult(memberInfo, 'executeBotMethod (多开)');
+      }
+    } catch (err) { }
+
+    // 5. 其他适配器版 - 未知适配器1
+    try {
+      const info = await e.group.pickMember(qq).getInfo();
+      if (info && info.nickname) {
+        return formatResult(info, 'e.group.pickMember');
+      }
+    } catch (err) { }
+
+    // 6. 其他适配器版 - 未知适配器2
+    try {
+      const info = await Bot.pickGroup(e.group_id).pickMember(qq).getInfo();
+      if (info && info.nickname) {
+        return formatResult(info, 'Bot.pickGroup');
+      }
+    } catch (err) { }
+  }
+
+  // 7. 私聊通用版
+  try {
+    const info = await Bot.pickUser(qq).getSimpleInfo();
+    if (info && info.nickname) {
+      return formatResult(info, 'Bot.pickUser');
+    }
+  } catch (error) {
+    try {
+      const info = await e.bot.pickUser(qq).getInfo();
+      if (info && info.nickname) {
+        return formatResult(info, 'e.bot.pickUser');
+      }
+    } catch (error) { }
+  }
+
+  // 都失败了就返回保底对象
+  return {
+    card: String(qq),
+    name: String(qq),
+    gender: 'unknown',
+    age: 'unknown',
+    role: 'unknown',
+    source: 'fallback (全部失败)',
+    // rawInfo: null
+  };
 }
