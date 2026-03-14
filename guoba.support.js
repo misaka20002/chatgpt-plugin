@@ -1216,11 +1216,11 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别工具”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
+          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
-              { label: 'Gemini内容识别工具', value: 'Gemini' },
+              { label: 'Gemini内容识别', value: 'Gemini' },
             ]
           }
         },

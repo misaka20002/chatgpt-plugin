@@ -805,44 +805,70 @@ class Core {
           const maxToolCalls = 5 // API 接口太蠢了，总是无限循环函数
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
-            toolCallCount++  // 每次进入循环计数
+            toolCallCount++
 
             if (msg.text) {
               await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
             }
 
-            let name, args;
-
-            if (msg.functionCall) {
-              // 处理旧的 functionCall 格式
-              name = msg.functionCall.name;
-              args = JSON.parse(msg.functionCall.arguments);
-            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
-              // 处理新的 toolCalls 格式
-              const toolCall = msg.toolCalls[0];
-              name = toolCall.function.name;
-              args = JSON.parse(toolCall.function.arguments);
-            } else {
-              // 如果没有工具调用，跳出循环
-              break;
+            let toolCallsToProcess = msg.toolCalls || [];
+            if (!toolCallsToProcess.length && msg.functionCall) {
+              // 兼容极旧版本的 function_call 响应
+              toolCallsToProcess = [{
+                id: 'call_' + Math.random().toString(36).substring(2, 10),
+                type: 'function',
+                function: msg.functionCall
+              }]
+              msg.toolCalls = toolCallsToProcess;
             }
 
-            // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
-            if (!args.groupId) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
+            let toolResults = [];
+
+            // 循环遍历大模型返回的所有并行工具
+            for (const toolCall of toolCallsToProcess) {
+              let name = toolCall.function.name;
+              let args;
+              try {
+                args = JSON.parse(toolCall.function.arguments);
+              } catch (e) {
+                args = {}
+              }
+
+              if (!args.groupId) {
+                args.groupId = e.group_id + '' || e.sender.user_id + ''
+              }
+              try {
+                parseInt(args.groupId)
+              } catch (err) {
+                args.groupId = e.group_id + '' || e.sender.user_id + ''
+              }
+
+              let functionResult = "";
+              try {
+                if (fullFuncMap[name.trim()]) {
+                  functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
+                    isAdmin,
+                    sender
+                  }, args), e)
+                  logger.mark(`function ${name} execution result: ${functionResult}`)
+                } else {
+                  functionResult = `Function ${name} not found.`
+                  logger.warn(functionResult)
+                }
+              } catch (err) {
+                functionResult = `Error executing function ${name}: ${err.message}`
+                logger.error(functionResult)
+              }
+
+              toolResults.push({
+                tool_call_id: toolCall.id, // 核心修复：带回 ID
+                name: name,
+                content: String(functionResult)
+              })
             }
-            try {
-              parseInt(args.groupId)
-            } catch (err) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
-            }
-            let functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
-              isAdmin,
-              sender
-            }, args), e)
-            logger.mark(`function ${name} execution result: ${functionResult}`)
+
             option.parentMessageId = msg.id
-            option.name = name
+            option.toolResults = toolResults // 交由 api 组装多结果数组
 
             // 拿到工具结果后重置 tool_choice 参数，允许大模型输出自然语言回答，防止死循环无限调用工具
             if (option.completionParams && option.completionParams.tool_choice === "required") {
@@ -852,22 +878,11 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
 
-            // 此处的 sendMessage 发送的是工具调用的执行结果，属于普通文本
-            msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
+            // 此处的 sendMessage 携带 toolResults 集合进行发包
+            msg = await this.chatGPTApi.sendMessage("", option, 'tool')
 
-            if (Config.debug) // 避免控制台刷屏
+            if (Config.debug)
               logger.info(msg)
-
-            // // 如果是函数返回结果，则跳出循环
-            // if (msg.conversation && msg.conversation.length > 0) {
-            //   const lastMessage = msg.conversation[msg.conversation.length - 1]
-            //   if (lastMessage.role === 'function' && lastMessage.name === name) {
-            //     // 清除工具调用相关字段，避免循环
-            //     msg.functionCall = undefined
-            //     msg.toolCalls = undefined
-            //     break
-            //   }
-            // }
           }
 
           if (toolCallCount >= maxToolCalls) {

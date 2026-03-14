@@ -1,7 +1,7 @@
 // @ts-ignore
 import Keyv from 'keyv'
 
-export type Role = 'user' | 'assistant' | 'system' | 'function'
+export type Role = 'user' | 'assistant' | 'system' | 'function' | 'tool' | 'developer'
 // @ts-ignore
 import fetch from 'node-fetch'
 export type FetchFn = typeof fetch
@@ -52,6 +52,11 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
+    toolResults?: Array<{
+        tool_call_id: string
+        name: string
+        content: string
+    }>
 }
 
 export type MessageActionType = 'next' | 'variant'
@@ -84,7 +89,13 @@ export interface ChatMessage {
     // only relevant for ChatGPTUnofficialProxyAPI (optional for ChatGPTAPI)
     conversationId?: string
     functionCall?: openai.FunctionCall,
-    toolCalls?: openai.ToolCall[],
+    toolCalls?: openai.ToolCall[]
+    tool_call_id?: string
+    toolResults?: Array<{
+        tool_call_id: string
+        name: string
+        content: string
+    }>
 }
 
 export class ChatGPTError extends Error {
@@ -268,9 +279,8 @@ export namespace openai {
          */
         name?: string
         function_call?: FunctionCall
-        tool_calls?: ToolCall,
-        // required todo
-        // tool_choice?: 'none' | 'auto' | 'required'
+        tool_calls?: ToolCall[]
+        tool_call_id?: string
     }
 
     export interface FunctionCall {
@@ -279,6 +289,7 @@ export namespace openai {
     }
 
     export interface ToolCall {
+        index?: number
         id: string
         type: "function"
         function: FunctionCall
@@ -294,6 +305,8 @@ export namespace openai {
         readonly User: 'user'
         readonly Assistant: 'assistant'
         readonly Function: 'function'
+        readonly Tool: 'tool'
+        readonly Developer: 'developer'
     }
     export declare type ChatCompletionRequestMessageRoleEnum =
         (typeof ChatCompletionRequestMessageRoleEnum)[keyof typeof ChatCompletionRequestMessageRoleEnum]

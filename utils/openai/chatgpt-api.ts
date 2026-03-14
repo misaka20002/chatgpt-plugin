@@ -159,7 +159,7 @@ export class ChatGPTAPI {
         }
 
         // 提取纯文本部分供普通的日志或非多模态场景使用
-        const messageText = typeof content === 'string' ? content : content.filter(t => t.type === 'text').map(t => (t as any).text).join('\n')
+        const messageText = opts.toolResults ? JSON.stringify(opts.toolResults) : (typeof content === 'string' ? content : content.filter(t => t.type === 'text').map(t => (t as any).text).join('\n'))
 
         const message: types.ChatMessage = {
             role,
@@ -167,8 +167,9 @@ export class ChatGPTAPI {
             conversationId,
             parentMessageId,
             text: messageText,
-            originalContent: content, // 存储完整的原始对象（包含图片）
-            name: opts.name
+            originalContent: content,
+            name: opts.name,
+            toolResults: opts.toolResults
         }
 
         const latestQuestion = message
@@ -200,12 +201,28 @@ export class ChatGPTAPI {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${this._apiKey}`
                 }
-                const body = {
-                    max_tokens: maxTokens,
+                const body: any = {
                     ...this._completionParams,
                     ...completionParams,
                     messages,
                     stream
+                }
+
+                // 支持新模型的 max_completion_tokens
+                const modelStr = body.model || CHATGPT_MODEL;
+                if (modelStr.startsWith('o1') || modelStr.startsWith('o3')) {
+                    body.max_completion_tokens = maxTokens;
+                } else {
+                    body.max_tokens = maxTokens;
+                }
+
+                // 如果存在 functions，将其转换为 tools 格式
+                if (body.functions && body.functions.length > 0) {
+                    body.tools = body.functions.map((func: any) => ({
+                        type: "function",
+                        function: func
+                    }));
+                    delete body.functions;
                 }
 
                 // 如果存在 functions，将其转换为 tools 格式
@@ -265,20 +282,24 @@ export class ChatGPTAPI {
                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments
                                             }
                                         } else if (delta.tool_calls && delta.tool_calls.length > 0) {
-                                            let fc = delta.tool_calls[0].function
-                                            if (fc.name) {
-                                                result.functionCall = {
-                                                    name: fc.name,
-                                                    arguments: fc.arguments
+                                            if (!result.toolCalls) result.toolCalls = [];
+                                            for (const tc of delta.tool_calls) {
+                                                const idx = tc.index !== undefined ? tc.index : 0;
+                                                if (!result.toolCalls[idx]) {
+                                                    result.toolCalls[idx] = {
+                                                        id: tc.id || '',
+                                                        type: 'function',
+                                                        function: { name: tc.function?.name || '', arguments: tc.function?.arguments || '' }
+                                                    };
+                                                } else {
+                                                    if (tc.function?.arguments) {
+                                                        result.toolCalls[idx].function.arguments += tc.function.arguments;
+                                                    }
                                                 }
-                                                // 同时设置 toolCalls 以支持新的格式
-                                                result.toolCalls = delta.tool_calls
-                                            } else {
-                                                result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments
-                                                // 更新 toolCalls 中的参数
-                                                if (result.toolCalls && result.toolCalls.length > 0) {
-                                                    result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments
-                                                }
+                                            }
+                                            // Compatibility for first function call
+                                            if (result.toolCalls.length > 0 && result.toolCalls[0]) {
+                                                result.functionCall = result.toolCalls[0].function;
                                             }
                                         } else {
                                             result.delta = delta.content
@@ -439,23 +460,36 @@ export class ChatGPTAPI {
         const maxNumTokens = this._maxModelTokens - this._maxResponseTokens
         let messages: types.openai.ChatCompletionRequestMessage[] = []
 
+        // 处理 developer 角色
+        const isThinkingModel = completionParams.model?.startsWith('o1') || completionParams.model?.startsWith('o3');
+        const systemRole = isThinkingModel ? 'developer' : 'system';
+
         if (systemMessage) {
             messages.push({
-                role: 'system',
+                role: systemRole as any,
                 content: systemMessage
             })
         }
 
         const systemMessageOffset = messages.length
-        let nextMessages = text
-            ? messages.concat([
-                {
-                    role,
-                    content: text,
-                    name: opts.name
-                }
-            ])
-            : messages
+        let nextMessages = messages.slice()
+
+        if (opts.toolResults && opts.toolResults.length > 0) {
+            for (const tr of opts.toolResults) {
+                nextMessages.push({
+                    role: 'tool',
+                    tool_call_id: tr.tool_call_id,
+                    name: tr.name,
+                    content: tr.content
+                } as any);
+            }
+        } else if (text || typeof text === 'string') {
+            nextMessages.push({
+                role: role as any,
+                content: text,
+                name: opts.name
+            })
+        }
 
         let functionToken = 0
         let numTokens = functionToken
@@ -522,11 +556,14 @@ export class ChatGPTAPI {
 
                     switch (message.role) {
                         case 'system':
+                        case 'developer':
                             return prompt.concat([`Instructions:\n${contentString}`])
                         case 'user':
                             return prompt.concat([`${userLabel}:\n${contentString}`])
                         case 'function':
                             return prompt
+                        case 'tool':
+                            return prompt.concat([`Tool ${message.name || ''} Result:\n${contentString}`])
                         case 'assistant':
                             return prompt
                         default:
@@ -565,17 +602,30 @@ export class ChatGPTAPI {
 
             const parentMessageRole = parentMessage.role || 'user'
 
-            nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
-                {
-                    role: parentMessageRole,
-                    // 在上下文继承时，优先传递包含多模态数组的 originalContent
+            let parentMessagesToInsert: types.openai.ChatCompletionRequestMessage[] = [];
+            // 如果历史节点包含多个工具返回结果，则将其展开为多个 tool 消息插入
+            if (parentMessage.toolResults && parentMessage.toolResults.length > 0) {
+                parentMessagesToInsert = parentMessage.toolResults.map(tr => ({
+                    role: 'tool',
+                    tool_call_id: tr.tool_call_id,
+                    name: tr.name,
+                    content: tr.content
+                } as any));
+            } else {
+                parentMessagesToInsert = [{
+                    role: parentMessageRole as any,
                     content: parentMessage.originalContent || parentMessage.text,
                     name: parentMessage.name,
                     function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                    // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
-                },
-                ...nextMessages.slice(systemMessageOffset)
-            ])
+                    tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined,
+                    tool_call_id: parentMessage.tool_call_id ? parentMessage.tool_call_id : undefined
+                } as any];
+            }
+
+            nextMessages = nextMessages.slice(0, systemMessageOffset).concat(
+                parentMessagesToInsert,
+                nextMessages.slice(systemMessageOffset)
+            )
 
             parentMessageId = parentMessage.parentMessageId
         } while (true)
