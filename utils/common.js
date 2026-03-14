@@ -885,22 +885,27 @@ export async function getImageOcrText (e) {
   }
 }
 
-export function getMaxModelTokens (model = 'gpt-3.5-turbo') {
-  if (model.startsWith('gpt-3.5-turbo')) {
-    if (model.includes('16k')) {
-      return 16000
-    } else if (model.includes('0613') || model.includes('0314')) {
-      return 4000
-    } else {
-      return 16000
+export function getModelTokenInfo (model = 'gpt-3.5-turbo') {
+  const normalizedModel = (model || 'gpt-3.5-turbo').toLowerCase()
+
+  if (normalizedModel.startsWith('gpt-3.5-turbo')) {
+    if (normalizedModel.includes('16k')) {
+      return { maxTokens: 16000, estimated: false }
+    } else if (normalizedModel.includes('0613') || normalizedModel.includes('0314')) {
+      return { maxTokens: 4000, estimated: false }
     }
-  } else {
-    if (model.includes('32k')) {
-      return 32000
-    } else {
-      return 16000
-    }
+    return { maxTokens: 16000, estimated: false }
   }
+
+  if (normalizedModel.includes('32k')) {
+    return { maxTokens: 32000, estimated: false }
+  }
+
+  return { maxTokens: 4096, estimated: true }
+}
+
+export function getMaxModelTokens (model = 'gpt-3.5-turbo') {
+  return getModelTokenInfo(model).maxTokens
 }
 
 export function getUin (e) {

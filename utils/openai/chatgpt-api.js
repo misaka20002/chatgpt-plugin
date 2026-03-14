@@ -65,6 +65,24 @@ import { fetchSSE } from './fetch-sse.js';
 var CHATGPT_MODEL = 'gpt-4o-mini';
 var USER_LABEL_DEFAULT = 'User';
 var ASSISTANT_LABEL_DEFAULT = 'ChatGPT';
+var TOOL_LABEL_DEFAULT = 'Tool';
+function extractTextContent(content) {
+    if (!content) {
+        return '';
+    }
+    return typeof content === 'string'
+        ? content
+        : content.filter(function (part) { return part.type === 'text'; }).map(function (part) { return part.text; }).join('\n');
+}
+function getStoredMessageRole(role) {
+    if (role === 'tool' || role === 'assistant' || role === 'system') {
+        return role;
+    }
+    if (role === 'function') {
+        return 'function';
+    }
+    return 'user';
+}
 var ChatGPTAPI = /** @class */ (function () {
     /**
      * Creates a new client wrapper around OpenAI's chat completion API, mimicing the official ChatGPT webapp's functionality as closely as possible.
@@ -82,7 +100,7 @@ var ChatGPTAPI = /** @class */ (function () {
      * @param fetch - Optional override for the `fetch` implementation to use. Defaults to the global `fetch` function.
      */
     function ChatGPTAPI(opts) {
-        var apiKey = opts.apiKey, apiOrg = opts.apiOrg, _a = opts.apiBaseUrl, apiBaseUrl = _a === void 0 ? 'https://api.openai.com/v1' : _a, _b = opts.debug, debug = _b === void 0 ? false : _b, messageStore = opts.messageStore, completionParams = opts.completionParams, systemMessage = opts.systemMessage, _c = opts.maxModelTokens, maxModelTokens = _c === void 0 ? 4000 : _c, _d = opts.maxResponseTokens, maxResponseTokens = _d === void 0 ? 8192 : _d, getMessageById = opts.getMessageById, upsertMessage = opts.upsertMessage, _e = opts.fetch, fetch = _e === void 0 ? globalFetch : _e;
+        var apiKey = opts.apiKey, apiOrg = opts.apiOrg, _a = opts.apiBaseUrl, apiBaseUrl = _a === void 0 ? 'https://api.openai.com/v1' : _a, _b = opts.debug, debug = _b === void 0 ? false : _b, messageStore = opts.messageStore, completionParams = opts.completionParams, systemMessage = opts.systemMessage, _c = opts.maxModelTokens, maxModelTokens = _c === void 0 ? 4096 : _c, _d = opts.maxResponseTokens, maxResponseTokens = _d === void 0 ? 8192 : _d, getMessageById = opts.getMessageById, upsertMessage = opts.upsertMessage, _e = opts.fetch, fetch = _e === void 0 ? globalFetch : _e;
         this._apiKey = apiKey;
         this._apiOrg = apiOrg;
         this._apiBaseUrl = apiBaseUrl;
@@ -116,6 +134,88 @@ var ChatGPTAPI = /** @class */ (function () {
             throw new Error('Invalid "fetch" is not a function');
         }
     }
+    ChatGPTAPI.prototype._toRequestMessage = function (message) {
+        var storedRole = getStoredMessageRole(message.role);
+        var content = message.originalContent || message.text;
+        var hasToolCalls = !!(message.toolCalls && message.toolCalls.length);
+        if (storedRole === 'function') {
+            return null;
+        }
+        if (storedRole === 'tool') {
+            if (!message.toolCallId) {
+                return null;
+            }
+            return {
+                role: 'tool',
+                content: content || '',
+                tool_call_id: message.toolCallId
+            };
+        }
+        return {
+            role: storedRole,
+            content: content || '',
+            name: storedRole === 'user' ? message.name : undefined,
+            function_call: storedRole === 'assistant' && !hasToolCalls ? message.functionCall : undefined,
+            tool_calls: storedRole === 'assistant' ? message.toolCalls : undefined
+        };
+    };
+    ChatGPTAPI.prototype._getMessageTokenEstimate = function (message) {
+        return __awaiter(this, void 0, void 0, function () {
+            var contentString, nonTextTokens, _i, _a, part, promptLine, tokenCount;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        contentString = extractTextContent(message.content);
+                        nonTextTokens = 0;
+                        if (Array.isArray(message.content)) {
+                            for (_i = 0, _a = message.content; _i < _a.length; _i++) {
+                                part = _a[_i];
+                                if (part.type === 'image_url')
+                                    nonTextTokens += 85;
+                                if (part.type === 'input_audio')
+                                    nonTextTokens += 100;
+                            }
+                        }
+                        promptLine = '';
+                        switch (message.role) {
+                            case 'system':
+                                promptLine = "Instructions:\n".concat(contentString);
+                                break;
+                            case 'user':
+                                promptLine = "".concat(USER_LABEL_DEFAULT, ":\n").concat(contentString);
+                                break;
+                            case 'assistant':
+                                promptLine = "".concat(ASSISTANT_LABEL_DEFAULT, ":\n").concat(contentString);
+                                break;
+                            case 'tool':
+                                promptLine = "".concat(TOOL_LABEL_DEFAULT, ":\n").concat(contentString);
+                                break;
+                        }
+                        return [4 /*yield*/, this._getTokenCount(promptLine)];
+                    case 1:
+                        tokenCount = (_b.sent()) + nonTextTokens;
+                        if (!message.function_call) return [3 /*break*/, 3];
+                        return [4 /*yield*/, this._getTokenCount(JSON.stringify(message.function_call))];
+                    case 2:
+                        tokenCount += _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        if (!message.tool_calls) return [3 /*break*/, 5];
+                        return [4 /*yield*/, this._getTokenCount(JSON.stringify(message.tool_calls))];
+                    case 4:
+                        tokenCount += _b.sent();
+                        _b.label = 5;
+                    case 5:
+                        if (!message.tool_call_id) return [3 /*break*/, 7];
+                        return [4 /*yield*/, this._getTokenCount(message.tool_call_id)];
+                    case 6:
+                        tokenCount += _b.sent();
+                        _b.label = 7;
+                    case 7: return [2 /*return*/, tokenCount];
+                }
+            });
+        });
+    };
     /**
      * Sends a message to the OpenAI chat completions endpoint, waits for the response
      * to resolve, and returns the response.
@@ -140,7 +240,7 @@ var ChatGPTAPI = /** @class */ (function () {
      */
     ChatGPTAPI.prototype.sendMessage = function (content_1) {
         return __awaiter(this, arguments, void 0, function (content, opts, role) {
-            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, messageText, message, latestQuestion, _c, messages, maxTokens, numTokens, result, responseP;
+            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, currentMessages, message, _c, messages, maxTokens, numTokens, result, responseP;
             var _this = this;
             if (opts === void 0) { opts = {}; }
             if (role === void 0) { role = 'user'; }
@@ -154,19 +254,27 @@ var ChatGPTAPI = /** @class */ (function () {
                             abortController = new AbortController();
                             abortSignal = abortController.signal;
                         }
-                        messageText = typeof content === 'string' ? content : content.filter(function (t) { return t.type === 'text'; }).map(function (t) { return t.text; }).join('\n');
-                        message = {
-                            role: role,
-                            id: messageId,
-                            conversationId: conversationId,
-                            parentMessageId: parentMessageId,
-                            text: messageText,
-                            originalContent: content, // 存储完整的原始对象（包含图片）
-                            name: opts.name
-                        };
-                        latestQuestion = message;
-                        return [4 /*yield*/, this._buildMessages(content, // 将原始包含图片的参数传递进去
-                            role, opts, completionParams)];
+                        currentMessages = __spreadArray([], (opts.appendMessages || []), true);
+                        if (content !== null) {
+                            if (role === 'tool' && !opts.toolCallId) {
+                                throw new Error('tool role message requires toolCallId');
+                            }
+                            message = {
+                                role: role,
+                                id: messageId,
+                                conversationId: conversationId,
+                                parentMessageId: currentMessages.length > 0 ? currentMessages[currentMessages.length - 1].id : parentMessageId,
+                                text: extractTextContent(content),
+                                originalContent: content,
+                                name: role === 'user' ? opts.name : undefined,
+                                toolCallId: role === 'tool' ? opts.toolCallId : undefined
+                            };
+                            currentMessages.push(message);
+                        }
+                        if (currentMessages.length === 0) {
+                            throw new Error('sendMessage requires content or appendMessages');
+                        }
+                        return [4 /*yield*/, this._buildMessages(currentMessages, opts, completionParams)];
                     case 1:
                         _c = _d.sent(), messages = _c.messages, maxTokens = _c.maxTokens, numTokens = _c.numTokens;
                         console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
@@ -174,7 +282,7 @@ var ChatGPTAPI = /** @class */ (function () {
                             role: 'assistant',
                             id: uuidv4(),
                             conversationId: conversationId,
-                            parentMessageId: messageId,
+                            parentMessageId: currentMessages[currentMessages.length - 1].id,
                             text: '',
                             thinking_text: '',
                             functionCall: undefined,
@@ -222,6 +330,13 @@ var ChatGPTAPI = /** @class */ (function () {
                                                 var _a;
                                                 if (data === '[DONE]') {
                                                     result.text = result.text.trim();
+                                                    if (result.functionCall && (!result.toolCalls || result.toolCalls.length === 0)) {
+                                                        result.toolCalls = [{
+                                                                id: "call_".concat(uuidv4()),
+                                                                type: 'function',
+                                                                function: result.functionCall
+                                                            }];
+                                                    }
                                                     result.conversation = messages;
                                                     return resolve(result);
                                                 }
@@ -244,21 +359,37 @@ var ChatGPTAPI = /** @class */ (function () {
                                                             }
                                                         }
                                                         else if (delta.tool_calls && delta.tool_calls.length > 0) {
-                                                            var fc = delta.tool_calls[0].function;
-                                                            if (fc.name) {
-                                                                result.functionCall = {
-                                                                    name: fc.name,
-                                                                    arguments: fc.arguments
-                                                                };
-                                                                // 同时设置 toolCalls 以支持新的格式
-                                                                result.toolCalls = delta.tool_calls;
+                                                            if (!result.toolCalls) {
+                                                                result.toolCalls = [];
                                                             }
-                                                            else {
-                                                                result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments;
-                                                                // 更新 toolCalls 中的参数
-                                                                if (result.toolCalls && result.toolCalls.length > 0) {
-                                                                    result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments;
+                                                            for (var _i = 0, _b = delta.tool_calls; _i < _b.length; _i++) {
+                                                                var incomingToolCall = _b[_i];
+                                                                var toolCallIndex = incomingToolCall.index || 0;
+                                                                if (!result.toolCalls[toolCallIndex]) {
+                                                                    result.toolCalls[toolCallIndex] = {
+                                                                        id: incomingToolCall.id || "call_".concat(uuidv4()),
+                                                                        type: 'function',
+                                                                        function: {
+                                                                            name: (incomingToolCall.function && incomingToolCall.function.name) || '',
+                                                                            arguments: (incomingToolCall.function && incomingToolCall.function.arguments) || ''
+                                                                        }
+                                                                    };
                                                                 }
+                                                                else {
+                                                                    if (incomingToolCall.id) {
+                                                                        result.toolCalls[toolCallIndex].id = incomingToolCall.id;
+                                                                    }
+                                                                    if (incomingToolCall.function && incomingToolCall.function.name) {
+                                                                        result.toolCalls[toolCallIndex].function.name = incomingToolCall.function.name;
+                                                                    }
+                                                                    if (incomingToolCall.function && incomingToolCall.function.arguments) {
+                                                                        result.toolCalls[toolCallIndex].function.arguments =
+                                                                            (result.toolCalls[toolCallIndex].function.arguments || '') + incomingToolCall.function.arguments;
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (result.toolCalls.length > 0) {
+                                                                result.functionCall = result.toolCalls[0].function;
                                                             }
                                                         }
                                                         else {
@@ -318,6 +449,11 @@ var ChatGPTAPI = /** @class */ (function () {
                                             }
                                             else if (message_1.function_call && message_1.function_call !== null) {
                                                 result.functionCall = message_1.function_call;
+                                                result.toolCalls = [{
+                                                        id: "call_".concat(uuidv4()),
+                                                        type: 'function',
+                                                        function: message_1.function_call
+                                                    }];
                                             }
                                             else if (message_1.tool_calls && message_1.tool_calls.length > 0) {
                                                 // 设置 functionCall 以兼容旧代码
@@ -367,10 +503,9 @@ var ChatGPTAPI = /** @class */ (function () {
                                     case 3:
                                         err_2 = _a.sent();
                                         return [3 /*break*/, 4];
-                                    case 4: return [2 /*return*/, Promise.all([
-                                            this._upsertMessage(latestQuestion),
+                                    case 4: return [2 /*return*/, Promise.all(__spreadArray(__spreadArray([], currentMessages.map(function (currentMessage) { return _this._upsertMessage(currentMessage); }), true), [
                                             this._upsertMessage(message)
-                                        ]).then(function () { return message; })];
+                                        ], false)).then(function () { return message; })];
                                 }
                             });
                         }); });
@@ -420,142 +555,80 @@ var ChatGPTAPI = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams) {
-        return __awaiter(this, void 0, void 0, function () {
-            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, nextMessages, functionToken, numTokens, _loop_1, this_1, state_1, maxTokens;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        _a = opts.systemMessage, systemMessage = _a === void 0 ? this._systemMessage : _a;
-                        parentMessageId = opts.parentMessageId;
-                        userLabel = USER_LABEL_DEFAULT;
-                        assistantLabel = ASSISTANT_LABEL_DEFAULT;
-                        maxNumTokens = this._maxModelTokens - this._maxResponseTokens;
-                        messages = [];
-                        if (systemMessage) {
-                            messages.push({
-                                role: 'system',
-                                content: systemMessage
-                            });
-                        }
-                        systemMessageOffset = messages.length;
-                        nextMessages = text
-                            ? messages.concat([
-                                {
-                                    role: role,
-                                    content: text,
-                                    name: opts.name
-                                }
-                            ])
-                            : messages;
-                        functionToken = 0;
-                        numTokens = functionToken;
-                        _loop_1 = function () {
-                            var nonTextTokens, prompt_1, nextNumTokensEstimate, _i, _c, m1, _d, isValidPrompt, parentMessage, parentMessageRole;
-                            return __generator(this, function (_e) {
-                                switch (_e.label) {
-                                    case 0:
-                                        nonTextTokens = 0 // 记录图片和语音等非文本媒体占用的预估 Token
-                                        ;
-                                        prompt_1 = nextMessages
-                                            .reduce(function (prompt, message) {
-                                            var contentString = '';
-                                            // 将多模态数据安全地解构为纯文本计算 Prompt，并累加多媒体 Token 成本
-                                            if (typeof message.content === 'string') {
-                                                contentString = message.content;
-                                            }
-                                            else if (Array.isArray(message.content)) {
-                                                contentString = message.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
-                                                for (var _i = 0, _a = message.content; _i < _a.length; _i++) {
-                                                    var part = _a[_i];
-                                                    if (part.type === 'image_url')
-                                                        nonTextTokens += 85; // 单张图片粗略估计 (Low 级别)
-                                                    if (part.type === 'input_audio')
-                                                        nonTextTokens += 100; // 音频粗略估计
-                                                }
-                                            }
-                                            switch (message.role) {
-                                                case 'system':
-                                                    return prompt.concat(["Instructions:\n".concat(contentString)]);
-                                                case 'user':
-                                                    return prompt.concat(["".concat(userLabel, ":\n").concat(contentString)]);
-                                                case 'function':
-                                                    return prompt;
-                                                case 'assistant':
-                                                    return prompt;
-                                                default:
-                                                    return contentString ? prompt.concat(["".concat(assistantLabel, ":\n").concat(contentString)]) : prompt;
-                                            }
-                                        }, [])
-                                            .join('\n\n');
-                                        return [4 /*yield*/, this_1._getTokenCount(prompt_1)];
-                                    case 1:
-                                        nextNumTokensEstimate = (_e.sent()) + nonTextTokens;
-                                        _i = 0, _c = nextMessages.filter(function (m) { return m.function_call; });
-                                        _e.label = 2;
-                                    case 2:
-                                        if (!(_i < _c.length)) return [3 /*break*/, 5];
-                                        m1 = _c[_i];
-                                        _d = nextNumTokensEstimate;
-                                        return [4 /*yield*/, this_1._getTokenCount(JSON.stringify(m1.function_call) || '')];
-                                    case 3:
-                                        nextNumTokensEstimate = _d + _e.sent();
-                                        _e.label = 4;
-                                    case 4:
-                                        _i++;
-                                        return [3 /*break*/, 2];
-                                    case 5:
-                                        isValidPrompt = nextNumTokensEstimate + functionToken <= maxNumTokens;
-                                        if (prompt_1 && !isValidPrompt) {
-                                            return [2 /*return*/, "break"];
-                                        }
-                                        messages = nextMessages;
-                                        numTokens = nextNumTokensEstimate + functionToken;
-                                        if (!isValidPrompt) {
-                                            return [2 /*return*/, "break"];
-                                        }
-                                        if (!parentMessageId) {
-                                            return [2 /*return*/, "break"];
-                                        }
-                                        return [4 /*yield*/, this_1._getMessageById(parentMessageId)];
-                                    case 6:
-                                        parentMessage = _e.sent();
-                                        if (!parentMessage) {
-                                            return [2 /*return*/, "break"];
-                                        }
-                                        parentMessageRole = parentMessage.role || 'user';
-                                        nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
-                                            {
-                                                role: parentMessageRole,
-                                                // 在上下文继承时，优先传递包含多模态数组的 originalContent
-                                                content: parentMessage.originalContent || parentMessage.text,
-                                                name: parentMessage.name,
-                                                function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                                                // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
-                                            }
-                                        ], nextMessages.slice(systemMessageOffset), true));
-                                        parentMessageId = parentMessage.parentMessageId;
-                                        return [2 /*return*/];
-                                }
-                            });
-                        };
-                        this_1 = this;
-                        _b.label = 1;
-                    case 1: return [5 /*yield**/, _loop_1()];
-                    case 2:
-                        state_1 = _b.sent();
-                        if (state_1 === "break")
-                            return [3 /*break*/, 4];
-                        _b.label = 3;
-                    case 3:
-                        if (true) return [3 /*break*/, 1];
-                        _b.label = 4;
-                    case 4:
-                        maxTokens = Math.max(1, Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens));
-                        return [2 /*return*/, { messages: messages, maxTokens: maxTokens, numTokens: numTokens }];
-                }
+    ChatGPTAPI.prototype._buildMessages = async function (currentMessages, opts, completionParams) {
+        var _a, _b;
+        var systemMessage = (_a = opts.systemMessage) !== null && _a !== void 0 ? _a : this._systemMessage;
+        var parentMessageId = (_b = currentMessages[0]) === null || _b === void 0 ? void 0 : _b.parentMessageId;
+        var promptBudget = this._maxResponseTokens < this._maxModelTokens
+            ? this._maxModelTokens - this._maxResponseTokens
+            : this._maxModelTokens - 1;
+        var messages = [];
+        if (systemMessage) {
+            messages.push({
+                role: 'system',
+                content: systemMessage
             });
-        });
+        }
+        var systemMessageOffset = messages.length;
+        var currentRequestMessages = currentMessages
+            .map(function (message) { return this._toRequestMessage(message); }, this)
+            .filter(Boolean);
+        var nextMessages = messages.concat(currentRequestMessages);
+        var functionToken = 0;
+        var numTokens = functionToken;
+        while (true) {
+            var nextNumTokensEstimate = functionToken;
+            for (var _i = 0, nextMessages_1 = nextMessages; _i < nextMessages_1.length; _i++) {
+                var message = nextMessages_1[_i];
+                nextNumTokensEstimate += await this._getMessageTokenEstimate(message);
+            }
+            var isValidPrompt = nextNumTokensEstimate <= promptBudget;
+            var includesOnlyCurrentTurn = nextMessages.length === systemMessageOffset + currentRequestMessages.length;
+            if (includesOnlyCurrentTurn || isValidPrompt) {
+                messages = nextMessages;
+                numTokens = nextNumTokensEstimate;
+            }
+            if (!isValidPrompt || !parentMessageId) {
+                break;
+            }
+            var parentMessage = await this._getMessageById(parentMessageId);
+            if (!parentMessage) {
+                break;
+            }
+            var storedRole = getStoredMessageRole(parentMessage.role);
+            if (storedRole === 'tool') {
+                var toolHistoryMessages = [];
+                var cursor = parentMessage;
+                while (cursor && getStoredMessageRole(cursor.role) === 'tool') {
+                    toolHistoryMessages.unshift(cursor);
+                    cursor = cursor.parentMessageId ? await this._getMessageById(cursor.parentMessageId) : undefined;
+                }
+                parentMessageId = cursor === null || cursor === void 0 ? void 0 : cursor.parentMessageId;
+                var assistantRequestMessage = cursor ? this._toRequestMessage(cursor) : null;
+                var toolRequestMessages = toolHistoryMessages
+                    .map(function (message) { return this._toRequestMessage(message); }, this)
+                    .filter(Boolean);
+                if ((assistantRequestMessage === null || assistantRequestMessage === void 0 ? void 0 : assistantRequestMessage.role) !== 'assistant' ||
+                    !((assistantRequestMessage === null || assistantRequestMessage === void 0 ? void 0 : assistantRequestMessage.tool_calls) && assistantRequestMessage.tool_calls.length) ||
+                    toolRequestMessages.length !== toolHistoryMessages.length) {
+                    continue;
+                }
+                nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray(__spreadArray([
+                    assistantRequestMessage
+                ], toolRequestMessages, true), nextMessages.slice(systemMessageOffset), true));
+                continue;
+            }
+            var parentRequestMessage = this._toRequestMessage(parentMessage);
+            parentMessageId = parentMessage.parentMessageId;
+            if (!parentRequestMessage) {
+                continue;
+            }
+            nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
+                parentRequestMessage
+            ], nextMessages.slice(systemMessageOffset), true));
+        }
+        var maxTokens = Math.max(1, this._maxResponseTokens);
+        return { messages: messages, maxTokens: maxTokens, numTokens: numTokens };
     };
     ChatGPTAPI.prototype._getTokenCount = function (text) {
         return __awaiter(this, void 0, void 0, function () {

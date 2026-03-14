@@ -3,7 +3,7 @@ import {
   extractContentFromFile,
   formatDate,
   parseSourceImg,
-  getMasterQQ, getMaxModelTokens,
+  getMasterQQ, getMaxModelTokens, getModelTokenInfo,
   getUin,
   getUserData,
   isCN
@@ -685,6 +685,12 @@ class Core {
       let promptPrefix = `You are ${Config.assistantLabel} ${useCast?.api || opt.system.api || defaultPropmtPrefix}
         Current date: ${currentDate}`
       let maxModelTokens = getMaxModelTokens(completionParams.model)
+      const modelTokenInfo = getModelTokenInfo(completionParams.model)
+      if (modelTokenInfo.estimated) {
+        logger.warn(`[chatgpt] unknown context window for model ${completionParams.model || 'default model'}, using fallback ${maxModelTokens}. Please set apiMaxToken according to the specific model; current value is ${Config.apiMaxToken}.`)
+      } else if (Config.apiMaxToken > maxModelTokens) {
+        logger.warn(`[chatgpt] apiMaxToken(${Config.apiMaxToken}) is larger than the known context window(${maxModelTokens}) for ${completionParams.model || 'default model'}. The configured value will still be used; please adjust it according to the specific model.`)
+      }
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, opt.settings)
 
@@ -804,44 +810,65 @@ class Core {
           const maxToolCalls = 5 // API 接口太蠢了，总是无限循环函数
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
-            toolCallCount++  // 每次进入循环计数
 
             if (msg.text) {
               await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
             }
 
-            let name, args;
+            const pendingToolCalls = msg.toolCalls?.length
+              ? msg.toolCalls
+              : (msg.functionCall
+                  ? [{
+                      id: `legacy_${crypto.randomUUID()}`,
+                      type: 'function',
+                      function: msg.functionCall
+                    }]
+                  : [])
 
-            if (msg.functionCall) {
-              // 处理旧的 functionCall 格式
-              name = msg.functionCall.name;
-              args = JSON.parse(msg.functionCall.arguments);
-            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
-              // 处理新的 toolCalls 格式
-              const toolCall = msg.toolCalls[0];
-              name = toolCall.function.name;
-              args = JSON.parse(toolCall.function.arguments);
-            } else {
+            if (pendingToolCalls.length === 0) {
               // 如果没有工具调用，跳出循环
               break;
             }
 
-            // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
-            if (!args.groupId) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
+            const toolMessages = []
+            let previousMessageId = msg.id
+
+            for (const toolCall of pendingToolCalls) {
+              if (toolCallCount >= maxToolCalls) {
+                break
+              }
+              toolCallCount++
+
+              const name = toolCall.function.name
+              const args = JSON.parse(toolCall.function.arguments)
+
+              // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
+              if (!args.groupId) {
+                args.groupId = e.group_id + '' || e.sender.user_id + ''
+              }
+              try {
+                parseInt(args.groupId)
+              } catch (err) {
+                args.groupId = e.group_id + '' || e.sender.user_id + ''
+              }
+              let functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
+                isAdmin,
+                sender
+              }, args), e)
+              logger.mark(`function ${name} execution result: ${functionResult}`)
+
+              const toolMessageId = crypto.randomUUID()
+              toolMessages.push({
+                id: toolMessageId,
+                role: 'tool',
+                text: functionResult,
+                originalContent: functionResult,
+                parentMessageId: previousMessageId,
+                conversationId: msg.conversationId,
+                toolCallId: toolCall.id
+              })
+              previousMessageId = toolMessageId
             }
-            try {
-              parseInt(args.groupId)
-            } catch (err) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
-            }
-            let functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
-              isAdmin,
-              sender
-            }, args), e)
-            logger.mark(`function ${name} execution result: ${functionResult}`)
-            option.parentMessageId = msg.id
-            option.name = name
 
             // 拿到工具结果后重置 tool_choice 参数，允许大模型输出自然语言回答，防止死循环无限调用工具
             if (option.completionParams && option.completionParams.tool_choice === "required") {
@@ -851,8 +878,10 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
 
-            // 此处的 sendMessage 发送的是工具调用的执行结果，属于普通文本
-            msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
+            option.parentMessageId = msg.id
+            option.appendMessages = toolMessages
+
+            msg = await this.chatGPTApi.sendMessage(null, option)
 
             if (Config.debug) // 避免控制台刷屏
               logger.info(msg)

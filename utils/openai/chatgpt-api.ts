@@ -13,6 +13,26 @@ const CHATGPT_MODEL = 'gpt-4o-mini'
 
 const USER_LABEL_DEFAULT = 'User'
 const ASSISTANT_LABEL_DEFAULT = 'ChatGPT'
+const TOOL_LABEL_DEFAULT = 'Tool'
+
+function extractTextContent(content?: string | types.openai.ChatCompletionContentPart[] | null): string {
+    if (!content) {
+        return ''
+    }
+    return typeof content === 'string'
+        ? content
+        : content.filter(part => part.type === 'text').map(part => (part as any).text).join('\n')
+}
+
+function getStoredMessageRole(role?: string): Role | 'function' {
+    if (role === 'tool' || role === 'assistant' || role === 'system') {
+        return role
+    }
+    if (role === 'function') {
+        return 'function'
+    }
+    return 'user'
+}
 
 export class ChatGPTAPI {
     protected _apiKey: string
@@ -58,7 +78,7 @@ export class ChatGPTAPI {
             messageStore,
             completionParams,
             systemMessage,
-            maxModelTokens = 4000,
+            maxModelTokens = 4096,
             maxResponseTokens = 8192,
             getMessageById,
             upsertMessage,
@@ -113,6 +133,75 @@ export class ChatGPTAPI {
         }
     }
 
+    protected _toRequestMessage(message: types.ChatMessage): types.openai.ChatCompletionRequestMessage | null {
+        const storedRole = getStoredMessageRole(message.role)
+        const content = message.originalContent ?? message.text
+
+        if (storedRole === 'function') {
+            // Legacy conversation data may still contain function-role messages
+            // written before tool_call_id support. Skip them during replay.
+            return null
+        }
+
+        if (storedRole === 'tool') {
+            if (!message.toolCallId) {
+                return null
+            }
+            return {
+                role: 'tool',
+                content: content || '',
+                tool_call_id: message.toolCallId
+            }
+        }
+
+        return {
+            role: storedRole,
+            content: content || '',
+            name: storedRole === 'user' ? message.name : undefined,
+            function_call: storedRole === 'assistant' && !message.toolCalls?.length ? message.functionCall : undefined,
+            tool_calls: storedRole === 'assistant' ? message.toolCalls : undefined
+        }
+    }
+
+    protected async _getMessageTokenEstimate(message: types.openai.ChatCompletionRequestMessage) {
+        const contentString = extractTextContent(message.content)
+        let nonTextTokens = 0
+        if (Array.isArray(message.content)) {
+            for (const part of message.content) {
+                if (part.type === 'image_url') nonTextTokens += 85
+                if (part.type === 'input_audio') nonTextTokens += 100
+            }
+        }
+
+        let promptLine = ''
+        switch (message.role) {
+            case 'system':
+                promptLine = `Instructions:\n${contentString}`
+                break
+            case 'user':
+                promptLine = `${USER_LABEL_DEFAULT}:\n${contentString}`
+                break
+            case 'assistant':
+                promptLine = `${ASSISTANT_LABEL_DEFAULT}:\n${contentString}`
+                break
+            case 'tool':
+                promptLine = `${TOOL_LABEL_DEFAULT}:\n${contentString}`
+                break
+        }
+
+        let tokenCount = await this._getTokenCount(promptLine) + nonTextTokens
+        if (message.function_call) {
+            tokenCount += await this._getTokenCount(JSON.stringify(message.function_call))
+        }
+        if (message.tool_calls) {
+            tokenCount += await this._getTokenCount(JSON.stringify(message.tool_calls))
+        }
+        if (message.tool_call_id) {
+            tokenCount += await this._getTokenCount(message.tool_call_id)
+        }
+        return tokenCount
+    }
+
     /**
      * Sends a message to the OpenAI chat completions endpoint, waits for the response
      * to resolve, and returns the response.
@@ -136,7 +225,7 @@ export class ChatGPTAPI {
      * @returns The response from ChatGPT
      */
     async sendMessage(
-        content: string | types.openai.ChatCompletionContentPart[],
+        content: string | types.openai.ChatCompletionContentPart[] | null,
         opts: types.SendMessageOptions = {},
         role: Role = 'user',
     ): Promise<types.ChatMessage> {
@@ -158,24 +247,31 @@ export class ChatGPTAPI {
             abortSignal = abortController.signal
         }
 
-        // 提取纯文本部分供普通的日志或非多模态场景使用
-        const messageText = typeof content === 'string' ? content : content.filter(t => t.type === 'text').map(t => (t as any).text).join('\n')
+        const currentMessages = [...(opts.appendMessages || [])]
+        if (content !== null) {
+            if (role === 'tool' && !opts.toolCallId) {
+                throw new Error('tool role message requires toolCallId')
+            }
 
-        const message: types.ChatMessage = {
-            role,
-            id: messageId,
-            conversationId,
-            parentMessageId,
-            text: messageText,
-            originalContent: content, // 存储完整的原始对象（包含图片）
-            name: opts.name
+            const message: types.ChatMessage = {
+                role,
+                id: messageId,
+                conversationId,
+                parentMessageId: currentMessages.length > 0 ? currentMessages[currentMessages.length - 1].id : parentMessageId,
+                text: extractTextContent(content),
+                originalContent: content, // 存储完整的原始对象（包含图片）
+                name: role === 'user' ? opts.name : undefined,
+                toolCallId: role === 'tool' ? opts.toolCallId : undefined
+            }
+            currentMessages.push(message)
         }
 
-        const latestQuestion = message
+        if (currentMessages.length === 0) {
+            throw new Error('sendMessage requires content or appendMessages')
+        }
 
         const { messages, maxTokens, numTokens } = await this._buildMessages(
-            content, // 将原始包含图片的参数传递进去
-            role,
+            currentMessages,
             opts,
             completionParams
         )
@@ -185,7 +281,7 @@ export class ChatGPTAPI {
             role: 'assistant',
             id: uuidv4(),
             conversationId,
-            parentMessageId: messageId,
+            parentMessageId: currentMessages[currentMessages.length - 1].id,
             text: '',
             thinking_text: '',
             functionCall: undefined,
@@ -241,6 +337,13 @@ export class ChatGPTAPI {
                             onMessage: (data: string) => {
                                 if (data === '[DONE]') {
                                     result.text = result.text.trim()
+                                    if (result.functionCall && (!result.toolCalls || result.toolCalls.length === 0)) {
+                                        result.toolCalls = [{
+                                            id: `call_${uuidv4()}`,
+                                            type: 'function',
+                                            function: result.functionCall
+                                        }]
+                                    }
                                     result.conversation = messages
                                     return resolve(result)
                                 }
@@ -265,20 +368,35 @@ export class ChatGPTAPI {
                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments
                                             }
                                         } else if (delta.tool_calls && delta.tool_calls.length > 0) {
-                                            let fc = delta.tool_calls[0].function
-                                            if (fc.name) {
-                                                result.functionCall = {
-                                                    name: fc.name,
-                                                    arguments: fc.arguments
+                                            if (!result.toolCalls) {
+                                                result.toolCalls = []
+                                            }
+                                            for (const incomingToolCall of delta.tool_calls) {
+                                                const toolCallIndex = incomingToolCall.index || 0
+                                                if (!result.toolCalls[toolCallIndex]) {
+                                                    result.toolCalls[toolCallIndex] = {
+                                                        id: incomingToolCall.id || `call_${uuidv4()}`,
+                                                        type: 'function',
+                                                        function: {
+                                                            name: incomingToolCall.function?.name || '',
+                                                            arguments: incomingToolCall.function?.arguments || ''
+                                                        }
+                                                    }
+                                                } else {
+                                                    if (incomingToolCall.id) {
+                                                        result.toolCalls[toolCallIndex].id = incomingToolCall.id
+                                                    }
+                                                    if (incomingToolCall.function?.name) {
+                                                        result.toolCalls[toolCallIndex].function.name = incomingToolCall.function.name
+                                                    }
+                                                    if (incomingToolCall.function?.arguments) {
+                                                        result.toolCalls[toolCallIndex].function.arguments =
+                                                            (result.toolCalls[toolCallIndex].function.arguments || '') + incomingToolCall.function.arguments
+                                                    }
                                                 }
-                                                // 同时设置 toolCalls 以支持新的格式
-                                                result.toolCalls = delta.tool_calls
-                                            } else {
-                                                result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments
-                                                // 更新 toolCalls 中的参数
-                                                if (result.toolCalls && result.toolCalls.length > 0) {
-                                                    result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments
-                                                }
+                                            }
+                                            if (result.toolCalls.length > 0) {
+                                                result.functionCall = result.toolCalls[0].function
                                             }
                                         } else {
                                             result.delta = delta.content
@@ -327,18 +445,23 @@ export class ChatGPTAPI {
                             result.id = response.id
                         }
 
-                        if (response?.choices?.length) {
-                            const message = response.choices[0].message
-                            if (message.content) {
-                                result.text = typeof message.content === 'string' ? message.content : (message.content as any).filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
-                                result.originalContent = message.content
-                            } else if (message.function_call && message.function_call !== null) {
-                                result.functionCall = message.function_call
-                            } else if (message.tool_calls && message.tool_calls.length > 0) {
-                                // 设置 functionCall 以兼容旧代码
-                                result.functionCall = message.tool_calls.map(tool => tool.function)[0]
-                                // 同时设置 toolCalls 以支持新的格式
-                                result.toolCalls = message.tool_calls
+                                        if (response?.choices?.length) {
+                                            const message = response.choices[0].message
+                                            if (message.content) {
+                                                result.text = typeof message.content === 'string' ? message.content : (message.content as any).filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
+                                                result.originalContent = message.content
+                                            } else if (message.function_call && message.function_call !== null) {
+                                                result.functionCall = message.function_call
+                                                result.toolCalls = [{
+                                                    id: `call_${uuidv4()}`,
+                                                    type: 'function',
+                                                    function: message.function_call
+                                                }]
+                                            } else if (message.tool_calls && message.tool_calls.length > 0) {
+                                                // 设置 functionCall 以兼容旧代码
+                                                result.functionCall = message.tool_calls.map(tool => tool.function)[0]
+                                                // 同时设置 toolCalls 以支持新的格式
+                                                result.toolCalls = message.tool_calls
                             }
                             result.thinking_text = message.reasoning_content
                             if (message.role) {
@@ -381,7 +504,7 @@ export class ChatGPTAPI {
             }
 
             return Promise.all([
-                this._upsertMessage(latestQuestion),
+                ...currentMessages.map(currentMessage => this._upsertMessage(currentMessage)),
                 this._upsertMessage(message)
             ]).then(() => message)
         })
@@ -425,18 +548,17 @@ export class ChatGPTAPI {
     }
 
     protected async _buildMessages(
-        text: string | types.openai.ChatCompletionContentPart[],
-        role: Role,
+        currentMessages: types.ChatMessage[],
         opts: types.SendMessageOptions,
         completionParams: Partial<Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>>
     ) {
         const { systemMessage = this._systemMessage } = opts
-        let { parentMessageId } = opts
+        let parentMessageId = currentMessages[0]?.parentMessageId
 
-        const userLabel = USER_LABEL_DEFAULT
-        const assistantLabel = ASSISTANT_LABEL_DEFAULT
+        const promptBudget = this._maxResponseTokens < this._maxModelTokens
+            ? this._maxModelTokens - this._maxResponseTokens
+            : this._maxModelTokens - 1
 
-        const maxNumTokens = this._maxModelTokens - this._maxResponseTokens
         let messages: types.openai.ChatCompletionRequestMessage[] = []
 
         if (systemMessage) {
@@ -447,114 +569,29 @@ export class ChatGPTAPI {
         }
 
         const systemMessageOffset = messages.length
-        let nextMessages = text
-            ? messages.concat([
-                {
-                    role,
-                    content: text,
-                    name: opts.name
-                }
-            ])
-            : messages
+        const currentRequestMessages = currentMessages
+            .map(message => this._toRequestMessage(message))
+            .filter(Boolean) as types.openai.ChatCompletionRequestMessage[]
+        let nextMessages = messages.concat(currentRequestMessages)
 
         let functionToken = 0
         let numTokens = functionToken
 
-        // deprecated function call token calculation due to low efficiency
-        // if (completionParams.functions) {
-        //     for (const func of completionParams.functions) {
-        //         functionToken += await this._getTokenCount(func?.name)
-        //         functionToken += await this._getTokenCount(func?.description)
-        //         if (func?.parameters?.properties) {
-        //             for (let key of Object.keys(func.parameters.properties)) {
-        //                 functionToken += await this._getTokenCount(key)
-        //                 let property = func.parameters.properties[key]
-        //                 for (let field of Object.keys(property)) {
-        //                     switch (field) {
-        //                         case 'type': {
-        //                             functionToken += 2
-        //                             functionToken += await this._getTokenCount(property?.type)
-        //                             break
-        //                         }
-        //                         case 'description': {
-        //                             functionToken += 2
-        //                             functionToken += await this._getTokenCount(property?.description)
-        //                             break
-        //                         }
-        //                         case 'enum': {
-        //                             functionToken -= 3
-        //                             for (let enumElement of property?.enum) {
-        //                                 functionToken += 3
-        //                                 functionToken += await this._getTokenCount(enumElement)
-        //                             }
-        //                             break
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //         if (func?.parameters?.required) {
-        //             for (let string of func.parameters.required) {
-        //                 functionToken += 2
-        //                 functionToken += await this._getTokenCount(string)
-        //             }
-        //         }
-        //     }
-        // }
-
         do {
-            let nonTextTokens = 0 // 记录图片和语音等非文本媒体占用的预估 Token
-
-            const prompt = nextMessages
-                .reduce((prompt, message) => {
-                    let contentString = ''
-                    // 将多模态数据安全地解构为纯文本计算 Prompt，并累加多媒体 Token 成本
-                    if (typeof message.content === 'string') {
-                        contentString = message.content
-                    } else if (Array.isArray(message.content)) {
-                        contentString = message.content.filter(c => c.type === 'text').map(c => (c as any).text).join('\n')
-
-                        for (const part of message.content) {
-                            if (part.type === 'image_url') nonTextTokens += 85 // 单张图片粗略估计 (Low 级别)
-                            if (part.type === 'input_audio') nonTextTokens += 100 // 音频粗略估计
-                        }
-                    }
-
-                    switch (message.role) {
-                        case 'system':
-                            return prompt.concat([`Instructions:\n${contentString}`])
-                        case 'user':
-                            return prompt.concat([`${userLabel}:\n${contentString}`])
-                        case 'function':
-                            return prompt
-                        case 'assistant':
-                            return prompt
-                        default:
-                            return contentString ? prompt.concat([`${assistantLabel}:\n${contentString}`]) : prompt
-                    }
-                }, [] as string[])
-                .join('\n\n')
-
-            // 将文本 Token 估值和多媒体粗略计算相加
-            let nextNumTokensEstimate = await this._getTokenCount(prompt) + nonTextTokens
-
-            for (const m1 of nextMessages.filter(m => m.function_call)) {
-                nextNumTokensEstimate += await this._getTokenCount(JSON.stringify(m1.function_call) || '')
+            let nextNumTokensEstimate = functionToken
+            for (const message of nextMessages) {
+                nextNumTokensEstimate += await this._getMessageTokenEstimate(message)
             }
 
-            const isValidPrompt = nextNumTokensEstimate + functionToken <= maxNumTokens
+            const isValidPrompt = nextNumTokensEstimate <= promptBudget
+            const includesOnlyCurrentTurn = nextMessages.length === systemMessageOffset + currentRequestMessages.length
 
-            if (prompt && !isValidPrompt) {
-                break
-            }
-            messages = nextMessages
-            numTokens = nextNumTokensEstimate + functionToken
-
-            if (!isValidPrompt) {
-                break
+            if (includesOnlyCurrentTurn || isValidPrompt) {
+                messages = nextMessages
+                numTokens = nextNumTokensEstimate
             }
 
-            if (!parentMessageId) {
+            if (!isValidPrompt || !parentMessageId) {
                 break
             }
 
@@ -563,29 +600,53 @@ export class ChatGPTAPI {
                 break
             }
 
-            const parentMessageRole = parentMessage.role || 'user'
+            const storedRole = getStoredMessageRole(parentMessage.role)
+            if (storedRole === 'tool') {
+                const toolHistoryMessages: types.ChatMessage[] = []
+                let cursor: types.ChatMessage | undefined = parentMessage
+
+                while (cursor && getStoredMessageRole(cursor.role) === 'tool') {
+                    toolHistoryMessages.unshift(cursor)
+                    cursor = cursor.parentMessageId ? await this._getMessageById(cursor.parentMessageId) : undefined
+                }
+
+                parentMessageId = cursor?.parentMessageId
+
+                const assistantRequestMessage = cursor ? this._toRequestMessage(cursor) : null
+                const toolRequestMessages = toolHistoryMessages
+                    .map(message => this._toRequestMessage(message))
+                    .filter(Boolean) as types.openai.ChatCompletionRequestMessage[]
+
+                if (
+                    assistantRequestMessage?.role !== 'assistant' ||
+                    !assistantRequestMessage.tool_calls?.length ||
+                    toolRequestMessages.length !== toolHistoryMessages.length
+                ) {
+                    continue
+                }
+
+                nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
+                    assistantRequestMessage,
+                    ...toolRequestMessages,
+                    ...nextMessages.slice(systemMessageOffset)
+                ])
+                continue
+            }
+
+            const parentRequestMessage = this._toRequestMessage(parentMessage)
+            parentMessageId = parentMessage.parentMessageId
+
+            if (!parentRequestMessage) {
+                continue
+            }
 
             nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
-                {
-                    role: parentMessageRole,
-                    // 在上下文继承时，优先传递包含多模态数组的 originalContent
-                    content: parentMessage.originalContent || parentMessage.text,
-                    name: parentMessage.name,
-                    function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                    // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
-                },
+                parentRequestMessage,
                 ...nextMessages.slice(systemMessageOffset)
             ])
-
-            parentMessageId = parentMessage.parentMessageId
         } while (true)
 
-        // Use up to 4096 tokens (prompt + response), but try to leave 1000 tokens
-        // for the response.
-        const maxTokens = Math.max(
-            1,
-            Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens)
-        )
+        const maxTokens = Math.max(1, this._maxResponseTokens)
 
         return { messages, maxTokens, numTokens }
     }
