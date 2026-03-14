@@ -20,7 +20,7 @@ export class Update extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: '^#(chatgpt|柴特寄批踢|GPT|ChatGPT|柴特鸡批踢|Chat|CHAT|CHATGPT|柴特|ChatGPT-Plugin|ChatGPT-plugin|chatgpt-plugin)((插件)?(强制)?更新| update)$',
+          reg: '^#(chatgpt|柴特寄批踢|GPT|ChatGPT|柴特鸡批踢|Chat|CHAT|CHATGPT|柴特|ChatGPT-Plugin|ChatGPT-plugin|chatgpt-plugin)((插件)?(强制)?更新| update)(\s*(v2|dev|DEV|main|MAIN))?$',
           fnc: 'update'
         }
       ]
@@ -47,7 +47,7 @@ export class Update extends plugin {
     // 检查是否为dev分支更新
     const isDevUpdate = this.e.msg.includes('dev') || this.e.msg.includes('DEV')
     // 检查是否为dev分支更新
-    const isMainUpdate = this.e.msg.includes('main') || this.e.msg.includes('MAIN')
+    const isMainUpdate = this.e.msg.includes('main') || this.e.msg.includes('MAIN') || this.e.msg.includes('v2')
 
     /** 执行更新 */
     await this.runUpdate(isForce, isDevUpdate, isMainUpdate)
@@ -75,12 +75,13 @@ export class Update extends plugin {
 
     if (isForce && isDevUpdate) {
       // dev分支强制更新
-      command = 'git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout dev && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/dev'
+      command = "git -C ./plugins/chatgpt-plugin/ config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*' && git -C ./plugins/chatgpt-plugin/ fetch origin && git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout dev && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/dev"
       this.e.reply('正在执行dev分支强制更新操作，请稍等')
     } else if (isForce && isMainUpdate) {
       // main分支强制更新
-      command = 'git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout main && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/main'
-      this.e.reply('正在执行main分支强制更新操作，请稍等')
+      // command = 'git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout main && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/main'
+      command = 'git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout v2 && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard origin/v2'
+      this.e.reply('正在执行 v2 分支强制更新操作，请稍等')
     } else if (isForce) {
       command = `git -C ./plugins/chatgpt-plugin/ reset --hard HEAD && git -C ./plugins/chatgpt-plugin/ clean -fd && git -C ./plugins/chatgpt-plugin/ checkout . && git -C ./plugins/chatgpt-plugin/ fetch --all && git -C ./plugins/chatgpt-plugin/ reset --hard @{u}`
       this.e.reply('正在执行强制更新操作，请稍等')
