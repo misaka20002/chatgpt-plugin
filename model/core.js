@@ -301,7 +301,7 @@ class Core {
           parentMessageId: conversation.parentMessageId,
           conversationId: conversation.conversationId,
           system: opt.system.claude,
-          max_tokens: Config.apiMaxToken
+          max_tokens: Config.claudeApiMaxToken
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
           let chats = await getChatHistoryGroup(e, Config.groupContextLength)
@@ -684,7 +684,7 @@ class Core {
       const currentDate = new Date().toISOString().split('T')[0]
       let promptPrefix = `You are ${Config.assistantLabel} ${useCast?.api || opt.system.api || defaultPropmtPrefix}
         Current date: ${currentDate}`
-      let maxModelTokens = getMaxModelTokens(completionParams.model)
+      // let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, opt.settings)
 
@@ -701,7 +701,7 @@ class Core {
         completionParams,
         assistantLabel: Config.assistantLabel,
         fetch: newFetch,
-        maxModelTokens,
+        maxModelTokens: Config.maxModelTokens,
         maxResponseTokens: Config.apiMaxToken
       }
       if (!Config.openAiForceUseReverse) {

@@ -261,8 +261,14 @@ export function supportGuoba() {
         },
         {
           field: 'apiMaxToken',
-          label: 'max token',
-          bottomHelpMessage: '默认4096',
+          label: '回复内容最大Token数',
+          bottomHelpMessage: '模型单次回复的Token上限，默认4096（要预留至少 10000 个输入Token，推荐“回复内容最大Token数”+10000≤“模型总上下文Token数”）',
+          component: 'InputNumber'
+        },
+        {
+          field: 'maxModelTokens',
+          label: '模型总上下文Token数',
+          bottomHelpMessage: '模型支持的输入+回复总Token上限，默认16000（参考：gpt-4o-mini为128000）',
           component: 'InputNumber'
         },
         {

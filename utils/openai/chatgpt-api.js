@@ -169,7 +169,7 @@ var ChatGPTAPI = /** @class */ (function () {
                             role, opts, completionParams)];
                     case 1:
                         _c = _d.sent(), messages = _c.messages, maxTokens = _c.maxTokens, numTokens = _c.numTokens;
-                        console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
+                        console.log("[ChatGPT][API] \u8F93\u5165Token(".concat(numTokens, ") | \u56DE\u590D\u4E0A\u9650(").concat(maxTokens, ") | \u603B\u4E0A\u4E0B\u6587(").concat(this._maxModelTokens, ")"));
                         result = {
                             role: 'assistant',
                             id: uuidv4(),

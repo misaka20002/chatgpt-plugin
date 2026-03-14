@@ -179,7 +179,7 @@ export class ChatGPTAPI {
             opts,
             completionParams
         )
-        console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
+        console.log(`[ChatGPT][API] 输入Token(${numTokens}) | 回复上限(${maxTokens}) | 总上下文(${this._maxModelTokens})`)
 
         const result: types.ChatMessage & { conversation: openai.ChatCompletionRequestMessage[] } = {
             role: 'assistant',
