@@ -416,7 +416,7 @@ export class memes extends plugin {
       let user = await getUserDetailedInfo(e, atMsg.qq);
       atUsers.push({
         qq: atMsg.qq,
-        text: user?.card || atMsg.text || '',
+        text: user?.card || atMsg.name || atMsg.text || '',
         gender: user?.gender || 'unknown'
       });
     }

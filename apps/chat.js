@@ -788,7 +788,7 @@ export class chatgpt extends plugin {
     }
 
     // 呆毛版 gemini的识图结果 + prompt
-    if (Config.recognitionByGemini) {
+    if (Config.mediaRecognitionSource == "Gemini") {
       let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, (e.img || []), (e.get_Video || []).map(v => v.url))
       if (imgRecognitionByGeminiText) {
         prompt = (e.senderNickname ? `${e.senderNickname}(ID:${e.senderUser_id})` : "") + (e.sourceMsg || "") + '消息中多媒体内容识别信息："' + imgRecognitionByGeminiText + '"\n' + prompt

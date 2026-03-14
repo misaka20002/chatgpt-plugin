@@ -610,7 +610,7 @@ class Core {
         codeExecution: Config.geminiEnableCodeExecution // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
       }
 
-      if (!Config.recognitionByGemini) {
+      if (!(Config.mediaRecognitionSource == "Gemini")) {
         // const image = await parseSourceImg(e)
         let imageUrl = e.img ? e.img[0] : undefined
         if (imageUrl) {
@@ -1033,7 +1033,7 @@ async function collectTools(e) {
     fullTools.push(new EmojiLikeTool())
   }
 
-  if (Config.mediaRecognitionSource === "Gemini") {
+  if (Config.mediaRecognitionGeminiTool) {
     tools.push(new RecognitionResultsByGeminiTool())
     fullTools.push(new RecognitionResultsByGeminiTool())
   }

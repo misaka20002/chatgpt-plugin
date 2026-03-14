@@ -670,17 +670,11 @@ export function supportGuoba() {
         {
           field: 'gemini_vqa_model',
           label: 'gemini内容识别模型',
-          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别工具 和 对话中图片识别-gemini；支持图片和视频识别；默认值：gemini-2.5-flash',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别和工具；支持图片和视频识别；默认值：gemini-2.5-flash',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
-        },
-        {
-          field: 'recognitionByGemini',
-          label: '对话中媒体识别',
-          bottomHelpMessage: '呆毛版 对话的前面加上gemini的识多媒体结果（用于无识图能力的接口）；如果对话时使用gemini-2.5及以上的模型时，这个功能和"对话中图片OCR"都不用开了！ 使用方法：1、建议关闭“全局-对话中图片OCR”功能；2、需要配置了gemini的key才能使用；3、需要同时包含多媒体和消息才生效，是否生效在控制台通过输出给ai的文本判断；4、gemini遇到涩涩会中断。',
-          component: 'Switch'
         },
         {
           field: 'gemini_vqa_needMaster',
@@ -1216,7 +1210,7 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '推荐使用并配置 gemini内容识别模型 以支持图片和视频识别（将以工具形式按需识别视频以节约token）；“模型内置”选项需要自行判断你的API支持图片识别。',
+          bottomHelpMessage: '识别引用的图片或视频的内容；推荐无识图能力的API选择“Gemini内容识别工具”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
@@ -1281,6 +1275,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'mediaRecognitionGeminiTool',
+          label: '工具新增-Gemini内容识别',
+          bottomHelpMessage: '新增Gemini内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型',
+          component: 'Switch'
+        },
+        {
           field: 'ScheduleTask_Tool',
           label: '工具新增-定时工具',
           bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制仅限群聊可用、每个用户仅能储存1条定时任务并且最大定时为1个月；推荐开启 “全局-At群友-提示词版” 或 “工具新增-at群友” 以第一时间获取ai通知；修改该选项后重启生效',
@@ -1306,7 +1306,7 @@ export function supportGuoba() {
         },
         {
           field: 'add_sf_image_edit',
-          label: '工具新增-Gemini Image',
+          label: '工具新增-Gemini Banana',
           bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
           component: 'Switch'
         },
@@ -1713,7 +1713,7 @@ export function supportGuoba() {
         {
           field: 'enableBYM',
           label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复。（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
+          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复；此开关重启生效；（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
           component: 'Switch'
         },
         {
