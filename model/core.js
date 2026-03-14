@@ -745,8 +745,9 @@ class Core {
           const response = await fetch(imageUrl);
           const buffer = await response.arrayBuffer();
           const base64Image = Buffer.from(buffer).toString('base64');
-          // 获取 MIME 类型，如果失败则回退默认图片格式
-          const mimeType = response.headers.get('content-type') || 'image/jpeg';
+          // const mimeType = response.headers.get('content-type') || 'image/jpeg';
+          // mimeType == "gif" 会报错，强制使用这个
+          const mimeType = 'image/jpeg';
           // OpenAI API 要求格式: data:image/jpeg;base64,{base64_string}
           imageDataUrl = `data:${mimeType};base64,${base64Image}`;
         } catch (err) {
