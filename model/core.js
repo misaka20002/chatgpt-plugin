@@ -3,7 +3,7 @@ import {
   extractContentFromFile,
   formatDate,
   parseSourceImg,
-  getMasterQQ, getMaxModelTokens, getModelTokenInfo,
+  getMasterQQ,
   getUin,
   getUserData,
   isCN
@@ -301,7 +301,7 @@ class Core {
           parentMessageId: conversation.parentMessageId,
           conversationId: conversation.conversationId,
           system: opt.system.claude,
-          max_tokens: Config.apiMaxToken
+          max_tokens: Config.claudeApiMaxToken
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
           let chats = await getChatHistoryGroup(e, Config.groupContextLength)
@@ -684,13 +684,7 @@ class Core {
       const currentDate = new Date().toISOString().split('T')[0]
       let promptPrefix = `You are ${Config.assistantLabel} ${useCast?.api || opt.system.api || defaultPropmtPrefix}
         Current date: ${currentDate}`
-      let maxModelTokens = getMaxModelTokens(completionParams.model)
-      const modelTokenInfo = getModelTokenInfo(completionParams.model)
-      if (modelTokenInfo.estimated) {
-        logger.warn(`[chatgpt] unknown context window for model ${completionParams.model || 'default model'}, using fallback ${maxModelTokens}. Please set apiMaxToken according to the specific model; current value is ${Config.apiMaxToken}.`)
-      } else if (Config.apiMaxToken > maxModelTokens) {
-        logger.warn(`[chatgpt] apiMaxToken(${Config.apiMaxToken}) is larger than the known context window(${maxModelTokens}) for ${completionParams.model || 'default model'}. The configured value will still be used; please adjust it according to the specific model.`)
-      }
+      // let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
       let system = await handleSystem(e, promptPrefix, opt.settings)
 
@@ -707,7 +701,7 @@ class Core {
         completionParams,
         assistantLabel: Config.assistantLabel,
         fetch: newFetch,
-        maxModelTokens,
+        maxModelTokens: Config.maxModelTokens,
         maxResponseTokens: Config.apiMaxToken
       }
       if (!Config.openAiForceUseReverse) {
@@ -751,8 +745,9 @@ class Core {
           const response = await fetch(imageUrl);
           const buffer = await response.arrayBuffer();
           const base64Image = Buffer.from(buffer).toString('base64');
-          // 获取 MIME 类型，如果失败则回退默认图片格式
-          const mimeType = response.headers.get('content-type') || 'image/jpeg';
+          // const mimeType = response.headers.get('content-type') || 'image/jpeg';
+          // mimeType == "gif" 会报错，强制使用这个
+          const mimeType = 'image/jpeg';
           // OpenAI API 要求格式: data:image/jpeg;base64,{base64_string}
           imageDataUrl = `data:${mimeType};base64,${base64Image}`;
         } catch (err) {
@@ -810,7 +805,6 @@ class Core {
           const maxToolCalls = 5 // API 接口太蠢了，总是无限循环函数
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
-
             if (msg.text) {
               await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
             }
@@ -826,8 +820,7 @@ class Core {
                   : [])
 
             if (pendingToolCalls.length === 0) {
-              // 如果没有工具调用，跳出循环
-              break;
+              break
             }
 
             const toolMessages = []
@@ -839,10 +832,14 @@ class Core {
               }
               toolCallCount++
 
-              const name = toolCall.function.name
-              const args = JSON.parse(toolCall.function.arguments)
+              let name = toolCall.function.name
+              let args
+              try {
+                args = JSON.parse(toolCall.function.arguments)
+              } catch (e) {
+                args = {}
+              }
 
-              // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
               if (!args.groupId) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
               }
@@ -851,18 +848,30 @@ class Core {
               } catch (err) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
               }
-              let functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
-                isAdmin,
-                sender
-              }, args), e)
-              logger.mark(`function ${name} execution result: ${functionResult}`)
+
+              let functionResult = ''
+              try {
+                if (fullFuncMap[name.trim()]) {
+                  functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
+                    isAdmin,
+                    sender
+                  }, args), e)
+                  logger.mark(`function ${name} execution result: ${functionResult}`)
+                } else {
+                  functionResult = `Function ${name} not found.`
+                  logger.warn(functionResult)
+                }
+              } catch (err) {
+                functionResult = `Error executing function ${name}: ${err.message}`
+                logger.error(functionResult)
+              }
 
               const toolMessageId = crypto.randomUUID()
               toolMessages.push({
                 id: toolMessageId,
                 role: 'tool',
-                text: functionResult,
-                originalContent: functionResult,
+                text: String(functionResult),
+                originalContent: String(functionResult),
                 parentMessageId: previousMessageId,
                 conversationId: msg.conversationId,
                 toolCallId: toolCall.id
@@ -870,32 +879,21 @@ class Core {
               previousMessageId = toolMessageId
             }
 
+            option.parentMessageId = msg.id
+            option.appendMessages = toolMessages
+
             // 拿到工具结果后重置 tool_choice 参数，允许大模型输出自然语言回答，防止死循环无限调用工具
             if (option.completionParams && option.completionParams.tool_choice === "required") {
-              delete option.completionParams.tool_choice;
+              delete option.completionParams.tool_choice
             }
 
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
 
-            option.parentMessageId = msg.id
-            option.appendMessages = toolMessages
-
             msg = await this.chatGPTApi.sendMessage(null, option)
 
-            if (Config.debug) // 避免控制台刷屏
+            if (Config.debug)
               logger.info(msg)
-
-            // // 如果是函数返回结果，则跳出循环
-            // if (msg.conversation && msg.conversation.length > 0) {
-            //   const lastMessage = msg.conversation[msg.conversation.length - 1]
-            //   if (lastMessage.role === 'function' && lastMessage.name === name) {
-            //     // 清除工具调用相关字段，避免循环
-            //     msg.functionCall = undefined
-            //     msg.toolCalls = undefined
-            //     break
-            //   }
-            // }
           }
 
           if (toolCallCount >= maxToolCalls) {

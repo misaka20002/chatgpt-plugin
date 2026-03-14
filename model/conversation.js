@@ -6,6 +6,151 @@ import _ from 'lodash'
 export const originalValues = ['星火', '通义千问', '克劳德', '克劳德2', '必应', 'api', 'API', 'api3', 'API3', 'glm', '双子星', '双子座', '智谱']
 export const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', 'api', 'api3', 'api3', 'chatglm', 'gemini', 'gemini', 'chatglm4']
 
+const REDIS_SCAN_COUNT = 200
+const REDIS_DELETE_BATCH_SIZE = 200
+
+async function deleteRedisKeys(patterns, debugLabel = '') {
+  const deleteCommand = typeof redis.unlink === 'function' ? 'UNLINK' : 'DEL'
+  let deleted = 0
+  let matched = 0
+
+  async function flushBatch(batch, pattern) {
+    if (batch.length === 0) {
+      return
+    }
+
+    const removed = await redis.sendCommand([deleteCommand, ...batch])
+    deleted += Number(removed) || 0
+
+    if (Config.debug && debugLabel) {
+      logger.info(`delete ${debugLabel}: pattern=${pattern}, batch=${batch.length}, command=${deleteCommand}`)
+    }
+  }
+
+  for (const pattern of patterns) {
+    let batch = []
+
+    for await (const key of redis.scanIterator({ MATCH: pattern, COUNT: REDIS_SCAN_COUNT })) {
+      batch.push(key)
+      matched++
+
+      if (batch.length >= REDIS_DELETE_BATCH_SIZE) {
+        await flushBatch(batch, pattern)
+        batch = []
+      }
+    }
+
+    await flushBatch(batch, pattern)
+  }
+
+  if (Config.debug && debugLabel) {
+    logger.info(`delete ${debugLabel} summary: matched=${matched}, deleted=${deleted}, patterns=${patterns.length}`)
+  }
+
+  return deleted
+}
+
+async function clearKeyvNamespace(namespace) {
+  let Keyv
+  try {
+    Keyv = (await import('keyv')).default
+  } catch (err) {
+    logger.warn(`清理 ${namespace} 命名空间失败，依赖 keyv 未安装`, err)
+    return false
+  }
+
+  try {
+    const cache = new Keyv({
+      store: new KeyvFile({ filename: 'cache.json' }),
+      namespace
+    })
+    if (typeof cache.clear === 'function') {
+      await cache.clear()
+      return true
+    }
+    logger.warn(`当前 keyv 存储不支持 clear，跳过清理命名空间: ${namespace}`)
+  } catch (err) {
+    logger.warn(`清理命名空间失败: ${namespace}`, err)
+  }
+
+  return false
+}
+
+function getCurrentModeCleanupTargets(use) {
+  switch (use) {
+    case 'claude':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_CLAUDE:*'],
+        historyPatterns: ['CHATGPT:MESSAGE_Claude:*'],
+        metadataPatterns: ['CHATGPT:WRONG_EMOTION:*']
+      }
+    case 'claude2':
+      return {
+        conversationPatterns: ['CHATGPT:CLAUDE2_CONVERSATION:*']
+      }
+    case 'xh':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_XH:*'],
+        keyvNamespaces: ['xh']
+      }
+    case 'bing':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_BING:*'],
+        metadataPatterns: ['CHATGPT:WRONG_EMOTION:*'],
+        keyvNamespaces: [Config.toneStyle]
+      }
+    case 'api':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS:*'],
+        historyPatterns: ['CHATGPT:MESSAGE:*']
+      }
+    case 'api3':
+      return {
+        conversationPatterns: ['CHATGPT:QQ_CONVERSATION:*'],
+        historyPatterns: ['CHATGPT:QQ_MESSAGE:*'],
+        metadataPatterns: [
+          'CHATGPT:CONVERSATION_LAST_MESSAGE_PROMPT:*',
+          'CHATGPT:CONVERSATION_LAST_MESSAGE_ID:*',
+          'CHATGPT:CONVERSATION_CREATER_ID:*',
+          'CHATGPT:CONVERSATION_CREATER_NICK_NAME:*'
+        ]
+      }
+    case 'chatglm':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_CHATGLM:*'],
+        historyPatterns: ['CHATGPT:MESSAGE_CHATGLM:*'],
+        keyvNamespaces: ['chatglm_6b']
+      }
+    case 'qwen':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_QWEN:*'],
+        historyPatterns: ['CHATGPT:MESSAGE_QWEN:*']
+      }
+    case 'gemini':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_GEMINI:*'],
+        historyPatterns: ['CHATGPT:MESSAGE_Gemini:*']
+      }
+    case 'chatglm4':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_CHATGLM4:*'],
+        historyPatterns: ['CHATGPT:MESSAGE_CHATGLM4:*']
+      }
+    case 'browser':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_BROWSER:*']
+      }
+    case 'azure':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_AZURE:*']
+      }
+    default:
+      return {
+        conversationPatterns: []
+      }
+  }
+}
+
 export class ConversationManager {
   async endConversation(e) {
     const userData = await getUserData(e.user_id)
@@ -217,161 +362,75 @@ export class ConversationManager {
   }
 
   async endAllConversations(e) {
-    const match = e.msg.trim().match('^#?(.*)(结束|新开|摧毁|毁灭|完结)全部对话')
-    console.log(match[1])
+    const isAllModeCleanup = e.msg.includes('模式')
+    const match = e.msg.trim().match('^#?(.*?)(结束|新开|摧毁|毁灭|完结|清理)全部(模式)?对话$')
+
+    if (isAllModeCleanup) {
+      const conversationPatterns = [
+        'CHATGPT:CONVERSATIONS:*',
+        'CHATGPT:QQ_CONVERSATION:*',
+        'CHATGPT:CONVERSATIONS_BING:*',
+        'CHATGPT:CONVERSATIONS_CHATGLM:*',
+        'CHATGPT:CONVERSATIONS_QWEN:*',
+        'CHATGPT:CONVERSATIONS_GEMINI:*',
+        'CHATGPT:CONVERSATIONS_CLAUDE:*',
+        'CHATGPT:CLAUDE2_CONVERSATION:*',
+        'CHATGPT:CONVERSATIONS_CHATGLM4:*',
+        'CHATGPT:CONVERSATIONS_XH:*',
+        'CHATGPT:CONVERSATIONS_BROWSER:*',
+        'CHATGPT:CONVERSATIONS_AZURE:*'
+      ]
+      const historyPatterns = [
+        'CHATGPT:MESSAGE:*',
+        'CHATGPT:MESSAGE_QWEN:*',
+        'CHATGPT:MESSAGE_Gemini:*',
+        'CHATGPT:MESSAGE_Claude:*',
+        'CHATGPT:MESSAGE_CHATGLM:*',
+        'CHATGPT:MESSAGE_CHATGLM4:*',
+        'CHATGPT:QQ_MESSAGE:*'
+      ]
+      const metadataPatterns = [
+        'CHATGPT:WRONG_EMOTION:*',
+        'CHATGPT:CONVERSATION_LAST_MESSAGE_PROMPT:*',
+        'CHATGPT:CONVERSATION_LAST_MESSAGE_ID:*',
+        'CHATGPT:CONVERSATION_CREATER_ID:*',
+        'CHATGPT:CONVERSATION_CREATER_NICK_NAME:*'
+      ]
+
+      const deletedConversations = await deleteRedisKeys(conversationPatterns, 'conversation')
+      await deleteRedisKeys(historyPatterns, 'history')
+      await deleteRedisKeys(metadataPatterns, 'conversation metadata')
+
+      await clearKeyvNamespace(Config.toneStyle)
+      await clearKeyvNamespace('chatglm_6b')
+      await clearKeyvNamespace('xh')
+
+      await this.reply(`已按全模式清理，结束了${deletedConversations}个会话，并清空可识别的历史记录。`, false)
+      return
+    }
+
     let use
-    if (match[1] && match[1] != 'chatgpt') {
+    if (match?.[1] && match[1] !== 'chatgpt') {
       use = correspondingValues[originalValues.indexOf(match[1])]
     } else {
       use = await redis.get('CHATGPT:USE') || 'api'
     }
-    console.log(use)
-    let deleted = 0
-    switch (use) {
-      case 'claude': {
-        let cs = await redis.keys('CHATGPT:CONVERSATIONS_CLAUDE:*')
-        let we = await redis.keys('CHATGPT:WRONG_EMOTION:*')
-        for (let i = 0; i < cs.length; i++) {
-          await redis.del(cs[i])
-          if (Config.debug) {
-            logger.info('delete claude conversation of qq: ' + cs[i])
-          }
-          deleted++
-        }
-        for (const element of we) {
-          await redis.del(element)
-        }
-        break
-      }
-      case 'xh': {
-        let cs = await redis.keys('CHATGPT:CONVERSATIONS_XH:*')
-        for (let i = 0; i < cs.length; i++) {
-          await redis.del(cs[i])
-          if (Config.debug) {
-            logger.info('delete xh conversation of qq: ' + cs[i])
-          }
-          deleted++
-        }
-        break
-      }
-      case 'bing': {
-        let cs = await redis.keys('CHATGPT:CONVERSATIONS_BING:*')
-        let we = await redis.keys('CHATGPT:WRONG_EMOTION:*')
-        for (let i = 0; i < cs.length; i++) {
-          await redis.del(cs[i])
-          if (Config.debug) {
-            logger.info('delete bing conversation of qq: ' + cs[i])
-          }
-          deleted++
-        }
-        for (const element of we) {
-          await redis.del(element)
-        }
-        break
-      }
-      case 'api': {
-        let cs = await redis.keys('CHATGPT:CONVERSATIONS:*')
-        for (let i = 0; i < cs.length; i++) {
-          await redis.del(cs[i])
-          if (Config.debug) {
-            logger.info('delete api conversation of qq: ' + cs[i])
-          }
-          deleted++
-        }
 
-        let ms = await redis.keys('CHATGPT:MESSAGE:*') // 呆毛未验证
-        for (let i = 0; i < ms.length; i++) {
-          await redis.del(ms[i])
-        }
+    const {
+      conversationPatterns = [],
+      historyPatterns = [],
+      metadataPatterns = [],
+      keyvNamespaces = []
+    } = getCurrentModeCleanupTargets(use)
 
-        break
-      }
-      case 'api3': {
-        let qcs = await redis.keys('CHATGPT:QQ_CONVERSATION:*')
-        for (let i = 0; i < qcs.length; i++) {
-          await redis.del(qcs[i])
-          if (Config.debug) {
-            logger.info('delete conversation bind: ' + qcs[i])
-          }
-          deleted++
-        }
+    const deletedConversations = await deleteRedisKeys(conversationPatterns, `${use} conversation`)
+    await deleteRedisKeys(historyPatterns, `${use} history`)
+    await deleteRedisKeys(metadataPatterns, `${use} metadata`)
 
-        let ms = await redis.keys('CHATGPT:QQ_MESSAGE:*') // 呆毛未验证
-        for (let i = 0; i < ms.length; i++) {
-          await redis.del(ms[i])
-        }
-
-        break
-      }
-      case 'chatglm': {
-        let qcs = await redis.keys('CHATGPT:CONVERSATIONS_CHATGLM:*')
-        for (let i = 0; i < qcs.length; i++) {
-          await redis.del(qcs[i])
-          if (Config.debug) {
-            logger.info('delete chatglm conversation bind: ' + qcs[i])
-          }
-          deleted++
-        }
-
-        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM:*') // 呆毛未验证
-        for (let i = 0; i < ms.length; i++) {
-          await redis.del(ms[i])
-        }
-
-        break
-      }
-      case 'qwen': {
-        let qcs = await redis.keys('CHATGPT:CONVERSATIONS_QWEN:*')
-        for (let i = 0; i < qcs.length; i++) {
-          await redis.del(qcs[i])
-          if (Config.debug) {
-            logger.info('delete qwen conversation bind: ' + qcs[i])
-          }
-          deleted++
-        }
-
-        let ms = await redis.keys('CHATGPT:MESSAGE_QWEN:*') // 呆毛未验证
-        for (let i = 0; i < ms.length; i++) {
-          await redis.del(ms[i])
-        }
-
-        break
-      }
-      case 'gemini': {
-        let qcs = await redis.keys('CHATGPT:CONVERSATIONS_GEMINI:*')
-        for (let i = 0; i < qcs.length; i++) {
-          await redis.del(qcs[i])
-          if (Config.debug) {
-            logger.info('delete gemini conversation bind: ' + qcs[i])
-          }
-          deleted++
-        }
-
-        let ms = await redis.keys('CHATGPT:MESSAGE_Gemini:*')
-        for (let i = 0; i < ms.length; i++) {
-          await redis.del(ms[i])
-        }
-
-        break
-      }
-      case 'chatglm4': {
-        let qcs = await redis.keys('CHATGPT:CONVERSATIONS_CHATGLM4:*')
-        for (let i = 0; i < qcs.length; i++) {
-          await redis.del(qcs[i])
-          if (Config.debug) {
-            logger.info('delete chatglm4 conversation bind: ' + qcs[i])
-          }
-          deleted++
-        }
-
-        let ms = await redis.keys('CHATGPT:MESSAGE_CHATGLM4:*') // 呆毛未验证
-        for (let i = 0; i < ms.length; i++) {
-          await redis.del(ms[i])
-        }
-
-        break
-      }
+    for (const namespace of keyvNamespaces) {
+      await clearKeyvNamespace(namespace)
     }
-    await this.reply(`结束了${deleted}个用户的对话。`, false)
+
+    await this.reply(`已清理当前模式 ${use} 的数据，结束了${deletedConversations}个会话。`, false)
   }
 }

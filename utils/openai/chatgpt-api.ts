@@ -54,21 +54,6 @@ export class ChatGPTAPI {
 
     protected _messageStore: Keyv<types.ChatMessage>
 
-    /**
-     * Creates a new client wrapper around OpenAI's chat completion API, mimicing the official ChatGPT webapp's functionality as closely as possible.
-     *
-     * @param apiKey - OpenAI API key (required).
-     * @param apiOrg - Optional OpenAI API organization (optional).
-     * @param apiBaseUrl - Optional override for the OpenAI API base URL.
-     * @param debug - Optional enables logging debugging info to stdout.
-     * @param completionParams - Param overrides to send to the [OpenAI chat completion API](https://platform.openai.com/docs/api-reference/chat/create). Options like `temperature` and `presence_penalty` can be tweaked to change the personality of the assistant.
-     * @param maxModelTokens - Optional override for the maximum number of tokens allowed by the model's context. Defaults to 4096.
-     * @param maxResponseTokens - Optional override for the minimum number of tokens allowed for the model's response. Defaults to 1000.
-     * @param messageStore - Optional [Keyv](https://github.com/jaredwray/keyv) store to persist chat messages to. If not provided, messages will be lost when the process exits.
-     * @param getMessageById - Optional function to retrieve a message by its ID. If not provided, the default implementation will be used (using an in-memory `messageStore`).
-     * @param upsertMessage - Optional function to insert or update a message. If not provided, the default implementation will be used (using an in-memory `messageStore`).
-     * @param fetch - Optional override for the `fetch` implementation to use. Defaults to the global `fetch` function.
-     */
     constructor(opts: types.ChatGPTAPIOptions) {
         const {
             apiKey,
@@ -78,7 +63,7 @@ export class ChatGPTAPI {
             messageStore,
             completionParams,
             systemMessage,
-            maxModelTokens = 4096,
+            maxModelTokens = 16000,
             maxResponseTokens = 8192,
             getMessageById,
             upsertMessage,
@@ -136,10 +121,9 @@ export class ChatGPTAPI {
     protected _toRequestMessage(message: types.ChatMessage): types.openai.ChatCompletionRequestMessage | null {
         const storedRole = getStoredMessageRole(message.role)
         const content = message.originalContent ?? message.text
+        const hasToolCalls = !!message.toolCalls?.length
 
         if (storedRole === 'function') {
-            // Legacy conversation data may still contain function-role messages
-            // written before tool_call_id support. Skip them during replay.
             return null
         }
 
@@ -158,7 +142,7 @@ export class ChatGPTAPI {
             role: storedRole,
             content: content || '',
             name: storedRole === 'user' ? message.name : undefined,
-            function_call: storedRole === 'assistant' && !message.toolCalls?.length ? message.functionCall : undefined,
+            function_call: storedRole === 'assistant' && !hasToolCalls ? message.functionCall : undefined,
             tool_calls: storedRole === 'assistant' ? message.toolCalls : undefined
         }
     }
@@ -166,6 +150,7 @@ export class ChatGPTAPI {
     protected async _getMessageTokenEstimate(message: types.openai.ChatCompletionRequestMessage) {
         const contentString = extractTextContent(message.content)
         let nonTextTokens = 0
+
         if (Array.isArray(message.content)) {
             for (const part of message.content) {
                 if (part.type === 'image_url') nonTextTokens += 85
@@ -199,35 +184,14 @@ export class ChatGPTAPI {
         if (message.tool_call_id) {
             tokenCount += await this._getTokenCount(message.tool_call_id)
         }
+
         return tokenCount
     }
 
-    /**
-     * Sends a message to the OpenAI chat completions endpoint, waits for the response
-     * to resolve, and returns the response.
-     *
-     * If you want your response to have historical context, you must provide a valid `parentMessageId`.
-     *
-     * If you want to receive a stream of partial responses, use `opts.onProgress`.
-     *
-     * Set `debug: true` in the `ChatGPTAPI` constructor to log more info on the full prompt sent to the OpenAI chat completions API. You can override the `systemMessage` in `opts` to customize the assistant's instructions.
-     *
-     * @param content - The prompt message to send: 多模态消息体封装：将传给 sendMessage 的参数从单纯的 string 放开为 string | ChatCompletionContentPart[]。你现在可以在上层应用构建好 [{ type: 'text', text: '描述一下这个图' }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,....' } }]
-     * @param opts.parentMessageId - Optional ID of the previous message in the conversation (defaults to `undefined`)
-     * @param opts.conversationId - Optional ID of the conversation (defaults to `undefined`)
-     * @param opts.messageId - Optional ID of the message to send (defaults to a random UUID)
-     * @param opts.systemMessage - Optional override for the chat "system message" which acts as instructions to the model (defaults to the ChatGPT system message)
-     * @param opts.timeoutMs - Optional timeout in milliseconds (defaults to no timeout)
-     * @param opts.onProgress - Optional callback which will be invoked every time the partial response is updated
-     * @param opts.abortSignal - Optional callback used to abort the underlying `fetch` call using an [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController)
-     * @param completionParams - Optional overrides to send to the [OpenAI chat completion API](https://platform.openai.com/docs/api-reference/chat/create). Options like `temperature` and `presence_penalty` can be tweaked to change the personality of the assistant.
-     *
-     * @returns The response from ChatGPT
-     */
     async sendMessage(
         content: string | types.openai.ChatCompletionContentPart[] | null,
         opts: types.SendMessageOptions = {},
-        role: Role = 'user',
+        role: Role = 'user'
     ): Promise<types.ChatMessage> {
         const {
             parentMessageId,
@@ -235,7 +199,7 @@ export class ChatGPTAPI {
             timeoutMs,
             onProgress,
             stream = onProgress ? true : false,
-            completionParams,
+            completionParams = {},
             conversationId
         } = opts
 
@@ -259,10 +223,11 @@ export class ChatGPTAPI {
                 conversationId,
                 parentMessageId: currentMessages.length > 0 ? currentMessages[currentMessages.length - 1].id : parentMessageId,
                 text: extractTextContent(content),
-                originalContent: content, // 存储完整的原始对象（包含图片）
+                originalContent: content,
                 name: role === 'user' ? opts.name : undefined,
                 toolCallId: role === 'tool' ? opts.toolCallId : undefined
             }
+
             currentMessages.push(message)
         }
 
@@ -270,12 +235,17 @@ export class ChatGPTAPI {
             throw new Error('sendMessage requires content or appendMessages')
         }
 
-        const { messages, maxTokens, numTokens } = await this._buildMessages(
+        const { messages, maxTokens, numTokens, trimInfo } = await this._buildMessages(
             currentMessages,
             opts,
             completionParams
         )
         console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
+        if (trimInfo.trimmed) {
+            console.log(
+                `[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}`
+            )
+        }
 
         const result: types.ChatMessage & { conversation: openai.ChatCompletionRequestMessage[] } = {
             role: 'assistant',
@@ -296,28 +266,32 @@ export class ChatGPTAPI {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${this._apiKey}`
                 }
-                const body = {
-                    max_tokens: maxTokens,
+                const body: any = {
                     ...this._completionParams,
                     ...completionParams,
                     messages,
                     stream
                 }
 
-                // 如果存在 functions，将其转换为 tools 格式
-                if ((body as any).functions && (body as any).functions.length > 0) {
-                    (body as any).tools = (body as any).functions.map((func: any) => ({
-                        type: "function",
+                const modelStr = body.model || CHATGPT_MODEL
+                if (modelStr.startsWith('o1') || modelStr.startsWith('o3')) {
+                    body.max_completion_tokens = maxTokens
+                } else {
+                    body.max_tokens = maxTokens
+                }
+
+                if (body.functions?.length > 0) {
+                    body.tools = body.functions.map((func: any) => ({
+                        type: 'function',
                         function: func
-                    }));
-                    delete (body as any).functions;
+                    }))
+                    delete body.functions
                 }
 
                 if (this._debug) {
                     console.log(JSON.stringify(body))
                 }
-                // Support multiple organizations
-                // See https://platform.openai.com/docs/api-reference/authentication
+
                 if (this._apiOrg) {
                     headers['OpenAI-Organization'] = this._apiOrg
                 }
@@ -349,8 +323,7 @@ export class ChatGPTAPI {
                                 }
 
                                 try {
-                                    const response: types.openai.CreateChatCompletionDeltaResponse =
-                                        JSON.parse(data)
+                                    const response: types.openai.CreateChatCompletionDeltaResponse = JSON.parse(data)
 
                                     if (response.id) {
                                         result.id = response.id
@@ -428,15 +401,16 @@ export class ChatGPTAPI {
 
                         if (!res.ok) {
                             const reason = await res.text()
-                            const msg = `OpenAI error ${res.status || res.statusText
-                                }: ${reason}`
+                            const msg = `OpenAI error ${res.status || res.statusText}: ${reason}`
                             const error = new types.ChatGPTError(msg)
                             error.statusCode = res.status
                             error.statusText = res.statusText
                             return reject(error)
                         }
+
                         const response: types.openai.CreateChatCompletionResponse =
                             (await res.json()) as types.openai.CreateChatCompletionResponse
+
                         if (this._debug) {
                             console.log(response)
                         }
@@ -445,23 +419,21 @@ export class ChatGPTAPI {
                             result.id = response.id
                         }
 
-                                        if (response?.choices?.length) {
-                                            const message = response.choices[0].message
-                                            if (message.content) {
-                                                result.text = typeof message.content === 'string' ? message.content : (message.content as any).filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
-                                                result.originalContent = message.content
-                                            } else if (message.function_call && message.function_call !== null) {
-                                                result.functionCall = message.function_call
-                                                result.toolCalls = [{
-                                                    id: `call_${uuidv4()}`,
-                                                    type: 'function',
-                                                    function: message.function_call
-                                                }]
-                                            } else if (message.tool_calls && message.tool_calls.length > 0) {
-                                                // 设置 functionCall 以兼容旧代码
-                                                result.functionCall = message.tool_calls.map(tool => tool.function)[0]
-                                                // 同时设置 toolCalls 以支持新的格式
-                                                result.toolCalls = message.tool_calls
+                        if (response?.choices?.length) {
+                            const message = response.choices[0].message
+                            if (message.content) {
+                                result.text = extractTextContent(message.content)
+                                result.originalContent = message.content
+                            } else if (message.function_call && message.function_call !== null) {
+                                result.functionCall = message.function_call
+                                result.toolCalls = [{
+                                    id: `call_${uuidv4()}`,
+                                    type: 'function',
+                                    function: message.function_call
+                                }]
+                            } else if (message.tool_calls && message.tool_calls.length > 0) {
+                                result.functionCall = message.tool_calls.map(tool => tool.function)[0]
+                                result.toolCalls = message.tool_calls
                             }
                             result.thinking_text = message.reasoning_content
                             if (message.role) {
@@ -472,8 +444,7 @@ export class ChatGPTAPI {
                             console.error(res)
                             return reject(
                                 new Error(
-                                    `OpenAI error: ${res?.detail?.message || res?.detail || 'unknown'
-                                    }`
+                                    `OpenAI error: ${res?.detail?.message || res?.detail || 'unknown'}`
                                 )
                             )
                         }
@@ -497,10 +468,7 @@ export class ChatGPTAPI {
                         total_tokens: promptTokens + completionTokens,
                         estimated: true
                     }
-                } catch (err) {
-                    // TODO: this should really never happen, but if it does,
-                    // we should handle notify the user gracefully
-                }
+                } catch (err) {}
             }
 
             return Promise.all([
@@ -511,8 +479,6 @@ export class ChatGPTAPI {
 
         if (timeoutMs) {
             if (abortController) {
-                // This will be called when a timeout occurs in order for us to forcibly
-                // ensure that the underlying HTTP request is aborted.
                 ; (responseP as any).cancel = () => {
                     abortController.abort()
                 }
@@ -522,27 +488,23 @@ export class ChatGPTAPI {
                 milliseconds: timeoutMs,
                 message: 'OpenAI timed out waiting for response'
             })
-        } else {
-            return responseP
         }
+
+        return responseP
     }
 
-    // @ts-ignore
     get apiKey(): string {
         return this._apiKey
     }
 
-    // @ts-ignore
     set apiKey(apiKey: string) {
         this._apiKey = apiKey
     }
 
-    // @ts-ignore
     get apiOrg(): string {
         return this._apiOrg
     }
 
-    // @ts-ignore
     set apiOrg(apiOrg: string) {
         this._apiOrg = apiOrg
     }
@@ -573,6 +535,12 @@ export class ChatGPTAPI {
             .map(message => this._toRequestMessage(message))
             .filter(Boolean) as types.openai.ChatCompletionRequestMessage[]
         let nextMessages = messages.concat(currentRequestMessages)
+        const currentTurnMessages = currentRequestMessages.length
+        let nextHistoryMessagesCount = 0
+        let nextToolChainCount = 0
+        let keptHistoryMessagesCount = 0
+        let keptToolChainCount = 0
+        let stopReason = 'complete'
 
         let functionToken = 0
         let numTokens = functionToken
@@ -589,14 +557,23 @@ export class ChatGPTAPI {
             if (includesOnlyCurrentTurn || isValidPrompt) {
                 messages = nextMessages
                 numTokens = nextNumTokensEstimate
+                keptHistoryMessagesCount = nextHistoryMessagesCount
+                keptToolChainCount = nextToolChainCount
             }
 
-            if (!isValidPrompt || !parentMessageId) {
+            if (!isValidPrompt) {
+                stopReason = 'budget'
+                break
+            }
+
+            if (!parentMessageId) {
+                stopReason = 'no_parent'
                 break
             }
 
             const parentMessage = await this._getMessageById(parentMessageId)
             if (!parentMessage) {
+                stopReason = 'missing_parent'
                 break
             }
 
@@ -622,6 +599,7 @@ export class ChatGPTAPI {
                     !assistantRequestMessage.tool_calls?.length ||
                     toolRequestMessages.length !== toolHistoryMessages.length
                 ) {
+                    stopReason = 'invalid_tool_chain'
                     continue
                 }
 
@@ -630,6 +608,8 @@ export class ChatGPTAPI {
                     ...toolRequestMessages,
                     ...nextMessages.slice(systemMessageOffset)
                 ])
+                nextHistoryMessagesCount += 1 + toolRequestMessages.length
+                nextToolChainCount += 1
                 continue
             }
 
@@ -637,6 +617,7 @@ export class ChatGPTAPI {
             parentMessageId = parentMessage.parentMessageId
 
             if (!parentRequestMessage) {
+                stopReason = 'skip_unsupported_parent'
                 continue
             }
 
@@ -644,20 +625,36 @@ export class ChatGPTAPI {
                 parentRequestMessage,
                 ...nextMessages.slice(systemMessageOffset)
             ])
+            nextHistoryMessagesCount += 1
         } while (true)
 
         const maxTokens = Math.max(1, this._maxResponseTokens)
+        const attemptedHistoryMessages = nextHistoryMessagesCount
+        const droppedHistoryMessages = Math.max(0, attemptedHistoryMessages - keptHistoryMessagesCount)
 
-        return { messages, maxTokens, numTokens }
+        return {
+            messages,
+            maxTokens,
+            numTokens,
+            trimInfo: {
+                currentTurnMessages,
+                promptBudget,
+                attemptedHistoryMessages,
+                keptHistoryMessages: keptHistoryMessagesCount,
+                droppedHistoryMessages,
+                keptToolChainCount,
+                trimmed: droppedHistoryMessages > 0,
+                stopReason
+            }
+        }
     }
 
     protected async _getTokenCount(text: string) {
         if (!text) {
             return 0
         }
-        // TODO: use a better fix in the tokenizer
-        text = text.replace(/<\|endoftext\|>/g, '')
 
+        text = text.replace(/<\|endoftext\|>/g, '')
         return tokenizer.encode(text).length
     }
 

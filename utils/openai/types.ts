@@ -86,7 +86,7 @@ export interface ChatMessage {
     // only relevant for ChatGPTUnofficialProxyAPI (optional for ChatGPTAPI)
     conversationId?: string
     functionCall?: openai.FunctionCall,
-    toolCalls?: openai.ToolCall[],
+    toolCalls?: openai.ToolCall[]
     toolCallId?: string
 }
 
@@ -271,10 +271,8 @@ export namespace openai {
          */
         name?: string
         function_call?: FunctionCall
-        tool_calls?: ToolCall,
+        tool_calls?: ToolCall[]
         tool_call_id?: string
-        // required todo
-        // tool_choice?: 'none' | 'auto' | 'required'
     }
 
     export interface FunctionCall {
@@ -283,10 +281,10 @@ export namespace openai {
     }
 
     export interface ToolCall {
+        index?: number
         id: string
         type: "function"
         function: FunctionCall
-        index?: number
     }
 
     export interface Tools {

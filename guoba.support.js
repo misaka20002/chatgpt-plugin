@@ -261,8 +261,14 @@ export function supportGuoba() {
         },
         {
           field: 'apiMaxToken',
-          label: 'max token',
-          bottomHelpMessage: '默认4096',
+          label: '回复内容最大Token数',
+          bottomHelpMessage: '模型单次回复的Token上限，默认4096（要预留至少 10000 个输入Token，推荐“回复内容最大Token数”+10000≤“模型总上下文Token数”）',
+          component: 'InputNumber'
+        },
+        {
+          field: 'maxModelTokens',
+          label: '模型总上下文Token数',
+          bottomHelpMessage: '模型支持的输入+回复总Token上限，默认16000（参考：gpt-4o-mini为128000）',
           component: 'InputNumber'
         },
         {
@@ -1210,11 +1216,11 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别工具”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
+          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
-              { label: 'Gemini内容识别工具', value: 'Gemini' },
+              { label: 'Gemini内容识别', value: 'Gemini' },
             ]
           }
         },
