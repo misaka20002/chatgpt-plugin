@@ -3,11 +3,11 @@ import pTimeout from 'p-timeout'
 import QuickLRU from 'quick-lru'
 import { v4 as uuidv4 } from 'uuid'
 
-import * as tokenizer from './tokenizer'
-import * as types from './types'
+import * as tokenizer from './tokenizer.js'
+import * as types from './types.js'
 import globalFetch from 'node-fetch'
-import { fetchSSE } from './fetch-sse'
-import {openai, Role} from "./types";
+import { fetchSSE } from './fetch-sse.js'
+import { openai, Role } from './types.js'
 
 const CHATGPT_MODEL = 'gpt-4o-mini'
 
@@ -24,7 +24,7 @@ export class ChatGPTAPI {
     protected _completionParams: Omit<
         types.openai.CreateChatCompletionRequest,
         'messages' | 'n'
-        >
+    >
     protected _maxModelTokens: number
     protected _maxResponseTokens: number
     protected _fetch: types.FetchFn
@@ -123,7 +123,7 @@ export class ChatGPTAPI {
      *
      * Set `debug: true` in the `ChatGPTAPI` constructor to log more info on the full prompt sent to the OpenAI chat completions API. You can override the `systemMessage` in `opts` to customize the assistant's instructions.
      *
-     * @param message - The prompt message to send
+     * @param content - The prompt message to send: 多模态消息体封装：将传给 sendMessage 的参数从单纯的 string 放开为 string | ChatCompletionContentPart[]。你现在可以在上层应用构建好 [{ type: 'text', text: '描述一下这个图' }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,....' } }]
      * @param opts.parentMessageId - Optional ID of the previous message in the conversation (defaults to `undefined`)
      * @param opts.conversationId - Optional ID of the conversation (defaults to `undefined`)
      * @param opts.messageId - Optional ID of the message to send (defaults to a random UUID)
@@ -136,7 +136,7 @@ export class ChatGPTAPI {
      * @returns The response from ChatGPT
      */
     async sendMessage(
-        text: string,
+        content: string | types.openai.ChatCompletionContentPart[],
         opts: types.SendMessageOptions = {},
         role: Role = 'user',
     ): Promise<types.ChatMessage> {
@@ -158,24 +158,29 @@ export class ChatGPTAPI {
             abortSignal = abortController.signal
         }
 
+        // 提取纯文本部分供普通的日志或非多模态场景使用
+        const messageText = typeof content === 'string' ? content : content.filter(t => t.type === 'text').map(t => (t as any).text).join('\n')
+
         const message: types.ChatMessage = {
             role,
             id: messageId,
             conversationId,
             parentMessageId,
-            text,
+            text: messageText,
+            originalContent: content, // 存储完整的原始对象（包含图片）
             name: opts.name
         }
 
         const latestQuestion = message
 
         const { messages, maxTokens, numTokens } = await this._buildMessages(
-            text,
+            content, // 将原始包含图片的参数传递进去
             role,
             opts,
             completionParams
         )
         console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
+
         const result: types.ChatMessage & { conversation: openai.ChatCompletionRequestMessage[] } = {
             role: 'assistant',
             id: uuidv4(),
@@ -211,7 +216,7 @@ export class ChatGPTAPI {
                     }));
                     delete (body as any).functions;
                 }
-                
+
                 if (this._debug) {
                     console.log(JSON.stringify(body))
                 }
@@ -260,21 +265,21 @@ export class ChatGPTAPI {
                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments
                                             }
                                         } else if (delta.tool_calls && delta.tool_calls.length > 0) {
-                                          let fc = delta.tool_calls[0].function
-                                          if (fc.name) {
-                                            result.functionCall = {
-                                              name: fc.name,
-                                              arguments: fc.arguments
+                                            let fc = delta.tool_calls[0].function
+                                            if (fc.name) {
+                                                result.functionCall = {
+                                                    name: fc.name,
+                                                    arguments: fc.arguments
+                                                }
+                                                // 同时设置 toolCalls 以支持新的格式
+                                                result.toolCalls = delta.tool_calls
+                                            } else {
+                                                result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments
+                                                // 更新 toolCalls 中的参数
+                                                if (result.toolCalls && result.toolCalls.length > 0) {
+                                                    result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments
+                                                }
                                             }
-                                            // 同时设置 toolCalls 以支持新的格式
-                                            result.toolCalls = delta.tool_calls
-                                          } else {
-                                            result.functionCall.arguments = (result.functionCall.arguments || '') + fc.arguments
-                                            // 更新 toolCalls 中的参数
-                                            if (result.toolCalls && result.toolCalls.length > 0) {
-                                              result.toolCalls[0].function.arguments = (result.toolCalls[0].function.arguments || '') + fc.arguments
-                                            }
-                                          }
                                         } else {
                                             result.delta = delta.content
                                             if (delta?.content) result.text += delta.content
@@ -305,17 +310,15 @@ export class ChatGPTAPI {
 
                         if (!res.ok) {
                             const reason = await res.text()
-                            const msg = `OpenAI error ${
-                                res.status || res.statusText
-                            }: ${reason}`
+                            const msg = `OpenAI error ${res.status || res.statusText
+                                }: ${reason}`
                             const error = new types.ChatGPTError(msg)
                             error.statusCode = res.status
                             error.statusText = res.statusText
                             return reject(error)
                         }
-
                         const response: types.openai.CreateChatCompletionResponse =
-                          (await res.json()) as types.openai.CreateChatCompletionResponse
+                            (await res.json()) as types.openai.CreateChatCompletionResponse
                         if (this._debug) {
                             console.log(response)
                         }
@@ -327,7 +330,8 @@ export class ChatGPTAPI {
                         if (response?.choices?.length) {
                             const message = response.choices[0].message
                             if (message.content) {
-                                result.text = message.content
+                                result.text = typeof message.content === 'string' ? message.content : (message.content as any).filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
+                                result.originalContent = message.content
                             } else if (message.function_call && message.function_call !== null) {
                                 result.functionCall = message.function_call
                             } else if (message.tool_calls && message.tool_calls.length > 0) {
@@ -345,8 +349,7 @@ export class ChatGPTAPI {
                             console.error(res)
                             return reject(
                                 new Error(
-                                    `OpenAI error: ${
-                                        res?.detail?.message || res?.detail || 'unknown'
+                                    `OpenAI error: ${res?.detail?.message || res?.detail || 'unknown'
                                     }`
                                 )
                             )
@@ -387,7 +390,7 @@ export class ChatGPTAPI {
             if (abortController) {
                 // This will be called when a timeout occurs in order for us to forcibly
                 // ensure that the underlying HTTP request is aborted.
-                ;(responseP as any).cancel = () => {
+                ; (responseP as any).cancel = () => {
                     abortController.abort()
                 }
             }
@@ -402,28 +405,31 @@ export class ChatGPTAPI {
     }
 
     // @ts-ignore
-  get apiKey(): string {
+    get apiKey(): string {
         return this._apiKey
     }
 
     // @ts-ignore
-  set apiKey(apiKey: string) {
+    set apiKey(apiKey: string) {
         this._apiKey = apiKey
     }
 
     // @ts-ignore
-  get apiOrg(): string {
+    get apiOrg(): string {
         return this._apiOrg
     }
 
     // @ts-ignore
-  set apiOrg(apiOrg: string) {
+    set apiOrg(apiOrg: string) {
         this._apiOrg = apiOrg
     }
 
-    protected async _buildMessages(text: string, role: Role, opts: types.SendMessageOptions, completionParams: Partial<
-        Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
-    >) {
+    protected async _buildMessages(
+        text: string | types.openai.ChatCompletionContentPart[],
+        role: Role,
+        opts: types.SendMessageOptions,
+        completionParams: Partial<Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>>
+    ) {
         const { systemMessage = this._systemMessage } = opts
         let { parentMessageId } = opts
 
@@ -452,8 +458,8 @@ export class ChatGPTAPI {
             : messages
 
         let functionToken = 0
-
         let numTokens = functionToken
+
         // deprecated function call token calculation due to low efficiency
         // if (completionParams.functions) {
         //     for (const func of completionParams.functions) {
@@ -497,28 +503,42 @@ export class ChatGPTAPI {
         // }
 
         do {
+            let nonTextTokens = 0 // 记录图片和语音等非文本媒体占用的预估 Token
+
             const prompt = nextMessages
                 .reduce((prompt, message) => {
+                    let contentString = ''
+                    // 将多模态数据安全地解构为纯文本计算 Prompt，并累加多媒体 Token 成本
+                    if (typeof message.content === 'string') {
+                        contentString = message.content
+                    } else if (Array.isArray(message.content)) {
+                        contentString = message.content.filter(c => c.type === 'text').map(c => (c as any).text).join('\n')
+
+                        for (const part of message.content) {
+                            if (part.type === 'image_url') nonTextTokens += 85 // 单张图片粗略估计 (Low 级别)
+                            if (part.type === 'input_audio') nonTextTokens += 100 // 音频粗略估计
+                        }
+                    }
+
                     switch (message.role) {
                         case 'system':
-                            return prompt.concat([`Instructions:\n${message.content}`])
+                            return prompt.concat([`Instructions:\n${contentString}`])
                         case 'user':
-                            return prompt.concat([`${userLabel}:\n${message.content}`])
+                            return prompt.concat([`${userLabel}:\n${contentString}`])
                         case 'function':
-                            // leave behind
                             return prompt
                         case 'assistant':
                             return prompt
                         default:
-                            return message.content ? prompt.concat([`${assistantLabel}:\n${message.content}`]) : prompt
+                            return contentString ? prompt.concat([`${assistantLabel}:\n${contentString}`]) : prompt
                     }
                 }, [] as string[])
                 .join('\n\n')
 
-            let nextNumTokensEstimate = await this._getTokenCount(prompt)
+            // 将文本 Token 估值和多媒体粗略计算相加
+            let nextNumTokensEstimate = await this._getTokenCount(prompt) + nonTextTokens
 
-            for (const m1 of nextMessages
-                .filter(m => m.function_call)) {
+            for (const m1 of nextMessages.filter(m => m.function_call)) {
                 nextNumTokensEstimate += await this._getTokenCount(JSON.stringify(m1.function_call) || '')
             }
 
@@ -548,10 +568,11 @@ export class ChatGPTAPI {
             nextMessages = nextMessages.slice(0, systemMessageOffset).concat([
                 {
                     role: parentMessageRole,
-                    content: parentMessage.text,
+                    // 在上下文继承时，优先传递包含多模态数组的 originalContent
+                    content: parentMessage.originalContent || parentMessage.text,
                     name: parentMessage.name,
                     function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                  // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
+                    // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
                 },
                 ...nextMessages.slice(systemMessageOffset)
             ])

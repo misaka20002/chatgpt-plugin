@@ -737,6 +737,23 @@ class Core {
         }
         option = Object.assign(option, conversation)
       }
+
+      let imageDataUrl = null;
+      let imageUrl = e.img ? e.img[0] : undefined;
+      if (imageUrl) {
+        try {
+          const response = await fetch(imageUrl);
+          const buffer = await response.arrayBuffer();
+          const base64Image = Buffer.from(buffer).toString('base64');
+          // 获取 MIME 类型，如果失败则回退默认图片格式
+          const mimeType = response.headers.get('content-type') || 'image/jpeg';
+          // OpenAI API 要求格式: data:image/jpeg;base64,{base64_string}
+          imageDataUrl = `data:${mimeType};base64,${base64Image}`;
+        } catch (err) {
+          logger.error('OpenAI 获取图片失败', err);
+        }
+      }
+
       if (opt.enableSmart) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
         let sender = e.sender.user_id
@@ -767,7 +784,16 @@ class Core {
             }
           }
 
-          msg = await this.chatGPTApi.sendMessage(prompt, option)
+          let messageContent = prompt;
+          if (imageDataUrl) {
+            // 当图片存在时，重组数据为多模态数组
+            messageContent = [
+              { type: 'text', text: prompt || '请描述这张图片' },
+              { type: 'image_url', image_url: { url: imageDataUrl } }
+            ];
+          }
+
+          msg = await this.chatGPTApi.sendMessage(messageContent, option)
 
           if (Config.debug) // 避免控制台刷屏
             logger.info(msg)
@@ -824,6 +850,8 @@ class Core {
 
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
+
+            // 此处的 sendMessage 发送的是工具调用的执行结果，属于普通文本
             msg = await this.chatGPTApi.sendMessage(functionResult, option, 'function')
 
             if (Config.debug) // 避免控制台刷屏
@@ -860,7 +888,14 @@ class Core {
       } else {
         let msg
         try {
-          msg = await this.chatGPTApi.sendMessage(prompt, option)
+          let messageContent = prompt;
+          if (imageDataUrl) {
+            messageContent = [
+              { type: 'text', text: prompt || '请描述这张图片' },
+              { type: 'image_url', image_url: { url: imageDataUrl } }
+            ];
+          }
+          msg = await this.chatGPTApi.sendMessage(messageContent, option)
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
             logger.warn(err)

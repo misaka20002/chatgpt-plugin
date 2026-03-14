@@ -8,8 +8,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -54,36 +54,38 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
 };
 import { createParser } from 'eventsource-parser';
 import * as types from './types.js';
-import fetch  from 'node-fetch';
+import nodefetch from 'node-fetch';
 import { streamAsyncIterable } from './stream-async-iterable.js';
-export function fetchSSE(url, options, fetchFn) {
-    var _a, e_1, _b, _c;
-    if (fetchFn === void 0) { fetchFn = fetch; }
-    return __awaiter(this, void 0, void 0, function () {
-        var onMessage, onError, fetchOptions, res, reason, err_1, msg, error, parser, feed, body_1, _d, _e, _f, chunk, str, e_1_1;
-        return __generator(this, function (_g) {
-            switch (_g.label) {
+export function fetchSSE(url_1, options_1) {
+    return __awaiter(this, arguments, void 0, function (url, options, fetch) {
+        var onMessage, onError, fetchOptions, res, reason, err_1, msg, error, parser, feed, body_1, _a, _b, _c, chunk, str, e_1_1;
+        var _d, e_1, _e, _f;
+        var _g;
+        if (fetch === void 0) { fetch = nodefetch; }
+        return __generator(this, function (_h) {
+            switch (_h.label) {
                 case 0:
                     onMessage = options.onMessage, onError = options.onError, fetchOptions = __rest(options, ["onMessage", "onError"]);
-                    return [4 /*yield*/, fetchFn(url, fetchOptions)];
+                    return [4 /*yield*/, fetch(url, fetchOptions)];
                 case 1:
-                    res = _g.sent();
+                    res = _h.sent();
                     if (!!res.ok) return [3 /*break*/, 6];
                     reason = void 0;
-                    _g.label = 2;
+                    _h.label = 2;
                 case 2:
-                    _g.trys.push([2, 4, , 5]);
+                    _h.trys.push([2, 4, , 5]);
                     return [4 /*yield*/, res.text()];
                 case 3:
-                    reason = _g.sent();
+                    reason = _h.sent();
                     return [3 /*break*/, 5];
                 case 4:
-                    err_1 = _g.sent();
+                    err_1 = _h.sent();
                     reason = res.statusText;
                     return [3 /*break*/, 5];
                 case 5:
                     msg = "ChatGPT error ".concat(res.status, ": ").concat(reason);
-                    error = new types.ChatGPTError(msg, { cause: res });
+                    error = new types.ChatGPTError(msg);
+                    error.cause = res;
                     error.statusCode = res.status;
                     error.statusText = res.statusText;
                     throw error;
@@ -104,7 +106,8 @@ export function fetchSSE(url, options, fetchFn) {
                         }
                         if (((_a = response === null || response === void 0 ? void 0 : response.detail) === null || _a === void 0 ? void 0 : _a.type) === 'invalid_request_error') {
                             var msg = "ChatGPT error ".concat(response.detail.message, ": ").concat(response.detail.code, " (").concat(response.detail.type, ")");
-                            var error = new types.ChatGPTError(msg, { cause: response });
+                            var error = new types.ChatGPTError(msg);
+                            error.cause = response;
                             error.statusCode = response.detail.code;
                             error.statusText = response.detail.message;
                             if (onError) {
@@ -118,7 +121,7 @@ export function fetchSSE(url, options, fetchFn) {
                         }
                         parser.feed(chunk);
                     };
-                    if (!!res.body.getReader) return [3 /*break*/, 7];
+                    if (!!((_g = res.body) === null || _g === void 0 ? void 0 : _g.getReader)) return [3 /*break*/, 7];
                     body_1 = res.body;
                     if (!body_1.on || !body_1.read) {
                         throw new types.ChatGPTError('unsupported "fetch" implementation');
@@ -131,33 +134,33 @@ export function fetchSSE(url, options, fetchFn) {
                     });
                     return [3 /*break*/, 18];
                 case 7:
-                    _g.trys.push([7, 12, 13, 18]);
-                    _d = true, _e = __asyncValues(streamAsyncIterable(res.body));
-                    _g.label = 8;
-                case 8: return [4 /*yield*/, _e.next()];
+                    _h.trys.push([7, 12, 13, 18]);
+                    _a = true, _b = __asyncValues(streamAsyncIterable(res.body));
+                    _h.label = 8;
+                case 8: return [4 /*yield*/, _b.next()];
                 case 9:
-                    if (!(_f = _g.sent(), _a = _f.done, !_a)) return [3 /*break*/, 11];
-                    _c = _f.value;
-                    _d = false;
-                    chunk = _c;
+                    if (!(_c = _h.sent(), _d = _c.done, !_d)) return [3 /*break*/, 11];
+                    _f = _c.value;
+                    _a = false;
+                    chunk = _f;
                     str = new TextDecoder().decode(chunk);
                     feed(str);
-                    _g.label = 10;
+                    _h.label = 10;
                 case 10:
-                    _d = true;
+                    _a = true;
                     return [3 /*break*/, 8];
                 case 11: return [3 /*break*/, 18];
                 case 12:
-                    e_1_1 = _g.sent();
+                    e_1_1 = _h.sent();
                     e_1 = { error: e_1_1 };
                     return [3 /*break*/, 18];
                 case 13:
-                    _g.trys.push([13, , 16, 17]);
-                    if (!(!_d && !_a && (_b = _e.return))) return [3 /*break*/, 15];
-                    return [4 /*yield*/, _b.call(_e)];
+                    _h.trys.push([13, , 16, 17]);
+                    if (!(!_a && !_d && (_e = _b.return))) return [3 /*break*/, 15];
+                    return [4 /*yield*/, _e.call(_b)];
                 case 14:
-                    _g.sent();
-                    _g.label = 15;
+                    _h.sent();
+                    _h.label = 15;
                 case 15: return [3 /*break*/, 17];
                 case 16:
                     if (e_1) throw e_1.error;

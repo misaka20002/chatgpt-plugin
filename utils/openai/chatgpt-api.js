@@ -19,8 +19,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -88,7 +88,7 @@ var ChatGPTAPI = /** @class */ (function () {
         this._apiBaseUrl = apiBaseUrl;
         this._debug = !!debug;
         this._fetch = fetch;
-        this._completionParams = __assign({ model: CHATGPT_MODEL, temperature: 1, top_p: 1.0 }, completionParams);
+        this._completionParams = __assign({ model: CHATGPT_MODEL, temperature: 0.8, top_p: 1.0, presence_penalty: 1.0 }, completionParams);
         this._systemMessage = systemMessage;
         if (this._systemMessage === undefined) {
             var currentDate = new Date().toISOString().split('T')[0];
@@ -126,7 +126,7 @@ var ChatGPTAPI = /** @class */ (function () {
      *
      * Set `debug: true` in the `ChatGPTAPI` constructor to log more info on the full prompt sent to the OpenAI chat completions API. You can override the `systemMessage` in `opts` to customize the assistant's instructions.
      *
-     * @param message - The prompt message to send
+     * @param content - The prompt message to send: 多模态消息体封装：将传给 sendMessage 的参数从单纯的 string 放开为 string | ChatCompletionContentPart[]。你现在可以在上层应用构建好 [{ type: 'text', text: '描述一下这个图' }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,....' } }]
      * @param opts.parentMessageId - Optional ID of the previous message in the conversation (defaults to `undefined`)
      * @param opts.conversationId - Optional ID of the conversation (defaults to `undefined`)
      * @param opts.messageId - Optional ID of the message to send (defaults to a random UUID)
@@ -138,12 +138,12 @@ var ChatGPTAPI = /** @class */ (function () {
      *
      * @returns The response from ChatGPT
      */
-    ChatGPTAPI.prototype.sendMessage = function (text, opts, role) {
-        if (opts === void 0) { opts = {}; }
-        if (role === void 0) { role = 'user'; }
-        return __awaiter(this, void 0, void 0, function () {
-            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, message, latestQuestion, _c, messages, maxTokens, numTokens, result, responseP;
+    ChatGPTAPI.prototype.sendMessage = function (content_1) {
+        return __awaiter(this, arguments, void 0, function (content, opts, role) {
+            var parentMessageId, _a, messageId, timeoutMs, onProgress, _b, stream, completionParams, conversationId, abortSignal, abortController, messageText, message, latestQuestion, _c, messages, maxTokens, numTokens, result, responseP;
             var _this = this;
+            if (opts === void 0) { opts = {}; }
+            if (role === void 0) { role = 'user'; }
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -154,16 +154,19 @@ var ChatGPTAPI = /** @class */ (function () {
                             abortController = new AbortController();
                             abortSignal = abortController.signal;
                         }
+                        messageText = typeof content === 'string' ? content : content.filter(function (t) { return t.type === 'text'; }).map(function (t) { return t.text; }).join('\n');
                         message = {
                             role: role,
                             id: messageId,
                             conversationId: conversationId,
                             parentMessageId: parentMessageId,
-                            text: text,
+                            text: messageText,
+                            originalContent: content, // 存储完整的原始对象（包含图片）
                             name: opts.name
                         };
                         latestQuestion = message;
-                        return [4 /*yield*/, this._buildMessages(text, role, opts, completionParams)];
+                        return [4 /*yield*/, this._buildMessages(content, // 将原始包含图片的参数传递进去
+                            role, opts, completionParams)];
                     case 1:
                         _c = _d.sent(), messages = _c.messages, maxTokens = _c.maxTokens, numTokens = _c.numTokens;
                         console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
@@ -189,19 +192,15 @@ var ChatGPTAPI = /** @class */ (function () {
                                             'Content-Type': 'application/json',
                                             Authorization: "Bearer ".concat(this._apiKey)
                                         };
-                                        body = __assign(__assign(__assign({ max_completion_tokens: maxTokens }, this._completionParams), completionParams), { messages: messages, stream: stream });
-
+                                        body = __assign(__assign(__assign({ max_tokens: maxTokens }, this._completionParams), completionParams), { messages: messages, stream: stream });
                                         // 如果存在 functions，将其转换为 tools 格式
                                         if (body.functions && body.functions.length > 0) {
-                                            body.tools = body.functions.map(function(func) {
-                                                return {
-                                                    type: "function",
-                                                    function: func
-                                                };
-                                            });
+                                            body.tools = body.functions.map(function (func) { return ({
+                                                type: "function",
+                                                function: func
+                                            }); });
                                             delete body.functions;
                                         }
-                                        
                                         if (this._debug) {
                                             console.log(JSON.stringify(body));
                                         }
@@ -314,12 +313,13 @@ var ChatGPTAPI = /** @class */ (function () {
                                         if ((_a = response === null || response === void 0 ? void 0 : response.choices) === null || _a === void 0 ? void 0 : _a.length) {
                                             message_1 = response.choices[0].message;
                                             if (message_1.content) {
-                                                result.text = message_1.content;
+                                                result.text = typeof message_1.content === 'string' ? message_1.content : message_1.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+                                                result.originalContent = message_1.content;
                                             }
-                                            if (message_1.function_call && message_1.function_call !== null) {
+                                            else if (message_1.function_call && message_1.function_call !== null) {
                                                 result.functionCall = message_1.function_call;
                                             }
-                                            if (message_1.tool_calls && message_1.tool_calls.length > 0) {
+                                            else if (message_1.tool_calls && message_1.tool_calls.length > 0) {
                                                 // 设置 functionCall 以兼容旧代码
                                                 result.functionCall = message_1.tool_calls.map(function (tool) { return tool.function; })[0];
                                                 // 同时设置 toolCalls 以支持新的格式
@@ -422,9 +422,9 @@ var ChatGPTAPI = /** @class */ (function () {
     });
     ChatGPTAPI.prototype._buildMessages = function (text, role, opts, completionParams) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, nextMessages, functionToken, numTokens, prompt_1, nextNumTokensEstimate, _i, _b, m1, _c, isValidPrompt, parentMessage, parentMessageRole, maxTokens;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var _a, systemMessage, parentMessageId, userLabel, assistantLabel, maxNumTokens, messages, systemMessageOffset, nextMessages, functionToken, numTokens, _loop_1, this_1, state_1, maxTokens;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         _a = opts.systemMessage, systemMessage = _a === void 0 ? this._systemMessage : _a;
                         parentMessageId = opts.parentMessageId;
@@ -450,77 +450,107 @@ var ChatGPTAPI = /** @class */ (function () {
                             : messages;
                         functionToken = 0;
                         numTokens = functionToken;
-                        _d.label = 1;
-                    case 1:
-                        prompt_1 = nextMessages
-                            .reduce(function (prompt, message) {
-                            switch (message.role) {
-                                case 'system':
-                                    return prompt.concat(["Instructions:\n".concat(message.content)]);
-                                case 'user':
-                                    return prompt.concat(["".concat(userLabel, ":\n").concat(message.content)]);
-                                case 'function':
-                                    // leave behind
-                                    return prompt;
-                                case 'assistant':
-                                    return prompt;
-                                default:
-                                    return message.content ? prompt.concat(["".concat(assistantLabel, ":\n").concat(message.content)]) : prompt;
-                            }
-                        }, [])
-                            .join('\n\n');
-                        return [4 /*yield*/, this._getTokenCount(prompt_1)];
+                        _loop_1 = function () {
+                            var nonTextTokens, prompt_1, nextNumTokensEstimate, _i, _c, m1, _d, isValidPrompt, parentMessage, parentMessageRole;
+                            return __generator(this, function (_e) {
+                                switch (_e.label) {
+                                    case 0:
+                                        nonTextTokens = 0 // 记录图片和语音等非文本媒体占用的预估 Token
+                                        ;
+                                        prompt_1 = nextMessages
+                                            .reduce(function (prompt, message) {
+                                            var contentString = '';
+                                            // 将多模态数据安全地解构为纯文本计算 Prompt，并累加多媒体 Token 成本
+                                            if (typeof message.content === 'string') {
+                                                contentString = message.content;
+                                            }
+                                            else if (Array.isArray(message.content)) {
+                                                contentString = message.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('\n');
+                                                for (var _i = 0, _a = message.content; _i < _a.length; _i++) {
+                                                    var part = _a[_i];
+                                                    if (part.type === 'image_url')
+                                                        nonTextTokens += 85; // 单张图片粗略估计 (Low 级别)
+                                                    if (part.type === 'input_audio')
+                                                        nonTextTokens += 100; // 音频粗略估计
+                                                }
+                                            }
+                                            switch (message.role) {
+                                                case 'system':
+                                                    return prompt.concat(["Instructions:\n".concat(contentString)]);
+                                                case 'user':
+                                                    return prompt.concat(["".concat(userLabel, ":\n").concat(contentString)]);
+                                                case 'function':
+                                                    return prompt;
+                                                case 'assistant':
+                                                    return prompt;
+                                                default:
+                                                    return contentString ? prompt.concat(["".concat(assistantLabel, ":\n").concat(contentString)]) : prompt;
+                                            }
+                                        }, [])
+                                            .join('\n\n');
+                                        return [4 /*yield*/, this_1._getTokenCount(prompt_1)];
+                                    case 1:
+                                        nextNumTokensEstimate = (_e.sent()) + nonTextTokens;
+                                        _i = 0, _c = nextMessages.filter(function (m) { return m.function_call; });
+                                        _e.label = 2;
+                                    case 2:
+                                        if (!(_i < _c.length)) return [3 /*break*/, 5];
+                                        m1 = _c[_i];
+                                        _d = nextNumTokensEstimate;
+                                        return [4 /*yield*/, this_1._getTokenCount(JSON.stringify(m1.function_call) || '')];
+                                    case 3:
+                                        nextNumTokensEstimate = _d + _e.sent();
+                                        _e.label = 4;
+                                    case 4:
+                                        _i++;
+                                        return [3 /*break*/, 2];
+                                    case 5:
+                                        isValidPrompt = nextNumTokensEstimate + functionToken <= maxNumTokens;
+                                        if (prompt_1 && !isValidPrompt) {
+                                            return [2 /*return*/, "break"];
+                                        }
+                                        messages = nextMessages;
+                                        numTokens = nextNumTokensEstimate + functionToken;
+                                        if (!isValidPrompt) {
+                                            return [2 /*return*/, "break"];
+                                        }
+                                        if (!parentMessageId) {
+                                            return [2 /*return*/, "break"];
+                                        }
+                                        return [4 /*yield*/, this_1._getMessageById(parentMessageId)];
+                                    case 6:
+                                        parentMessage = _e.sent();
+                                        if (!parentMessage) {
+                                            return [2 /*return*/, "break"];
+                                        }
+                                        parentMessageRole = parentMessage.role || 'user';
+                                        nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
+                                            {
+                                                role: parentMessageRole,
+                                                // 在上下文继承时，优先传递包含多模态数组的 originalContent
+                                                content: parentMessage.originalContent || parentMessage.text,
+                                                name: parentMessage.name,
+                                                function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
+                                                // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
+                                            }
+                                        ], nextMessages.slice(systemMessageOffset), true));
+                                        parentMessageId = parentMessage.parentMessageId;
+                                        return [2 /*return*/];
+                                }
+                            });
+                        };
+                        this_1 = this;
+                        _b.label = 1;
+                    case 1: return [5 /*yield**/, _loop_1()];
                     case 2:
-                        nextNumTokensEstimate = _d.sent();
-                        _i = 0, _b = nextMessages
-                            .filter(function (m) { return m.function_call; });
-                        _d.label = 3;
+                        state_1 = _b.sent();
+                        if (state_1 === "break")
+                            return [3 /*break*/, 4];
+                        _b.label = 3;
                     case 3:
-                        if (!(_i < _b.length)) return [3 /*break*/, 6];
-                        m1 = _b[_i];
-                        _c = nextNumTokensEstimate;
-                        return [4 /*yield*/, this._getTokenCount(JSON.stringify(m1.function_call) || '')];
-                    case 4:
-                        nextNumTokensEstimate = _c + _d.sent();
-                        _d.label = 5;
-                    case 5:
-                        _i++;
-                        return [3 /*break*/, 3];
-                    case 6:
-                        isValidPrompt = nextNumTokensEstimate + functionToken <= maxNumTokens;
-                        if (prompt_1 && !isValidPrompt) {
-                            return [3 /*break*/, 9];
-                        }
-                        messages = nextMessages;
-                        numTokens = nextNumTokensEstimate + functionToken;
-                        if (!isValidPrompt) {
-                            return [3 /*break*/, 9];
-                        }
-                        if (!parentMessageId) {
-                            return [3 /*break*/, 9];
-                        }
-                        return [4 /*yield*/, this._getMessageById(parentMessageId)];
-                    case 7:
-                        parentMessage = _d.sent();
-                        if (!parentMessage) {
-                            return [3 /*break*/, 9];
-                        }
-                        parentMessageRole = parentMessage.role || 'user';
-                        nextMessages = nextMessages.slice(0, systemMessageOffset).concat(__spreadArray([
-                            {
-                                role: parentMessageRole,
-                                content: parentMessage.text,
-                                name: parentMessage.name,
-                                function_call: parentMessage.functionCall ? parentMessage.functionCall : undefined,
-                                // tool_calls: parentMessage.toolCalls ? parentMessage.toolCalls : undefined
-                            }
-                        ], nextMessages.slice(systemMessageOffset), true));
-                        parentMessageId = parentMessage.parentMessageId;
-                        _d.label = 8;
-                    case 8:
                         if (true) return [3 /*break*/, 1];
-                        _d.label = 9;
-                    case 9:
+                        _b.label = 4;
+                    case 4:
                         maxTokens = Math.max(1, Math.min(this._maxModelTokens - numTokens, this._maxResponseTokens));
                         return [2 /*return*/, { messages: messages, maxTokens: maxTokens, numTokens: numTokens }];
                 }

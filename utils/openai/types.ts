@@ -69,13 +69,14 @@ export type SendMessageBrowserOptions = {
 export interface ChatMessage {
     id: string
     text: string
+    originalContent?: string | openai.ChatCompletionContentPart[]
     thinking_text?: string
     role: Role
     name?: string
     delta?: string
     detail?:
-        | openai.CreateChatCompletionResponse
-        | CreateChatCompletionStreamResponse
+    | openai.CreateChatCompletionResponse
+    | CreateChatCompletionStreamResponse
 
     // relevant for both ChatGPTAPI and ChatGPTUnofficialProxyAPI
     parentMessageId?: string
@@ -197,6 +198,31 @@ export type MessageContent = {
 export type MessageMetadata = any
 
 export namespace openai {
+    export type ChatCompletionContentPart =
+        | ChatCompletionContentPartText
+        | ChatCompletionContentPartImage
+        | ChatCompletionContentPartInputAudio
+
+    export interface ChatCompletionContentPartText {
+        type: 'text'
+        text: string
+    }
+
+    export interface ChatCompletionContentPartImage {
+        type: 'image_url'
+        image_url: {
+            url: string // URL 或者 data:image/jpeg;base64,...
+            detail?: 'auto' | 'low' | 'high'
+        }
+    }
+
+    export interface ChatCompletionContentPartInputAudio {
+        type: 'input_audio'
+        input_audio: {
+            data: string
+            format: 'mp3' | 'wav' | 'pcm16' | string
+        }
+    }
     export interface CreateChatCompletionDeltaResponse {
         id: string
         object: 'chat.completion.chunk'
@@ -231,10 +257,10 @@ export namespace openai {
         role: ChatCompletionRequestMessageRoleEnum
         /**
          * The contents of the message
-         * @type {string}
+         * @type {string|Array}
          * @memberof ChatCompletionRequestMessage
          */
-        content: string
+        content: string | ChatCompletionContentPart[]
         /**
          * The name of the user in a multi-user chat
          * @type {string}
@@ -253,14 +279,14 @@ export namespace openai {
     }
 
     export interface ToolCall {
-      id: string
-      type: "function"
-      function: FunctionCall
+        id: string
+        type: "function"
+        function: FunctionCall
     }
 
     export interface Tools {
-      type: "function" | string,
-      function: Function
+        type: "function" | string,
+        function: Function
     }
 
     export declare const ChatCompletionRequestMessageRoleEnum: {

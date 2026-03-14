@@ -1,8 +1,8 @@
 import { createParser } from 'eventsource-parser'
 
-import * as types from './types'
-import { fetch as nodefetch } from 'node-fetch'
-import { streamAsyncIterable } from './stream-async-iterable'
+import * as types from './types.js'
+import nodefetch from 'node-fetch'
+import { streamAsyncIterable } from './stream-async-iterable.js'
 
 export async function fetchSSE(
     url: string,
@@ -10,7 +10,7 @@ export async function fetchSSE(
         onMessage: (data: string) => void
         onError?: (error: any) => void
     },
-    fetch: types.FetchFn = nodefetch
+    fetch: types.FetchFn = nodefetch as any
 ) {
     const { onMessage, onError, ...fetchOptions } = options
     const res = await fetch(url, fetchOptions)
@@ -24,7 +24,8 @@ export async function fetchSSE(
         }
 
         const msg = `ChatGPT error ${res.status}: ${reason}`
-        const error = new types.ChatGPTError(msg, { cause: res })
+        const error = new types.ChatGPTError(msg)
+            ; (error as any).cause = res
         error.statusCode = res.status
         error.statusText = res.statusText
         throw error
@@ -38,7 +39,7 @@ export async function fetchSSE(
 
     // handle special response errors
     const feed = (chunk: string) => {
-        let response = null
+        let response: any = null
 
         try {
             response = JSON.parse(chunk)
@@ -48,7 +49,8 @@ export async function fetchSSE(
 
         if (response?.detail?.type === 'invalid_request_error') {
             const msg = `ChatGPT error ${response.detail.message}: ${response.detail.code} (${response.detail.type})`
-            const error = new types.ChatGPTError(msg, { cause: response })
+            const error = new types.ChatGPTError(msg)
+                ; (error as any).cause = response
             error.statusCode = response.detail.code
             error.statusText = response.detail.message
 
@@ -65,7 +67,7 @@ export async function fetchSSE(
         parser.feed(chunk)
     }
 
-    if (!res.body.getReader) {
+    if (!(res.body as any)?.getReader) {
         // Vercel polyfills `fetch` with `node-fetch`, which doesn't conform to
         // web standards, so this is a workaround...
         const body: NodeJS.ReadableStream = res.body as any
@@ -81,7 +83,7 @@ export async function fetchSSE(
             }
         })
     } else {
-        for await (const chunk of streamAsyncIterable(res.body)) {
+        for await (const chunk of streamAsyncIterable(res.body as any)) {
             const str = new TextDecoder().decode(chunk)
             feed(str)
         }

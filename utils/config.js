@@ -313,7 +313,7 @@ const defaultConfig = {
   gemini_temperature: 0.9,
   mediaMaxSizeInMB: 5,
   enableEmojiLikeTool: true,
-  mediaRecognitionSource: "Gemini",
+  mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
   gemini_fallbackModel: "gemini-2.5-flash",
   ScheduleTask_Tool: true,
