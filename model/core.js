@@ -856,7 +856,7 @@ class Core {
                     isAdmin,
                     sender
                   }, args), e)
-                  logger.mark(`function ${name} execution result: ${functionResult}`)
+                  logger.info(`function ${name} execution result: ${functionResult}`)
                 } else {
                   functionResult = `Function ${name} not found.`
                   logger.warn(functionResult)

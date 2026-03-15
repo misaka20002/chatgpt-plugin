@@ -11,84 +11,100 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
  * @return {*} recognitionResults
  */
 export async function recognitionResultsByGemini(e, img = [], video = []) {
-  if (Config.geminiKey) {
-    // 确定目标 URL 和类型
-    let { targetUrl, isVideo } = getMediaTargetUrl(e);
+  if (!Config.geminiKey)
+    return "请告知用户识别出错：请先配置Geimin对话接口"
 
-    if (targetUrl) {
-      let client = new CustomGoogleGeminiClient({
-        e,
-        userId: e.sender.user_id,
-        key: Config.getGeminiKey,
-        model: Config.gemini_vqa_model,
-        baseUrl: Config.geminiBaseUrl,
-        debug: Config.debug
-      })
+  // 确定目标 URL 和类型
+  let targetUrl = null
+  let isVideo = false
 
-      try {
-        // 增加超时时间，视频下载可能较慢
-        const response = await fetch(targetUrl, { timeout: 120000 });
-        if (!response.ok) {
-          return "媒体链接下载失败或已失效。"
-        }
+  // 优先识别视频url
+  if (video && video.length > 0) {
+    targetUrl = video[0]
+    isVideo = true
+  } else if (img && img.length > 0) {
+    targetUrl = img[0]
+    isVideo = false
+  }
 
-        // 媒体下载大小限制
-        const limitMB = Config.mediaMaxSizeInMB || 10;
-        const maxSizeInBytes = limitMB * 1024 * 1024;
+  // 从e中确定目标 URL 和类型
+  if (!targetUrl)
+    ({ targetUrl, isVideo } = getMediaTargetUrl(e));
 
-        const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
+  if (!targetUrl)
+    return "请告知用户识别出错：请传入要识别的媒体链接"
+  else {
+    let client = new CustomGoogleGeminiClient({
+      e,
+      userId: e.sender.user_id,
+      key: Config.getGeminiKey,
+      model: Config.gemini_vqa_model,
+      baseUrl: Config.geminiBaseUrl,
+      debug: Config.debug
+    })
 
-        if (headerLen) {
-          const contentLength = parseInt(headerLen);
-          if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
-            return `媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
-          }
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-
-        // 实际下载后二次检查 防止 header 缺失或不准确的情况
-        if (arrayBuffer.byteLength > maxSizeInBytes) {
-          return `下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
-        }
-
-        const base64Data = Buffer.from(arrayBuffer).toString('base64')
-        if (!base64Data) {
-          return "媒体文件为空或链接失效。"
-        }
-
-        // 自动探测 MimeType
-        let mimeType = response.headers.get('content-type')
-        // 如果 header 没给或者不准确，回退到默认值
-        if (!mimeType || mimeType === 'application/octet-stream') {
-          mimeType = isVideo ? 'video/mp4' : 'image/jpeg'
-        }
-
-        const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
-        let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this content in Simplified Chinese'
-        let recognitionResults = ''
-
-        // 动态调整 System Prompt 里的措辞
-        const mediaTypeStr = isVideo ? "一段视频" : "一张照片";
-        const systemPrompt = `我将拿出${mediaTypeStr}，你需要描述${mediaTypeStr}中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`
-
-        let res = await client.sendMessage(msg, {
-          system: systemPrompt,
-          media: {
-            mimeType: mimeType,
-            data: base64Data
-          }
-        })
-        recognitionResults = res.text
-        return recognitionResults
-
-      } catch (err) {
-        logger.error('派蒙第一人称对话-获取gemini的识别结果出错: ' + err)
-        return '请告知用户识别出错：' + (err.message || "网络或API错误")
+    try {
+      // 增加超时时间，视频下载可能较慢
+      const response = await fetch(targetUrl, { timeout: 120000 });
+      if (!response.ok) {
+        return "媒体链接下载失败或已失效。"
       }
+
+      // 媒体下载大小限制
+      const limitMB = Config.mediaMaxSizeInMB || 10;
+      const maxSizeInBytes = limitMB * 1024 * 1024;
+
+      const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
+
+      if (headerLen) {
+        const contentLength = parseInt(headerLen);
+        if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
+          return `媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+        }
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+
+      // 实际下载后二次检查 防止 header 缺失或不准确的情况
+      if (arrayBuffer.byteLength > maxSizeInBytes) {
+        return `下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
+      }
+
+      const base64Data = Buffer.from(arrayBuffer).toString('base64')
+      if (!base64Data) {
+        return "媒体文件为空或链接失效。"
+      }
+
+      // 自动探测 MimeType
+      let mimeType = response.headers.get('content-type')
+      // 如果 header 没给或者不准确，回退到默认值
+      if (!mimeType || mimeType === 'application/octet-stream') {
+        mimeType = isVideo ? 'video/mp4' : 'image/jpeg'
+      }
+
+      const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
+      let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this content in Simplified Chinese'
+      let recognitionResults = ''
+
+      // 动态调整 System Prompt 里的措辞
+      const mediaTypeStr = isVideo ? "一段视频" : "一张照片";
+      const systemPrompt = `我将拿出${mediaTypeStr}，你需要描述${mediaTypeStr}中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`
+
+      let res = await client.sendMessage(msg, {
+        system: systemPrompt,
+        media: {
+          mimeType: mimeType,
+          data: base64Data
+        }
+      })
+      recognitionResults = res.text
+      return recognitionResults
+
+    } catch (err) {
+      logger.error('派蒙第一人称对话-获取gemini的识别结果出错: ' + err)
+      return '请告知用户识别出错：' + (err.message || "网络或API错误")
     }
   }
-  return null // 如果没有key或者没有url
 }
 
 /**

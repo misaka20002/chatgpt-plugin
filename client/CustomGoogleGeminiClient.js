@@ -504,9 +504,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
               mode: 'gemini'
             })
             functionResponse.response.content = await chosenTool.func(args, this.e)
-            if (this.debug) {
-              logger.info(JSON.stringify(functionResponse.response.content))
-            }
+            logger.info(`[Chatgpt][Gemini] function ${fc.name} execution result: ${JSON.stringify(functionResponse.response.content)}`)
           } catch (err) {
             logger.error(err)
             functionResponse.response.content = {
