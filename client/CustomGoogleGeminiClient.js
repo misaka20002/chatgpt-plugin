@@ -170,13 +170,15 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     let history = await this.getHistory(opt.parentMessageId)
 
-    // 限制历史记录最大轮数（按条数限制） maxHistory 必须是偶数，这里设定 50 条（即 25 轮对话）
-    let maxHistory = Config.chatgptBlockCount || 50;
-    if (maxHistory % 2 !== 0) maxHistory += 1; // 强制保证是偶数，防止 Gemini 角色交替报错
+    if (Config.chatgptBlockCount) {
+      // 限制历史记录最大轮数（按条数限制） maxHistory 必须是偶数
+      let maxHistory = Config.chatgptBlockCount;
+      if (maxHistory % 2 !== 0) maxHistory += 1; // 强制保证是偶数，防止 Gemini 角色交替报错
 
-    if (history.length > maxHistory) {
-      // 截取最新的 maxHistory 条记录，确保开头是 user，结尾是 model
-      history = history.slice(-maxHistory);
+      if (history.length > maxHistory) {
+        // 截取最新的 maxHistory 条记录，确保开头是 user，结尾是 model
+        history = history.slice(-maxHistory);
+      }
     }
 
     let systemMessage = opt.system

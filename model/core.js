@@ -728,7 +728,8 @@ class Core {
         assistantLabel: Config.assistantLabel,
         fetch: newFetch,
         maxModelTokens: Config.maxModelTokens,
-        maxResponseTokens: Config.apiMaxToken
+        maxResponseTokens: Config.apiMaxToken,
+        chatgptBlockCount: Config.chatgptBlockCount,
       }
       if (!Config.openAiForceUseReverse) {
         let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
@@ -850,7 +851,7 @@ class Core {
           /** 工具调用计数器 */
           let toolCallCount = 0
           /** 工具调用最大次数 */
-          const maxToolCalls = 5 // API 接口太蠢了，总是无限循环函数
+          const maxToolCalls = 10 // API 接口太蠢了，总是无限循环函数
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
             if (msg.text) {
@@ -860,12 +861,12 @@ class Core {
             const pendingToolCalls = msg.toolCalls?.length
               ? msg.toolCalls
               : (msg.functionCall
-                  ? [{
-                      id: `legacy_${crypto.randomUUID()}`,
-                      type: 'function',
-                      function: msg.functionCall
-                    }]
-                  : [])
+                ? [{
+                  id: `legacy_${crypto.randomUUID()}`,
+                  type: 'function',
+                  function: msg.functionCall
+                }]
+                : [])
 
             if (pendingToolCalls.length === 0) {
               break

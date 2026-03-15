@@ -28,6 +28,9 @@ export type ChatGPTAPIOptions = {
 
     /** @defaultValue `1000` **/
     maxResponseTokens?: number
+    
+    /** 限制历史记录最大条数 */
+    chatgptBlockCount?: number 
 
     messageStore?: Keyv
     getMessageById?: GetMessageByIdFunction
