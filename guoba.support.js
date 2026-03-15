@@ -151,7 +151,7 @@ export function supportGuoba() {
           field: 'chatgptBlockCount',
           label: '对话历史记录条数',
           helpMessage: '单位：条',
-          bottomHelpMessage: '限制历史记录最大条数，必须是偶数，用户+AI回复 为2条；目前仅支持 Gemini',
+          bottomHelpMessage: '限制历史记录最大条数，必须是偶数，用户+AI回复 为2条；设置为0则由 token 控制；目前仅支持 API、Gemini',
           component: 'InputNumber',
           componentProps: {
             min: 0,

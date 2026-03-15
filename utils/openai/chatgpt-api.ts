@@ -53,6 +53,7 @@ export class ChatGPTAPI {
     protected _upsertMessage: types.UpsertMessageFunction
 
     protected _messageStore: Keyv<types.ChatMessage>
+    protected _chatgptBlockCount: number
 
     /**
      * Creates a new client wrapper around OpenAI's chat completion API, mimicing the official ChatGPT webapp's functionality as closely as possible.
@@ -64,6 +65,7 @@ export class ChatGPTAPI {
      * @param completionParams - Param overrides to send to the [OpenAI chat completion API](https://platform.openai.com/docs/api-reference/chat/create). Options like `temperature` and `presence_penalty` can be tweaked to change the personality of the assistant.
      * @param maxModelTokens - Optional override for the maximum number of tokens allowed by the model's context. Defaults to 4096.
      * @param maxResponseTokens - Optional override for the minimum number of tokens allowed for the model's response. Defaults to 1000.
+     * @param chatgptBlockCount 
      * @param messageStore - Optional [Keyv](https://github.com/jaredwray/keyv) store to persist chat messages to. If not provided, messages will be lost when the process exits.
      * @param getMessageById - Optional function to retrieve a message by its ID. If not provided, the default implementation will be used (using an in-memory `messageStore`).
      * @param upsertMessage - Optional function to insert or update a message. If not provided, the default implementation will be used (using an in-memory `messageStore`).
@@ -80,6 +82,7 @@ export class ChatGPTAPI {
             systemMessage,
             maxModelTokens = 16000,
             maxResponseTokens = 8192,
+            chatgptBlockCount = 0,
             getMessageById,
             upsertMessage,
             fetch = globalFetch
@@ -108,6 +111,7 @@ export class ChatGPTAPI {
 
         this._maxModelTokens = maxModelTokens
         this._maxResponseTokens = maxResponseTokens
+        this._chatgptBlockCount = chatgptBlockCount
 
         this._getMessageById = getMessageById ?? this._defaultGetMessageById
         this._upsertMessage = upsertMessage ?? this._defaultUpsertMessage
@@ -201,6 +205,25 @@ export class ChatGPTAPI {
         }
 
         return tokenCount
+    }
+
+    protected _stripImages(content: any) {
+        if (!content || typeof content === 'string') return content
+        if (Array.isArray(content)) {
+            return content.map(part => {
+                if (part.type === 'image_url') {
+                    return { ...part, image_url: { url: '[Image Content]' } } // 替换 Base64
+                }
+                if (part.type === 'input_audio') {
+                    return { ...part, input_audio: { ...part.input_audio, data: '[Audio Content]' } }
+                }
+                if (part.type === 'input_video') {
+                    return { ...part, input_video: { ...part.input_video, data: '[Video Content]' } }
+                }
+                return part
+            })
+        }
+        return content
     }
 
     /**
@@ -508,9 +531,20 @@ export class ChatGPTAPI {
                 } catch (err) { }
             }
 
+            const cleanedCurrentMessages = currentMessages.map(m => ({
+                ...m,
+                originalContent: this._stripImages(m.originalContent)
+            }))
+
+            const cleanedResponse = {
+                ...message,
+                originalContent: this._stripImages(message.originalContent)
+            }
+
+            // 返回给当前调用的带图片的 message ，只是存入数据库的是无图片的 cleaned 版
             return Promise.all([
-                ...currentMessages.map(currentMessage => this._upsertMessage(currentMessage)),
-                this._upsertMessage(message)
+                ...cleanedCurrentMessages.map(currentMessage => this._upsertMessage(currentMessage)),
+                this._upsertMessage(cleanedResponse)
             ]).then(() => message)
         })
 
@@ -601,6 +635,11 @@ export class ChatGPTAPI {
             if (!isValidPrompt) {
                 stopReason = 'budget'
                 break
+            }
+
+            if (this._chatgptBlockCount > 0 && nextHistoryMessagesCount >= this._chatgptBlockCount) {
+                stopReason = 'block_count_reached';
+                break;
             }
 
             if (!parentMessageId) {
