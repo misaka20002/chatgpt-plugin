@@ -6,48 +6,34 @@ import _ from 'lodash'
 export const originalValues = ['星火', '通义千问', '克劳德', '克劳德2', '必应', 'api', 'API', 'api3', 'API3', 'glm', '双子星', '双子座', '智谱']
 export const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', 'api', 'api3', 'api3', 'chatglm', 'gemini', 'gemini', 'chatglm4']
 
-const REDIS_SCAN_COUNT = 200
-const REDIS_DELETE_BATCH_SIZE = 200
+const REDIS_SCAN_COUNT = 3000
+const REDIS_DELETE_BATCH_SIZE = 1000
 
-async function deleteRedisKeys(patterns, debugLabel = '') {
+async function deleteRedisKeys(patterns) {
   const deleteCommand = typeof redis.unlink === 'function' ? 'UNLINK' : 'DEL'
-  let deleted = 0
-  let matched = 0
+  let totalDeleted = 0
 
-  async function flushBatch(batch, pattern) {
-    if (batch.length === 0) {
-      return
-    }
-
-    const removed = await redis.sendCommand([deleteCommand, ...batch])
-    deleted += Number(removed) || 0
-
-    if (Config.debug && debugLabel) {
-      logger.info(`delete ${debugLabel}: pattern=${pattern}, batch=${batch.length}, command=${deleteCommand}`)
-    }
-  }
-
-  for (const pattern of patterns) {
+  async function processPattern(pattern) {
     let batch = []
-
+    let deleted = 0
     for await (const key of redis.scanIterator({ MATCH: pattern, COUNT: REDIS_SCAN_COUNT })) {
       batch.push(key)
-      matched++
-
       if (batch.length >= REDIS_DELETE_BATCH_SIZE) {
-        await flushBatch(batch, pattern)
+        const removed = await redis.sendCommand([deleteCommand, ...batch])
+        deleted += Number(removed) || 0
         batch = []
       }
     }
-
-    await flushBatch(batch, pattern)
+    if (batch.length > 0) {
+      const removed = await redis.sendCommand([deleteCommand, ...batch])
+      deleted += Number(removed) || 0
+    }
+    return deleted
   }
 
-  if (Config.debug && debugLabel) {
-    logger.info(`delete ${debugLabel} summary: matched=${matched}, deleted=${deleted}, patterns=${patterns.length}`)
-  }
-
-  return deleted
+  const results = await Promise.all(patterns.map(p => processPattern(p)))
+  totalDeleted = results.reduce((a, b) => a + b, 0)
+  return totalDeleted
 }
 
 async function clearKeyvNamespace(namespace) {
@@ -396,9 +382,11 @@ export class ConversationManager {
         'CHATGPT:CONVERSATION_CREATER_NICK_NAME:*'
       ]
 
-      const deletedConversations = await deleteRedisKeys(conversationPatterns, 'conversation')
-      await deleteRedisKeys(historyPatterns, 'history')
-      await deleteRedisKeys(metadataPatterns, 'conversation metadata')
+      const [deletedConversations] = await Promise.all([
+        deleteRedisKeys(conversationPatterns, 'conversation'),
+        deleteRedisKeys(historyPatterns, 'history'),
+        deleteRedisKeys(metadataPatterns, 'conversation metadata')
+      ])
 
       await clearKeyvNamespace(Config.toneStyle)
       await clearKeyvNamespace('chatglm_6b')
