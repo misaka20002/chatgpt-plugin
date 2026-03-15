@@ -80,6 +80,21 @@ export const roleMap = {
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
 
+function getRetryGroupContextLengths(baseLength = 0) {
+  if (!Number.isFinite(baseLength) || baseLength <= 0) {
+    return [0]
+  }
+
+  const fallbackLengths = [
+    Math.floor(baseLength * 0.75),
+    Math.floor(baseLength * 0.5),
+    Math.floor(baseLength * 0.25),
+    0
+  ]
+
+  return [...new Set(fallbackLengths.filter(length => length >= 0 && length < baseLength))]
+}
+
 async function handleSystem(e, system, settings) {
   if (settings.enableGroupContext) {
     try {
@@ -96,7 +111,8 @@ async function handleSystem(e, system, settings) {
       if (master && !e.group) {
         opt.masterName = e.bot.getFriendList().get(parseInt(master))?.nickname
       }
-      let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+      const groupContextLength = settings.groupContextLength ?? Config.groupContextLength
+      let chats = await getChatHistoryGroup(e, groupContextLength)
       opt.chats = chats
       const namePlaceholder = '[name]'
       const defaultBotName = 'ChatGPT'
@@ -108,7 +124,7 @@ async function handleSystem(e, system, settings) {
       if (opt.botName) {
         system += `Your nickname is ${opt.botName} in the group,`
       }
-      if (chats) {
+      if (Array.isArray(chats) && chats.length > 0) {
         system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
         system += chats
           .map(chat => {
@@ -686,9 +702,19 @@ class Core {
         Current date: ${currentDate}`
       // let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
-      let system = await handleSystem(e, promptPrefix, opt.settings)
-
-      system = mergeSystemPrompt(system, e)
+      let extraSystemMessage = ''
+      const buildOpenAISystem = async (groupContextLength = Config.groupContextLength) => {
+        let system = await handleSystem(e, promptPrefix, {
+          ...opt.settings,
+          groupContextLength
+        })
+        system = mergeSystemPrompt(system, e)
+        if (extraSystemMessage) {
+          system += extraSystemMessage
+        }
+        return system
+      }
+      let system = await buildOpenAISystem()
 
       logger.debug(system)
       let opts = {
@@ -738,6 +764,26 @@ class Core {
         option = Object.assign(option, conversation)
       }
 
+      const sendOpenAIWithContextFallback = async (messageContent, sendOption) => {
+        const retryLengths = opt.settings.enableGroupContext
+          ? getRetryGroupContextLengths(Config.groupContextLength)
+          : []
+
+        for (let i = 0; i <= retryLengths.length; i++) {
+          try {
+            return await this.chatGPTApi.sendMessage(messageContent, sendOption)
+          } catch (err) {
+            const isContextExceeded = err.message?.indexOf('context_length_exceeded') > 0
+            if (!isContextExceeded || i >= retryLengths.length) {
+              throw err
+            }
+            const nextGroupContextLength = retryLengths[i]
+            logger.warn(`[chatgpt] 上下文超限，压缩群聊记录后重试，groupContextLength=${nextGroupContextLength}。若频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`)
+            sendOption.systemMessage = await buildOpenAISystem(nextGroupContextLength)
+          }
+        }
+      }
+
       let imageDataUrl = null;
       let imageUrl = e.img ? e.img[0] : undefined;
       if (imageUrl) {
@@ -773,6 +819,8 @@ class Core {
           type: "function",
           function: funcMap[k].function
         }))
+        extraSystemMessage = systemAddition || ''
+        option.systemMessage = await buildOpenAISystem()
 
         let msg
         try {
@@ -794,7 +842,7 @@ class Core {
             ];
           }
 
-          msg = await this.chatGPTApi.sendMessage(messageContent, option)
+          msg = await sendOpenAIWithContextFallback(messageContent, option)
 
           if (Config.debug) // 避免控制台刷屏
             logger.info(msg)
@@ -823,7 +871,16 @@ class Core {
               break
             }
 
-            const toolMessages = []
+            const toolMessages = [{
+              id: msg.id,
+              role: 'assistant',
+              text: msg.text || '',
+              originalContent: msg.originalContent ?? (msg.text || null),
+              parentMessageId: msg.parentMessageId,
+              conversationId: msg.conversationId,
+              functionCall: msg.functionCall,
+              toolCalls: pendingToolCalls
+            }]
             let previousMessageId = msg.id
 
             for (const toolCall of pendingToolCalls) {
@@ -890,7 +947,7 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
 
-            msg = await this.chatGPTApi.sendMessage(null, option)
+            msg = await sendOpenAIWithContextFallback(null, option)
 
             if (Config.debug)
               logger.info(msg)
@@ -922,7 +979,7 @@ class Core {
               { type: 'image_url', image_url: { url: imageDataUrl } }
             ];
           }
-          msg = await this.chatGPTApi.sendMessage(messageContent, option)
+          msg = await sendOpenAIWithContextFallback(messageContent, option)
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
             logger.warn(err)

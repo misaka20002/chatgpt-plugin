@@ -153,9 +153,14 @@ export class ChatGPTAPI {
             }
         }
 
+        const assistantContent =
+            storedRole === 'assistant' && (hasToolCalls || message.functionCall)
+                ? (content || null)
+                : (content || '')
+
         return {
             role: storedRole,
-            content: content || '',
+            content: assistantContent,
             name: storedRole === 'user' ? message.name : undefined,
             function_call: storedRole === 'assistant' && !hasToolCalls ? message.functionCall : undefined,
             tool_calls: storedRole === 'assistant' ? message.toolCalls : undefined
@@ -278,9 +283,12 @@ export class ChatGPTAPI {
             completionParams
         )
         console.log(`[ChatGPT][API] 输入Token(${numTokens}) | 回复上限(${maxTokens}) | 总上下文(${this._maxModelTokens})`)
+        if (numTokens + maxTokens > this._maxModelTokens) {
+            console.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${numTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`)
+        }
         if (trimInfo.trimmed) {
             console.log(
-                `[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}`
+                `[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}。若这类日志频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`
             )
         }
 
