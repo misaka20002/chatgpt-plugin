@@ -148,6 +148,17 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'chatgptBlockCount',
+          label: '对话历史记录条数',
+          helpMessage: '单位：条',
+          bottomHelpMessage: '限制历史记录最大条数，必须是偶数，用户+AI回复 为2条；目前仅支持 Gemini',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 2
+          }
+        },
+        {
           field: 'forwardReasoning',
           label: '是否转发思考过程',
           bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。仅适配reasoning_content。默认开启。',
