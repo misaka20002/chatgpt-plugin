@@ -3,7 +3,7 @@ import {
   extractContentFromFile,
   formatDate,
   parseSourceImg,
-  getMasterQQ, getMaxModelTokens,
+  getMasterQQ,
   getUin,
   getUserData,
   isCN
@@ -805,31 +805,37 @@ class Core {
           const maxToolCalls = 5 // API 接口太蠢了，总是无限循环函数
 
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
-            toolCallCount++
-
             if (msg.text) {
               await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
             }
 
-            let toolCallsToProcess = msg.toolCalls || [];
-            if (!toolCallsToProcess.length && msg.functionCall) {
-              // 兼容极旧版本的 function_call 响应
-              toolCallsToProcess = [{
-                id: 'call_' + Math.random().toString(36).substring(2, 10),
-                type: 'function',
-                function: msg.functionCall
-              }]
-              msg.toolCalls = toolCallsToProcess;
+            const pendingToolCalls = msg.toolCalls?.length
+              ? msg.toolCalls
+              : (msg.functionCall
+                  ? [{
+                      id: `legacy_${crypto.randomUUID()}`,
+                      type: 'function',
+                      function: msg.functionCall
+                    }]
+                  : [])
+
+            if (pendingToolCalls.length === 0) {
+              break
             }
 
-            let toolResults = [];
+            const toolMessages = []
+            let previousMessageId = msg.id
 
-            // 循环遍历大模型返回的所有并行工具
-            for (const toolCall of toolCallsToProcess) {
-              let name = toolCall.function.name;
-              let args;
+            for (const toolCall of pendingToolCalls) {
+              if (toolCallCount >= maxToolCalls) {
+                break
+              }
+              toolCallCount++
+
+              let name = toolCall.function.name
+              let args
               try {
-                args = JSON.parse(toolCall.function.arguments);
+                args = JSON.parse(toolCall.function.arguments)
               } catch (e) {
                 args = {}
               }
@@ -843,7 +849,7 @@ class Core {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
               }
 
-              let functionResult = "";
+              let functionResult = ''
               try {
                 if (fullFuncMap[name.trim()]) {
                   functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
@@ -860,26 +866,31 @@ class Core {
                 logger.error(functionResult)
               }
 
-              toolResults.push({
-                tool_call_id: toolCall.id, // 核心修复：带回 ID
-                name: name,
-                content: String(functionResult)
+              const toolMessageId = crypto.randomUUID()
+              toolMessages.push({
+                id: toolMessageId,
+                role: 'tool',
+                text: String(functionResult),
+                originalContent: String(functionResult),
+                parentMessageId: previousMessageId,
+                conversationId: msg.conversationId,
+                toolCallId: toolCall.id
               })
+              previousMessageId = toolMessageId
             }
 
             option.parentMessageId = msg.id
-            option.toolResults = toolResults // 交由 api 组装多结果数组
+            option.appendMessages = toolMessages
 
             // 拿到工具结果后重置 tool_choice 参数，允许大模型输出自然语言回答，防止死循环无限调用工具
             if (option.completionParams && option.completionParams.tool_choice === "required") {
-              delete option.completionParams.tool_choice;
+              delete option.completionParams.tool_choice
             }
 
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
 
-            // 此处的 sendMessage 携带 toolResults 集合进行发包
-            msg = await this.chatGPTApi.sendMessage("", option, 'tool')
+            msg = await this.chatGPTApi.sendMessage(null, option)
 
             if (Config.debug)
               logger.info(msg)
