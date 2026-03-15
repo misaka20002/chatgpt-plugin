@@ -362,10 +362,9 @@ export class ConversationManager {
   }
 
   async endAllConversations(e) {
-    const isAllModeCleanup = e.msg.includes('模式')
-    const match = e.msg.trim().match('^#?(.*?)(结束|新开|摧毁|毁灭|完结|清理)全部(模式)?对话$')
+    const match = e.msg.trim().match(`^#?(${originalValues.join('|')})?(结束|新开|摧毁|毁灭|完结|清理)全部(模式|模型)?对话$`)
 
-    if (isAllModeCleanup) {
+    if (match?.[3]) {
       const conversationPatterns = [
         'CHATGPT:CONVERSATIONS:*',
         'CHATGPT:QQ_CONVERSATION:*',

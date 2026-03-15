@@ -54,6 +54,21 @@ export class ChatGPTAPI {
 
     protected _messageStore: Keyv<types.ChatMessage>
 
+    /**
+     * Creates a new client wrapper around OpenAI's chat completion API, mimicing the official ChatGPT webapp's functionality as closely as possible.
+     *
+     * @param apiKey - OpenAI API key (required).
+     * @param apiOrg - Optional OpenAI API organization (optional).
+     * @param apiBaseUrl - Optional override for the OpenAI API base URL.
+     * @param debug - Optional enables logging debugging info to stdout.
+     * @param completionParams - Param overrides to send to the [OpenAI chat completion API](https://platform.openai.com/docs/api-reference/chat/create). Options like `temperature` and `presence_penalty` can be tweaked to change the personality of the assistant.
+     * @param maxModelTokens - Optional override for the maximum number of tokens allowed by the model's context. Defaults to 4096.
+     * @param maxResponseTokens - Optional override for the minimum number of tokens allowed for the model's response. Defaults to 1000.
+     * @param messageStore - Optional [Keyv](https://github.com/jaredwray/keyv) store to persist chat messages to. If not provided, messages will be lost when the process exits.
+     * @param getMessageById - Optional function to retrieve a message by its ID. If not provided, the default implementation will be used (using an in-memory `messageStore`).
+     * @param upsertMessage - Optional function to insert or update a message. If not provided, the default implementation will be used (using an in-memory `messageStore`).
+     * @param fetch - Optional override for the `fetch` implementation to use. Defaults to the global `fetch` function.
+     */
     constructor(opts: types.ChatGPTAPIOptions) {
         const {
             apiKey,
@@ -188,6 +203,28 @@ export class ChatGPTAPI {
         return tokenCount
     }
 
+    /**
+     * Sends a message to the OpenAI chat completions endpoint, waits for the response
+     * to resolve, and returns the response.
+     *
+     * If you want your response to have historical context, you must provide a valid `parentMessageId`.
+     *
+     * If you want to receive a stream of partial responses, use `opts.onProgress`.
+     *
+     * Set `debug: true` in the `ChatGPTAPI` constructor to log more info on the full prompt sent to the OpenAI chat completions API. You can override the `systemMessage` in `opts` to customize the assistant's instructions.
+     *
+     * @param content - The prompt message to send: 多模态消息体封装：将传给 sendMessage 的参数从单纯的 string 放开为 string | ChatCompletionContentPart[]。你现在可以在上层应用构建好 [{ type: 'text', text: '描述一下这个图' }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,....' } }]
+     * @param opts.parentMessageId - Optional ID of the previous message in the conversation (defaults to `undefined`)
+     * @param opts.conversationId - Optional ID of the conversation (defaults to `undefined`)
+     * @param opts.messageId - Optional ID of the message to send (defaults to a random UUID)
+     * @param opts.systemMessage - Optional override for the chat "system message" which acts as instructions to the model (defaults to the ChatGPT system message)
+     * @param opts.timeoutMs - Optional timeout in milliseconds (defaults to no timeout)
+     * @param opts.onProgress - Optional callback which will be invoked every time the partial response is updated
+     * @param opts.abortSignal - Optional callback used to abort the underlying `fetch` call using an [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController)
+     * @param completionParams - Optional overrides to send to the [OpenAI chat completion API](https://platform.openai.com/docs/api-reference/chat/create). Options like `temperature` and `presence_penalty` can be tweaked to change the personality of the assistant.
+     *
+     * @returns The response from ChatGPT
+     */
     async sendMessage(
         content: string | types.openai.ChatCompletionContentPart[] | null,
         opts: types.SendMessageOptions = {},
@@ -240,7 +277,7 @@ export class ChatGPTAPI {
             opts,
             completionParams
         )
-        console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
+        console.log(`[ChatGPT][API] 输入Token(${numTokens}) | 回复上限(${maxTokens}) | 总上下文(${this._maxModelTokens})`)
         if (trimInfo.trimmed) {
             console.log(
                 `[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}`
@@ -468,7 +505,7 @@ export class ChatGPTAPI {
                         total_tokens: promptTokens + completionTokens,
                         estimated: true
                     }
-                } catch (err) {}
+                } catch (err) { }
             }
 
             return Promise.all([

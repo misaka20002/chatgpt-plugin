@@ -176,7 +176,7 @@ export class chatgpt extends plugin {
           fnc: 'destroyConversations'
         },
         {
-          reg: `^#?(${originalValues.join('|')})?(结束|新开|摧毁|毁灭|完结|清理)全部(模式)?对话$`,
+          reg: `^#?(${originalValues.join('|')})?(结束|新开|摧毁|毁灭|完结|清理)全部(模式|模型)?对话$`,
           fnc: 'endAllConversations',
           permission: 'master'
         },
