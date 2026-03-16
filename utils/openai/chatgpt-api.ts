@@ -217,13 +217,13 @@ export class ChatGPTAPI {
         if (Array.isArray(content)) {
             return content.map(part => {
                 if (part.type === 'image_url') {
-                    return { ...part, image_url: { url: '[Image Content]' } } // 替换 Base64
+                    return { type: 'text', text: '[图片]' }
                 }
                 if (part.type === 'input_audio') {
-                    return { ...part, input_audio: { ...part.input_audio, data: '[Audio Content]' } }
+                    return { type: 'text', text: '[音频]' }
                 }
                 if (part.type === 'input_video') {
-                    return { ...part, input_video: { ...part.input_video, data: '[Video Content]' } }
+                    return { type: 'text', text: '[视频]' }
                 }
                 return part
             })

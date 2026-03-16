@@ -231,13 +231,13 @@ var ChatGPTAPI = /** @class */ (function () {
         if (Array.isArray(content)) {
             return content.map(function (part) {
                 if (part.type === 'image_url') {
-                    return __assign(__assign({}, part), { image_url: { url: '[Image Content]' } }); // 替换 Base64
+                    return { type: 'text', text: '[图片]' };
                 }
                 if (part.type === 'input_audio') {
-                    return __assign(__assign({}, part), { input_audio: __assign(__assign({}, part.input_audio), { data: '[Audio Content]' }) });
+                    return { type: 'text', text: '[音频]' };
                 }
                 if (part.type === 'input_video') {
-                    return __assign(__assign({}, part), { input_video: __assign(__assign({}, part.input_video), { data: '[Video Content]' }) });
+                    return { type: 'text', text: '[视频]' };
                 }
                 return part;
             });
@@ -307,10 +307,10 @@ var ChatGPTAPI = /** @class */ (function () {
                         _d = _e.sent(), messages = _d.messages, maxTokens = _d.maxTokens, numTokens = _d.numTokens, trimInfo = _d.trimInfo;
                         console.log("[ChatGPT][API] \u8F93\u5165Token(".concat(numTokens, ") | \u56DE\u590D\u4E0A\u9650(").concat(maxTokens, ") | \u603B\u4E0A\u4E0B\u6587(").concat(this._maxModelTokens, ")"));
                         if (numTokens + maxTokens > this._maxModelTokens) {
-                            console.warn("[ChatGPT][API] \u5F53\u524D token \u914D\u7F6E\u8FB9\u754C\u8FC7\u7D27\uFF1A\u8F93\u5165Token(".concat(numTokens, ") + \u56DE\u590D\u4E0A\u9650(").concat(maxTokens, ") > \u603B\u4E0A\u4E0B\u6587(").concat(this._maxModelTokens, ")\u3002\u8BF7\u68C0\u67E5\u9505\u5DF4\u4E2D\u7684\u300C\u56DE\u590D\u5185\u5BB9\u6700\u5927Token\u6570(apiMaxToken)\u300D\u4E0E\u300C\u6A21\u578B\u603B\u4E0A\u4E0B\u6587Token\u6570(maxModelTokens)\u300D\u914D\u7F6E\u662F\u5426\u8FC7\u7D27\uFF1B\u63D2\u4EF6\u5C06\u4F9D\u8D56\u5386\u53F2\u88C1\u526A\uFF0C\u82E5\u4ECD\u8D85\u9650\uFF0C\u53EF\u80FD\u89E6\u53D1\u7FA4\u804A\u4E0A\u4E0B\u6587\u538B\u7F29\u6216\u91CD\u8BD5\u3002"));
+                            console.warn("[ChatGPT][API] \u5F53\u524D token \u914D\u7F6E\u8FB9\u754C\u8FC7\u7D27\uFF1A\u8F93\u5165Token(".concat(numTokens, ") + \u56DE\u590D\u4E0A\u9650(").concat(maxTokens, ") > \u603B\u4E0A\u4E0B\u6587(").concat(this._maxModelTokens, ")\u3002\u8BF7\u68C0\u67E5\u9505\u5DF4\u4E2D\u7684\u201C\u56DE\u590D\u5185\u5BB9\u6700\u5927Token\u6570(apiMaxToken)\u201D\u4E0E\u201C\u6A21\u578B\u603B\u4E0A\u4E0B\u6587Token\u6570(maxModelTokens)\u201D\u914D\u7F6E\u662F\u5426\u8FC7\u7D27\uFF1B\u63D2\u4EF6\u5C06\u4F9D\u8D56\u5386\u53F2\u88C1\u526A\uFF0C\u82E5\u4ECD\u8D85\u9650\uFF0C\u53EF\u80FD\u89E6\u53D1\u7FA4\u804A\u4E0A\u4E0B\u6587\u538B\u7F29\u6216\u91CD\u8BD5\u3002"));
                         }
                         if (trimInfo.trimmed) {
-                            console.log("[chatgpt] history trimmed: current=".concat(trimInfo.currentTurnMessages, ", keptHistory=").concat(trimInfo.keptHistoryMessages, ", attemptedHistory=").concat(trimInfo.attemptedHistoryMessages, ", droppedHistory=").concat(trimInfo.droppedHistoryMessages, ", keptToolChains=").concat(trimInfo.keptToolChainCount, ", budget=").concat(trimInfo.promptBudget, ", finalTokens=").concat(numTokens, ", reason=").concat(trimInfo.stopReason, "\u3002\u82E5\u8FD9\u7C7B\u65E5\u5FD7\u9891\u7E41\u51FA\u73B0\uFF0C\u8BF7\u68C0\u67E5\u9505\u5DF4\u4E2D\u7684\u300C\u56DE\u590D\u5185\u5BB9\u6700\u5927Token\u6570(apiMaxToken)\u300D\u4E0E\u300C\u6A21\u578B\u603B\u4E0A\u4E0B\u6587Token\u6570(maxModelTokens)\u300D\u914D\u7F6E\u662F\u5426\u8FC7\u7D27\u3002"));
+                            console.log("[chatgpt] history trimmed: current=".concat(trimInfo.currentTurnMessages, ", keptHistory=").concat(trimInfo.keptHistoryMessages, ", attemptedHistory=").concat(trimInfo.attemptedHistoryMessages, ", droppedHistory=").concat(trimInfo.droppedHistoryMessages, ", keptToolChains=").concat(trimInfo.keptToolChainCount, ", budget=").concat(trimInfo.promptBudget, ", finalTokens=").concat(numTokens, ", reason=").concat(trimInfo.stopReason, "\u3002\u82E5\u8FD9\u7C7B\u65E5\u5FD7\u9891\u7E41\u51FA\u73B0\uFF0C\u8BF7\u68C0\u67E5\u9505\u5DF4\u4E2D\u7684\u201C\u56DE\u590D\u5185\u5BB9\u6700\u5927Token\u6570(apiMaxToken)\u201D\u4E0E\u201C\u6A21\u578B\u603B\u4E0A\u4E0B\u6587Token\u6570(maxModelTokens)\u201D\u914D\u7F6E\u662F\u5426\u8FC7\u7D27\u3002"));
                         }
                         result = {
                             role: 'assistant',
@@ -725,9 +725,9 @@ var ChatGPTAPI = /** @class */ (function () {
                                 maxTokens: maxTokens,
                                 numTokens: numTokens,
                                 trimInfo: {
-                                currentTurnMessages: currentTurnMessages,
-                                promptBudget: promptBudget,
-                                attemptedHistoryMessages: attemptedHistoryMessages,
+                                    currentTurnMessages: currentTurnMessages,
+                                    promptBudget: promptBudget,
+                                    attemptedHistoryMessages: attemptedHistoryMessages,
                                     keptHistoryMessages: keptHistoryMessagesCount,
                                     droppedHistoryMessages: droppedHistoryMessages,
                                     keptToolChainCount: keptToolChainCount,
