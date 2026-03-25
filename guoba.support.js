@@ -129,6 +129,7 @@ export function supportGuoba() {
         {
           field: 'enablePrivateChat',
           label: '是否允许私聊机器人',
+          bottomHelpMessage: 'Bot主人不受限制',
           component: 'Switch'
         },
         {
