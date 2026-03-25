@@ -4,7 +4,7 @@ import { AbstractTool } from './AbstractTool.js'
 export class ScheduleTaskTool extends AbstractTool {
   name = 'scheduleGroupTask'
 
-  description = 'Useful when the user wants to schedule a reminder, message, or task to be executed in the future. (Only works in group chats)'
+  description = 'Useful when the user wants to schedule a reminder, message, or task to be executed in the future. (Works in both group chats and private chats)'
 
   parameters = {
     properties: {
@@ -23,16 +23,16 @@ export class ScheduleTaskTool extends AbstractTool {
   func = async function (opts, e) {
     let { content, delayMinutes } = opts
 
-    // 1. 验证群聊环境
-    if (!e.isGroup) {
-      return 'This tool can only be used in group chats. Please tell the user it is not supported in private messages.'
-    }
+    // 【修改2】删除这里的 isGroup 拦截校验
+    // if (!e.isGroup) {
+    //   return 'This tool can only be used in group chats. Please tell the user it is not supported in private messages.'
+    // }
 
     if (!delayMinutes || delayMinutes <= 0) {
       return 'Invalid delay time. Must be a positive number.'
     }
 
-    // 2. 验证最大时长限制：最长 1 个月 (按 30 天计算: 30 * 24 * 60 = 43200 分钟)
+    // 2. 验证最大时长限制：最长 1 个月
     const MAX_DELAY_MINUTES = 30 * 24 * 60
     if (delayMinutes > MAX_DELAY_MINUTES) {
       return `Delay time is too long. The maximum allowed delay is ${MAX_DELAY_MINUTES} minutes (about 1 month).`
@@ -42,17 +42,13 @@ export class ScheduleTaskTool extends AbstractTool {
       let replacedOldTask = false
 
       // 3. 验证与清理：每个用户只能拥有一个活跃任务
-      // 如果已存在任务，则提取出来并删除（覆盖逻辑）
-      // if (!e.isMaster) {
       if (true) {
-        // 从 Redis 获取当前未执行的全部定时任务
         const pendingTasks = await redis.zRange('CHATGPT:ScheduledTasks', 0, -1) || []
         const tasksToRemove = []
 
         for (const taskStr of pendingTasks) {
           try {
             const taskObj = JSON.parse(taskStr)
-            // 匹配到该用户的旧任务
             if (String(taskObj.user_id) === String(e.user_id)) {
               tasksToRemove.push(taskStr)
             }
@@ -61,7 +57,6 @@ export class ScheduleTaskTool extends AbstractTool {
           }
         }
 
-        // 发现旧任务，从 ZSET 中移除
         if (tasksToRemove.length > 0) {
           await redis.zRem('CHATGPT:ScheduledTasks', tasksToRemove)
           replacedOldTask = true
@@ -74,16 +69,18 @@ export class ScheduleTaskTool extends AbstractTool {
       const taskData = {
         taskId: `task_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         bot_id: e.self_id || e.bot?.uin,
-        group_id: e.group_id,
+        // 【修改3】保存聊天环境类型。如果是私聊，group_id 为 undefined
+        isGroup: e.isGroup,
+        group_id: e.isGroup ? e.group_id : undefined,
         user_id: e.user_id,
         content: content,
         createdAt: Date.now(),
         executeTime: executeTime,
         isMaster: e.isMaster,
-        nickname: e.sender.card || e.sender.nickname
+        nickname: e.sender?.card || e.sender?.nickname || 'User'
       }
 
-      // 5. 存入 Redis 的 ZSET (有序集合)
+      // 5. 存入 Redis 的 ZSET
       await redis.zAdd('CHATGPT:ScheduledTasks', [{
         score: executeTime,
         value: JSON.stringify(taskData)

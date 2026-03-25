@@ -16,7 +16,7 @@ export class ScheduleTaskPlugin extends plugin {
         // 配置定时任务
         this.task = [
             {
-                cron: Config.ScheduleTask_Tool ? '0 * * * * *' : "0 0 1 1 * *", // 每分钟的第 0 秒执行一次
+                cron: Config.ScheduleTask_Tool ? '0 * * * * *' : "0 0 1 1 * *",
                 name: 'Check_LLM_Scheduled_Tasks',
                 fnc: this.checkAndExecuteTasks.bind(this),
                 log: false
@@ -52,19 +52,21 @@ export class ScheduleTaskPlugin extends plugin {
                     continue;
                 }
 
-                // 成功解析后立即从 Redis 移除该任务，防止后续报错导致任务死循环
+                // 成功解析后立即从 Redis 移除该任务
                 await redis.zRem(redisKey, taskJson);
+
+                // 【修改1】兼容旧数据，判断是群聊还是私聊
+                const isGroup = taskData.isGroup !== undefined ? taskData.isGroup : !!taskData.group_id;
 
                 // 主动构建完整的 mockE，包含 sender 对象
                 let mockE = {
                     self_id: taskData.bot_id,
-                    group_id: taskData.group_id,
                     user_id: taskData.user_id,
                     post_type: 'message',
-                    message_type: 'group',
-                    // 补充 prepareEvent 漏处理的值
-                    isGroup: true,
-                    isPrivate: false,
+                    // 【修改2】动态设定消息类型
+                    message_type: isGroup ? 'group' : 'private',
+                    isGroup: isGroup,
+                    isPrivate: !isGroup,
                     isMaster: taskData.isMaster,
                     sender: {
                         user_id: taskData.user_id,
@@ -73,41 +75,51 @@ export class ScheduleTaskPlugin extends plugin {
                     message: []
                 }
 
+                // 【修改3】如果是群聊才带入 group_id，以便 bot.js 正确装配
+                if (isGroup && taskData.group_id) {
+                    mockE.group_id = taskData.group_id;
+                }
+
                 // 调用云崽的原生装配函数
                 if (global.Bot && typeof Bot.prepareEvent === 'function') {
                     Bot.prepareEvent(mockE)
                 }
 
-                // 设置 abstractChat() 因为LLM API出错后回复的定时内容
-                const messageToSend = [
-                    segment.at(taskData.user_id),
-                    `\n叮！您设定的定时提醒：\n${taskData.content}`
-                ]
-                // if (mockE.reply) {
-                //     mockE.reply(messageToSend)
-                // } else {
-                //     logger.warn(`[ChatGPT-定时任务] 找不到群 ${taskData.group_id} 的发送方法，Bot可能掉线或群不存在。`)
-                // }
+                // 【修改4】设置 abstractChat() 因为LLM API出错后回复的定时内容
+                // 区分群聊和私聊，私聊通常不支持或不需要 @ 人
+                const messageToSend = []
+                if (isGroup) {
+                    messageToSend.push(segment.at(taskData.user_id));
+                    messageToSend.push(`\n叮！您设定的定时提醒：\n${taskData.content}`);
+                } else {
+                    messageToSend.push(`叮！您设定的定时提醒：\n${taskData.content}`);
+                }
+
                 mockE.checkAndExecuteContent = messageToSend;
 
                 // 植入chatgpt插件
                 const chatgptTask = new chatgpt(mockE);
-                mockE.msg = `${taskData.nickname}(ID:${taskData.user_id})设定的定时提醒已触发：\n${taskData.content}`;
-                // 【核心修复】：手动为插件实例挂载上下文 e，补足云崽框架原本做的事！
+                const sourceStr = isGroup ? "群聊" : "私聊";
+                mockE.msg = `${taskData.nickname}(ID:${taskData.user_id})在${sourceStr}设定的定时提醒已触发：\n${taskData.content}`;
+
+                // 手动为插件实例挂载上下文 e
                 chatgptTask.e = mockE;
 
                 // 触发LLM
                 let groupId = mockE.isGroup ? mockE.group_id : ''
-                if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
+                // 确保在私聊 (groupId为空) 的情况下闭嘴逻辑不报错
+                if (await redis.get('CHATGPT:SHUT_UP:ALL') || (groupId && await redis.get(`CHATGPT:SHUT_UP:${groupId}`))) {
                     logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
                     continue;
                 }
                 const userData = await getUserData(mockE.user_id)
                 const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
-                // // 关闭私聊通道后不回复 // 仅群聊
-                // if (!mockE.isMaster && mockE.isPrivate && !Config.enablePrivateChat) {
-                //     return false
-                // }
+
+                // 关闭私聊通道后不回复
+                if (!mockE.isMaster && mockE.isPrivate && !Config.enablePrivateChat) {
+                    continue; // 原本是 return false，在 for 循环中应改为 continue
+                }
+
                 if (!(await chatgptTask.canGPT_blackAndWhitelist(mockE))) continue;
 
                 await chatgptTask.abstractChat(mockE, mockE.msg, use)
