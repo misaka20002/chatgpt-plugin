@@ -487,16 +487,39 @@ export class memes extends plugin {
       }
       imgUrls = imgUrls.slice(0, Math.min(info.params_type.max_images, imgUrls.length))
       for (let i = 0; i < imgUrls.length; i++) {
-        let imgUrl = imgUrls[i]
-        const imageResponse = await fetch(imgUrl)
-        const fileType = imageResponse.headers.get('Content-Type').split('/')[1]
-        // fileLoc = `data/memes/original/${Date.now()}.${fileType}`
-        // mkdirs('data/memes/original')
-        const blob = await imageResponse.blob()
-        const arrayBuffer = await blob.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        // await fs.writeFileSync(fileLoc, buffer)
-        formData.append('images', new File([buffer], `avatar_${i}.jpg`, { type: 'image/jpeg' }))
+        let imgUrl = imgUrls[i];
+        let buffer;
+        let fileType = 'jpeg';
+        let mimeType = 'image/jpeg';
+        if (imgUrl.startsWith('data:') || imgUrl.startsWith('base64://')) {
+          let base64Data = '';
+          if (imgUrl.startsWith('data:')) {
+            const matches = imgUrl.match(/^data:([^;]+);base64,(.+)$/);
+            if (!matches) {
+              console.warn(`第 ${i} 个图片格式不正确，跳过`);
+              continue;
+            }
+            mimeType = matches[1];
+            fileType = mimeType.split('/')[1] || 'jpeg';
+            base64Data = matches[2];
+          } else {
+            base64Data = imgUrl.replace(/^base64:\/\//, '');
+          }
+          buffer = Buffer.from(base64Data, 'base64');
+        } else {
+          const imageResponse = await fetch(imgUrl);
+          const contentType = imageResponse.headers.get('Content-Type');
+          if (contentType) {
+            mimeType = contentType;
+            fileType = contentType.split('/')[1] || 'jpeg';
+          }
+          const arrayBuffer = await imageResponse.arrayBuffer();
+          buffer = Buffer.from(arrayBuffer);
+        }
+        formData.append(
+          'images',
+          new File([buffer], `avatar_${i}.${fileType}`, { type: mimeType })
+        );
       }
     }
 

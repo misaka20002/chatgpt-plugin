@@ -72,6 +72,7 @@ import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
+import { getImageBase64 } from '../utils/paimonFuction.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -345,9 +346,13 @@ class Core {
         }
         // let img = await parseSourceImg(e)
         if (e.img && e.img.length > 0) {
-          const response = await fetch(e.img[0])
-          const base64Image = Buffer.from(await response.arrayBuffer()).toString('base64')
-          opt.image = base64Image
+          let imageUrl = e.img ? e.img[0] : undefined;
+          if (imageUrl) {
+            const base64String = await getImageBase64(imageUrl);
+            if (base64String) {
+              opt.image = base64String;
+            }
+          }
         }
         try {
           let rsp = await client.sendMessage(prompt, option)
@@ -628,11 +633,12 @@ class Core {
 
       if (!(Config.mediaRecognitionSource == "Gemini")) {
         // const image = await parseSourceImg(e)
-        let imageUrl = e.img ? e.img[0] : undefined
+        let imageUrl = e.img ? e.img[0] : undefined;
         if (imageUrl) {
-          const response = await fetch(imageUrl)
-          const base64Image = Buffer.from(await response.arrayBuffer())
-          option.image = base64Image.toString('base64')
+          const base64String = await getImageBase64(imageUrl);
+          if (base64String) {
+            option.image = base64String;
+          }
         }
       }
 
@@ -789,14 +795,13 @@ class Core {
       let imageUrl = e.img ? e.img[0] : undefined;
       if (imageUrl) {
         try {
-          const response = await fetch(imageUrl);
-          const buffer = await response.arrayBuffer();
-          const base64Image = Buffer.from(buffer).toString('base64');
-          // const mimeType = response.headers.get('content-type') || 'image/jpeg';
-          // mimeType == "gif" 会报错，强制使用这个
-          const mimeType = 'image/jpeg';
-          // OpenAI API 要求格式: data:image/jpeg;base64,{base64_string}
-          imageDataUrl = `data:${mimeType};base64,${base64Image}`;
+          const base64String = await getImageBase64(imageUrl);
+          if (base64String) {
+            // mimeType == "gif" 会报错，强制使用这个
+            const mimeType = 'image/jpeg';
+            // OpenAI API 要求格式: data:image/jpeg;base64,{base64_string}
+            imageDataUrl = `data:${mimeType};base64,${base64String}`;
+          }
         } catch (err) {
           logger.error('OpenAI 获取图片失败', err);
         }

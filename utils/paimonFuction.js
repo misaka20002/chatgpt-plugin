@@ -44,42 +44,78 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
     })
 
     try {
-      // 增加超时时间，视频下载可能较慢
-      const response = await fetch(targetUrl, { timeout: 120000 });
-      if (!response.ok) {
-        return "媒体链接下载失败或已失效。"
-      }
-
-      // 媒体下载大小限制
+      // 媒体下载大小限制 (提取到外部公用)
       const limitMB = Config.mediaMaxSizeInMB || 10;
       const maxSizeInBytes = limitMB * 1024 * 1024;
 
-      const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
+      let base64Data = '';
+      let mimeType = '';
 
-      if (headerLen) {
-        const contentLength = parseInt(headerLen);
-        if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
-          return `媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+      // 判断是否是 base64 或 data URI
+      if (targetUrl.startsWith('base64://') || targetUrl.startsWith('data:')) {
+
+        if (targetUrl.startsWith('data:')) {
+          // 解析 data:image/png;base64,xxxxx 格式
+          const match = targetUrl.match(/^data:(.*?);base64,(.*)$/);
+          if (match) {
+            mimeType = match[1];
+            base64Data = match[2];
+          } else {
+            return "无效的 Data URI 数据格式。";
+          }
+        } else if (targetUrl.startsWith('base64://')) {
+          // 解析 base64://xxxxx 格式
+          base64Data = targetUrl.replace('base64://', '');
+        }
+
+        // 计算 Base64 实际的字节大小进行限制检查
+        const bufferData = Buffer.from(base64Data, 'base64');
+        if (bufferData.byteLength > maxSizeInBytes) {
+          return `媒体文件过大(${(bufferData.byteLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+        }
+
+        // 针对 base64:// 补充默认 mimeType
+        if (!mimeType) {
+          mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
+        }
+
+      } else {
+        // 走网络下载逻辑
+        // 增加超时时间，视频下载可能较慢
+        const response = await fetch(targetUrl, { timeout: 120000 });
+        if (!response.ok) {
+          return "媒体链接下载失败或已失效。";
+        }
+
+        const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
+
+        if (headerLen) {
+          const contentLength = parseInt(headerLen);
+          if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
+            return `媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+          }
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        // 实际下载后二次检查 防止 header 缺失或不准确的情况
+        if (arrayBuffer.byteLength > maxSizeInBytes) {
+          return `下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
+        }
+
+        base64Data = Buffer.from(arrayBuffer).toString('base64');
+
+        // 自动探测 MimeType
+        mimeType = response.headers.get('content-type');
+        // 如果 header 没给或者不准确，回退到默认值
+        if (!mimeType || mimeType === 'application/octet-stream') {
+          mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
         }
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-
-      // 实际下载后二次检查 防止 header 缺失或不准确的情况
-      if (arrayBuffer.byteLength > maxSizeInBytes) {
-        return `下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
-      }
-
-      const base64Data = Buffer.from(arrayBuffer).toString('base64')
+      // 最终数据检查
       if (!base64Data) {
-        return "媒体文件为空或链接失效。"
-      }
-
-      // 自动探测 MimeType
-      let mimeType = response.headers.get('content-type')
-      // 如果 header 没给或者不准确，回退到默认值
-      if (!mimeType || mimeType === 'application/octet-stream') {
-        mimeType = isVideo ? 'video/mp4' : 'image/jpeg'
+        return "媒体文件为空或链接失效。";
       }
 
       const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
@@ -690,4 +726,40 @@ export async function getUserDetailedInfo(e, qq = null) {
     source: 'fallback (全部失败)',
     // rawInfo: null
   };
+}
+
+/**
+ * 获取图片的 base64 字符串
+ * @param {string} url - 图片的 URL，可以是 http(s), data:URI 或 base64://
+ * @returns {Promise<string | undefined>} - 返回纯 base64 字符串，失败返回 undefined
+ */
+export async function getImageBase64(url) {
+  if (!url) return undefined;
+
+  try {
+    // 1. 处理 data: URI (例如: data:image/png;base64,iVBORw0KGgo...)
+    if (url.startsWith('data:')) {
+      // 提取逗号后面的纯 base64 数据部分
+      return url.includes(',') ? url.split(',')[1] : url;
+    }
+
+    // 2. 处理 base64:// 自定义协议前缀
+    if (url.startsWith('base64://')) {
+      return url.replace(/^base64:\/\//, '');
+    }
+
+    // 3. 处理普通的 http / https 网络请求
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    // 注意：Buffer.from 是 Node.js 环境的 API
+    return Buffer.from(arrayBuffer).toString('base64');
+
+  } catch (error) {
+    console.error(`Failed to convert image to base64: ${url}`, error);
+    return undefined;
+  }
 }
