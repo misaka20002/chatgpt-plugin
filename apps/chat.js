@@ -970,6 +970,10 @@ export class chatgpt extends plugin {
       if (Config.debug) {
         logger.mark({ conversation })
       }
+
+      // 适配器发送“正在输入”状态
+      if (e.send_typing) e.send_typing();
+
       let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e)
       if (chatMessage?.noMsg) {
         return false
