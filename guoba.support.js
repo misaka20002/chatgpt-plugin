@@ -110,6 +110,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'getCurrentTime',
+          label: '允许感知现实时间',
+          bottomHelpMessage: '开启后机器人可以感知现实时间；但如果开启了“允许机器人读取近期的群聊”Bot也可以从群聊记录中知道时间',
+          component: 'Switch'
+        },
+        {
           field: 'enableGroupContext',
           label: '是否允许机器人读取近期的群聊聊天记录',
           bottomHelpMessage: '开启后机器人可以知道群名、最近发言等信息；同时将替换设定中的 [name] 字符串为机器人群昵称/昵称',

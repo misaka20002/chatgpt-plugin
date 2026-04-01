@@ -166,6 +166,9 @@ function mergeSystemPrompt(systemPrompt, e) {
   if (Config.enableChatSuno) {
     systemPrompt += '如果我要求你生成音乐或写歌，你需要回复适合Suno生成音乐的信息。请使用Verse、Chorus、Bridge、Outro和End等关键字对歌词进行分段，如[Verse 1]。音乐信息需要使用markdown包裹的JSON格式回复给我，结构为```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```。'
   }
+  if (Config.getCurrentTime) {
+    systemPrompt += `\nCurrent time: ${formatDate(new Date())}.`;
+  }
   return systemPrompt
 }
 

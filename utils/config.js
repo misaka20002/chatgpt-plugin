@@ -305,6 +305,7 @@ const defaultConfig = {
   removeCQCodeFocus: true,
   switch_atOtherUserTool: false,
   isProcessCQAtCode: true,
+  getCurrentTime: true,
   poke_userIDs: true,
   agent_SandboxSwitch: false,
   auto_makeForwardMsg: 2000,
