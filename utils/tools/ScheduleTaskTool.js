@@ -23,16 +23,11 @@ export class ScheduleTaskTool extends AbstractTool {
   func = async function (opts, e) {
     let { content, delayMinutes } = opts
 
-    // 【修改2】删除这里的 isGroup 拦截校验
-    // if (!e.isGroup) {
-    //   return 'This tool can only be used in group chats. Please tell the user it is not supported in private messages.'
-    // }
-
     if (!delayMinutes || delayMinutes <= 0) {
       return 'Invalid delay time. Must be a positive number.'
     }
 
-    // 2. 验证最大时长限制：最长 1 个月
+    // 最长 1 个月
     const MAX_DELAY_MINUTES = 30 * 24 * 60
     if (delayMinutes > MAX_DELAY_MINUTES) {
       return `Delay time is too long. The maximum allowed delay is ${MAX_DELAY_MINUTES} minutes (about 1 month).`
@@ -41,8 +36,8 @@ export class ScheduleTaskTool extends AbstractTool {
     try {
       let replacedOldTask = false
 
-      // 3. 验证与清理：每个用户只能拥有一个活跃任务
-      if (true) {
+      // 每个用户只能拥有一个活跃任务, 主人除外
+      if (!e.isMaster) {
         const pendingTasks = await redis.zRange('CHATGPT:ScheduledTasks', 0, -1) || []
         const tasksToRemove = []
 
@@ -63,13 +58,12 @@ export class ScheduleTaskTool extends AbstractTool {
         }
       }
 
-      // 4. 准备需要储存的新数据
       const executeTime = Date.now() + (delayMinutes * 60 * 1000)
 
       const taskData = {
         taskId: `task_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         bot_id: e.self_id || e.bot?.uin,
-        // 【修改3】保存聊天环境类型。如果是私聊，group_id 为 undefined
+        // 如果是私聊，group_id 为 undefined
         isGroup: e.isGroup,
         group_id: e.isGroup ? e.group_id : undefined,
         user_id: e.user_id,
@@ -80,7 +74,6 @@ export class ScheduleTaskTool extends AbstractTool {
         nickname: e.sender?.card || e.sender?.nickname || 'User'
       }
 
-      // 5. 存入 Redis 的 ZSET
       await redis.zAdd('CHATGPT:ScheduledTasks', [{
         score: executeTime,
         value: JSON.stringify(taskData)
@@ -88,7 +81,6 @@ export class ScheduleTaskTool extends AbstractTool {
 
       const dateStr = new Date(executeTime).toLocaleString('zh-CN')
 
-      // 6. 构造返回给 AI 的提示信息
       let responseMsg = `Successfully scheduled the task. It will be executed at ${dateStr}. `
       if (replacedOldTask) {
         responseMsg += `Note: This user already had a pending scheduled task. As regular users can only have one active task, the OLD task was REMOVED and replaced by this new one. Please explicitly inform the user about this replacement.`
