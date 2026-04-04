@@ -174,7 +174,7 @@ export class memoryManage extends plugin {
       return
     }
 
-    // 提取QQ号
+    // 提取用户ID
     let targetUserId = null
 
     // 从@中提取
@@ -182,15 +182,15 @@ export class memoryManage extends plugin {
     if (atUsers.length > 0) {
       targetUserId = atUsers[0].qq
     } else {
-      // 从文本中提取数字
-      const match = e.msg.match(/\d{5,11}/)
+      // 匹配任意非空白字符作为目标用户ID (兼容多平台适配器)
+      const match = e.msg.match(/^#(?:他|她|TA|ta)的记忆\s+(\S+)/i)
       if (match) {
-        targetUserId = match[0]
+        targetUserId = match[1]
       }
     }
 
     if (!targetUserId) {
-      await e.reply('请@某人或输入QQ号，例如：#他的记忆 123456789', true)
+      await e.reply('请@某人或输入用户ID，例如：#他的记忆 user_123', true)
       return
     }
 
@@ -242,21 +242,22 @@ export class memoryManage extends plugin {
       return
     }
 
-    // 提取QQ号
+    // 提取用户ID
     let targetUserId = null
 
     const atUsers = e.message.filter(m => m.type === 'at')
     if (atUsers.length > 0) {
       targetUserId = atUsers[0].qq
     } else {
-      const match = e.msg.match(/\d{5,11}/)
+      // 匹配任意非空白字符作为目标用户ID (兼容多平台适配器)
+      const match = e.msg.match(/^#清空(?:他|她|TA|ta)的记忆\s+(\S+)/i)
       if (match) {
-        targetUserId = match[0]
+        targetUserId = match[1]
       }
     }
 
     if (!targetUserId) {
-      await e.reply('请@某人或输入QQ号，例如：#清空他的记忆 123456789', true)
+      await e.reply('请@某人或输入用户ID，例如：#清空他的记忆 user_123', true)
       return
     }
 
@@ -338,11 +339,11 @@ export class memoryManage extends plugin {
       return
     }
 
-    // 提取QQ号和记忆ID/序号
-    const match = e.msg.match(/#删除记忆\s*(\d{5,11})\s*[#\s]*(\d+|[a-z0-9]+)/i)
+    // 修复正则：第一个 \S+ 匹配任意用户ID(包含英文字符等)，第二个匹配序号或记忆ID
+    const match = e.msg.match(/#删除记忆\s+(\S+)\s+[#\s]*([a-zA-Z0-9_\-]+)/i)
 
     if (!match) {
-      await e.reply('格式错误！\n用法1: #删除记忆 QQ号 序号 (例如：#删除记忆 123456789 3)\n用法2: #删除记忆 QQ号 记忆ID', true)
+      await e.reply('格式错误！\n用法1: #删除记忆 用户ID 序号 (例如：#删除记忆 user_123 3)\n用法2: #删除记忆 用户ID 记忆ID', true)
       return
     }
 
@@ -359,7 +360,7 @@ export class memoryManage extends plugin {
 
       let memoryToDelete = null
 
-      // 判断是序号还是ID
+      // 判断是序号还是ID (纯数字且长度较短判定为序号)
       if (/^\d{1,4}$/.test(memoryIdentifier)) {
         // 序号
         const index = parseInt(memoryIdentifier) - 1
@@ -477,16 +478,17 @@ export class memoryManage extends plugin {
       return
     }
 
-    // 提取QQ号
+    // 提取用户ID
     let targetUserId = e.user_id
 
     const atUsers = e.message.filter(m => m.type === 'at')
     if (atUsers.length > 0) {
       targetUserId = atUsers[0].qq
     } else {
-      const match = e.msg.match(/\d{5,11}/)
+      // 兼容多平台字符串ID提取
+      const match = e.msg.match(/^#记忆统计\s+(\S+)/i)
       if (match) {
-        targetUserId = match[0]
+        targetUserId = match[1]
       }
     }
 
@@ -537,14 +539,14 @@ export class memoryManage extends plugin {
       `【查看记忆】\n` +
       `#我的记忆 - 查看自己的记忆\n` +
       `#他的记忆 @某人 - 查看某人的记忆(主人)\n` +
-      `#他的记忆 123456789 - 通过QQ号查看(主人)\n` +
+      `#他的记忆 123456 - 通过用户ID查看(主人)\n` +
       `#群记忆 - 查看当前群的记忆统计\n\n` +
       `【删除记忆】\n` +
       `#清空所有记忆 - 清空所有用户的记忆(主人)\n` +
       `#清空我的记忆 - 清空自己的所有记忆\n` +
       `#清空他的记忆 @某人 - 清空某人的记忆(主人)\n` +
-      `#删除记忆 QQ号 序号 - 删除指定记忆(主人)\n` +
-      `例如：#删除记忆 123456789 3\n\n` +
+      `#删除记忆 用户ID 序号 - 删除指定记忆(主人)\n` +
+      `例如：#删除记忆 user_123 3\n\n` +
       `【统计信息】\n` +
       `#记忆统计 - 查看自己的记忆统计\n` +
       `#记忆统计 @某人 - 查看某人的统计(主人)\n\n` +
