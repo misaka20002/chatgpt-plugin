@@ -372,6 +372,19 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       });
     }
 
+    try {
+      // 返回 token 统计信息
+      const usage = response.usageMetadata;
+      if (usage) {
+        const numTokens = usage.promptTokenCount || 0;
+        const outTokens = usage.candidatesTokenCount || 0;
+        const maxTokens = opt.maxOutputTokens || 0;
+        logger.info(`[Chatgpt][Gemini] 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 输出Token(${outTokens}) | 累计Token(${usage.totalTokenCount})`);
+      }
+    } catch (err) {
+      logger.debug(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
+    }
+
     // 检查 candidates 是否存在
     if (!response.candidates || response.candidates.length === 0) {
       return await executeRetry(`API 返回的 candidates 为空`, () => {
