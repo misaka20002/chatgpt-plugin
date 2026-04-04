@@ -542,7 +542,8 @@ class Core {
         try {
           this.qwenApi = new QwenApi(opts)
           msg = await this.qwenApi.sendMessage(prompt, option)
-          logger.info(msg)
+          if (Config.debug)
+            logger.info(msg)
           while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
@@ -583,7 +584,8 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
             msg = await this.qwenApi.sendMessage(functionResult, option, 'tool')
-            logger.info(msg)
+            if (Config.debug)
+              logger.info(msg)
 
             // 如果是函数返回结果，则跳出循环
             if (msg.conversation && msg.conversation.length > 0) {
@@ -859,12 +861,14 @@ class Core {
           if (Config.debug) // 避免控制台刷屏
             logger.info(msg)
 
-          /** 工具调用计数器 */
-          let toolCallCount = 0
-          /** 工具调用最大次数 */
-          const maxToolCalls = 10 // API 接口太蠢了，总是无限循环函数
+          /** 工具调用轮次计数器 */
+          let toolRoundCount = 0
+          /** 工具调用最大轮次数 */
+          const maxToolRounds = 3
+          // 只要模型返回了需要调用工具，且没有超过最大轮次，就继续循环
+          while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount < maxToolRounds) {
+            toolRoundCount++
 
-          while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolCallCount < maxToolCalls) {
             if (msg.text) {
               await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
             }
@@ -896,11 +900,6 @@ class Core {
             let previousMessageId = msg.id
 
             for (const toolCall of pendingToolCalls) {
-              if (toolCallCount >= maxToolCalls) {
-                break
-              }
-              toolCallCount++
-
               let name = toolCall.function.name
               let args
               try {
@@ -908,6 +907,8 @@ class Core {
               } catch (e) {
                 args = {}
               }
+
+              logger.info(`[Chatgpt][API] execution function: ${JSON.stringify({ name, args })}`)
 
               if (!args.groupId) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -925,7 +926,7 @@ class Core {
                     isAdmin,
                     sender
                   }, args), e)
-                  logger.info(`function ${name} execution result: ${functionResult}`)
+                  logger.info(`[Chatgpt][API] function ${name} execution result: ${JSON.stringify(functionResult)}`)
                 } else {
                   functionResult = `Function ${name} not found.`
                   logger.warn(functionResult)
@@ -959,14 +960,16 @@ class Core {
             // 不然普通用户可能会被openai限速
             await common.sleep(300)
 
+            // 将所有并行工具的结果一次性POST回给API，进入下一轮
             msg = await sendOpenAIWithContextFallback(null, option)
 
             if (Config.debug)
               logger.info(msg)
           }
 
-          if (toolCallCount >= maxToolCalls) {
-            logger.warn(`工具调用已达上限 ${maxToolCalls} 次，强制终止工具循环`)
+          // 判断退出原因，如果是达到最大轮次强制退出的，打印警告
+          if ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount >= maxToolRounds) {
+            logger.warn(`工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制终止工具循环`)
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {

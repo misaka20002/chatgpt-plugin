@@ -397,15 +397,17 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
-
+      /** 在多轮工具调用中，禁止调用已经调用过的工具，防止工具调用陷入死循环。 TODO: 随着模型升级未来可移除此限制 */
       const repeatedTool = toolNames.find(name => opt.toolChain.calledTools.includes(name));
-
-      if (opt.toolChain.depth >= 2 || repeatedTool) {
+      /** 工具调用最大轮次数 */
+      const maxToolRounds = 3
+      // 最多允许连续 maxToolRounds 轮工具调用，不限制单次并行调用的工具数量
+      if (opt.toolChain.depth >= maxToolRounds || repeatedTool) {
         const responseText = responseContent.parts.find(i => i.text)?.text;
         if (!responseText) {
           return await executeRetry(`responseContent.parts 中未找到文本内容`, () => {
             return {
-              text: '操作已完成',
+              text: '<EMPTY>', // apps\chat.js if (response.trim() === "<EMPTY>")
               conversationId: '',
               parentMessageId: idThis,
               id: idModel
@@ -466,7 +468,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
       for (let fc of functionCall) {
-        logger.info(JSON.stringify(fc))
+        logger.info(`[Chatgpt][Gemini] execution function: ${JSON.stringify(fc)}`)
         const funcName = fc.name
         let chosenTool = this.tools.find(t => t.name === funcName)
         /**
@@ -480,7 +482,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           }
         }
 
-        // 关键：保留 thoughtSignature
+        // 关键：保留 thoughtSignature (适用于 Gemini Thinking 模型)
         // 根据文档：
         // - 单次调用：只有一个签名，添加到唯一的 response
         // - 并行调用：只有第一个有签名，仅添加到第一个 response
