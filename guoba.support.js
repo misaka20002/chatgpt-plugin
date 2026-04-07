@@ -784,7 +784,7 @@ export function supportGuoba() {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: '语音传回是数据链接还是文件：呆毛版三种vits api选择链接；如果你部署的是本地vits服务或使用的是微软azure，请改为文件',
+          bottomHelpMessage: 'vits选链接，本地vits服务/voicevox/azure选文件（呆毛注：目前没有云转码服务了，选“关闭云转码”，不过 NapCat 适配器已内置转码，音质很棒）',
           component: 'Select',
           componentProps: {
             options: [
@@ -825,19 +825,23 @@ export function supportGuoba() {
           componentProps: {
             options: [
               {
-                label: 'vits-uma-genshin-honkai',
-                value: 'vits-uma-genshin-honkai'
-              },
-              {
-                label: '微软Azure',
+                label: '微软Azure语音',
                 value: 'azure'
               },
               {
                 label: 'VoiceVox',
                 value: 'voicevox'
+              },              
+              {
+                label: '自定义语音',
+                value: 'vits-uma-genshin-honkai'
               }
             ]
           }
+        },
+        {
+          label: '微软Azure语音',
+          component: 'Divider'
         },
         {
           field: 'azureTTSKey',
@@ -881,6 +885,10 @@ export function supportGuoba() {
           }
         },
         {
+          label: 'voicevox语音',
+          component: 'Divider'
+        },
+        {
           field: 'voicevoxSpace',
           label: 'voicevox语音转换API地址',
           bottomHelpMessage: '可使用https://2ndelement-voicevox.hf.space, 也可github搜索voicevox-engine自建',
@@ -906,13 +914,13 @@ export function supportGuoba() {
           }
         },
         {
-          label: 'VITS语音生成：前提：语音模式源为"vits-uma-genshin-honkai"；云转码API发送数据模式为链接；指令#tts语音帮助',
+          label: '自定义语音',
           component: 'Divider'
         },
         {
           field: 'ttsSpace',
-          label: 'vits语音转换API地址',
-          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 或 https://misaka20001-paimon-is-not-a-food.hf.space/api/generate 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；或使用海螺api地址https://hailuo.maliy.top/v1/audio/speech 或参考 https://github.com/xiaoY233/MiniMax-Free-API 自行部署；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音',
+          label: '语音转换API地址',
+          bottomHelpMessage: '使用Bert-VITS2请填入https://bv2.firefly.matce.cn （已失效）；使用ai_hobbyist请填入ai_hobbyist；使用vits-uma前往duplicate空间 https://huggingface.co/spaces/ikechan8370/vits-uma-genshin-honkai 后查看api地址并填入此处（有需要请填写"语音转换huggingface反代"）；使用FishApi请填入：https://api.fish.audio；使用 siliconflow 的填写地址 https://api.siliconflow.cn/v1/audio/speech （目前呆毛推荐使用）；填入后请重启bot并F5刷新此页面将刷新 vits默认角色 列表，不同站点对应不同发音人，错误填写 vits默认角色 将无法生成语音；可用指令： #tts语音帮助',
           component: 'Input'
         },
         {
@@ -939,6 +947,28 @@ export function supportGuoba() {
           bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
             '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译',
           component: 'Switch'
+        },
+        {
+          label: 'siliconflow 语音api设置',
+          component: 'Divider'
+        },
+        {
+          field: 'siliconflow_Voice_ApiKey',
+          label: 'Api Key',
+          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色',
+          component: 'Input'
+        },
+        {
+          field: 'siliconflow_Voice_Model',
+          label: '语音模型',
+          bottomHelpMessage: '推荐 FunAudioLLM/CosyVoice2-0.5B',
+          component: 'Input'
+        },
+        {
+          field: 'siliconflow_Voice_ReferenceId',
+          label: '发音人ID',
+          bottomHelpMessage: '推荐自己上传，CosyVoice2模型可填面包大大生成的ID（不要双引号）: 可莉: "speech:keli:cm08sphf600du6l3t3szh0t16:bvteaayeqsrhnvkpfchr", 派蒙: "speech:paimeng:cm08sphf600du6l3t3szh0t16:aokpesfnylxyxyfwmnyj"',
+          component: 'Input'
         },
         {
           label: 'fish.audio的设置',
@@ -984,16 +1014,16 @@ export function supportGuoba() {
         //   bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 api_fish_audio_model 决定其发音人',
         //   component: 'Input'
         // },
-        {
-          label: '海螺发音的设置',
-          component: 'Divider'
-        },
-        {
-          field: 'hailuoApiKey',
-          label: '海螺Key',
-          bottomHelpMessage: '如果不知道请联系小呆毛；（需要配置key）（自行搭建文档https://github.com/LLM-Red-Team/hailuo-free-api 请在域名中包含hailuo以便本插件识别）',
-          component: 'Input'
-        },
+        // {
+        //   label: '海螺发音的设置',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'hailuoApiKey',
+        //   label: '海螺Key',
+        //   bottomHelpMessage: '如果不知道请联系小呆毛；（需要配置key）（自行搭建文档https://github.com/LLM-Red-Team/hailuo-free-api 请在域名中包含hailuo以便本插件识别）',
+        //   component: 'Input'
+        // },
         {
           label: 'VITS的设置',
           component: 'Divider'
