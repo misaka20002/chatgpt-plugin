@@ -54,6 +54,7 @@ import { QwenApi } from '../utils/alibaba/qwen-api.js'
 import { BingAIClient } from '../client/CopilotAIClient.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
+import { getImageBase64 } from '../utils/paimonFuction.js'
 import { GithubAPITool } from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
@@ -72,7 +73,7 @@ import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
-import { getImageBase64 } from '../utils/paimonFuction.js'
+import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1175,6 +1176,11 @@ async function collectTools(e) {
   if (Config.ScheduleTask_Tool) {
     tools.push(new ScheduleTaskTool())
     fullTools.push(new ScheduleTaskTool())
+  }
+
+  if (Config.TTSAudio_Tool) {
+    tools.push(new TTSAudioTool())
+    fullTools.push(new TTSAudioTool())
   }
 
   let systemAddition = ''

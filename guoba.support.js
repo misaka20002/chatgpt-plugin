@@ -1383,6 +1383,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'TTSAudio_Tool',
+          label: '工具新增-智能发送语音',
+          bottomHelpMessage: '新增智能发送语音工具，提供给AI让Ta可以在适当的时候给你发送语音；可在Bot人设中加入“你将总是使用 sendTTSAudio 工具”',
+          component: 'Switch'
+        },
+        {
           field: 'disable_sendMessage_tool',
           label: '工具禁用-文字工具',
           bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于文字模式、图片模式、sf图片模式重复发送相同文本等问题',

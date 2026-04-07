@@ -324,6 +324,7 @@ const defaultConfig = {
   ScheduleTask_Tool: true,
   rateLimiting: 0,
   chatgptBlockCount: 50,
+  TTSAudio_Tool: false,
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统
