@@ -30,14 +30,17 @@ if (module) {
   Contactable = module.default
   try {
     pcm2slk = (await import('node-silk')).pcm2slk
+    // logger.info('[Chatgpt] 已安装 node-silk 将尝试本插件高清转码')
   } catch (e) {
     if (Config.ttsHD) {
-      logger.info('已开启本地SILK转码，电脑端将无法播放语音')
+      // logger.info('[Chatgpt] 已开启本地SILK转码，电脑端将无法播放语音')
+    } else if (Config.cloudMode == "off") {
+      // logger.info('[Chatgpt] 未安装 node-silk 将使用适配器自带的语音silk转码')
     } else if (Config.cloudTranscode) {
-      logger.warn('未安装node-silk，将尝试使用云转码服务进行合成')
+      logger.warn('[Chatgpt] 未安装node-silk，将尝试使用云转码服务进行合成')
     } else {
       Config.debug && logger.error(e)
-      logger.warn('未安装node-silk，如ffmpeg不支持amr编码请安装node-silk以支持语音模式')
+      logger.warn('[Chatgpt] 未安装node-silk，如ffmpeg不支持amr编码请安装node-silk以支持语音模式')
     }
   }
 }
@@ -66,14 +69,19 @@ async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', igno
   }
   let result
   if (Config.ttsHD) {
-    logger.info('使用本地-2转码silk进行高清语音生成:')
+    logger.info('[Chatgpt] 使用本地-2转码silk进行高清语音生成:')
     result = await getPttBuffer(recordUrl, Bot.config?.ffmpeg_path ?? Config.tts_ffmpeg_path, false);
   } else if (pcm2slk && !Config.focus_CloudTranscode) {
-    logger.info('使用本地pcm2slk转码silk进行高清语音生成:')
-    result = await getPttBuffer(recordUrl, Bot.config?.ffmpeg_path ?? Config.tts_ffmpeg_path, true);
+    logger.info('[Chatgpt] 使用本地pcm2slk转码silk进行高清语音生成:')
+    try { result = await getPttBuffer(recordUrl, Bot.config?.ffmpeg_path ?? Config.tts_ffmpeg_path, true) }
+    catch (err) {
+      logger.warn(`[Chatgpt] 使用本地pcm2slk转码silk进行高清语音生成失败，将转为使用适配器自带的语音silk转码\n ${err.message}`)
+      pcm2slk = false;
+      return false;
+    }
   } else if (Config.cloudTranscode) {
     if (Config.cloudMode === 'off') return false;
-    logger.info('使用云转码silk进行高清语音生成:')
+    logger.info('[Chatgpt] 使用云转码silk进行高清语音生成:')
     try {
       if (recordType === 'buffer') {
         // save it as a file

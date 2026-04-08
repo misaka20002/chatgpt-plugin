@@ -350,6 +350,12 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
 config = lodash.merge({}, defaultConfig, config)
 config.version = defaultConfig.version
 
+// ===================
+// 重启后强制设置的选项 // 启动时内存里的这两个配置变成了 false，但不会立刻写入硬盘的 config.json
+config.focus_CloudTranscode = false
+config.ttsHD = false
+// ===================
+
 function saveDiff(target) {
   /** 递归判断Diff */
   function deepDiff(obj, base) {
