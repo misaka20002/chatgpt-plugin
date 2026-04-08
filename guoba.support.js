@@ -967,8 +967,11 @@ export function supportGuoba() {
         {
           field: 'siliconflow_Voice_ReferenceId',
           label: '发音人ID',
-          bottomHelpMessage: '推荐自己上传，CosyVoice2模型可填面包大大生成的ID（不要双引号）: 可莉: "speech:keli:cm08sphf600du6l3t3szh0t16:bvteaayeqsrhnvkpfchr", 派蒙: "speech:paimeng:cm08sphf600du6l3t3szh0t16:aokpesfnylxyxyfwmnyj"',
-          component: 'Input'
+          bottomHelpMessage: '推荐自己上传，CosyVoice2语音模型时可填面包大大生成的语音ID: 可莉: speech:keli:cm08sphf600du6l3t3szh0t16:bvteaayeqsrhnvkpfchr, 派蒙: speech:paimeng:cm08sphf600du6l3t3szh0t16:aokpesfnylxyxyfwmnyj',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'speech:paimeng:cm08sphf600du6l3t3szh0t16:aokpesfnylxyxyfwmnyj',
+          },
         },
         {
           label: 'fish.audio的设置',
@@ -1385,7 +1388,7 @@ export function supportGuoba() {
         {
           field: 'TTSAudio_Tool',
           label: '工具新增-智能发送语音',
-          bottomHelpMessage: '新增智能发送语音工具，提供给AI让Ta可以在适当的时候给你发送语音；可在Bot人设中加入“你将总是使用 sendTTSAudio 工具”',
+          bottomHelpMessage: '新增智能发送语音工具，提供给AI让Ta可以在适当的时候给你发送语音；需要先配置语音模式下可正常发送语音；可在Bot人设中加入“你将总是使用 sendTTSAudio 工具”',
           component: 'Switch'
         },
         {

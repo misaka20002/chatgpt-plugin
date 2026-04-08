@@ -6,6 +6,9 @@ import { getProxy } from './proxy.js'
 let proxy = getProxy()
 import WebSocket from 'ws'
 import crypto from 'crypto'
+import {
+  removeCQCode,
+} from '../utils/paimonFuction.js'
 
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 const isTrss = Array.isArray(Bot.uin)
@@ -91,7 +94,8 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     }
 
     // chat.js传递过来转语音前已经做了'\n'转'，'的处理：ttsResponse = ttsResponse.replace(/[-:_；*;\n]/g, '，')
-    /*处理文本：*/
+    /*处理后的文本：*/
+    text = removeCQCode(text); // 删除 CQ 码
     text = text
         .replace(/\s*```[\s\S]*?```\s*$/, '') // 删除最底部的代码块
         .replace(/\#|(\[..\])|(\[.\])/g, '') // 删除[？？]和[？]
@@ -109,7 +113,6 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
     // #gpt翻日 硬编码替换部分角色名
     if (Config.autoJapanese)
         text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|コーリ|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ').replace(/愛しい人/g, 'あなた')
-
 
     let space = Config.ttsSpace
 
@@ -256,36 +259,36 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         }
     }
 
-    // 生成 hailuo 下的 mp3 音频
-    else if (space.includes('hailuo')) {
-        logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 300000)
+    // // 生成 hailuo 下的 mp3 音频
+    // else if (space.includes('hailuo')) {
+    //     logger.info(`[chatgpt-tts]正在使用${speaker}，基于文本：'${text}'生成语音`)
+    //     const controller = new AbortController()
+    //     const timeoutId = setTimeout(() => controller.abort(), 300000)
 
-        const response = await newFetch(space, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${Config.hailuoApiKey}`,
-                'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'hailuo',
-                input: text,
-                voice: speaker
-            }),
-            signal: controller.signal
-        })
+    //     const response = await newFetch(space, {
+    //         method: 'POST',
+    //         headers: {
+    //             Authorization: `Bearer ${Config.hailuoApiKey}`,
+    //             'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+    //             'Content-Type': 'application/json'
+    //         },
+    //         body: JSON.stringify({
+    //             model: 'hailuo',
+    //             input: text,
+    //             voice: speaker
+    //         }),
+    //         signal: controller.signal
+    //     })
 
-        clearTimeout(timeoutId)
+    //     clearTimeout(timeoutId)
 
-        if (!response.ok) {
-            throw new Error(`[chatgpt-tts]无法从服务器获取音频数据：${response.statusText}`)
-        }
+    //     if (!response.ok) {
+    //         throw new Error(`[chatgpt-tts]无法从服务器获取音频数据：${response.statusText}`)
+    //     }
 
-        const hailuo_ResponseData = await response.arrayBuffer()
-        return Buffer.from(hailuo_ResponseData)
-    }
+    //     const hailuo_ResponseData = await response.arrayBuffer()
+    //     return Buffer.from(hailuo_ResponseData)
+    // }
 
     // Bert-VITS-Umamusume 已不可用，但 wss 连接方案，保留待用
     // // wss连接 hf-bert-vits 站点
