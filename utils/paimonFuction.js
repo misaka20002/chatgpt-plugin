@@ -144,47 +144,104 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
 }
 
 /**
- * @description: 把句子转为不超过3个元素的数组
- * @param {*} str
- * @return {*} array
+ * @description: 把句子转为不超过3个元素的数组，自动处理 at对象
+ * @param {Array} inputData
+ * @return {Array} 
  */
-export function convertSentenceToArray(str) {
-  // 用正则表达式来保留句号和问号符号
-  // let arr = str.split(/([。？！～~!?“”"'‘’\n]+)/).filter(Boolean);
-  let arr = str.split(/([。？！!?”’）)\n]+)/).filter(Boolean);
-  let newArr = [];
-  let tempSentence = '';
-  // 把分隔符号插回去
-  for (let i = 0; i < arr.length; i++) {
-    tempSentence += arr[i];
-    if (i % 2 !== 0) {
-      newArr.push(tempSentence);
-      tempSentence = '';
-    } else if (i === arr.length - 1) {
-      newArr.push(tempSentence);
+export function convertSentenceToArray(inputArr) {
+  // 确保输入是数组格式
+  const elements = Array.isArray(inputArr) ? inputArr : [inputArr];
+
+  let flatList = [];
+  for (const item of elements) {
+    if (typeof item === 'object' && item !== null) {
+      // 保留对象元素（如 at, image）
+      flatList.push(item);
+    } else if (typeof item === 'string') {
+      // 拆分字符串元素
+      let arr = item.split(/([。？！!?”’）)\n]+)/).filter(Boolean);
+      let tempSentence = '';
+      for (let i = 0; i < arr.length; i++) {
+        tempSentence += arr[i];
+        if (i % 2 !== 0 || i === arr.length - 1) {
+          let cleaned = tempSentence.replace(/。|\n$|^{|}$|^(，|,)/gm, "").trim();
+          if (cleaned) {
+            flatList.push(cleaned);
+          }
+          tempSentence = '';
+        }
+      }
     }
-  }
-  // 重组为不超过3句话
-  while (newArr.length > 3) {
-    for (let i = 0; i < newArr.length; i++) {
-      newArr[i] = newArr[i] + (newArr[i + 1] || "");
-      newArr.splice(i + 1, 1);
-    }
-  }
-  // 把长度小于5的元素合并
-  for (let i = 0; i < newArr.length; i++) {
-    if (newArr[i].length < 5 || newArr[i + 1]?.length < 5) {
-      newArr[i] = newArr[i] + (newArr[i + 1] || "");
-      newArr.splice(i + 1, 1);
-    }
-  }
-  // 删除句号和大括号
-  for (let i = 0; i < newArr.length; i++) {
-    // newArr[i] = newArr[i].replace(/。|\n$|^{|}$|(?<=.)\n|\n(?=.)/gm, "")
-    newArr[i] = newArr[i].replace(/。|\n$|^{|}$|^(，|,)/gm, "")
+    // 非对象和非字符串的元素会被自动忽略
   }
 
-  return newArr;
+  // 把长度小于5的字符串元素合并
+  for (let i = 0; i < flatList.length; i++) {
+    if (typeof flatList[i] === 'string' && flatList[i].length < 5) {
+      // 优先往后合并
+      if (i + 1 < flatList.length && typeof flatList[i + 1] === 'string') {
+        flatList[i] = flatList[i] + flatList[i + 1];
+        flatList.splice(i + 1, 1);
+        i--; // 退回一步，重新检查合并后的长度
+      }
+      // 如果后面没有字符串，往前合并
+      else if (i > 0 && typeof flatList[i - 1] === 'string') {
+        flatList[i - 1] = flatList[i - 1] + flatList[i];
+        flatList.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  let logicalGroups = [];
+  let currentGroup = [];
+  for (const item of flatList) {
+    currentGroup.push(item);
+    // 遇到字符串就作为一个断点，打包成一个数组
+    if (typeof item === 'string') {
+      logicalGroups.push(currentGroup);
+      currentGroup = [];
+    }
+  }
+  if (currentGroup.length > 0) {
+    logicalGroups.push(currentGroup);
+  }
+
+  // 重组为不超过3句话
+  while (logicalGroups.length > 3) {
+    for (let i = 0; i < logicalGroups.length - 1; i++) {
+      // 合并相邻的两个数组
+      logicalGroups[i] = logicalGroups[i].concat(logicalGroups[i + 1]);
+      logicalGroups.splice(i + 1, 1);
+    }
+  }
+
+  // 整合 at对象和字符串 为一个对象
+  for (let i = 0; i < logicalGroups.length; i++) {
+    let compactedGroup = [];
+    for (const item of logicalGroups[i]) {
+      const lastItem = compactedGroup[compactedGroup.length - 1]; // 获取已装入的最后一个元素
+
+      if (typeof item === 'string') {
+        if (typeof lastItem === 'string') {
+          // 如果当前和上一个都是字符串，直接拼接
+          compactedGroup[compactedGroup.length - 1] += item;
+        } else if (typeof lastItem === 'object' && lastItem !== null) {
+          // 如果上一个元素是对象（at对象），则在当前字符串前加一个空格
+          compactedGroup.push(' ' + item);
+        } else {
+          // 正常推入（比如这是数组的第一个元素）
+          compactedGroup.push(item);
+        }
+      } else {
+        // 当前是对象，直接推入
+        compactedGroup.push(item);
+      }
+    }
+    logicalGroups[i] = compactedGroup;
+  }
+
+  return logicalGroups;
 }
 
 /**

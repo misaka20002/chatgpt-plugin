@@ -1,12 +1,10 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
 import { estimateCronMinInterval } from '../cronMatcher.js'
-import { removeCQCode } from '../paimonFuction.js'
 
 const REDIS_KEY = 'CHATGPT:ScheduledTasks'
 
-function limitLabel (count, e) {
-  const maxTasks = Config.ScheduleTask_MaxPerUser || 1
+function limitLabel (count, maxTasks, e) {
   return e.isMaster ? `${count}, no limit` : `${count}/${maxTasks}`
 }
 
@@ -45,7 +43,8 @@ async function listTasks (e) {
   if (userTasks.length === 0) {
     return 'No pending one-time scheduled tasks for this user. Inform the user they have no scheduled tasks.'
   }
-  return `One-time tasks (${limitLabel(userTasks.length, e)}):\n${formatTaskList(userTasks)}\nPresent this list to the user in a friendly way.`
+  const maxTasks = Config.ScheduleTask_MaxPerUser ?? 1 // 使用 ?? 以支持 0
+  return `One-time tasks (${limitLabel(userTasks.length, maxTasks, e)}):\n${formatTaskList(userTasks)}\nPresent this list to the user in a friendly way.`
 }
 
 async function cancelTask (e, taskId) {
@@ -65,7 +64,8 @@ async function cancelTask (e, taskId) {
 
   await redis.zRem(REDIS_KEY, target.raw)
   const remaining = userTasks.length - 1
-  return `Successfully cancelled task [${taskId}]. Remaining tasks: ${limitLabel(remaining, e)}. Confirm the cancellation to the user.`
+  const maxTasks = Config.ScheduleTask_MaxPerUser ?? 1
+  return `Successfully cancelled task [${taskId}]. Remaining tasks: ${limitLabel(remaining, maxTasks, e)}. Confirm the cancellation to the user.`
 }
 
 async function scheduleTask (e, content, delayMinutes) {
@@ -81,12 +81,17 @@ async function scheduleTask (e, content, delayMinutes) {
     return `Delay time is too long. Maximum is ${MAX_DELAY_MINUTES} minutes (about 1 month).`
   }
 
-  const maxTasks = Config.ScheduleTask_MaxPerUser || 1
+  const maxTasks = Config.ScheduleTask_MaxPerUser ?? 1 // 使用 ?? 允许值为 0
   const userTasks = await getUserTasks(e.user_id)
 
   // 主人不受任务数量限制
-  if (!e.isMaster && userTasks.length >= maxTasks) {
-    return `Task limit reached (${userTasks.length}/${maxTasks}). Cannot create a new task. Current tasks:\n${formatTaskList(userTasks)}\nDo NOT create the task. Instead, tell the user their task slots are full, show them the current task list, and ask which one they want to cancel. After they choose, use action "cancel" to remove it, then retry scheduling.`
+  if (!e.isMaster) {
+    if (maxTasks === 0) {
+      return `One-time scheduled tasks are currently disabled by the administrator (limit is 0). Do NOT create the task, and politely inform the user.`
+    }
+    if (userTasks.length >= maxTasks) {
+      return `Task limit reached (${userTasks.length}/${maxTasks}). Cannot create a new task. Current tasks:\n${formatTaskList(userTasks)}\nDo NOT create the task. Instead, tell the user their task slots are full, show them the current task list, and ask which one they want to cancel. After they choose, use action "cancel" to remove it, then retry scheduling.`
+    }
   }
 
   const executeTime = Date.now() + (delayMinutes * 60 * 1000)
@@ -96,7 +101,7 @@ async function scheduleTask (e, content, delayMinutes) {
     isGroup: e.isGroup,
     group_id: e.isGroup ? e.group_id : undefined,
     user_id: e.user_id,
-    content: removeCQCode(content),
+    content: content,
     createdAt: Date.now(),
     executeTime: executeTime,
     isMaster: e.isMaster,
@@ -110,7 +115,7 @@ async function scheduleTask (e, content, delayMinutes) {
 
   const dateStr = new Date(executeTime).toLocaleString('zh-CN')
   const newCount = userTasks.length + 1
-  return `Successfully scheduled task [${taskData.taskId}]. It will execute at ${dateStr}. Active tasks: ${limitLabel(newCount, e)}. Tell the user the task has been set and when it will execute.`
+  return `Successfully scheduled task [${taskData.taskId}]. It will execute at ${dateStr}. Active tasks: ${limitLabel(newCount, maxTasks, e)}. Tell the user the task has been set and when it will execute.`
 }
 
 // ==================== Cron 循环任务 ====================
@@ -134,7 +139,8 @@ function cronList (e) {
   if (userCron.length === 0) {
     return 'No recurring cron tasks for this user. Inform the user they have no recurring tasks.'
   }
-  return `Recurring cron tasks (${limitLabel(userCron.length, e)}):\n${formatCronList(userCron)}\nPresent this list to the user in a friendly way, explaining each task's schedule.`
+  const maxCronTasks = Config.ScheduleTask_CronMaxPerUser ?? 1 // 使用 ?? 以支持 0
+  return `Recurring cron tasks (${limitLabel(userCron.length, maxCronTasks, e)}):\n${formatCronList(userCron)}\nPresent this list to the user in a friendly way, explaining each task's schedule.`
 }
 
 function cronAdd (e, content, cronExpression) {
@@ -152,16 +158,22 @@ function cronAdd (e, content, cronExpression) {
 
   const minInterval = Config.ScheduleTask_CronMinInterval || 60
   const estimated = estimateCronMinInterval(cronExpression)
-  if (estimated < minInterval) {
+  // 主人不受循环最小间隔限制
+  if (estimated < minInterval && !e.isMaster) {
     return `Cron interval too short: "${cronExpression}" fires roughly every ${estimated} minute(s), but the minimum allowed interval is ${minInterval} minute(s). Tell the user to use a less frequent schedule. For example, "0 * * * *" for hourly or "0 */2 * * *" for every 2 hours.`
   }
 
-  const maxTasks = Config.ScheduleTask_MaxPerUser || 1
+  const maxCronTasks = Config.ScheduleTask_CronMaxPerUser ?? 1 // 使用 ?? 以支持 0
   const userCron = getUserCronTasks(e.user_id)
 
   // 主人不受任务数量限制
-  if (!e.isMaster && userCron.length >= maxTasks) {
-    return `Cron task limit reached (${userCron.length}/${maxTasks}). Current cron tasks:\n${formatCronList(userCron)}\nDo NOT create the task. Instead, tell the user their recurring task slots are full, show them the current list, and ask which one to remove. After they choose, use action "cron_remove" to delete it, then retry.`
+  if (!e.isMaster) {
+    if (maxCronTasks === 0) {
+      return `Recurring cron tasks are currently disabled by the administrator (limit is 0). Do NOT create the task, and politely inform the user.`
+    }
+    if (userCron.length >= maxCronTasks) {
+      return `Cron task limit reached (${userCron.length}/${maxCronTasks}). Current cron tasks:\n${formatCronList(userCron)}\nDo NOT create the task. Instead, tell the user their recurring task slots are full, show them the current list, and ask which one to remove. After they choose, use action "cron_remove" to delete it, then retry.`
+    }
   }
 
   const taskData = {
@@ -171,7 +183,7 @@ function cronAdd (e, content, cronExpression) {
     isGroup: e.isGroup,
     group_id: e.isGroup ? e.group_id : undefined,
     user_id: e.user_id,
-    content: removeCQCode(content),
+    content: content,
     isMaster: e.isMaster,
     nickname: e.sender?.card || e.sender?.nickname || 'User',
     createdAt: Date.now()
@@ -183,7 +195,7 @@ function cronAdd (e, content, cronExpression) {
   Config.save()
 
   const newCount = userCron.length + 1
-  return `Successfully created recurring cron task [${taskData.taskId}]. Cron: ${cronExpression}. Active cron tasks: ${limitLabel(newCount, e)}. Tell the user the recurring task has been created and explain when it will trigger in plain language.`
+  return `Successfully created recurring cron task [${taskData.taskId}]. Cron: ${cronExpression}. Active cron tasks: ${limitLabel(newCount, maxCronTasks, e)}. Tell the user the recurring task has been created and explain when it will trigger in plain language.`
 }
 
 function cronRemove (e, taskId) {
@@ -207,7 +219,8 @@ function cronRemove (e, taskId) {
   Config.save()
 
   const remaining = getUserCronTasks(e.user_id).length
-  return `Successfully removed cron task [${taskId}]. Remaining cron tasks: ${limitLabel(remaining, e)}. Confirm the removal to the user.`
+  const maxCronTasks = Config.ScheduleTask_CronMaxPerUser ?? 1
+  return `Successfully removed cron task [${taskId}]. Remaining cron tasks: ${limitLabel(remaining, maxCronTasks, e)}. Confirm the removal to the user.`
 }
 
 // ==================== 工具定义 ====================

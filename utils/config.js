@@ -323,6 +323,7 @@ const defaultConfig = {
   gemini_fallbackModel: "gemini-2.5-flash",
   ScheduleTask_Tool: true,
   ScheduleTask_MaxPerUser: 1,
+  ScheduleTask_CronMaxPerUser: 0,
   ScheduleTask_CronMinInterval: 60,
   ScheduleTask_CronTasks: [],
   rateLimiting: 0,

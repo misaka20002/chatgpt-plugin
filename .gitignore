@@ -8,4 +8,3 @@ prompts/*
 !prompts/.gitkeep
 node_modules/
 .vs/
-_commit_msg.txt
