@@ -145,7 +145,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
 
 /**
  * @description: 把句子转为不超过3个元素的数组，自动处理 at对象
- * @param {Array} inputData
+ * @param {Array|Object|String} inputArr
  * @return {Array} 
  */
 export function convertSentenceToArray(inputArr) {
@@ -158,8 +158,8 @@ export function convertSentenceToArray(inputArr) {
       // 保留对象元素（如 at, image）
       flatList.push(item);
     } else if (typeof item === 'string') {
-      // 拆分字符串元素
-      let arr = item.split(/([。？！!?”’）)\n]+)/).filter(Boolean);
+      // 更新修改正则
+      let arr = item.split(/([。？！!?\n]+[”’）)]*)/).filter(Boolean);
       let tempSentence = '';
       for (let i = 0; i < arr.length; i++) {
         tempSentence += arr[i];
@@ -182,10 +182,8 @@ export function convertSentenceToArray(inputArr) {
       if (i + 1 < flatList.length && typeof flatList[i + 1] === 'string') {
         flatList[i] = flatList[i] + flatList[i + 1];
         flatList.splice(i + 1, 1);
-        i--; // 退回一步，重新检查合并后的长度
-      }
-      // 如果后面没有字符串，往前合并
-      else if (i > 0 && typeof flatList[i - 1] === 'string') {
+        i--; 
+      } else if (i > 0 && typeof flatList[i - 1] === 'string') {
         flatList[i - 1] = flatList[i - 1] + flatList[i];
         flatList.splice(i, 1);
         i--;
@@ -197,7 +195,6 @@ export function convertSentenceToArray(inputArr) {
   let currentGroup = [];
   for (const item of flatList) {
     currentGroup.push(item);
-    // 遇到字符串就作为一个断点，打包成一个数组
     if (typeof item === 'string') {
       logicalGroups.push(currentGroup);
       currentGroup = [];
@@ -207,34 +204,37 @@ export function convertSentenceToArray(inputArr) {
     logicalGroups.push(currentGroup);
   }
 
-  // 重组为不超过3句话
+  // 每次寻找文本总长度最短的相邻两组合并，直到等于3
   while (logicalGroups.length > 3) {
+    let minLen = Infinity;
+    let mergeIdx = 0;
     for (let i = 0; i < logicalGroups.length - 1; i++) {
-      // 合并相邻的两个数组
-      logicalGroups[i] = logicalGroups[i].concat(logicalGroups[i + 1]);
-      logicalGroups.splice(i + 1, 1);
+      let len1 = logicalGroups[i].filter(x => typeof x === 'string').join('').length;
+      let len2 = logicalGroups[i + 1].filter(x => typeof x === 'string').join('').length;
+      if (len1 + len2 < minLen) {
+        minLen = len1 + len2;
+        mergeIdx = i;
+      }
     }
+    logicalGroups[mergeIdx] = logicalGroups[mergeIdx].concat(logicalGroups[mergeIdx + 1]);
+    logicalGroups.splice(mergeIdx + 1, 1);
   }
 
   // 整合 at对象和字符串 为一个对象
   for (let i = 0; i < logicalGroups.length; i++) {
     let compactedGroup = [];
     for (const item of logicalGroups[i]) {
-      const lastItem = compactedGroup[compactedGroup.length - 1]; // 获取已装入的最后一个元素
+      const lastItem = compactedGroup[compactedGroup.length - 1]; 
 
       if (typeof item === 'string') {
         if (typeof lastItem === 'string') {
-          // 如果当前和上一个都是字符串，直接拼接
           compactedGroup[compactedGroup.length - 1] += item;
         } else if (typeof lastItem === 'object' && lastItem !== null) {
-          // 如果上一个元素是对象（at对象），则在当前字符串前加一个空格
           compactedGroup.push(' ' + item);
         } else {
-          // 正常推入（比如这是数组的第一个元素）
           compactedGroup.push(item);
         }
       } else {
-        // 当前是对象，直接推入
         compactedGroup.push(item);
       }
     }
