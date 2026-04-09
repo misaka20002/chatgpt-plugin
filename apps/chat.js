@@ -26,6 +26,18 @@ import fetch from 'node-fetch'
 import { deleteConversation, getConversations, getLatestMessageIdByConversationId } from '../utils/conversation.js'
 import { convertSpeaker, speakers } from '../utils/tts.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
+
+/** 安全 join：segment 对象(如 at)不会变成 [object Object] */
+function safeJoinMsg (arr) {
+  if (typeof arr === 'string') return arr
+  if (!Array.isArray(arr)) return String(arr ?? '')
+  return arr.map(item => {
+    if (typeof item === 'string') return item
+    if (item?.type === 'at') return item?.data?.qq ? `@${item.data.qq}` : ''
+    if (item?.type === 'face') return ''
+    return ''
+  }).join('')
+}
 import { ConversationManager, originalValues } from '../model/conversation.js'
 import XinghuoClient from '../utils/xinghuo/xinghuo.js'
 import { getProxy } from '../utils/proxy.js'
@@ -1444,10 +1456,22 @@ export class chatgpt extends plugin {
             })
           }
           if (Config.isConvertSentenceToArrayReply) {
-            // 多次回复
-            const str_arr = convertSentenceToArray(responseText.join(''));
+            // 多次回复：提取 segment.at 对象，文本部分拆分多条发送，首条保留真 @
+            let atSegments = []
+            let textParts = responseText
+            if (Array.isArray(responseText)) {
+              atSegments = responseText.filter(m => m && typeof m === 'object' && m.type === 'at')
+              textParts = responseText.filter(m => !(m && typeof m === 'object' && m.type === 'at'))
+            }
+            const str_arr = convertSentenceToArray(safeJoinMsg(textParts));
             for (let i = 0; i < str_arr.length; i++) {
-              await this.reply(str_arr[i].trim());
+              const piece = str_arr[i].trim()
+              if (!piece) continue
+              if (i === 0 && atSegments.length > 0) {
+                await this.reply([...atSegments, ' ', piece])
+              } else {
+                await this.reply(piece)
+              }
               await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
@@ -1526,10 +1550,22 @@ export class chatgpt extends plugin {
           }
         }
         if (Config.isConvertSentenceToArrayReply) {
-          // 多次回复
-          const str_arr = convertSentenceToArray(responseText.join(''));
+          // 多次回复：提取 segment.at 对象，文本部分拆分多条发送，首条保留真 @
+          let atSegments = []
+          let textParts = responseText
+          if (Array.isArray(responseText)) {
+            atSegments = responseText.filter(m => m && typeof m === 'object' && m.type === 'at')
+            textParts = responseText.filter(m => !(m && typeof m === 'object' && m.type === 'at'))
+          }
+          const str_arr = convertSentenceToArray(safeJoinMsg(textParts));
           for (let i = 0; i < str_arr.length; i++) {
-            await this.reply(str_arr[i].trim());
+            const piece = str_arr[i].trim()
+            if (!piece) continue
+            if (i === 0 && atSegments.length > 0) {
+              await this.reply([...atSegments, ' ', piece])
+            } else {
+              await this.reply(piece)
+            }
             await sleep_zz(Math.random() * 5000 + 2000);
           }
         }

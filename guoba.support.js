@@ -1340,8 +1340,40 @@ export function supportGuoba() {
         {
           field: 'ScheduleTask_Tool',
           label: '工具新增-定时工具',
-          bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如“明天早上8点叫我并查询今天的热门新闻”；目前限制限制每个用户仅能储存1条定时任务并且最大定时为1个月；推荐开启 “全局-At群友-提示词版” 或 “工具新增-at群友” 以第一时间获取ai通知；修改该选项后重启生效',
+          bottomHelpMessage: '让AI可以定时被唤醒提示或调用其他工具，例如"明天早上8点叫我并查询今天的热门新闻"；支持同时储存多条定时任务，AI可以查询和取消已有任务；最大定时为1个月；推荐开启 "全局-At群友-提示词版" 或 "工具新增-at群友" 以第一时间获取ai通知；修改该选项后重启生效',
           component: 'Switch'
+        },
+        {
+          field: 'ScheduleTask_MaxPerUser',
+          label: '定时工具-每用户任务上限',
+          bottomHelpMessage: '普通用户每种类型（一次性、循环）各最多可保存N条定时任务，任务满时AI会提示用户选择取消哪条再新建；主人不受此限制',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 20,
+            placeholder: '默认1'
+          }
+        },
+        {
+          field: 'ScheduleTask_CronMinInterval',
+          label: '定时工具-循环最小间隔(分钟)',
+          bottomHelpMessage: '循环任务允许的最小执行间隔(分钟)。例如60表示最快每小时一次，1440表示最快每天一次。防止用户创建过于频繁的循环任务',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 1440,
+            placeholder: '默认60'
+          }
+        },
+        {
+          field: 'ScheduleTask_CronTasks_Display',
+          label: '定时工具-循环任务列表',
+          bottomHelpMessage: '当前活跃的循环定时任务（由AI创建）。可删除标签来移除不需要的循环任务',
+          component: 'GTags',
+          componentProps: {
+            allowAdd: false,
+            allowDel: true
+          }
         },
         {
           field: 'poke_userIDs',
@@ -2041,11 +2073,28 @@ export function supportGuoba() {
       ],
       // 获取配置数据方法（用于前端填充显示数据）
       getConfigData() {
-        return Config
+        // 生成循环任务展示标签
+        const cronTasks = Config.ScheduleTask_CronTasks || []
+        const configObj = Object.assign({}, Config)
+        configObj.ScheduleTask_CronTasks_Display = cronTasks.map(t => {
+          const content = (t.content || '').replace(/\[CQ:[^\]]+\]/g, '').trim()
+          return `${t.user_id} | ${t.group_id || '私聊'} | [${t.taskId}] | ${t.cronExpression} | ${content}`
+        })
+        return configObj
       },
       // 设置配置的方法（前端点确定后调用的方法）
       setConfigData(data, { Result }) {
         for (let [keyPath, value] of Object.entries(data)) {
+          // 处理循环任务标签删除同步
+          if (keyPath === 'ScheduleTask_CronTasks_Display') {
+            const remainingIds = value.map(tag => {
+              const m = tag.match(/\[([^\]]+)\]/)
+              return m ? m[1] : null
+            }).filter(Boolean)
+            const tasks = Config.ScheduleTask_CronTasks || []
+            lodash.set(Config.getConfig(), 'ScheduleTask_CronTasks', tasks.filter(t => remainingIds.includes(t.taskId)))
+            continue
+          }
           // 处理黑名单
           if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
             value = value.toString().split(/[,，;；\|]/)
