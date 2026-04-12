@@ -18,15 +18,15 @@ export class APTool extends AbstractTool {
 
     if (drawToolsArr.includes('nai-plugin-1')) {
       enumValues.push('nai-plugin-1');
-      toolDescriptions.push('- nai-plugin-1: Use NovelAi to draw anime characters.');
+      toolDescriptions.push('- nai-plugin-1: Prioritize using NovelAi to draw anime characters.');
     }
     if (drawToolsArr.includes('nai-plugin-4')) {
       enumValues.push('nai-plugin-4');
-      toolDescriptions.push('- nai-plugin-4: Use NovelAi to draw anime characters.');
+      toolDescriptions.push('- nai-plugin-4: Prioritize using NovelAi to draw anime characters.');
     }
     if (drawToolsArr.includes('paimonnai-plugin')) {
       enumValues.push('paimonnai-plugin');
-      toolDescriptions.push('- paimonnai-plugin: Use NovelAi to draw anime characters.');
+      toolDescriptions.push('- paimonnai-plugin: Prioritize using NovelAi to draw anime characters.');
     }
     if (drawToolsArr.includes('ap-plugin')) {
       enumValues.push('ap-plugin');
@@ -38,7 +38,13 @@ export class APTool extends AbstractTool {
     }
     if (drawToolsArr.includes('Midjourney-paint')) {
       enumValues.push('Midjourney-paint');
-      toolDescriptions.push('- Midjourney-paint: Use Midjourney drawing.');
+      toolDescriptions.push('- Midjourney-paint: Use Midjourney drawing for general styles.');
+      enumValues.push('Niji-Journey');
+      if (drawToolsArr.some(val => ['nai-plugin-1', 'nai-plugin-4', 'paimonnai-plugin'].includes(val))) {
+        toolDescriptions.push('- Niji-Journey: Use Niji Journey for anime style drawings (Secondary choice, MUST prioritize NovelAi plugins if available).');
+      } else {
+        toolDescriptions.push('- Niji-Journey: Use Niji Journey specifically for anime style drawings.');
+      }
     }
     if (drawToolsArr.includes('Jimeng-paint')) {
       enumValues.push('Jimeng-paint');
@@ -46,7 +52,7 @@ export class APTool extends AbstractTool {
     }
     if (drawToolsArr.includes('gemini-Image')) {
       enumValues.push('gemini-Image');
-      toolDescriptions.push('- gemini-Image: Use Gemini-3-image to draw or editing existing images.');
+      toolDescriptions.push('- gemini-Image: Use Gemini-image (nano banana) to draw or editing existing images.');
     }
 
     if (enumValues.length === 0) {
@@ -56,7 +62,7 @@ export class APTool extends AbstractTool {
 
     let promptDescription = "**Prompt:**\\n";
     const enabledNaiOrAp = enumValues.filter(val => ['nai-plugin-1', 'nai-plugin-4', 'paimonnai-plugin', 'ap-plugin', 'siliconflow-paint'].includes(val));
-    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Jimeng-paint', 'gemini-Image'].includes(val));
+    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'gemini-Image'].includes(val));
 
     if (enabledNaiOrAp.length > 0) {
       const pluginsStr = enabledNaiOrAp.map(p => `\`${p}\``).join(', ');
@@ -217,7 +223,7 @@ export class APTool extends AbstractTool {
     }
 
     // 使用SF插件mj
-    else if (plugin === 'Midjourney-paint') {
+    else if (plugin === 'Midjourney-paint' || plugin === 'Niji-Journey') {
       let sfmj
       try {
         let { MJ_Painting } = await import('../../../siliconflow-plugin/apps/MJ_Painting.js')
@@ -226,8 +232,17 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = `#mjp ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
-        await sfmj.mj_draw(e)
+        let cmd = plugin === 'Niji-Journey' ? '#niji' : '#mjp';
+        if (e.img?.length > 0) {
+          cmd = plugin === 'Niji-Journey' ? '#nic' : '#mjc';
+        }
+        e.msg = `${cmd} ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
+
+        if (cmd === '#mjc' || cmd === '#nic') {
+          await sfmj.mj_draw_with_link(e)
+        } else {
+          await sfmj.mj_draw(e)
+        }
         logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
       } catch (err) {
@@ -255,7 +270,7 @@ export class APTool extends AbstractTool {
       }
     }
 
-    // 使用 Gemini-3-image (类似Sf_image_edit)
+    // 使用 Sf插件的 Gemini-3-image
     else if (plugin === 'gemini-Image') {
       let sf
       try {

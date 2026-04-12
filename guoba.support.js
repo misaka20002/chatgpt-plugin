@@ -1459,7 +1459,7 @@ export function supportGuoba() {
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
               { label: "ap-plugin（#绘图）", value: "ap-plugin" },
               { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-paint" },
-              { label: "siliconflow-plugin（#mjp）", value: "Midjourney-paint" },
+              { label: "siliconflow-plugin（#mjp #niji）", value: "Midjourney-paint" },
               { label: "siliconflow-Jimeng（#即梦绘画）", value: "Jimeng-paint" },
               { label: "siliconflow-plugin（#g谷歌编辑图片）", value: "gemini-Image" },
             ],
@@ -1478,7 +1478,7 @@ export function supportGuoba() {
         {
           field: 'drawByJsonToPlugin',
           label: '绘画prompt模式',
-          bottomHelpMessage: '绘画prompt模式 适用于不支持调用函数的大模型；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
+          bottomHelpMessage: '绘画prompt模式 适用于不支持智能模式(Agent)的接口；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
           component: "Select",
           componentProps: {
             options: [
@@ -1510,7 +1510,7 @@ export function supportGuoba() {
         {
           field: 'sfPluginToPaintPrefix',
           label: 'sf绘画前缀',
-          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、sf绘画模式预设词等；应用于 #sf绘画 #mjp #即梦绘画',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、sf绘画模式预设词等；应用于 #sf绘画 #mjp #niji #即梦绘画',
           component: 'InputTextArea',
           componentProps: {
             placeholder: ' --1:1',

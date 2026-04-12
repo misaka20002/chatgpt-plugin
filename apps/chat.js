@@ -1338,7 +1338,7 @@ export class chatgpt extends plugin {
               console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
             }
             try {
-              e.msg = `#sf绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#sf绘图 ${charactersName}, ` + Config.sfPluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用sf插件绘画：\nmsg: ', e.msg)
               if (Config.doNotCheckPaintPluginSuccess) {
                 sf.sf_draw(e);
@@ -1369,7 +1369,7 @@ export class chatgpt extends plugin {
               console.log('[ChatGPT]调用SF插件错误-未安装SF插件')
             }
             try {
-              e.msg = `#mjp ${charactersName}, ` + Config.nai3PluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
+              e.msg = `#mjp ${charactersName}, ` + Config.sfPluginToPaintPrefix + ', ' + jsonTags + ', best quality, amazing quality, very aesthetic, absurdres'
               console.log('[ChatGPT]开始调用sf插件绘画：\nmsg: ', e.msg)
               if (Config.doNotCheckPaintPluginSuccess) {
                 sfmj.mj_draw(e);
