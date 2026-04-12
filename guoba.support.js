@@ -1500,8 +1500,17 @@ export function supportGuoba() {
         },
         {
           field: 'nai3PluginToPaintPrefix',
-          label: '绘画前缀',
-          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、采样器等；应用于 #绘画 #绘图 #draw #sf绘画',
+          label: 'nai绘画前缀',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、采样器等；应用于 #绘画 #绘图 #draw',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
+          },
+        },
+        {
+          field: 'sfPluginToPaintPrefix',
+          label: 'sf绘画前缀',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、sf绘画模式预设词等；应用于 #sf绘画 #mjp #即梦绘画',
           component: 'InputTextArea',
           componentProps: {
             placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',

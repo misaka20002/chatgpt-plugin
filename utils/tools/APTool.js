@@ -207,7 +207,7 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = `#sf绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#sf绘图 ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
         await sf.sf_draw(e)
         console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
@@ -226,7 +226,7 @@ export class APTool extends AbstractTool {
         return 'the user didn\'t install siliconflow-plugin. suggest him to install'
       }
       try {
-        e.msg = `#mjp ${charactersName}, ` + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
+        e.msg = `#mjp ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
         await sfmj.mj_draw(e)
         console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
@@ -246,7 +246,7 @@ export class APTool extends AbstractTool {
         return 'draw failed, Jimeng painting app might not be supported in your siliconflow-plugin version.'
       }
       try {
-        e.msg = `#即梦绘画 ${charactersName}, ` + processedTags
+        e.msg = `#即梦绘画 ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags
         if (sfjm && sfjm.jm_draw) {
           await sfjm.jm_draw(e)
         } else {

@@ -96,6 +96,7 @@ const defaultConfig = {
   disable_sendMessage_tool: true,
   change_handleMsg_tool: true,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
+  sfPluginToPaintPrefix: "",
   geminiModelsByFetch: [],
   draw_PluginCharactersList: '',
   doNotCheckPaintPluginSuccess: false,
