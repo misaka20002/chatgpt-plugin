@@ -99,7 +99,7 @@ const defaultConfig = {
   sfPluginToPaintPrefix: "",
   geminiModelsByFetch: [],
   draw_PluginCharactersList: '',
-  doNotCheckPaintPluginSuccess: false,
+  doNotCheckPaintPluginSuccess: true,
   paimon_chuoyichuo_open: true,
   // paimon_chuoyichuo_ByMsgGroups: [],
   // paimon_chuoyichuo_Probability_ByMsgGroups: 5,
@@ -373,6 +373,7 @@ removeExtraKeys(config, defaultConfig);
 // 重启后强制设置的选项 // 启动时内存里的这两个配置变成了 false，但不会立刻写入硬盘的 config.json
 config.focus_CloudTranscode = false
 config.ttsHD = false
+config.doNotCheckPaintPluginSuccess = true
 // ===================
 
 function saveDiff(target) {

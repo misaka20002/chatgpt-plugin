@@ -1492,12 +1492,12 @@ export function supportGuoba() {
             ],
           },
         },
-        {
-          field: 'doNotCheckPaintPluginSuccess',
-          label: '不检测画图成功',
-          bottomHelpMessage: '绘画prompt模式时检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/paimonnai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
-          component: 'Switch'
-        },
+        // {
+        //   field: 'doNotCheckPaintPluginSuccess',
+        //   label: '不检测画图成功',
+        //   bottomHelpMessage: '绘画prompt模式时检测是否成功调用#绘画/#绘图，未返回成功则回复“在这个群还不能使用#绘画 功能啦”；需要调用指定插件：https://github.com/misaka20002/ap-plugin 或 https://github.com/misaka20002/paimonnai-plugin 或 https://github.com/misaka20002/siliconflow-plugin',
+        //   component: 'Switch'
+        // },
         {
           field: 'nai3PluginToPaintPrefix',
           label: 'nai绘画前缀',
@@ -1513,7 +1513,7 @@ export function supportGuoba() {
           bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、sf绘画模式预设词等；应用于 #sf绘画 #mjp #即梦绘画',
           component: 'InputTextArea',
           componentProps: {
-            placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
+            placeholder: ' --1:1',
           },
         },
         {

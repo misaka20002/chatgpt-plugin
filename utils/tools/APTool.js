@@ -129,7 +129,7 @@ export class APTool extends AbstractTool {
         // 随机 smea
         const random_1 = Math.random()
         e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', smea, dynoff' : ', smea');
-        console.log('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', e.msg)
+        logger.info('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', e.msg)
         await nai.txt2img(e)
         return 'draw success, picture has been sent.'
       } catch (err) {
@@ -162,7 +162,7 @@ export class APTool extends AbstractTool {
         // 随机 smea （nai4不支持smea 关闭这个功能）
         // const random_1 = Math.random()
         // e.msg += random_1 < 0.50 ? '' : (random_1 < 0.75 ? ', --sm true --sm_dyn false' : ', --sm true --sm_dyn true');
-        console.log('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', e.msg)
+        logger.info('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', e.msg)
         await nai.text(e)
         return 'draw success, picture has been sent.'
       } catch (err) {
@@ -190,7 +190,7 @@ export class APTool extends AbstractTool {
       try {
         e.msg = `#绘图 ${charactersName}, ` + Config.nai3PluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
         await ap.aiPainting(e)
-        console.log('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', e.msg)
+        logger.info('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'
@@ -209,7 +209,7 @@ export class APTool extends AbstractTool {
       try {
         e.msg = `#sf绘图 ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
         await sf.sf_draw(e)
-        console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'
@@ -228,7 +228,7 @@ export class APTool extends AbstractTool {
       try {
         e.msg = `#mjp ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags + ', best quality, amazing quality, very aesthetic, absurdres'
         await sfmj.mj_draw(e)
-        console.log('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'
@@ -239,20 +239,16 @@ export class APTool extends AbstractTool {
     else if (plugin === 'Jimeng-paint') {
       let sfjm
       try {
-        let { JM_Painting } = await import('../../../siliconflow-plugin/apps/JM_Painting.js')
-        sfjm = new JM_Painting(e)
+        let { Jimeng } = await import('../../../siliconflow-plugin/apps/Jimeng.js')
+        sfjm = new Jimeng(e)
       } catch (err) {
         // Fallback or old name check? Let's just use SF_Painting if JM is missing or try to require from sf plugin
         return 'draw failed, Jimeng painting app might not be supported in your siliconflow-plugin version.'
       }
       try {
         e.msg = `#即梦绘画 ${charactersName}, ` + Config.sfPluginToPaintPrefix + processedTags
-        if (sfjm && sfjm.jm_draw) {
-          await sfjm.jm_draw(e)
-        } else {
-          return 'the user didn\'t install siliconflow-plugin properly for Jimeng.'
-        }
-        console.log('[ChatGPT][DrawTool]开始调用sf插件即梦绘画：\nmsg: ', e.msg)
+        await sfjm.call_Jimeng_Api(e)
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件即梦绘画：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'
@@ -271,7 +267,7 @@ export class APTool extends AbstractTool {
       try {
         e.msg = `#g谷歌编辑图片 ` + prompt
         await sf.gg_select_and_chat(e)
-        console.log('[ChatGPT][DrawTool]开始调用sf插件-#g谷歌编辑图片：\nmsg: ', e.msg)
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件-#g谷歌编辑图片：\nmsg: ', e.msg)
         return 'draw success, picture has been sent.'
       } catch (err) {
         return 'draw failed due to unknown error'
