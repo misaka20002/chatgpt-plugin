@@ -354,6 +354,20 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
 config = lodash.merge({}, defaultConfig, config)
 config.version = defaultConfig.version
 
+/** 递归清理从本地读取但 defaultConfig 中已经不存在的多余键 */
+function removeExtraKeys(target, base) {
+  for (const key in target) {
+    // 如果 defaultConfig 中没有这个键，则直接从内存中删除
+    if (!Object.prototype.hasOwnProperty.call(base, key)) {
+      delete target[key];
+    } else if (lodash.isPlainObject(target[key]) && lodash.isPlainObject(base[key])) {
+      // 如果都是普通对象，则递归往下清理嵌套的多余键
+      removeExtraKeys(target[key], base[key]);
+    }
+  }
+}
+removeExtraKeys(config, defaultConfig);
+
 // ===================
 // 重启后强制设置的选项 // 启动时内存里的这两个配置变成了 false，但不会立刻写入硬盘的 config.json
 config.focus_CloudTranscode = false
@@ -365,8 +379,11 @@ function saveDiff(target) {
   function deepDiff(obj, base) {
     function changes(object, base) {
       return lodash.transform(object, function (result, value, key) {
+        if (!Object.prototype.hasOwnProperty.call(base, key)) {
+          return;
+        }
         if (!lodash.isEqual(value, base[key])) {
-          result[key] = (lodash.isObject(value) && lodash.isObject(base[key]))
+          result[key] = (lodash.isPlainObject(value) && lodash.isPlainObject(base[key]))
             ? changes(value, base[key])
             : value;
         }

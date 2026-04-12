@@ -1356,7 +1356,7 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'at_otherUser',
+          field: 'switch_atOtherUserTool',
           label: '工具新增-at群友',
           bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
           component: 'Switch'
@@ -2133,9 +2133,9 @@ export function supportGuoba() {
               return acc
             }, [])
           }
-          else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr' || keyPath === 'bymDisableGroup') {
-            value = value.map(item => item.trim()).filter(item => item !== '')
-          }
+          // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr' || keyPath === 'bymDisableGroup') {
+          //   value = value.map(item => item.trim()).filter(item => item !== '')
+          // }
 
           // 使用 lodash 处理锅巴传入的 点分隔 keyPath
           lodash.set(Config.getConfig(), keyPath, value)
