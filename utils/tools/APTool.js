@@ -203,13 +203,12 @@ export class APTool extends AbstractTool {
         }
 
         let cmd = plugin === 'Niji-Journey' ? '#niji' : '#mjp';
-        if (e.img?.length > 0) {
-          cmd = plugin === 'Niji-Journey' ? '#nic' : '#mjc';
-        }
+        // if (e.img?.length > 0) { // 注释掉这个了，因为 #nic 和 #mjc 的角色参考的效果并不好
+        //   cmd = plugin === 'Niji-Journey' ? '#nic' : '#mjc';
+        // }
 
         e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
-
-        logger.info('[ChatGPT][DrawTool]开始调用sf-MJP插件绘画：\nmsg: ', e.msg);
+        logger.info('[ChatGPT][DrawTool]开始调用sf-MJ插件绘画：\nmsg: ', e.msg);
         if (cmd === '#mjc' || cmd === '#nic') {
           await sfmj.mj_draw_with_link(e);
         } else {
