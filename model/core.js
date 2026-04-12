@@ -1128,10 +1128,10 @@ async function collectTools(e) {
     fullTools = fullTools.filter(tool => tool !== serpTool);
   }
 
-  if (Config.add_sf_image_edit) {
-    tools.push(...[new Sf_image_edit()])
-    fullTools.push(...[new Sf_image_edit()])
-  }
+  // if (Config.add_sf_image_edit) {
+  //   tools.push(...[new Sf_image_edit()])
+  //   fullTools.push(...[new Sf_image_edit()])
+  // }
 
   if (Config.switch_atOtherUserTool) {
     tools.push(...[new AtOtherUserTool()])

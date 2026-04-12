@@ -1,6 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 // import { Config } from '../config.js'
 
+/** 该工具已合并到 ..\utils\tools\APTool.js */
 export class Sf_image_edit extends AbstractTool {
   name = 'sf_image_edit'
 

@@ -129,7 +129,7 @@ export function supportGuoba() {
         {
           field: 'groupContextLength',
           label: '允许机器人读取近期的最多群聊聊天记录条数。',
-          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。太多可能会超。默认50。同时影响所有模式，不止必应',
+          bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。非常消耗输入token，推荐20',
           component: 'InputNumber'
         },
         {
@@ -1356,12 +1356,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'add_sf_image_edit',
-          label: '工具新增-Gemini Banana',
-          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
-          component: 'Switch'
-        },
-        {
           field: 'at_otherUser',
           label: '工具新增-at群友',
           bottomHelpMessage: '新增主动At其他群友的工具；推荐仅在 “全局-At群友-提示词版” 无法生效时启用',
@@ -1394,7 +1388,7 @@ export function supportGuoba() {
         {
           field: 'change_handleMsg_tool',
           label: '工具调整-msg工具',
-          bottomHelpMessage: '智能模式中，修改“handleMsg工具”：1.引用消息时，bot如果要加精华时将强制指定为引用的消息；2.禁用撤回消息的功能。（该选项用于某些不够聪明的模型，例如 gemini 2.0 系列）（当你在控制台看到mark消息“[ChatGPT][handleMsg] ai 已正确选择引用消息 source_message_id”就可以将该选项关闭了）',
+          bottomHelpMessage: '智能模式中，修改“handleMsg工具”：1.引用消息时，bot如果要加精华时将强制指定为引用的消息；2.禁用撤回消息的功能。（该选项用于某些不够聪明的模型，例如 gemini 2.0 系列）（当你在控制台看到mark消息“[ChatGPT][handleMsg] Agent 已正确选择引用消息 source_message_id”就可以将该选项关闭了）',
           component: 'Switch'
         },
         {
@@ -1451,26 +1445,40 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'drawToolS',
+          field: 'drawToolsArr',
           label: '智能模式绘画',
-          bottomHelpMessage: '智能模式绘画 适用于支持调用函数的大模型，需要开启 全局-智能模式，在智能模式下控制使用的绘画插件；若使用Gemini可设置gemini强制工具关键词。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
+          bottomHelpMessage: '智能模式绘画 适用于支持调用函数的大模型，需要开启 智能模式；若你已安装对应绘画插件并支持（括号）中的指令，可勾选后提供给Agent调用。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
           component: "Select",
           componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
             options: [
-              { label: "关闭智能模式绘画", value: false },
               { label: "nai-plugin（#绘画）", value: "nai-plugin-1" },
               { label: "nai-plugin-4.0（#draw）", value: "nai-plugin-4" },
               { label: "paimonnai-plugin（#绘画）", value: "paimonnai-plugin" },
               { label: "ap-plugin（#绘图）", value: "ap-plugin" },
-              { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-plugin-sf" },
-              { label: "siliconflow-plugin（#mjp）", value: "siliconflow-plugin-mj" },
+              { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-paint" },
+              { label: "siliconflow-plugin（#mjp）", value: "Midjourney-paint" },
+              { label: "siliconflow-Jimeng（#即梦绘画）", value: "Jimeng-paint" },
+              { label: "siliconflow-plugin（#g谷歌编辑图片）", value: "gemini-Image" },
             ],
           },
         },
         {
+          field: 'siliconflow-gemini-Image_help_field',
+          label: '帮助: #g谷歌编辑图片',
+          component: 'Input',
+          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
+          componentProps: {
+            readonly: true,
+            defaultValue: 'https://github.com/AIGC-Yunzai/siliconflow-plugin'
+          }
+        },
+        {
           field: 'drawByJsonToPlugin',
           label: '绘画prompt模式',
-          bottomHelpMessage: '绘画prompt模式 适用于不支持调用函数的大模型；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。',
+          bottomHelpMessage: '绘画prompt模式 适用于不支持调用函数的大模型；用法：开启后直接告知你想要画画的内容，需要先安装对应插件；若失效请缩短你的设定的长度、关闭是否允许机器人读取近期的群聊聊天记录、关闭Suno音乐、或使用#结束对话；目前支持API(openai)、gemini、通义千问。注意 “智能模式绘画” 和 “绘画prompt模式” 只推荐开启其中一个',
           component: "Select",
           componentProps: {
             options: [
@@ -1493,7 +1501,7 @@ export function supportGuoba() {
         {
           field: 'nai3PluginToPaintPrefix',
           label: '绘画前缀',
-          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、采样器等；ap/nai/sf共用',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、采样器等；应用于 #绘画 #绘图 #draw #sf绘画',
           component: 'InputTextArea',
           componentProps: {
             placeholder: 'toddler, artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa], ',
