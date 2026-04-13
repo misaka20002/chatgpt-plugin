@@ -172,6 +172,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableSuggestedResponses',
+          label: '开启回复建议',
+          bottomHelpMessage: '开启后，如果模型返回数据包含 suggestedResponses 则发出来',
+          component: 'Switch'
+        },
+        {
           field: 'removeCQCodeFocus',
           label: '移除CQ码',
           bottomHelpMessage: '强制移除Bot回复消息中的恼人的 CQ 码',
@@ -318,98 +324,98 @@ export function supportGuoba() {
             max: 2
           }
         },
-        {
-          label: '以下为必应方式的配置。',
-          component: 'Divider'
-        },
-        {
-          field: 'bingReasoning',
-          label: 'Bing开启思考',
-          bottomHelpMessage: 'Copilot的思考功能。开启后无法搜索',
-          component: 'Switch'
-        },
-        {
-          field: 'enforceMaster',
-          label: '加强主人认知',
-          bottomHelpMessage: '加强主人认知。希望机器人认清主人，避免NTR可开启。开启后可能会与自设定的内容有部分冲突。sydney模式可以放心开启',
-          component: 'Switch'
-        },
-        {
-          field: 'sydney',
-          label: 'Custom的设定',
-          bottomHelpMessage: '你可以自己改写设定，让Copilot变成你希望的样子。可能存在不稳定的情况',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'sydneyReverseProxy',
-          label: '必应反代',
-          bottomHelpMessage: '用于创建对话（默认不用于正式对话）。目前国内ip和部分境外IDC IP由于微软限制创建对话，如果有bing.com的反代可以填在此处，或者使用proxy。默认为https://666102.201666.xyz',
-          component: 'Input'
-        },
-        {
-          field: 'bingAiToken',
-          label: '必应AccessToken',
-          bottomHelpMessage: 'Copilot的AccessToken，scope需为ChatAI.ReadWrite。可以发送`#Copilot配置方法`查看浏览器获取配置的方法。',
-          component: 'Input'
-        },
-        {
-          field: 'bingAiClientId',
-          label: '必应ClientId',
-          bottomHelpMessage: '配合RefreshToken刷新AccessToken',
-          component: 'Input'
-        },
-        {
-          field: 'bingAiScope',
-          label: '必应Auth Scope',
-          bottomHelpMessage: '配合RefreshToken刷新AccessToken',
-          component: 'Input'
-        },
-        {
-          field: 'bingAiRefreshToken',
-          label: '必应RefreshToken',
-          bottomHelpMessage: '配合RefreshToken刷新AccessToken',
-          component: 'Input'
-        },
-        {
-          field: 'bingAiOid',
-          label: '必应Oid',
-          bottomHelpMessage: '（homeAccountId）配合RefreshToken刷新AccessToken',
-          component: 'Input'
-        },
-        {
-          field: '_2captchaKey',
-          label: '2captcha API密钥',
-          bottomHelpMessage: '用于解除Copilot的验证码',
-          component: 'Input'
-        },
-        {
-          label: '以下为API3方式的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'api',
-          label: 'ChatGPT API反代服务器地址',
-          bottomHelpMessage: 'ChatGPT的API反代服务器，用于绕过Cloudflare访问ChatGPT API',
-          component: 'Input'
-        },
-        {
-          field: 'apiBaseUrl',
-          label: 'apiBaseUrl地址',
-          bottomHelpMessage: 'apiBaseUrl地址',
-          component: 'Input'
-        },
-        {
-          field: 'apiForceUseReverse',
-          label: '强制使用ChatGPT反代',
-          bottomHelpMessage: '即使配置了proxy，依然使用ChatGPT反代',
-          component: 'Switch'
-        },
-        {
-          field: 'useGPT4',
-          label: '使用GPT-4',
-          bottomHelpMessage: '使用GPT-4，注意试用配额较低，如果用不了就关掉',
-          component: 'Switch'
-        },
+        // {
+        //   label: '以下为必应方式的配置',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'bingReasoning',
+        //   label: 'Bing开启思考',
+        //   bottomHelpMessage: 'Copilot的思考功能。开启后无法搜索',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'enforceMaster',
+        //   label: '加强主人认知',
+        //   bottomHelpMessage: '加强主人认知。希望机器人认清主人，避免NTR可开启。开启后可能会与自设定的内容有部分冲突。sydney模式可以放心开启',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'sydney',
+        //   label: 'Custom的设定',
+        //   bottomHelpMessage: '你可以自己改写设定，让Copilot变成你希望的样子。可能存在不稳定的情况',
+        //   component: 'InputTextArea'
+        // },
+        // {
+        //   field: 'sydneyReverseProxy',
+        //   label: '必应反代',
+        //   bottomHelpMessage: '用于创建对话（默认不用于正式对话）。目前国内ip和部分境外IDC IP由于微软限制创建对话，如果有bing.com的反代可以填在此处，或者使用proxy。默认为https://666102.201666.xyz',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'bingAiToken',
+        //   label: '必应AccessToken',
+        //   bottomHelpMessage: 'Copilot的AccessToken，scope需为ChatAI.ReadWrite。可以发送`#Copilot配置方法`查看浏览器获取配置的方法。',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'bingAiClientId',
+        //   label: '必应ClientId',
+        //   bottomHelpMessage: '配合RefreshToken刷新AccessToken',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'bingAiScope',
+        //   label: '必应Auth Scope',
+        //   bottomHelpMessage: '配合RefreshToken刷新AccessToken',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'bingAiRefreshToken',
+        //   label: '必应RefreshToken',
+        //   bottomHelpMessage: '配合RefreshToken刷新AccessToken',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'bingAiOid',
+        //   label: '必应Oid',
+        //   bottomHelpMessage: '（homeAccountId）配合RefreshToken刷新AccessToken',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: '_2captchaKey',
+        //   label: '2captcha API密钥',
+        //   bottomHelpMessage: '用于解除Copilot的验证码',
+        //   component: 'Input'
+        // },
+        // {
+        //   label: '以下为API3方式的配置',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'api',
+        //   label: 'ChatGPT API反代服务器地址',
+        //   bottomHelpMessage: 'ChatGPT的API反代服务器，用于绕过Cloudflare访问ChatGPT API',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'apiBaseUrl',
+        //   label: 'apiBaseUrl地址',
+        //   bottomHelpMessage: 'apiBaseUrl地址',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'apiForceUseReverse',
+        //   label: '强制使用ChatGPT反代',
+        //   bottomHelpMessage: '即使配置了proxy，依然使用ChatGPT反代',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'useGPT4',
+        //   label: '使用GPT-4',
+        //   bottomHelpMessage: '使用GPT-4，注意试用配额较低，如果用不了就关掉',
+        //   component: 'Switch'
+        // },
         {
           label: '以下为智谱清言（ChatGLM）方式的配置。',
           component: 'Divider'
@@ -1512,7 +1518,7 @@ export function supportGuoba() {
         {
           field: 'sfPluginToPaintPrefix',
           label: 'sf绘画前缀',
-          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、sf绘画模式预设词等；应用于 #sf绘画 #mjp #niji #即梦绘画',
+          bottomHelpMessage: '定义绘画前缀，例如画师、画风、模型、sf绘画模式预设词等；应用于 #sf绘画 #mjp #niji #即梦绘画 #d聊天绘画工具',
           component: 'InputTextArea',
           componentProps: {
             placeholder: ' --1:1',

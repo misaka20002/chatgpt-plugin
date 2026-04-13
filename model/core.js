@@ -201,108 +201,109 @@ class Core {
     }
     const userData = await getUserData(e.user_id)
     const useCast = userData.cast || {}
-    if (use === 'bing') { // 使用接口 ##############################
-      const cacheOptions = {
-        namespace: Config.toneStyle,
-        store: new KeyvFile({ filename: 'cache.json' })
-      }
-      const conversationsCache = new Keyv(cacheOptions)
-      let client = new BingAIClient(Config.bingAiToken, Config.sydneyReverseProxy, Config.debug, Config._2captchaKey, Config.bingAiClientId, Config.bingAiScope, Config.bingAiRefreshToken, Config.bingAiOid, Config.bingReasoning)
-      const conversationKey = `SydneyUser_${e.sender.user_id}`
-      const conversations = (await conversationsCache.get(conversationKey)) || {
-        messages: [],
-        createdAt: Date.now()
-      }
-      if (Config.debug) {
-        logger.debug(JSON.stringify(conversations))
-      }
-      const previousCachedMessages = SydneyAIClient.getMessagesForConversation(conversations.messages, conversation.parentMessageId)
-        .map((message) => {
-          return {
-            text: message.message,
-            author: message.role === 'User' ? 'user' : 'bot'
-          }
-        })
-      let system = opt.system.bing
+    // if (use === 'bing') { // 使用接口 ##############################
+    //   const cacheOptions = {
+    //     namespace: Config.toneStyle,
+    //     store: new KeyvFile({ filename: 'cache.json' })
+    //   }
+    //   const conversationsCache = new Keyv(cacheOptions)
+    //   let client = new BingAIClient(Config.bingAiToken, Config.sydneyReverseProxy, Config.debug, Config._2captchaKey, Config.bingAiClientId, Config.bingAiScope, Config.bingAiRefreshToken, Config.bingAiOid, Config.bingReasoning)
+    //   const conversationKey = `SydneyUser_${e.sender.user_id}`
+    //   const conversations = (await conversationsCache.get(conversationKey)) || {
+    //     messages: [],
+    //     createdAt: Date.now()
+    //   }
+    //   if (Config.debug) {
+    //     logger.debug(JSON.stringify(conversations))
+    //   }
+    //   const previousCachedMessages = SydneyAIClient.getMessagesForConversation(conversations.messages, conversation.parentMessageId)
+    //     .map((message) => {
+    //       return {
+    //         text: message.message,
+    //         author: message.role === 'User' ? 'user' : 'bot'
+    //       }
+    //     })
+    //   let system = opt.system.bing
 
-      system = mergeSystemPrompt(system, e)
+    //   system = mergeSystemPrompt(system, e)
 
-      if (opt.settings.enableGroupContext && e.isGroup) {
-        let chats = await getChatHistoryGroup(e, Config.groupContextLength)
-        const namePlaceholder = '[name]'
-        const defaultBotName = 'Copilot'
-        const groupContextTip = Config.groupContextTip
-        let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
-        system = system.replaceAll(namePlaceholder, botName || defaultBotName) +
-          ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
-        system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
-        system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
-        system += `Your nickname is ${botName} in the group,`
-        if (chats) {
-          system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
-          system += chats
-            .map(chat => {
-              let sender = chat.sender || {}
-              return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
-            })
-            .join('\n')
-        }
-      }
-      const msg = `System:\n${system}\n\nPrevious Messages:\n${JSON.stringify(previousCachedMessages)}\n\nUser: ${prompt}`
-      const response = await client.sendMessage(msg)
-      logger.info({ response })
-      const userMessage = {
-        id: crypto.randomUUID(),
-        parentMessageId: conversation.parentMessageId,
-        role: 'User',
-        message: prompt
-      }
-      conversations.messages.push(userMessage)
-      const replyMessage = {
-        id: crypto.randomUUID(),
-        parentMessageId: userMessage.id,
-        role: 'Bing',
-        message: response
-      }
-      conversations.messages.push(replyMessage)
-      await conversationsCache.set(conversationKey, conversations)
-      return {
-        text: response,
-        parentMessageId: replyMessage.id
+    //   if (opt.settings.enableGroupContext && e.isGroup) {
+    //     let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+    //     const namePlaceholder = '[name]'
+    //     const defaultBotName = 'Copilot'
+    //     const groupContextTip = Config.groupContextTip
+    //     let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
+    //     system = system.replaceAll(namePlaceholder, botName || defaultBotName) +
+    //       ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
+    //     system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
+    //     system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
+    //     system += `Your nickname is ${botName} in the group,`
+    //     if (chats) {
+    //       system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
+    //       system += chats
+    //         .map(chat => {
+    //           let sender = chat.sender || {}
+    //           return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
+    //         })
+    //         .join('\n')
+    //     }
+    //   }
+    //   const msg = `System:\n${system}\n\nPrevious Messages:\n${JSON.stringify(previousCachedMessages)}\n\nUser: ${prompt}`
+    //   const response = await client.sendMessage(msg)
+    //   logger.info({ response })
+    //   const userMessage = {
+    //     id: crypto.randomUUID(),
+    //     parentMessageId: conversation.parentMessageId,
+    //     role: 'User',
+    //     message: prompt
+    //   }
+    //   conversations.messages.push(userMessage)
+    //   const replyMessage = {
+    //     id: crypto.randomUUID(),
+    //     parentMessageId: userMessage.id,
+    //     role: 'Bing',
+    //     message: response
+    //   }
+    //   conversations.messages.push(replyMessage)
+    //   await conversationsCache.set(conversationKey, conversations)
+    //   return {
+    //     text: response,
+    //     parentMessageId: replyMessage.id
 
-      }
-    } else if (use === 'api3') { // 使用接口 ##############################
-      // official without cloudflare
-      let accessToken = await redis.get('CHATGPT:TOKEN')
-      // if (!accessToken) {
-      //   throw new Error('未绑定ChatGPT AccessToken，请使用#chatgpt设置token命令绑定token')
-      // }
-      this.chatGPTApi = new OfficialChatGPTClient({
-        accessToken,
-        apiReverseUrl: Config.api,
-        timeoutMs: 120000
-      })
-      let sendMessageResult = await this.chatGPTApi.sendMessage(prompt, conversation)
-      // 更新最后一条prompt
-      await redis.set(`CHATGPT:CONVERSATION_LAST_MESSAGE_PROMPT:${sendMessageResult.conversationId}`, prompt)
-      // 更新最后一条messageId
-      await redis.set(`CHATGPT:CONVERSATION_LAST_MESSAGE_ID:${sendMessageResult.conversationId}`, sendMessageResult.id)
-      await redis.set(`CHATGPT:QQ_CONVERSATION:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`, sendMessageResult.conversationId)
-      if (!conversation.conversationId) {
-        // 如果是对话的创建者
-        await redis.set(`CHATGPT:CONVERSATION_CREATER_ID:${sendMessageResult.conversationId}`, e.sender.user_id)
-        await redis.set(`CHATGPT:CONVERSATION_CREATER_NICK_NAME:${sendMessageResult.conversationId}`, e.sender.card)
-      }
-      (async () => {
-        let audio = await this.chatGPTApi.synthesis(sendMessageResult)
-        if (audio) {
-          await e.reply(segment.record(audio))
-        }
-      })().catch(err => {
-        logger.warn('发送语音失败', err)
-      })
-      return sendMessageResult
-    } else if (use === 'claude') { // 使用接口 ##############################
+    //   }
+    // } else if (use === 'api3') { // 使用接口 ##############################
+    //   // official without cloudflare
+    //   let accessToken = await redis.get('CHATGPT:TOKEN')
+    //   // if (!accessToken) {
+    //   //   throw new Error('未绑定ChatGPT AccessToken，请使用#chatgpt设置token命令绑定token')
+    //   // }
+    //   this.chatGPTApi = new OfficialChatGPTClient({
+    //     accessToken,
+    //     apiReverseUrl: Config.api,
+    //     timeoutMs: 120000
+    //   })
+    //   let sendMessageResult = await this.chatGPTApi.sendMessage(prompt, conversation)
+    //   // 更新最后一条prompt
+    //   await redis.set(`CHATGPT:CONVERSATION_LAST_MESSAGE_PROMPT:${sendMessageResult.conversationId}`, prompt)
+    //   // 更新最后一条messageId
+    //   await redis.set(`CHATGPT:CONVERSATION_LAST_MESSAGE_ID:${sendMessageResult.conversationId}`, sendMessageResult.id)
+    //   await redis.set(`CHATGPT:QQ_CONVERSATION:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`, sendMessageResult.conversationId)
+    //   if (!conversation.conversationId) {
+    //     // 如果是对话的创建者
+    //     await redis.set(`CHATGPT:CONVERSATION_CREATER_ID:${sendMessageResult.conversationId}`, e.sender.user_id)
+    //     await redis.set(`CHATGPT:CONVERSATION_CREATER_NICK_NAME:${sendMessageResult.conversationId}`, e.sender.card)
+    //   }
+    //   (async () => {
+    //     let audio = await this.chatGPTApi.synthesis(sendMessageResult)
+    //     if (audio) {
+    //       await e.reply(segment.record(audio))
+    //     }
+    //   })().catch(err => {
+    //     logger.warn('发送语音失败', err)
+    //   })
+    //   return sendMessageResult
+    // } else
+    if (use === 'claude') { // 使用接口 ##############################
       // slack已经不可用，移除
       let keys = Config.claudeApiKey?.split(/[,;]/).map(key => key.trim()).filter(key => key)
       let choiceIndex = Math.floor(Math.random() * keys.length)
