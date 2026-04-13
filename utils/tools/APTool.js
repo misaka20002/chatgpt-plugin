@@ -23,7 +23,8 @@ export class APTool extends AbstractTool {
       { id: 'siliconflow-paint', desc: '- siliconflow-paint: Use siliconflow/sf插件 to draw pictures.' },
       { id: 'Jimeng-paint', desc: '- Jimeng-paint: Use Jimeng drawing API.' },
       { id: 'gemini-Image-gg', desc: '- gemini-Image-gg: Use Gemini-image to draw or editing existing images.' },
-      { id: 'gemini-Image-ss', desc: '- gemini-Image-ss: Use Gemini-image to draw or editing existing images.' }
+      { id: 'gemini-Image-ss', desc: '- gemini-Image-ss: Use Gemini-image to draw or editing existing images.' },
+      { id: 'sf-dd-paint', desc: '- sf-dd-paint: Use sf插件dd接口 drawing API.' }
     ];
 
     toolConfigs.forEach(tool => {
@@ -50,7 +51,7 @@ export class APTool extends AbstractTool {
 
     let promptDescription = "**Prompt:**\n";
     const enabledNaiOrAp = enumValues.filter(val => ['nai-plugin-1', 'nai-plugin-4', 'paimonnai-plugin', 'ap-plugin', 'siliconflow-paint'].includes(val));
-    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'gemini-Image-gg', 'gemini-Image-ss'].includes(val));
+    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'gemini-Image-gg', 'gemini-Image-ss', 'sf-dd-paint'].includes(val));
 
     if (enabledNaiOrAp.length > 0) {
       const pluginsStr = enabledNaiOrAp.map(p => `\`${p}\``).join(', ');
@@ -229,6 +230,21 @@ export class APTool extends AbstractTool {
         e.msg = `#即梦绘画 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf插件即梦绘画：\nmsg: ', e.msg);
         await sfjm.call_Jimeng_Api(e);
+        return 'draw success, picture has been sent.';
+      }
+
+      // 使用sf-dd绘画
+      else if (plugin === 'sf-dd-paint') {
+        let sfdd;
+        try {
+          let { DD_Painting } = await import('../../../siliconflow-plugin/apps/DD_Painting.js');
+          sfdd = new DD_Painting(e);
+        } catch (err) {
+          return 'draw failed, ModelScope painting app might not be supported in your siliconflow-plugin version.';
+        }
+        e.msg = `#d聊天绘画工具 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件dd绘画：\nmsg: ', e.msg);
+        await sfdd.dd_custom_command(e);
         return 'draw success, picture has been sent.';
       }
 

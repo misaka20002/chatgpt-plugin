@@ -1463,14 +1463,15 @@ export function supportGuoba() {
               { label: "siliconflow-Jimeng（#即梦绘画）", value: "Jimeng-paint" },
               { label: "siliconflow-plugin（#g谷歌编辑图片）", value: "gemini-Image-gg" },
               { label: "siliconflow-plugin（#s谷歌编辑图片）", value: "gemini-Image-ss" },
+              { label: "siliconflow-plugin（#d聊天绘画工具）", value: "sf-dd-paint" },
             ],
           },
         },
         {
           field: 'siliconflow-gemini-Image_help_field',
-          label: '帮助: #g谷歌编辑图片',
+          label: '帮助: Siliconflow-Plugin',
           component: 'Input',
-          bottomHelpMessage: '增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 或 #s谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp',
+          bottomHelpMessage: '1. #g谷歌编辑图片: 增加基于sf插件的gemini的图片修改/以图画图工具，需要先安装siliconflow插件：然后配置一个对话接口名为 #g谷歌编辑图片 或 #s谷歌编辑图片 的接口 ； 参考文档： https://github.com/AIGC-Yunzai/siliconflow-plugin/blob/main/docs/openrouter_ai.md 参考图： https://github.com/misaka20002/chatgpt-plugin/blob/v2/doc/guoba_imgs/guobaHelp-Gemini%20Image.webp ;',
           componentProps: {
             readonly: true,
             defaultValue: 'https://github.com/AIGC-Yunzai/siliconflow-plugin'
