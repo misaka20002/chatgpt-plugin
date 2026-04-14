@@ -24,25 +24,26 @@ export class QueryGenshinTool extends AbstractTool {
   func = async function (opts, e) {
     let { qq, uid = '', character = '' } = opts
     qq = isNaN(qq) || !qq ? e.sender.user_id : parseInt(qq.trim())
-    if (e.at === e.bot.uin) {
-      e.at = null
+    const new_e = Object.assign(Object.create(Object.getPrototypeOf(e)), e);
+    if (new_e.at === new_e.bot.uin) {
+      new_e.at = null
     }
-    e.atBot = false
+    new_e.atBot = false
     try {
       if (character) {
         let ProfileDetail = (await import('../../../miao-plugin/apps/profile/ProfileDetail.js')).default
-        // e.msg = `#${character}面板${uid}`
-        e.original_msg = `#${character}面板${uid}`
-        e.user_id = parseInt(qq)
-        e.isSr = false
-        await ProfileDetail.detail(e)
+        new_e.original_msg = `#${character}面板${uid}`
+        // new_e.msg = `#${character}面板${uid}`
+        new_e.user_id = parseInt(qq)
+        new_e.isSr = false
+        await ProfileDetail.detail(new_e)
         return 'the character panel of genshin impact has been sent to group. you don\'t need text version'
       } else {
         let ProfileList = (await import('../../../miao-plugin/apps/profile/ProfileList.js')).default
-        e.msg = `#面板${uid}`
-        e.user_id = qq
-        e.isSr = false
-        await ProfileList.render(e)
+        new_e.msg = `#面板${uid}`
+        new_e.user_id = qq
+        new_e.isSr = false
+        await ProfileList.render(new_e)
         return 'the player panel of genshin impact has been sent to group. you don\'t need text version'
       }
     } catch (err) {

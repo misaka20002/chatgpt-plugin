@@ -575,14 +575,14 @@ export class memes extends plugin {
       })
     } catch (error) {
       logger.error('[meme]请求失败:', error)
-      await e.reply(`[meme]表情制作失败: ${hidePrivacyInfo(error.message)}`, true)
+      await e.reply(`[meme]表情制作失败: ${hidePrivacyInfo(error.message)}`, true, { recallMsg: !Config.is_recallMsg ? 0 : 119 })
       return true
     }
     // console.log(response.status)
     if (response.status > 299) {
       let error = await response.text()
       console.error(error)
-      await e.reply(hidePrivacyInfo(error), true)
+      await e.reply(hidePrivacyInfo(error), true, { recallMsg: !Config.is_recallMsg ? 0 : 119 })
       return true
     }
     // mkdirs('data/memes/result')

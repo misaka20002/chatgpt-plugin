@@ -94,10 +94,11 @@ export class APTool extends AbstractTool {
 
   func = async function (opts, e) {
     let { prompt, plugin } = opts
-    if (e.at === e.bot.uin) {
-      e.at = null
+    const new_e = Object.assign(Object.create(Object.getPrototypeOf(e)), e);
+    if (new_e.at === new_e.bot.uin) {
+      new_e.at = null
     }
-    e.atBot = false
+    new_e.atBot = false
 
     // 为角色添加作品名
     const { charactersName, processedTags } = extractCharacterName(prompt);
@@ -122,14 +123,14 @@ export class APTool extends AbstractTool {
         if (random_nai < 0.3) strPaint = '宽图';
         else if (random_nai < 0.6) strPaint = '方图';
 
-        e.msg = `#绘画${strPaint} ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
-        if (e.img?.length) e.msg += ', Reference_Strength = 0.30';
+        new_e.msg = `#绘画${strPaint} ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
+        if (new_e.img?.length) new_e.msg += ', Reference_Strength = 0.30';
 
         // 随机 smea
-        e.msg += Math.random() < 0.50 ? '' : (Math.random() < 0.75 ? ', smea, dynoff' : ', smea');
+        new_e.msg += Math.random() < 0.50 ? '' : (Math.random() < 0.75 ? ', smea, dynoff' : ', smea');
 
-        logger.info('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', e.msg);
-        await nai.txt2img(e);
+        logger.info('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', new_e.msg);
+        await nai.txt2img(new_e);
         return 'draw success, picture has been sent.';
       }
 
@@ -149,11 +150,11 @@ export class APTool extends AbstractTool {
         if (random_nai < 0.3) strPaint = ' --width 1216 --height 832';
         else if (random_nai < 0.6) strPaint = ' --width 1024 --height 1024';
 
-        e.msg = `#draw ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}${strPaint}`;
-        if (e.img?.length) e.msg += ', --reference_strength 0.3';
+        new_e.msg = `#draw ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}${strPaint}`;
+        if (new_e.img?.length) new_e.msg += ', --reference_strength 0.3';
 
-        logger.info('[ChatGPT][DrawTool]开始调用nai4插件绘画：\nmsg: ', e.msg);
-        await nai.text(e);
+        logger.info('[ChatGPT][DrawTool]开始调用nai4插件绘画：\nmsg: ', new_e.msg);
+        await nai.text(new_e);
         return 'draw success, picture has been sent.';
       }
 
@@ -162,19 +163,19 @@ export class APTool extends AbstractTool {
         let ap;
         try {
           let { Ai_Painting } = await import('../../../ap-plugin/apps/aiPainting.js');
-          ap = new Ai_Painting(e);
+          ap = new Ai_Painting(new_e);
         } catch (err) {
           try {
             // ap的dev分支改名了
             let { Ai_Painting } = await import('../../../ap-plugin/apps/ai_painting.js');
-            ap = new Ai_Painting(e);
+            ap = new Ai_Painting(new_e);
           } catch (err1) {
             return "the user didn't install ap-plugin. suggest him to install";
           }
         }
-        e.msg = `#绘图 ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
-        logger.info('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', e.msg);
-        await ap.aiPainting(e);
+        new_e.msg = `#绘图 ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
+        logger.info('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', new_e.msg);
+        await ap.aiPainting(new_e);
         return 'draw success, picture has been sent.';
       }
 
@@ -183,13 +184,13 @@ export class APTool extends AbstractTool {
         let sf;
         try {
           let { SF_Painting } = await import('../../../siliconflow-plugin/apps/SF_Painting.js');
-          sf = new SF_Painting(e);
+          sf = new SF_Painting(new_e);
         } catch (err) {
           return "the user didn't install siliconflow-plugin. suggest him to install";
         }
-        e.msg = `#sf绘图 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
-        logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', e.msg);
-        await sf.sf_draw(e);
+        new_e.msg = `#sf绘图 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', new_e.msg);
+        await sf.sf_draw(new_e);
         return 'draw success, picture has been sent.';
       }
 
@@ -198,7 +199,7 @@ export class APTool extends AbstractTool {
         let sfmj;
         try {
           let { MJ_Painting } = await import('../../../siliconflow-plugin/apps/MJ_Painting.js');
-          sfmj = new MJ_Painting(e);
+          sfmj = new MJ_Painting(new_e);
         } catch (err) {
           return "the user didn't install siliconflow-plugin. suggest him to install";
         }
@@ -208,12 +209,12 @@ export class APTool extends AbstractTool {
         //   cmd = plugin === 'Niji-Journey' ? '#nic' : '#mjc';
         // }
 
-        e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
-        logger.info('[ChatGPT][DrawTool]开始调用sf-MJ插件绘画：\nmsg: ', e.msg);
+        new_e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        logger.info('[ChatGPT][DrawTool]开始调用sf-MJ插件绘画：\nmsg: ', new_e.msg);
         if (cmd === '#mjc' || cmd === '#nic') {
-          await sfmj.mj_draw_with_link(e);
+          await sfmj.mj_draw_with_link(new_e);
         } else {
-          await sfmj.mj_draw(e);
+          await sfmj.mj_draw(new_e);
         }
         return 'draw success, picture has been sent.';
       }
@@ -223,13 +224,13 @@ export class APTool extends AbstractTool {
         let sfjm;
         try {
           let { Jimeng } = await import('../../../siliconflow-plugin/apps/Jimeng.js');
-          sfjm = new Jimeng(e);
+          sfjm = new Jimeng(new_e);
         } catch (err) {
           return 'draw failed, Jimeng painting app might not be supported in your siliconflow-plugin version.';
         }
-        e.msg = `#即梦绘画 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
-        logger.info('[ChatGPT][DrawTool]开始调用sf插件即梦绘画：\nmsg: ', e.msg);
-        await sfjm.call_Jimeng_Api(e);
+        new_e.msg = `#即梦绘画 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件即梦绘画：\nmsg: ', new_e.msg);
+        await sfjm.call_Jimeng_Api(new_e);
         return 'draw success, picture has been sent.';
       }
 
@@ -238,13 +239,13 @@ export class APTool extends AbstractTool {
         let sfdd;
         try {
           let { DD_Painting } = await import('../../../siliconflow-plugin/apps/DD_Painting.js');
-          sfdd = new DD_Painting(e);
+          sfdd = new DD_Painting(new_e);
         } catch (err) {
           return 'draw failed, ModelScope painting app might not be supported in your siliconflow-plugin version.';
         }
-        e.msg = `#d聊天绘画工具 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
-        logger.info('[ChatGPT][DrawTool]开始调用sf插件dd绘画：\nmsg: ', e.msg);
-        await sfdd.dd_custom_command(e);
+        new_e.msg = `#d聊天绘画工具 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        logger.info('[ChatGPT][DrawTool]开始调用sf插件dd绘画：\nmsg: ', new_e.msg);
+        await sfdd.dd_custom_command(new_e);
         return 'draw success, picture has been sent.';
       }
 
@@ -253,19 +254,19 @@ export class APTool extends AbstractTool {
         let sf;
         try {
           let { SF_Painting } = await import('../../../siliconflow-plugin/apps/SF_Painting.js');
-          sf = new SF_Painting(e);
+          sf = new SF_Painting(new_e);
         } catch (err) {
           return "the user didn't install siliconflow-plugin. suggest him to install";
         }
 
         if (plugin === 'gemini-Image-gg') {
-          e.msg = `#g谷歌编辑图片 ` + prompt;
-          logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', e.msg);
-          await sf.gg_select_and_chat(e);
+          new_e.msg = `#g谷歌编辑图片 ` + prompt;
+          logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', new_e.msg);
+          await sf.gg_select_and_chat(new_e);
         } else {
-          e.msg = `#s谷歌编辑图片 ` + prompt;
-          logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', e.msg);
-          await sf.sf_select_and_chat(e);
+          new_e.msg = `#s谷歌编辑图片 ` + prompt;
+          logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', new_e.msg);
+          await sf.sf_select_and_chat(new_e);
         }
         return 'draw success, picture has been sent.';
       }
