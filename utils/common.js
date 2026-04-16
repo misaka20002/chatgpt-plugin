@@ -219,15 +219,15 @@ export function mkdirs (dirname) {
   }
 }
 
-export function formatDate (date) {
+export function formatDate(date) {
+  const pad = (num) => num.toString().padStart(2, '0') // 补0
   const year = date.getFullYear()
-  const month = date.getMonth() + 1 // Note that getMonth() returns a zero-based index
-  const day = date.getDate()
-  const hour = date.getHours()
-  const minute = date.getMinutes()
+  const month = pad(date.getMonth() + 1)
+  const day = pad(date.getDate())
+  const hour = pad(date.getHours())
+  const minute = pad(date.getMinutes())
 
-  const formattedDate = `${year}年${month}月${day}日 ${hour}:${minute}`
-  return formattedDate
+  return `${year}年${month}月${day}日 ${hour}:${minute}`
 }
 
 export function formatDate2 (date) {

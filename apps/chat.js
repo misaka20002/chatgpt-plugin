@@ -1014,11 +1014,12 @@ export class chatgpt extends plugin {
         if (!chatMessage.error) {
           // 没错误的时候再更新，不然易出错就对话没了
           previousConversation.num = previousConversation.num + 1
+          // 添加当前时间戳
           if (!previousConversation.replyTimestamps) previousConversation.replyTimestamps = []
           previousConversation.replyTimestamps.push(Date.now())
-          if (previousConversation.replyTimestamps.length > 10) {
+          if (previousConversation.replyTimestamps.length > 10)
             previousConversation.replyTimestamps = previousConversation.replyTimestamps.slice(-10)
-          }
+          // 写入 redis
           await redis.set(key, JSON.stringify(previousConversation), Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {})
         }
       }
