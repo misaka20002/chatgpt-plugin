@@ -930,7 +930,8 @@ export class chatgpt extends plugin {
         clientId: previousConversation.clientId,
         invocationId: previousConversation.invocationId,
         conversationSignature: previousConversation.conversationSignature,
-        bingToken: previousConversation.bingToken
+        bingToken: previousConversation.bingToken,
+        replyTimestamps: previousConversation.replyTimestamps || []
       }
     }
     let handler = this.e.runtime?.handler || {
@@ -1013,6 +1014,11 @@ export class chatgpt extends plugin {
         if (!chatMessage.error) {
           // 没错误的时候再更新，不然易出错就对话没了
           previousConversation.num = previousConversation.num + 1
+          if (!previousConversation.replyTimestamps) previousConversation.replyTimestamps = []
+          previousConversation.replyTimestamps.push(Date.now())
+          if (previousConversation.replyTimestamps.length > 10) {
+            previousConversation.replyTimestamps = previousConversation.replyTimestamps.slice(-10)
+          }
           await redis.set(key, JSON.stringify(previousConversation), Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {})
         }
       }

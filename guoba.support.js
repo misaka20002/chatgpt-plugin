@@ -112,7 +112,7 @@ export function supportGuoba() {
         {
           field: 'getCurrentTime',
           label: '允许感知现实时间',
-          bottomHelpMessage: '开启后机器人可以感知现实时间；但如果开启了“允许机器人读取近期的群聊”Bot也可以从群聊记录中知道时间',
+          bottomHelpMessage: '开启后系统提示词会附加当前时间，并以“上一次对话是在X分钟前”的形式告诉AI历史对话时间线。关闭后立即生效，无需清空历史对话',
           component: 'Switch'
         },
         {

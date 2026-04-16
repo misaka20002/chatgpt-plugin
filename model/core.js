@@ -149,8 +149,15 @@ async function handleSystem(e, system, settings) {
   return system
 }
 
+function buildConversationTimeline(replyTimestamps) {
+  if (!replyTimestamps?.length) return ''
+  return '\nConversation timeline:\n' + replyTimestamps.map((ts, i) =>
+    `${i + 1}. ${formatDate(new Date(ts))}`
+  ).join('\n')
+}
+
 /** 合并插件用系统提示词 */
-function mergeSystemPrompt(systemPrompt, e) {
+function mergeSystemPrompt(systemPrompt, e, replyTimestamps) {
   // 呆毛版 在 prompt 中替换文本使用 e.sender 信息
   if (Config.isReplacePromptForSenderMsg) {
     systemPrompt = replacePromptForSenderMsg(e, systemPrompt);
@@ -168,7 +175,8 @@ function mergeSystemPrompt(systemPrompt, e) {
     systemPrompt += '如果我要求你生成音乐或写歌，你需要回复适合Suno生成音乐的信息。请使用Verse、Chorus、Bridge、Outro和End等关键字对歌词进行分段，如[Verse 1]。音乐信息需要使用markdown包裹的JSON格式回复给我，结构为```json{"option": "Suno", "tags": "style", "title": "title of the song", "lyrics": "lyrics"}```。'
   }
   if (Config.getCurrentTime) {
-    systemPrompt += `\nCurrent time: ${formatDate(new Date())}.`;
+    systemPrompt += `\nCurrent time: ${formatDate(new Date())}.`
+    systemPrompt += buildConversationTimeline(replyTimestamps)
   }
   return systemPrompt
 }
@@ -332,7 +340,7 @@ class Core {
           const groupContextTip = Config.groupContextTip
           let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
 
-          option.system = mergeSystemPrompt(option.system, e)
+          option.system = mergeSystemPrompt(option.system, e, conversation.replyTimestamps)
 
           option.system = option.system.replaceAll(namePlaceholder, botName || defaultBotName) +
             ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
@@ -446,7 +454,7 @@ class Core {
         e,
         chatId: conversation?.conversationId,
         image: e.img ? e.img[0] : undefined,
-        system: mergeSystemPrompt(opt.system.xh, e)
+        system: mergeSystemPrompt(opt.system.xh, e, conversation.replyTimestamps)
       })
       return response
     } else if (use === 'azure') { // 使用接口 ##############################
@@ -519,7 +527,7 @@ class Core {
         option = Object.assign(option, conversation)
       }
 
-      opts.systemMessage = mergeSystemPrompt(opts.systemMessage, e)
+      opts.systemMessage = mergeSystemPrompt(opts.systemMessage, e, conversation.replyTimestamps)
 
       if (opt.enableSmart) {
         let isAdmin = ['admin', 'owner'].includes(e.sender.role)
@@ -658,7 +666,7 @@ class Core {
       }
       let system = opt.system.gemini
 
-      system = mergeSystemPrompt(system, e)
+      system = mergeSystemPrompt(system, e, conversation.replyTimestamps)
 
       if (opt.settings.enableGroupContext && e.isGroup) {
         let chats = await getChatHistoryGroup(e, Config.groupContextLength)
@@ -721,7 +729,7 @@ class Core {
           ...opt.settings,
           groupContextLength
         })
-        system = mergeSystemPrompt(system, e)
+        system = mergeSystemPrompt(system, e, conversation.replyTimestamps)
         if (extraSystemMessage) {
           system += extraSystemMessage
         }
