@@ -162,7 +162,7 @@ export function supportGuoba() {
         {
           field: 'groupMerge',
           label: '群组消息合并',
-          bottomHelpMessage: '开启后，群聊消息将被视为同一对话',
+          bottomHelpMessage: '开启后，群聊消息将被视为同一对话；呆毛注：开启后所有群友视为同一人，推荐关闭该选项',
           component: 'Switch'
         },
         {
