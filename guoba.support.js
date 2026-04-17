@@ -33,7 +33,7 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
-          label: '通用配置',
+          label: '触发配置',
           component: 'Divider'
         },
         {
@@ -49,10 +49,20 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'enablePrivateChat',
+          label: '是否允许私聊机器人',
+          bottomHelpMessage: 'Bot主人不受限制',
+          component: 'Switch'
+        },
+        {
           field: 'allowOtherMode',
           label: '允许其他模式',
           bottomHelpMessage: '开启后，则允许用户使用#chat1/#chat3/#chatglm/#bing等命令无视全局模式进行聊天',
           component: 'Switch'
+        },
+        {
+          label: '对话限制',
+          component: 'Divider'
         },
         {
           field: 'blockWords',
@@ -98,6 +108,10 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          label: '行为控制',
+          component: 'Divider'
+        },
+        {
           field: 'enableRobotAt',
           label: '是否允许机器人真at',
           bottomHelpMessage: '开启后机器人的回复如果at群友会真的at；原理：当Bot输出的文本中包含特定群友的昵称或群昵称时 转为 At 用户，经呆毛测试NTQQ平台已失效，推荐关闭。',
@@ -108,6 +122,19 @@ export function supportGuoba() {
           label: 'At群友-提示词版',
           bottomHelpMessage: '开启后机器人的回复如果at群友会真的at；原理：插件自动在系统提示词中写入At码并处理',
           component: 'Switch'
+        },
+        {
+          field: 'replyConfirmType',
+          label: '回复确认',
+          bottomHelpMessage: '填写贴表情回复确认的表情值，例如66是爱心、111是QAQ，具体值可在控制台中自己贴个表情查看；贴表情仅QQ适配器群聊可用；填写 0 为关闭回复确认；填写 -1 为“xx在哦”文字确认。如果你的适配器不支持贴表情，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
+          component: 'InputNumber',
+          componentProps: {
+            min: -1
+          }
+        },
+        {
+          label: '输入控制',
+          component: 'Divider'
         },
         {
           field: 'getCurrentTime',
@@ -131,12 +158,6 @@ export function supportGuoba() {
           label: '允许机器人读取近期的最多群聊聊天记录条数。',
           bottomHelpMessage: '允许机器人读取近期的最多群聊聊天记录条数。非常消耗输入token，推荐20',
           component: 'InputNumber'
-        },
-        {
-          field: 'enablePrivateChat',
-          label: '是否允许私聊机器人',
-          bottomHelpMessage: 'Bot主人不受限制',
-          component: 'Switch'
         },
         {
           field: 'groupMerge',
@@ -166,6 +187,10 @@ export function supportGuoba() {
           }
         },
         {
+          label: '输出控制',
+          component: 'Divider'
+        },
+        {
           field: 'forwardReasoning',
           label: '是否转发思考过程',
           bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。仅适配reasoning_content。默认开启。',
@@ -184,7 +209,7 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          label: '图片模式',
+          label: '图片回复模式',
           component: 'Divider'
         },
         {
@@ -248,20 +273,6 @@ export function supportGuoba() {
           label: '撤回错误消息',
           bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
-        },
-        {
-          field: 'translateSource',
-          label: '翻译来源',
-          bottomHelpMessage: '#gpt翻译使用的AI来源',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: 'OpenAI', value: 'openai' },
-              { label: 'Gemini', value: 'gemini' },
-              { label: '星火', value: 'xh' },
-              { label: '通义千问', value: 'qwen' }
-            ]
-          }
         },
         {
           label: '对话',
@@ -1830,6 +1841,20 @@ export function supportGuoba() {
         {
           label: '杂项',
           component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          field: 'translateSource',
+          label: '翻译来源',
+          bottomHelpMessage: '#gpt翻译使用的AI来源',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: 'OpenAI', value: 'openai' },
+              { label: 'Gemini', value: 'gemini' },
+              { label: '星火', value: 'xh' },
+              { label: '通义千问', value: 'qwen' }
+            ]
+          }
         },
         {
           label: '伪人',

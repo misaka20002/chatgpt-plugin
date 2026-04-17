@@ -330,6 +330,7 @@ const defaultConfig = {
   rateLimiting: 0,
   chatgptBlockCount: 50,
   TTSAudio_Tool: false,
+  replyConfirmType: 111,
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统

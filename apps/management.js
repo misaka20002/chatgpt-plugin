@@ -734,13 +734,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   }
 
   async turnOnConfirm(e) {
-    await redis.set('CHATGPT:CONFIRM', 'on')
+    Config.replyConfirmType = 111
     await this.reply('已开启消息确认', true)
     return false
   }
 
   async turnOffConfirm(e) {
-    await redis.set('CHATGPT:CONFIRM', 'off')
+    Config.replyConfirmType = 0
     await this.reply('已关闭消息确认', true)
     return false
   }
@@ -1588,9 +1588,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     } else {
       redisConfig.bingTokens = []
     }
-    if (await redis.exists('CHATGPT:CONFIRM') != 0) {
-      redisConfig.turnConfirm = await redis.get('CHATGPT:CONFIRM') === 'on'
-    }
     if (await redis.exists('CHATGPT:USE') != 0) {
       redisConfig.useMode = await redis.get('CHATGPT:USE')
     }
@@ -1647,15 +1644,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
               type: 'redis'
             })
             await redis.set('CHATGPT:BING_TOKENS', JSON.stringify(redisConfig.bingTokens))
-          }
-          if (redisConfig.turnConfirm != null) {
-            changeConfig.push({
-              item: 'turnConfirm',
-              value: redisConfig.turnConfirm ? 'on' : 'off',
-              old: await redis.get('CHATGPT:CONFIRM'),
-              type: 'redis'
-            })
-            await redis.set('CHATGPT:CONFIRM', redisConfig.turnConfirm ? 'on' : 'off')
           }
           if (redisConfig.useMode != null) {
             changeConfig.push({

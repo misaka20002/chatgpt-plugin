@@ -811,11 +811,6 @@ export class chatgpt extends plugin {
       await this.reply(`${Config.tts_First_person}不想回答你这个问题QAQ`, true)
       return false
     }
-    let confirm = await redis.get('CHATGPT:CONFIRM')
-    let confirmOn = (!confirm || confirm === 'on') // confirm默认开启
-    if (confirmOn) {
-      await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: !Config.is_recallMsg ? 0 : 30 })
-    }
 
     const emotionFlag = await redis.get(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
     let userReplySetting = await getUserReplySetting(this.e)
@@ -972,6 +967,12 @@ export class chatgpt extends plugin {
         logger.mark({ conversation })
       }
 
+      // 回复确认
+      if (Config.replyConfirmType == -1) {
+        await this.reply(`${Config.tts_First_person}在哦`, true, { recallMsg: !Config.is_recallMsg ? 0 : 30 })
+      } else if (Config.replyConfirmType && e.group?.setEmojiLike) {
+        e.group.setEmojiLike(e.message_id, Config.replyConfirmType)
+      }
       // 适配器发送“正在输入”状态
       if (e.send_typing) e.send_typing();
 
