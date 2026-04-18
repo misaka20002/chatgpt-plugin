@@ -129,7 +129,8 @@ export function supportGuoba() {
           bottomHelpMessage: '填写贴表情回复确认的表情值，例如66是爱心、111是QAQ，具体值可在控制台中自己贴个表情查看；贴表情仅QQ适配器群聊可用；填写 0 为关闭回复确认；填写 -1 为“xx在哦”文字确认。如果你的适配器不支持贴表情，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'InputNumber',
           componentProps: {
-            min: -1
+            min: -1,
+            step: 1
           }
         },
         {
@@ -1668,7 +1669,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_cd',
           label: '戳一戳响应CD',
-          bottomHelpMessage: '戳一戳响应CD，QQ默认戳一戳CD为10s，建议填写大于10的整数。设置为0则禁用戳一戳响应CD',
+          bottomHelpMessage: '戳一戳个人响应CD，QQ默认戳一戳CD为10s，建议填写大于10',
           helpMessage: '单位：秒',
           component: 'InputNumber',
           componentProps: {
@@ -1804,7 +1805,7 @@ export function supportGuoba() {
         {
           field: 'meme_CD',
           label: 'meme CD',
-          bottomHelpMessage: 'meme CD个人时间，建议填写大于1的整数。设置为0则禁用戳一戳响应CD',
+          bottomHelpMessage: 'meme生成个人CD时间',
           helpMessage: '单位：秒',
           component: 'InputNumber',
           componentProps: {
@@ -1996,16 +1997,16 @@ export function supportGuoba() {
             min: 0
           }
         },
-        {
-          field: 'sydneyFirstMessageTimeout',
-          label: 'Sydney模式接受首条信息超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '超过该时间阈值未收到Bing的任何消息，则断开本次连接并重试（最多重试3次，失败后将返回timeout waiting for first message）',
-          component: 'InputNumber',
-          componentProps: {
-            min: 15000
-          }
-        },
+        // {
+        //   field: 'sydneyFirstMessageTimeout',
+        //   label: 'Sydney模式接受首条信息超时时间',
+        //   helpMessage: '单位：毫秒',
+        //   bottomHelpMessage: '超过该时间阈值未收到Bing的任何消息，则断开本次连接并重试（最多重试3次，失败后将返回timeout waiting for first message）',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 15000
+        //   }
+        // },
         {
           label: 'emoji合成',
           component: 'Divider'
