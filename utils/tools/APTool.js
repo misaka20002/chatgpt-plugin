@@ -23,7 +23,7 @@ export class APTool extends AbstractTool {
       { id: 'siliconflow-paint', desc: '- siliconflow-paint: Use siliconflow/sf插件 to draw pictures.' },
       { id: 'Jimeng-paint', desc: '- Jimeng-paint: Use Jimeng drawing API.' },
       { id: 'gemini-Image-gg', desc: '- gemini-Image-gg: Use Gemini-image to draw or editing existing images.' },
-      { id: 'gemini-Image-ss', desc: '- gemini-Image-ss: Use Gemini-image to draw or editing existing images.' },
+      { id: 'gpt-Image-2-ss', desc: '- gpt-Image-2-ss: Use GPT-Image-2 to draw or editing existing images.' },
       { id: 'sf-dd-paint', desc: '- sf-dd-paint: Use sf插件dd接口 drawing API.' }
     ];
 
@@ -51,7 +51,7 @@ export class APTool extends AbstractTool {
 
     let promptDescription = "**Prompt:**\n";
     const enabledNaiOrAp = enumValues.filter(val => ['nai-plugin-1', 'nai-plugin-4', 'paimonnai-plugin', 'ap-plugin', 'siliconflow-paint'].includes(val));
-    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'gemini-Image-gg', 'gemini-Image-ss', 'sf-dd-paint'].includes(val));
+    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'gemini-Image-gg', 'gpt-Image-2-ss', 'sf-dd-paint'].includes(val));
 
     if (enabledNaiOrAp.length > 0) {
       const pluginsStr = enabledNaiOrAp.map(p => `\`${p}\``).join(', ');
@@ -69,7 +69,7 @@ export class APTool extends AbstractTool {
       promptDescription += `For ${pluginsStr}, You are a top-tier prompt engineer. 请你使用**英文自然语言**详细描述画面的主体、环境、光影、风格和氛围，可以使用完整的句子和段落。\n\n`;
     }
 
-    const matchedGeminiImageTool = enumValues.find(val => val === 'gemini-Image-gg' || val === 'gemini-Image-ss');
+    const matchedGeminiImageTool = enumValues.find(val => val === 'gemini-Image-gg' || val === 'gpt-Image-2-ss');
     if (matchedGeminiImageTool) {
       promptDescription += `特别提示：如果用户要求**修改图片**或**在已有图片基础上编辑**，请优先选择 \`${matchedGeminiImageTool}\` 工具。\n\n`;
     }
@@ -250,7 +250,7 @@ export class APTool extends AbstractTool {
       }
 
       // 使用 Sf插件的 Gemini-3-image
-      else if (plugin === 'gemini-Image-gg' || plugin === 'gemini-Image-ss') {
+      else if (plugin === 'gemini-Image-gg' || plugin === 'gpt-Image-2-ss') {
         let sf;
         try {
           let { SF_Painting } = await import('../../../siliconflow-plugin/apps/SF_Painting.js');
@@ -264,7 +264,7 @@ export class APTool extends AbstractTool {
           logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', new_e.msg);
           await sf.gg_select_and_chat(new_e);
         } else {
-          new_e.msg = `#s谷歌编辑图片 ` + prompt;
+          new_e.msg = `#sgpt编辑图片 ` + prompt;
           logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', new_e.msg);
           await sf.sf_select_and_chat(new_e);
         }
