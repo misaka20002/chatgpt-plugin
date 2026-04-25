@@ -44,7 +44,7 @@ export class GeminiSearchTool extends AbstractTool {
 
         let client = new CustomGoogleGeminiClient({
             key: Config.getGeminiKey,
-            model: 'gemini-2.5-flash',
+            model: Config.geminiSearchModel,
             baseUrl: Config.geminiBaseUrl,
             debug: Config.debug
         })

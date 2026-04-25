@@ -719,6 +719,15 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'geminiSearchModel',
+          label: 'gemini搜索模型',
+          bottomHelpMessage: '用于智能模式(搜索工具)-搜索来源-Gemini原生搜索；默认值：gemini-2.5-flash',
+          component: 'Select',
+          componentProps: {
+            options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
+          }
+        },
+        {
           field: 'gemini_vqa_needMaster',
           label: '只有主人才能#识图',
           bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”；注意： #识图 指令不受“媒体识别容量限制”控制',
