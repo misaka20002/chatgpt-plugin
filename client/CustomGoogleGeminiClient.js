@@ -564,9 +564,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           // final += `[${chunk.web.title}](${chunk.web.uri})\n`
           final += `[${chunk.web.title}]\n`
         })
-        groundingMetadata.webSearchQueries.forEach(q => {
-          logger.info('search query: ' + q)
-        })
+        logger.info('[Chatgpt][Gemini Grounding] 搜索查询: ' + groundingMetadata.webSearchQueries.join(', '));
       }
     } catch (err) {
       logger.warn(err)
