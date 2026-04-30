@@ -24,7 +24,7 @@ export class APTool extends AbstractTool {
       { id: 'Jimeng-paint', desc: '- Jimeng-paint: Use Jimeng drawing API.' },
       { id: 'gemini-Image-gg', desc: '- gemini-Image-gg: Use Gemini-image to draw or editing existing images.' },
       { id: 'gpt-Image-2-ss', desc: '- gpt-Image-2-ss: Use GPT-Image-2 to draw or editing existing images.' },
-      { id: 'sf-dd-paint', desc: '- sf-dd-paint: Use sf插件dd接口 drawing API.' }
+      { id: 'sf-dd-paint', desc: '- sf-dd-paint: Use modelscope (魔搭) drawing or editing  API.' }
     ];
 
     toolConfigs.forEach(tool => {
@@ -243,7 +243,7 @@ export class APTool extends AbstractTool {
         } catch (err) {
           return 'draw failed, ModelScope painting app might not be supported in your siliconflow-plugin version.';
         }
-        new_e.msg = `#d聊天绘画工具 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        new_e.msg = `#d魔搭编辑图片 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf插件dd绘画：\nmsg: ', new_e.msg);
         await sfdd.dd_custom_command(new_e);
         return 'draw success, picture has been sent.';
