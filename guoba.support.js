@@ -39,7 +39,7 @@ export function supportGuoba() {
         {
           field: 'toggleMode',
           label: '触发方式',
-          bottomHelpMessage: 'at模式下只有at机器人才会回复。#chat模式下不需要at，但需要添加前缀#chat 其他指令：#chatgpt[开启|关闭]回复确认',
+          bottomHelpMessage: 'at模式下只有at机器人才会回复。#chat模式下不需要at，但需要添加前缀#chat',
           component: 'Select',
           componentProps: {
             options: [
@@ -79,7 +79,7 @@ export function supportGuoba() {
         {
           field: 'whitelist',
           label: '对话白名单',
-          bottomHelpMessage: '呆毛版白名单优先方案：群号用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。说明：1、全局白名单模式，即除白名单以外的都不能使用插件对话；2、可在白名单的基础上指定黑名单；3、若什么都不填则关闭白名单功能仅使用黑名单功能。' +
+          bottomHelpMessage: '呆毛版白名单优先方案：群号用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。说明：1、全局白名单模式，即除白名单以外的都不能使用插件对话；2、可在白名单的基础上指定黑名单；3、支持更多的适配器(例如微信个人号：^wx_8888@im.wechat)；4、若什么都不填则关闭白名单功能仅使用黑名单功能。' +
             '白名单优先级：群号^qq > qq > 群号。\n' +
             '黑名单优先级: 群号 > qq > 群号^qq。',
           component: 'Input'
@@ -2171,16 +2171,12 @@ export function supportGuoba() {
             value = value.toString().split(/[,，;；\|]/)
           }
           else if (keyPath === 'blacklist' || keyPath === 'whitelist') {
-            // 6-10位数的群号或qq
-            const regex = /^\^?[1-9]\d{5,9}(\^[1-9]\d{5,9})?$/
             const inputSet = new Set()
             value = value.toString().split(/[,，;；|\s]/).reduce((acc, item) => {
               item = item.trim()
-              if (!inputSet.has(item) && regex.test(item)) {
-                if (item.length <= 11 || (item.length <= 21 && item.length > 11 && !item.startsWith('^'))) {
-                  inputSet.add(item)
-                  acc.push(item)
-                }
+              if (item && !inputSet.has(item)) {
+                inputSet.add(item)
+                acc.push(item)
               }
               return acc
             }, [])
