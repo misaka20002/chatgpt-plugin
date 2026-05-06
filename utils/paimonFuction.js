@@ -8,11 +8,12 @@ import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js"
  * @param {*} e
  * @param {*} img 图片url数组
  * @param {*} video 视频url数组 (传入的是url字符串数组)
- * @return {*} recognitionResults
+ * @param {*} systemPrompt 自定义识别媒体的系统提示词（可选）
+ * @return {string}
  */
-export async function recognitionResultsByGemini(e, img = [], video = []) {
+export async function recognitionResultsByGemini(e, img = [], video = [], systemPrompt = `描述这个媒体中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`) {
   if (!Config.geminiKey)
-    return "请告知用户识别出错：请先配置Geimin对话接口"
+    return "识别出错：请先配置Geimin对话接口"
 
   // 确定目标 URL 和类型
   let targetUrl = null
@@ -32,7 +33,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
     ({ targetUrl, isVideo } = getMediaTargetUrl(e));
 
   if (!targetUrl)
-    return "请告知用户识别出错：请传入要识别的媒体链接"
+    return "识别出错：请传入要识别的媒体链接"
   else {
     let client = new CustomGoogleGeminiClient({
       e,
@@ -61,7 +62,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
             mimeType = match[1];
             base64Data = match[2];
           } else {
-            return "无效的 Data URI 数据格式。";
+            return "识别出错：无效的 Data URI 数据格式。";
           }
         } else if (targetUrl.startsWith('base64://')) {
           // 解析 base64://xxxxx 格式
@@ -71,7 +72,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
         // 计算 Base64 实际的字节大小进行限制检查
         const bufferData = Buffer.from(base64Data, 'base64');
         if (bufferData.byteLength > maxSizeInBytes) {
-          return `媒体文件过大(${(bufferData.byteLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+          return `识别出错：媒体文件过大(${(bufferData.byteLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
         }
 
         // 针对 base64:// 补充默认 mimeType
@@ -84,7 +85,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
         // 增加超时时间，视频下载可能较慢
         const response = await fetch(targetUrl, { timeout: 120000 });
         if (!response.ok) {
-          return "媒体链接下载失败或已失效。";
+          return "识别出错：媒体链接下载失败或已失效。";
         }
 
         const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
@@ -92,7 +93,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
         if (headerLen) {
           const contentLength = parseInt(headerLen);
           if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
-            return `媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
+            return `识别出错：媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
           }
         }
 
@@ -100,7 +101,7 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
 
         // 实际下载后二次检查 防止 header 缺失或不准确的情况
         if (arrayBuffer.byteLength > maxSizeInBytes) {
-          return `下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
+          return `识别出错：下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
         }
 
         base64Data = Buffer.from(arrayBuffer).toString('base64');
@@ -115,16 +116,11 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
 
       // 最终数据检查
       if (!base64Data) {
-        return "媒体文件为空或链接失效。";
+        return "识别出错：媒体文件为空或链接失效。";
       }
 
       const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
       let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this content in Simplified Chinese'
-      let recognitionResults = ''
-
-      // 动态调整 System Prompt 里的措辞
-      const mediaTypeStr = isVideo ? "一段视频" : "一张照片";
-      const systemPrompt = `我将拿出${mediaTypeStr}，你需要描述${mediaTypeStr}中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`
 
       let res = await client.sendMessage(msg, {
         system: systemPrompt,
@@ -133,12 +129,11 @@ export async function recognitionResultsByGemini(e, img = [], video = []) {
           data: base64Data
         }
       })
-      recognitionResults = res.text
-      return recognitionResults
+      return res.text
 
     } catch (err) {
       logger.error('派蒙第一人称对话-获取gemini的识别结果出错: ' + err)
-      return '请告知用户识别出错：' + (err.message || "网络或API错误")
+      return '识别出错：' + (err.message || "网络或API错误")
     }
   }
 }
@@ -182,7 +177,7 @@ export function convertSentenceToArray(inputArr) {
       if (i + 1 < flatList.length && typeof flatList[i + 1] === 'string') {
         flatList[i] = flatList[i] + flatList[i + 1];
         flatList.splice(i + 1, 1);
-        i--; 
+        i--;
       } else if (i > 0 && typeof flatList[i - 1] === 'string') {
         flatList[i - 1] = flatList[i - 1] + flatList[i];
         flatList.splice(i, 1);
@@ -224,7 +219,7 @@ export function convertSentenceToArray(inputArr) {
   for (let i = 0; i < logicalGroups.length; i++) {
     let compactedGroup = [];
     for (const item of logicalGroups[i]) {
-      const lastItem = compactedGroup[compactedGroup.length - 1]; 
+      const lastItem = compactedGroup[compactedGroup.length - 1];
 
       if (typeof item === 'string') {
         if (typeof lastItem === 'string') {

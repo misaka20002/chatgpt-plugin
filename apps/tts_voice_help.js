@@ -2,7 +2,8 @@ import plugin from '../../../lib/plugins/plugin.js';
 import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
 import {
-    getUserReplySetting
+    getUserReplySetting,
+    parseSourceImg,
 } from '../utils/common.js'
 import {
     get_matce_cn_speaker,
@@ -15,7 +16,10 @@ import path from 'path'
 import fs from 'fs'
 import fetch from 'node-fetch'
 import cfg from '../../../lib/config/config.js'
-import { getGeminiModelsByFetch } from '../utils/paimonFuction.js'
+import {
+    getGeminiModelsByFetch,
+    recognitionResultsByGemini,
+} from '../utils/paimonFuction.js'
 // import { ConversationManager } from '../model/conversation.js'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/autoEmoticons/PaimonChuoYiChouPictures/savePics`
@@ -138,6 +142,11 @@ export class voicechangehelp extends plugin {
                     fnc: 'delete_redis_all_gemini_msg',
                     permission: 'master'
                 },
+                {
+                    reg: /^#gpt偷(图|表情包?)$/i,
+                    fnc: 'save_EmojiImg',
+                    permission: 'master'
+                },
             ]
         })
         this.task = [
@@ -150,6 +159,74 @@ export class voicechangehelp extends plugin {
         ]
     }
 
+    /** /^#gpt(偷图|偷表情包?)$/i */
+    async save_EmojiImg(e) {
+        await parseSourceImg(e);
+        if (!e.img || !e.img.length) {
+            e.reply(`请引用图片或将图片一起发送后重试`, true);
+            return true;
+        }
+
+        const emotions = [
+            'happy', 'sad', 'angry', 'love', 'confused', 'tired',
+            'excited', 'scared', 'laugh', 'cry', 'cute', 'shy',
+            'thumbsup', 'thinking', 'surprised', 'bored', 'cool',
+            'sick', 'sleep', 'eat'
+        ];
+
+        // e.reply('正在识别表情包并分析情感中...', true);
+        const systemPrompt = `分析这个表情包或图片的情感，从以下分类中选出一个最合适的分类：\n${emotions.join(', ')}\n\n请严格按以下格式回复：\n[分类]: 简短分析（10个字以内）\n例如：\nhappy: 看起来非常开心`;
+        let aiText = await recognitionResultsByGemini(e, (e.img || []), [], systemPrompt);
+
+        let emotion = '';
+        let analysis = '';
+
+        if (aiText && !aiText.includes('识别出错：')) {
+            // 尝试提取分类和分析
+            const match = aiText.match(/^([a-zA-Z]+)[:：]\s*(.*)/);
+            if (match) {
+                emotion = match[1].toLowerCase();
+                analysis = match[2].trim();
+            } else {
+                // 如果格式不完全匹配，尝试在文本中寻找关键字
+                const foundEmotion = emotions.find(em => aiText.toLowerCase().includes(em));
+                if (foundEmotion) {
+                    emotion = foundEmotion;
+                    analysis = aiText.replace(new RegExp(foundEmotion, 'i'), '').trim();
+                }
+            }
+        }
+
+        if (!emotions.includes(emotion)) {
+            e.reply('未能确定该表情包类别\nError: ' + aiText, true);
+            return true;
+        }
+
+        const directory = path.join(process.cwd(), 'data', 'chatgpt', 'sendEmojiTool', emotion);
+
+        try {
+            const imgResponse = await fetch(e.img[0]);
+            if (imgResponse.ok) {
+                let imgSize = (imgResponse.headers.get('size') || imgResponse.headers.get('content-length')) / 1024 / 1024;
+                if (imgSize > 10) {
+                    e.reply(`这图片超过10MB了，还是不要保存了吧QAQ`, true);
+                    return true;
+                }
+                const imageUrl = await reNameAndSavePic(imgResponse, e.img[0], directory);
+                if (imageUrl) {
+                    e.reply(`偷图成功！\n已将表情包储存在 [${emotion}] 文件夹中~\nAI简评: ${analysis}`, true);
+                } else {
+                    e.reply(`保存表情包失败了呢QAQ`, true);
+                }
+            } else {
+                e.reply('图片下载失败了呢QAQ', true);
+            }
+        } catch (err) {
+            logger.error('偷图失败：', err);
+            e.reply('偷图过程中发生错误：' + err.message, true);
+        }
+        return true;
+    }
 
     /** ^#tts(语音)?(替换)?帮助 */
     async voicechangehelp(e) {
@@ -643,7 +720,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 
     /** ^#派蒙戳(一戳)?(保存|添加)(图片|表情)$ */
     async paimon_chuo_save_img(e) {
-        e = await parseSourceImg(e)
+        await parseSourceImg(e)
         if (e.img) {
             const imgResponse = await fetch(e.img[0])
             if (imgResponse.ok) {
@@ -809,36 +886,6 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         return true;
     }
 
-}
-
-
-/**
- * @description: 处理消息中的图片：当消息引用了图片，则将对应图片放入e.img ，优先级==> e.source.img > e.img
- * @param {*} e
- * @return {*}处理过后的e
- */
-async function parseSourceImg(e) {
-    if (e.source) {
-        let reply;
-        if (e.isGroup) {
-            reply = (await e.group.getChatHistory(e.source.seq, 1)).pop()?.message;
-        } else {
-            reply = (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message;
-        }
-        if (reply) {
-            for (const val of reply) {
-                if (val.type == "image") {
-                    e.img = [val.url];
-                    break;
-                }
-                if (val.type == "file") {
-                    e.reply("不支持消息中的文件，请以图片发送", true);
-                    return;
-                }
-            }
-        }
-    }
-    return e;
 }
 
 /** 下载好的图片重命名并存档在directory */
