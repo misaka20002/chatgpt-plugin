@@ -33,7 +33,13 @@ export class SerpImageTool_by_baidu extends AbstractTool {
         }
       })
 
-      const data = await response.json()
+      // 清除非法控制字符后再解析
+      const text = await response.text()
+      const cleanText = text
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // 移除不可见的非法控制字符（含未转义的换行、制表符等）
+        .replace(/\\'/g, "'")                 // 修复 JSON 标准中不允许的单引号转义 \'
+
+      const data = JSON.parse(cleanText)
 
       if (!data.data || data.data.length === 0) {
         return `No images found for keyword: ${q}`
