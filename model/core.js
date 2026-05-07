@@ -27,8 +27,7 @@ import { SendVideoTool } from '../utils/tools/SendBilibiliTool.js'
 import { BilibiliSearchVideoTool } from '../utils/tools/SearchBilibiliTool.js'
 import { SendAvatarTool } from '../utils/tools/SendAvatarTool.js'
 import { SerpImageTool } from '../utils/tools/SearchImageTool.js'
-import { Search163MusicTool } from '../utils/tools/SearchMusicTool.js'
-import { Send163MusicTool } from '../utils/tools/SendMusicTool.js'
+import { SendNetEaseMusicTool } from '../utils/tools/SendNetEaseMusicTool.js'
 import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { QueryGenshinTool } from '../utils/tools/QueryGenshinTool.js'
@@ -1057,8 +1056,7 @@ async function collectTools(e) {
     serpTools.push(new WeatherTool())
   }
   if (Config.serpSourceArr.includes('Send163_MusicTool')) {
-    serpTools.push(new Search163MusicTool())
-    serpTools.push(new Send163MusicTool())
+    serpTools.push(new SendNetEaseMusicTool())
   }
 
   /** fullTools 包括了踢人等管理员用的工具 */
