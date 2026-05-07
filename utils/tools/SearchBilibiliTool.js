@@ -3,7 +3,7 @@ import fetch from 'node-fetch'
 import { formatDate, mkdirs } from '../common.js'
 import fs from 'fs'
 import { AbstractTool } from './AbstractTool.js'
-export class SearchVideoTool extends AbstractTool {
+export class BilibiliSearchVideoTool extends AbstractTool {
   name = 'searchVideo'
 
   parameters = {

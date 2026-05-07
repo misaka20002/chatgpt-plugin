@@ -155,7 +155,7 @@
   "enableGenerateContents": false,
   "amapKey": "",
   "azSerpKey": "",
-  "serpSource": "off",
+  "serpSourceArr": [],
   "extraUrl": "",
   "smartMode": false,
   "is_recallMsg": true,

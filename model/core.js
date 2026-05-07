@@ -24,11 +24,11 @@ import { QueryStarRailTool } from '../utils/tools/QueryStarRailTool.js'
 import { WebsiteTool } from '../utils/tools/WebsiteTool.js'
 import { SendPictureTool } from '../utils/tools/SendPictureTool.js'
 import { SendVideoTool } from '../utils/tools/SendBilibiliTool.js'
-import { SearchVideoTool } from '../utils/tools/SearchBilibiliTool.js'
+import { BilibiliSearchVideoTool } from '../utils/tools/SearchBilibiliTool.js'
 import { SendAvatarTool } from '../utils/tools/SendAvatarTool.js'
 import { SerpImageTool } from '../utils/tools/SearchImageTool.js'
-import { SearchMusicTool } from '../utils/tools/SearchMusicTool.js'
-import { SendMusicTool } from '../utils/tools/SendMusicTool.js'
+import { Search163MusicTool } from '../utils/tools/SearchMusicTool.js'
+import { Send163MusicTool } from '../utils/tools/SendMusicTool.js'
 import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { QueryGenshinTool } from '../utils/tools/QueryGenshinTool.js'
@@ -39,7 +39,7 @@ import { JinyanTool } from '../utils/tools/JinyanTool.js'
 import { KickOutTool } from '../utils/tools/KickOutTool.js'
 import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
-import { SerpTool } from '../utils/tools/SerpTool.js'
+import { azureSerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
 import { SendDiceTool } from '../utils/tools/SendDiceTool.js'
 import { EliMovieTool } from '../utils/tools/EliMovieTool.js'
@@ -1030,63 +1030,51 @@ class Core {
  * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string, fullFuncMap: {}}>}
  */
 async function collectTools(e) {
-  let serpTool, WebTool
-  switch (Config.serpSource) {
-    case 'geminiSearchTool': {
-      serpTool = new GeminiSearchTool()
-      break
-    }
-    case 'tavily_search': {
-      serpTool = new TavilyTool()
-      break
-    }
-    case 'misaka_WebSearchTool': {
-      serpTool = new Misaka_WebSearchTool()
-      break
-    }
-    case 'ikechan8370': {
-      serpTool = new SerpIkechan8370Tool() // 该工具使用的 url 不再提供服务
-      break
-    }
-    case 'azure': {
-      // if (!Config.azSerpKey) {
-      //   logger.warn('未配置bing搜索密钥，转为使用ikechan8370搜索源')
-      //   serpTool = new SerpIkechan8370Tool()
-      // } else {
-      serpTool = new SerpTool()
-      // }
-      break
-    }
-    default: {
-      serpTool = new Misaka_WebSearchTool()
-    }
+  /** 搜索/网络来源 */
+  let serpTools = []
+  if (Config.serpSourceArr.includes('geminiSearchTool')) {
+    serpTools.push(new GeminiSearchTool())
   }
-  // 若填写了 tavily Key 则使用 TavilyExtractTool
-  if (Config.tavilyKey)
-    WebTool = new TavilyExtractTool()
-  else
-    WebTool = new WebsiteTool()
+  if (Config.serpSourceArr.includes('tavily_search')) {
+    serpTools.push(new TavilyTool())
+  }
+  if (Config.serpSourceArr.includes('misaka_WebSearchTool')) {
+    serpTools.push(new Misaka_WebSearchTool())
+  }
+  if (Config.serpSourceArr.includes('ikechan8370')) {
+    serpTools.push(new SerpIkechan8370Tool()) // 该工具使用的 url 不再提供服务
+  }
+  if (Config.serpSourceArr.includes('azure')) {
+    serpTools.push(new azureSerpTool())
+  }
+  if (Config.serpSourceArr.includes('local_WebsiteTool')) {
+    serpTools.push(new WebsiteTool())
+  }
+  if (Config.serpSourceArr.includes('tavily_WebsiteTool')) {
+    serpTools.push(new TavilyExtractTool())
+  }
+  if (Config.serpSourceArr.includes('Weather_Tool')) {
+    serpTools.push(new WeatherTool())
+  }
+  if (Config.serpSourceArr.includes('Send163_MusicTool')) {
+    serpTools.push(new Search163MusicTool())
+    serpTools.push(new Send163MusicTool())
+  }
 
   /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
     new EditCardTool(),
     new QueryStarRailTool(), // 星铁工具
-    WebTool,
     new JinyanTool(),
     new KickOutTool(),
-    new WeatherTool(),
     new SendPictureTool(),
     new SendVideoTool(),
     // new ImageCaptionTool(), // OCR 工具
-    new SearchVideoTool(),
+    new SerpImageTool_by_baidu(),
+    new BilibiliSearchVideoTool(),
     new SendAvatarTool(),
     // new SerpImageTool(), // 该工具使用的 url 不再提供服务
-    new SerpImageTool_by_baidu(),
-    new SearchMusicTool(),
-    new SendMusicTool(),
-    // new SerpIkechan8370Tool(),
-    // new SerpTool(),
-    serpTool,
+    ...serpTools, // 展开所有开启的搜索工具
     // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
     // new ProcessPictureTool(), // 图像预处理工具
     new APTool(),
@@ -1102,6 +1090,7 @@ async function collectTools(e) {
     new BlockUserTool(),
     // new RecognitionResultsByGeminiTool(),
   ]
+
   // todo 3.0再重构tool的插拔和管理
   let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
     new SendAvatarTool(),
@@ -1110,38 +1099,25 @@ async function collectTools(e) {
     // new EditCardTool(),
     new QueryStarRailTool(), // 星铁工具
     new QueryGenshinTool(), // 原神工具
-    new SendMusicTool(),
-    new SearchMusicTool(),
     // new ProcessPictureTool(), // 图像预处理工具
-    WebTool,
     // new JinyanTool(),
     // new KickOutTool(),
-    new WeatherTool(),
     new SendPictureTool(),
     // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
     new APTool(),
     // new HandleMessageMsgTool(),
-    serpTool,
+    ...serpTools, // 展开所有开启的搜索工具
     new QueryUserinfoTool(), // 查看用户 e.sender 工具
     new GithubAPITool(),
     new BlockUserTool(),
     // new RecognitionResultsByGeminiTool(),
+    new SendVideoTool(),
   ]
 
   if (!Config.disable_sendMessage_tool) {
     tools.push(...[new SendMessageToSpecificGroupOrUserTool()])
     fullTools.push(...[new SendMessageToSpecificGroupOrUserTool()])
   }
-
-  if (Config.serpSource === "off") {
-    tools = tools.filter(tool => tool !== serpTool);
-    fullTools = fullTools.filter(tool => tool !== serpTool);
-  }
-
-  // if (Config.add_sf_image_edit) {
-  //   tools.push(...[new Sf_image_edit()])
-  //   fullTools.push(...[new Sf_image_edit()])
-  // }
 
   if (Config.switch_atOtherUserTool) {
     tools.push(...[new AtOtherUserTool()])
@@ -1224,9 +1200,12 @@ async function collectTools(e) {
 
   } else {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
-    tools.push(new SerpImageTool_by_baidu())
-    tools.push(...[new SearchVideoTool(),
-    new SendVideoTool()])
+    if (Config.serpSourceArr.includes('SerpImageTool_Baidu')) {
+      tools.push(new SerpImageTool_by_baidu())
+    }
+    if (Config.serpSourceArr.includes('Bilibili_SearchVideoTool')) {
+      tools.push(new BilibiliSearchVideoTool())
+    }
   }
   let funcMap = {}
   let fullFuncMap = {}

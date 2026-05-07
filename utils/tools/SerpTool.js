@@ -1,7 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
 
-export class SerpTool extends AbstractTool {
+export class azureSerpTool extends AbstractTool {
   name = 'serp'
 
   parameters = {

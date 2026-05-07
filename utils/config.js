@@ -92,7 +92,6 @@ const defaultConfig = {
   drawByJsonToPlugin: false,
   drawToolsArr: [],
   sf_markdownPic: false,
-  // add_sf_image_edit: false,
   disable_sendMessage_tool: true,
   change_handleMsg_tool: true,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
@@ -226,7 +225,7 @@ const defaultConfig = {
   amapKey: '',
   azSerpKey: '',
   tavilyKey: '',
-  serpSource: 'off',
+  serpSourceArr: ["SerpImageTool_Baidu", "Bilibili_SearchVideoTool", "Send163_MusicTool", "Weather_Tool", "geminiSearchTool"],
   extraUrl: '',
   smartMode: false,
   // claude2

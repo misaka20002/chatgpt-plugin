@@ -1,7 +1,7 @@
 import fetch from 'node-fetch'
 import { AbstractTool } from './AbstractTool.js'
 
-export class SearchMusicTool extends AbstractTool {
+export class Search163MusicTool extends AbstractTool {
   name = 'searchMusic'
 
   parameters = {

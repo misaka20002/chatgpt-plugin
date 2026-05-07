@@ -1309,30 +1309,26 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'amapKey',
-          label: '高德APIKey',
-          bottomHelpMessage: '智能模式时，用于查询天气',
-          component: 'Input'
-        },
-        {
-          field: 'githubAPIKey',
-          label: 'github Access Token',
-          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
-          component: 'Input'
-        },
-        {
-          field: 'serpSource',
-          label: '搜索来源',
+          field: 'serpSourceArr',
+          label: '搜索/网络来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择 Azure（收费的）需填写 Azure search key；若选择 tavily search 需填写 tavily key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
+          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择（需配置）的工具，需要填写下面对应Key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
           componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
             options: [
-              { label: '呆毛版纯本地搜索工具', value: 'misaka_WebSearchTool' },
-              { label: 'Gemini原生搜索', value: 'geminiSearchTool' },
-              { label: 'tavily search', value: 'tavily_search' },
-              { label: 'Azure（收费的）', value: 'azure' },
+              { label: '百度图片搜索工具（推荐）', value: 'SerpImageTool_Baidu' },
+              { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
+              { label: '网易音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
+              { label: '天气搜索工具（推荐）（需配置）', value: 'Weather_Tool' },
+              { label: 'Gemini原生搜索（推荐）（需配置）', value: 'geminiSearchTool' },
+              { label: 'tavily search（需配置）', value: 'tavily_search' },
+              { label: 'tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
+              { label: 'Azure search（需配置）', value: 'azure' },
+              { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
+              { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
               { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
-              { label: '关闭搜索工具', value: 'off' }
             ]
           }
         },
@@ -1346,6 +1342,18 @@ export function supportGuoba() {
           field: 'tavilyKey',
           label: 'tavily key',
           bottomHelpMessage: 'https://app.tavily.com/ 每个月 1000 Credits 额度；填写后智能模式中的 WebsiteTool（网页内容提取工具）将使用 tavily Api；若拥有多个 Key 使用英文逗号分割',
+          component: 'Input'
+        },
+        {
+          field: 'amapKey',
+          label: '高德APIKey',
+          bottomHelpMessage: '智能模式时，用于查询天气',
+          component: 'Input'
+        },
+        {
+          field: 'githubAPIKey',
+          label: 'github Access Token',
+          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
           component: 'Input'
         },
         {

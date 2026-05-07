@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 
-export class SendMusicTool extends AbstractTool {
+export class Send163MusicTool extends AbstractTool {
   name = 'sendMusic'
 
   parameters = {
