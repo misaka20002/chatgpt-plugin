@@ -13,7 +13,7 @@ export class SerpImageTool_by_baidu extends AbstractTool {
       },
       limit: {
         type: 'number',
-        description: 'image number, default is 30, max is 50'
+        description: 'image number, default is 20, max is 50'
       }
     },
     required: ['q']
@@ -22,7 +22,7 @@ export class SerpImageTool_by_baidu extends AbstractTool {
   description = 'Useful when you want to search images from Baidu (百度图片搜索). Returns image URLs that can be sent using sendPicture.'
 
   func = async function (opts) {
-    let { q, limit = 30 } = opts
+    let { q, limit = 20 } = opts
     try {
       const url = `https://image.baidu.com/search/acjson?tn=resultjson_com&word=${encodeURIComponent(q)}&pn=0&rn=${Math.min(limit, 50)}`
 

@@ -12,35 +12,33 @@ export class GetPixivApiLoliconTool extends AbstractTool {
         properties: {
             tag1: {
                 type: 'string',
-                description: 'Primary tag for image search in Japanese. Supports multiple tags separated by "|" (up to 20 tags). MUST use Japanese tags. Examples: "白髪", "猫耳", "ロリ", "メイド|巫女"'
+                description: '主标签（日文）。可用 "|" 分隔多个标签（OR 逻辑，最多20个）。示例："白髪", "猫耳|メイド"'
             },
             tag2: {
                 type: 'string',
-                description: 'Optional secondary tag for image search in Japanese. Supports multiple tags separated by "|" (up to 20 tags). MUST use Japanese tags. This parameter is optional.'
+                description: '可选副标签（日文），格式同 tag1。与 tag1 为 AND 关系'
             },
             num: {
                 type: 'number',
-                description: 'Number of images to retrieve. Minimum: 1, Maximum: 10. Default: 1'
+                description: '获取数量，1-10，默认 3'
             }
         },
         required: ['tag1']
     }
 
-    description = 'Search and retrieve anime/illustration images from Pixiv using Japanese tags. Call this tool when users ask for anime pictures, character illustrations, or images with specific features (like hair color, clothing, characters, etc.). All tags MUST be in Japanese language (e.g., "白髪", "猫耳", "メイド". 2) tag1 and tag2 work as AND filter - images must match BOTH tags if tag2 is provided. 3) Each tag parameter supports multiple tags separated by "|" for OR logic (e.g., "メイド|巫女" means maid OR shrine maiden). Returns image URLs and sends them to the user.'
+    description = '通过日文标签搜索并返回 Pixiv 动漫/插画图片。当用户索要带有特定特征（发色、服装等）的动漫图时调用。标签内支持 "|" 或逻辑，tag1 与 tag2 为与逻辑。图片会自动发送给用户。'
 
     constructor() {
         super()
     }
 
     func = async function (opts, e) {
-        let { tag1, tag2, num = 1 } = opts
+        let { tag1, tag2, num = 3 } = opts
 
-        // 验证必需参数
         if (!tag1 || typeof tag1 !== 'string') {
             return 'Error: tag1 parameter is required and must be a string'
         }
 
-        // 验证并限制 num 参数
         if (typeof num !== 'number' || num < 1) {
             num = 1
         } else if (num > 10) {
@@ -48,19 +46,17 @@ export class GetPixivApiLoliconTool extends AbstractTool {
         }
 
         try {
-            // 调用函数获取图片URL
             const picUrls = await get_url_from_api_lolicon(tag1, tag2, num)
 
             if (!picUrls || !Array.isArray(picUrls) || picUrls.length === 0) {
                 return `No images found for tags: ${tag1}${tag2 ? ` and ${tag2}` : ''}. Try using different or more general tags.`
             }
 
-            // 发送图片给用户 (支持多图)
             for (const url of picUrls) {
                 e.reply(segment.image(url))
             }
 
-            return `Successfully retrieved and sent ${picUrls.length} image(s) with tags: ${tag1}${tag2 ? ` and ${tag2}` : ''}. The image(s) have been sent to the user.`
+            return `Successfully sent ${picUrls.length} image(s) with tags: ${tag1}${tag2 ? ` and ${tag2}` : ''}. Image URLs: ${JSON.stringify(picUrls)}. You may also use sendPicture tool if needed.`
 
         } catch (err) {
             logger.error('[GetPicsApiLoliconTool] Error:', err)
