@@ -1320,12 +1320,12 @@ export function supportGuoba() {
             options: [
               { label: '百度图片搜索工具（推荐）', value: 'SerpImageTool_Baidu' },
               { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
-              { label: '网易音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
-              { label: 'qq音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
-              { label: '天气搜索工具（推荐）（需配置）', value: 'Weather_Tool' },
+              { label: 'QQ音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
+              { label: '网易云音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
+              { label: '高德天气工具（推荐）（需配置）', value: 'Weather_Tool' },
               { label: 'Gemini原生搜索（推荐）（需配置）', value: 'geminiSearchTool' },
-              { label: 'tavily search（需配置）', value: 'tavily_search' },
-              { label: 'tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
+              { label: 'Tavily search（需配置）', value: 'tavily_search' },
+              { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
               { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
               { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
@@ -1348,13 +1348,13 @@ export function supportGuoba() {
         {
           field: 'amapKey',
           label: '高德APIKey',
-          bottomHelpMessage: '智能模式时，用于查询天气',
+          bottomHelpMessage: '用于高德天气工具',
           component: 'Input'
         },
         {
           field: 'githubAPIKey',
           label: 'github Access Token',
-          bottomHelpMessage: '去https://github.com/settings/personal-access-tokens生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
+          bottomHelpMessage: '去 https://github.com/settings/personal-access-tokens 生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
           component: 'Input'
         },
         {

@@ -127,7 +127,7 @@ export class SendQQMusicTool extends AbstractTool {
                 }
             }
 
-            return `Successfully found and shared QQ music (QQ音乐): [${songName} by ${artistsName}] to ${target}. Music Card and Voice Record sent.`
+            return `Successfully found and shared QQ music: [${songName} by ${artistsName}] to ${target}. Music Card and Voice Record sent.`
         } catch (err) {
             return `QQ music search and share failed: ${err.message || err}`
         }
