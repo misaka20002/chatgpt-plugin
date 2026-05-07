@@ -73,6 +73,7 @@ import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
+import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1057,6 +1058,9 @@ async function collectTools(e) {
   }
   if (Config.serpSourceArr.includes('Send163_MusicTool')) {
     serpTools.push(new SendNetEaseMusicTool())
+  }
+  if (Config.serpSourceArr.includes('SendQQ_MusicTool')) {
+    serpTools.push(new SendQQMusicTool())
   }
 
   /** fullTools 包括了踢人等管理员用的工具 */

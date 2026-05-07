@@ -225,7 +225,7 @@ const defaultConfig = {
   amapKey: '',
   azSerpKey: '',
   tavilyKey: '',
-  serpSourceArr: ["SerpImageTool_Baidu", "Bilibili_SearchVideoTool", "Send163_MusicTool", "Weather_Tool", "geminiSearchTool"],
+  serpSourceArr: ["SerpImageTool_Baidu", "Bilibili_SearchVideoTool", "Send163_MusicTool", "Weather_Tool", "geminiSearchTool", "SendQQ_MusicTool"],
   extraUrl: '',
   smartMode: false,
   // claude2

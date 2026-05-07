@@ -70,5 +70,5 @@ export class SendNetEaseMusicTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to search and send NetEase Music (网易音乐) directly by keyword in one step. If no extra description needed, just reply <EMPTY> at the next turn.'
+  description = 'Useful when you want to search and send NetEase Music (网易音乐) directly by keyword. If no extra description needed, just reply <EMPTY> at the next turn.'
 }

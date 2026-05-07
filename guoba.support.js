@@ -1321,6 +1321,7 @@ export function supportGuoba() {
               { label: '百度图片搜索工具（推荐）', value: 'SerpImageTool_Baidu' },
               { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
               { label: '网易音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
+              { label: 'qq音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
               { label: '天气搜索工具（推荐）（需配置）', value: 'Weather_Tool' },
               { label: 'Gemini原生搜索（推荐）（需配置）', value: 'geminiSearchTool' },
               { label: 'tavily search（需配置）', value: 'tavily_search' },
