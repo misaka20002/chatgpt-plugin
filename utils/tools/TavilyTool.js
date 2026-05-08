@@ -9,7 +9,7 @@ export class TavilyTool extends AbstractTool {
         properties: {
             q: {
                 type: 'string',
-                description: 'Search query'
+                description: 'Search query. Using natural language questions'
             },
             max_results: {
                 type: 'number', 
@@ -168,5 +168,5 @@ export class TavilyTool extends AbstractTool {
         }
     }
 
-    description = 'A powerful web search tool using Tavily API. Ideal for gathering current information, news, and detailed web content analysis. Use this when you need to search the internet for real-time information, current events, or when you want comprehensive search results with high-quality content extraction.'
+    description = 'A powerful web search tool using Tavily API. Ideal for gathering current information, news, and detailed web content analysis. When formatting your search query (q), prefer writing complete, conversational questions.'
 }
