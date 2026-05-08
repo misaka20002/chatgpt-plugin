@@ -1030,38 +1030,23 @@ class Core {
  * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string, fullFuncMap: {}}>}
  */
 async function collectTools(e) {
+  /** 搜索/网络来源 总工具 */
+  const serpToolMap = {
+    'geminiSearchTool': GeminiSearchTool,
+    'tavily_search': TavilyTool,
+    'misaka_WebSearchTool': Misaka_WebSearchTool,
+    'ikechan8370': SerpIkechan8370Tool, // 该工具使用的 url 不再提供服务
+    'azure': azureSerpTool,
+    'local_WebsiteTool': WebsiteTool,
+    'tavily_WebsiteTool': TavilyExtractTool,
+    'Weather_Tool': WeatherTool,
+    'Send163_MusicTool': SendNetEaseMusicTool,
+    'SendQQ_MusicTool': SendQQMusicTool
+  }
   /** 搜索/网络来源 */
-  let serpTools = []
-  if (Config.serpSourceArr.includes('geminiSearchTool')) {
-    serpTools.push(new GeminiSearchTool())
-  }
-  if (Config.serpSourceArr.includes('tavily_search')) {
-    serpTools.push(new TavilyTool())
-  }
-  if (Config.serpSourceArr.includes('misaka_WebSearchTool')) {
-    serpTools.push(new Misaka_WebSearchTool())
-  }
-  if (Config.serpSourceArr.includes('ikechan8370')) {
-    serpTools.push(new SerpIkechan8370Tool()) // 该工具使用的 url 不再提供服务
-  }
-  if (Config.serpSourceArr.includes('azure')) {
-    serpTools.push(new azureSerpTool())
-  }
-  if (Config.serpSourceArr.includes('local_WebsiteTool')) {
-    serpTools.push(new WebsiteTool())
-  }
-  if (Config.serpSourceArr.includes('tavily_WebsiteTool')) {
-    serpTools.push(new TavilyExtractTool())
-  }
-  if (Config.serpSourceArr.includes('Weather_Tool')) {
-    serpTools.push(new WeatherTool())
-  }
-  if (Config.serpSourceArr.includes('Send163_MusicTool')) {
-    serpTools.push(new SendNetEaseMusicTool())
-  }
-  if (Config.serpSourceArr.includes('SendQQ_MusicTool')) {
-    serpTools.push(new SendQQMusicTool())
-  }
+  let serpTools = Object.entries(serpToolMap)
+    .filter(([key]) => Config.serpSourceArr.includes(key))
+    .map(([_, ToolClass]) => new ToolClass());
 
   /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
@@ -1116,69 +1101,37 @@ async function collectTools(e) {
     new SendVideoTool(),
   ]
 
-  if (!Config.disable_sendMessage_tool) {
-    tools.push(...[new SendMessageToSpecificGroupOrUserTool()])
-    fullTools.push(...[new SendMessageToSpecificGroupOrUserTool()])
-  }
+  /** 可选工具 */
+  const optionalTools = [
+    { condition: !Config.disable_sendMessage_tool, ToolClass: SendMessageToSpecificGroupOrUserTool },
+    { condition: Config.switch_atOtherUserTool, ToolClass: AtOtherUserTool },
+    { condition: Config.poke_userIDs, ToolClass: SendGroupPokeTool },
+    { condition: Config.agent_SandboxSwitch, ToolClass: SandboxJSTool },
+    { condition: Config.getPixivTool, ToolClass: GetPixivApiLoliconTool },
+    { condition: Config.switch_EmojiTool, ToolClass: EmojiTool },
+    { condition: Config.enableMemory, ToolClass: MemoryTool },
+    { condition: Config.enableEmojiLikeTool, ToolClass: EmojiLikeTool },
+    { condition: Config.mediaRecognitionGeminiTool, ToolClass: RecognitionResultsByGeminiTool },
+    { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
+    { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
+  ];
 
-  if (Config.switch_atOtherUserTool) {
-    tools.push(...[new AtOtherUserTool()])
-    fullTools.push(...[new AtOtherUserTool()])
-  }
-
-  if (Config.poke_userIDs) {
-    tools.push(...[new SendGroupPokeTool()])
-    fullTools.push(...[new SendGroupPokeTool()])
-  }
-
-  if (Config.agent_SandboxSwitch) {
-    tools.push(...[new SandboxJSTool()])
-    fullTools.push(...[new SandboxJSTool()])
-  }
-
-  if (Config.getPixivTool) {
-    tools.push(...[new GetPixivApiLoliconTool()])
-    fullTools.push(...[new GetPixivApiLoliconTool()])
-  }
-
-  if (Config.switch_EmojiTool) {
-    tools.push(...[new EmojiTool()])
-    fullTools.push(...[new EmojiTool()])
-  }
-
-  if (Config.enableMemory) {
-    tools.push(new MemoryTool())
-    fullTools.push(new MemoryTool())
-  }
-
-  if (Config.enableEmojiLikeTool) {
-    tools.push(new EmojiLikeTool())
-    fullTools.push(new EmojiLikeTool())
-  }
-
-  if (Config.mediaRecognitionGeminiTool) {
-    tools.push(new RecognitionResultsByGeminiTool())
-    fullTools.push(new RecognitionResultsByGeminiTool())
-  }
-
-  if (Config.ScheduleTask_Tool) {
-    tools.push(new ScheduleTaskTool())
-    fullTools.push(new ScheduleTaskTool())
-  }
-
-  if (Config.TTSAudio_Tool) {
-    tools.push(new TTSAudioTool())
-    fullTools.push(new TTSAudioTool())
-  }
+  optionalTools.forEach(({ condition, ToolClass }) => {
+    if (condition) {
+      tools.push(new ToolClass())
+      fullTools.push(new ToolClass())
+    }
+  });
 
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
     if (botInfo.role !== 'member') {
-      tools.push(...[new EditCardTool(), new JinyanTool(), new SetTitleTool()])
+      tools.push(new EditCardTool(), new JinyanTool(), new SetTitleTool())
       // 管理员才给这些工具
-      if (e.isMaster || e.sender.role == 'owner' || e.sender.role == 'admin')
-        tools.push(...[new KickOutTool(), new HandleMessageMsgTool()])
+      if (e.isMaster || e.sender.role === 'owner' || e.sender.role === 'admin') {
+        tools.push(new KickOutTool(), new HandleMessageMsgTool())
+      }
       // 用于撤回和加精的id
       if (e.source?.seq) {
         let source = (await e.group.getChatHistory(e.source?.seq, 1)).pop()
@@ -1188,6 +1141,7 @@ async function collectTools(e) {
       }
     }
   }
+
   let promptAddition = ''
   // let img = await parseSourceImg(e)
   if (e.img?.length > 0) {
@@ -1199,7 +1153,6 @@ async function collectTools(e) {
     if (isImgUrlValid) {
       promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`;
     }
-
   } else {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
     if (Config.serpSourceArr.includes('SerpImageTool_Baidu')) {
@@ -1209,25 +1162,19 @@ async function collectTools(e) {
       tools.push(new BilibiliSearchVideoTool())
     }
   }
-  let funcMap = {}
-  let fullFuncMap = {}
-  tools.forEach(tool => {
-    funcMap[tool.name] = {
-      exec: tool.func,
-      function: tool.function(),
-      tool
-    }
-  })
-  fullTools.forEach(tool => {
-    fullFuncMap[tool.name] = {
-      exec: tool.func,
-      function: tool.function(),
-      tool
-    }
-  })
+
+  const buildFuncMap = (toolArray) => {
+    return Object.fromEntries(
+      toolArray.map(tool => [
+        tool.name,
+        { exec: tool.func, function: tool.function(), tool }
+      ])
+    )
+  }
+
   return {
-    funcMap,
-    fullFuncMap,
+    funcMap: buildFuncMap(tools),
+    fullFuncMap: buildFuncMap(fullTools),
     systemAddition,
     promptAddition
   }
