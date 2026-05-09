@@ -9,7 +9,7 @@ export class APTool extends AbstractTool {
 
   constructor() {
     super()
-    this.description = 'Useful when you want to draw picture or edit images'
+    this.description = 'Useful when you want to draw picture, edit images or generate videos'
 
     const drawToolsArr = Config.drawToolsArr ?? []
     const enumValues = [];
@@ -22,6 +22,7 @@ export class APTool extends AbstractTool {
       { id: 'ap-plugin', desc: '- ap-plugin: Use local Stable Diffusion WebUI to draw.' },
       { id: 'siliconflow-paint', desc: '- siliconflow-paint: Use siliconflow/sf插件 to draw pictures.' },
       { id: 'Jimeng-paint', desc: '- Jimeng-paint: Use Jimeng drawing API.' },
+      { id: 'Jimeng-videoGeneration', desc: '- Jimeng-videoGeneration: Use Jimeng API to generate video.' },
       { id: 'gemini-Image-gg', desc: '- gemini-Image-gg: Use Gemini-image to draw or editing existing images.' },
       { id: 'gpt-Image-2-ss', desc: '- gpt-Image-2-ss: Use GPT-Image-2 to draw or editing existing images.' },
       { id: 'sf-dd-paint', desc: '- sf-dd-paint: Use modelscope (魔搭) drawing or editing  API.' }
@@ -51,7 +52,7 @@ export class APTool extends AbstractTool {
 
     let promptDescription = "**Prompt:**\n";
     const enabledNaiOrAp = enumValues.filter(val => ['nai-plugin-1', 'nai-plugin-4', 'paimonnai-plugin', 'ap-plugin', 'siliconflow-paint'].includes(val));
-    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'gemini-Image-gg', 'gpt-Image-2-ss', 'sf-dd-paint'].includes(val));
+    const enabledOther = enumValues.filter(val => ['Midjourney-paint', 'Niji-Journey', 'Jimeng-paint', 'Jimeng-videoGeneration', 'gemini-Image-gg', 'gpt-Image-2-ss', 'sf-dd-paint'].includes(val));
 
     if (enabledNaiOrAp.length > 0) {
       const pluginsStr = enabledNaiOrAp.map(p => `\`${p}\``).join(', ');
@@ -219,19 +220,22 @@ export class APTool extends AbstractTool {
         return 'draw success, picture has been sent.';
       }
 
-      // 使用SF即梦
-      else if (plugin === 'Jimeng-paint') {
+      // 使用SF即梦绘画与视频生成
+      else if (plugin === 'Jimeng-paint' || plugin === 'Jimeng-videoGeneration') {
         let sfjm;
         try {
           let { Jimeng } = await import('../../../siliconflow-plugin/apps/Jimeng.js');
           sfjm = new Jimeng(new_e);
         } catch (err) {
-          return 'draw failed, Jimeng painting app might not be supported in your siliconflow-plugin version.';
+          return 'generation failed, Jimeng app might not be supported in your siliconflow-plugin version.';
         }
-        new_e.msg = `#即梦绘画 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
-        logger.info('[ChatGPT][DrawTool]开始调用sf插件即梦绘画：\nmsg: ', new_e.msg);
+
+        let cmd = plugin === 'Jimeng-videoGeneration' ? '#即梦视频' : '#即梦绘画';
+        new_e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        logger.info(`[ChatGPT][DrawTool]开始调用sf插件${cmd}：\nmsg: `, new_e.msg);
+
         await sfjm.call_Jimeng_Api(new_e);
-        return 'draw success, picture has been sent.';
+        return 'generation success, result has been sent.';
       }
 
       // 使用sf-dd绘画
@@ -275,7 +279,7 @@ export class APTool extends AbstractTool {
 
     } catch (err) {
       logger.error('[ChatGPT][DrawTool] Error:', err);
-      return `draw failed due to unknown error: ${err.message}`;
+      return `generation failed due to unknown error: ${err.message}`;
     }
   }
 }

@@ -20,9 +20,9 @@
 - ~~2024年10月21日，tts接入海螺~~
 - ~~2024年11月11日，tts接入 ai_hobbyist~~
 - ~~2025年2月22日，tts接入 hf_Bert-VITS2~~
-- 2025年3月7日，重构函数，`智能模式绘图` 和 `prompt模式绘图` 时，支持切换 nai插件、ap插件、sf插件
+- 2025年3月7日，重构函数，`智能模式绘图` 和 `prompt模式绘图` 时，支持 [nai插件](https://github.com/CikeyQi/nai-plugin)、[ap插件](https://github.com/misaka20002/ap-plugin)、[sf插件](https://github.com/AIGC-Yunzai/siliconflow-plugin)
 - 2025年5月5日，修复了原版v2结束对话的时候没有清空历史对话导致数据库越来越大（都占用redis内存数据库到1GB了...），现在发送 `#结束全部对话` 后将彻底清空对话记录
-- ~~2025年5月15日，增加自动偷取发送表情包功能、自动复读和打断复读~~ 已将功能转移到 [SF-插件](https://github.com/AIGC-Yunzai/siliconflow-plugin)
+- ~~2025年5月15日，增加自动偷取发送表情包功能、自动复读和打断复读~~ 已将功能转移到 [sf插件](https://github.com/AIGC-Yunzai/siliconflow-plugin)
 - 2025年10月11日，智能模式搜索来源增加 `Gemini搜索`； `搜图工具` 接口改为 **百度公开搜图API**
 - 2025年11月22日，优化算法：智能模式中-Bot可以根据人设 对对话者 `修改群名片、禁言、设置头衔`（而不会误伤）了；新增 `强制移除CQ码`
 - 2025年12月2日，智能模式中增加 `根据情绪发送表情` `Pixiv搜图` `AI短暂拉黑群友` `科学计算` `at/戳一戳群友`
@@ -30,7 +30,8 @@
 - 2026年1月1日，Gemini模式、API模型支持多工具并行调用
 - 2026年2月22日，增加 `CQ码At群友` `对话速率限制` ；智能模式中增加 `定时任务工具` `图片/视频内容识别`
 - 2026年4月1日，接入 api.siliconflow.cn 语音合成；智能模式中增加 `智能发送语音`
-- 2026年5月1日，智能模式中增加 `QQ音乐搜索` ；增加指令 `#gpt偷图` 智能为 `根据情绪发送表情` 工具添加图片
+- 2026年4月15日，智能模式接入 [sf插件-Skills](https://github.com/AIGC-Yunzai/siliconflow-plugin) 新增 `flux绘画` `Midjourney绘画` `Gemini大香蕉` `GPT-Image-2` `即梦绘画` `即梦视频`
+- 2026年5月1日，智能模式中增加 `QQ音乐搜索`；增加指令 `#gpt偷图` 智能为 `根据情绪发送表情` 工具添加图片
 ## 小玩意：
 - 戳一戳功能
   - 整合#chatgpt设置AI第一人称 和锅巴控制

@@ -1497,6 +1497,7 @@ export function supportGuoba() {
               { label: "siliconflow-plugin（#sf绘画）", value: "siliconflow-paint" },
               { label: "siliconflow-plugin（#mjp #niji）", value: "Midjourney-paint" },
               { label: "siliconflow-Jimeng（#即梦绘画）", value: "Jimeng-paint" },
+              { label: "siliconflow-Jimeng（#即梦视频）", value: "Jimeng-videoGeneration" },
               { label: "siliconflow-plugin（#g谷歌编辑图片）", value: "gemini-Image-gg" },
               { label: "siliconflow-plugin（#sgpt编辑图片）", value: "gpt-Image-2-ss" },
               { label: "siliconflow-plugin（#d魔搭编辑图片）", value: "sf-dd-paint" },
