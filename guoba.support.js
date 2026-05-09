@@ -694,7 +694,7 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-2.5-flash；推荐：gemini-exp-1206,gemini-2.0-flash-thinking-exp-01-21；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
+          bottomHelpMessage: '默认值：gemini-flash-latest；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -703,7 +703,7 @@ export function supportGuoba() {
         {
           field: 'gemini_fallbackModel',
           label: '失败回退模型',
-          bottomHelpMessage: '模型返回错误后改用这个备用模型尝试，默认值：gemini-2.5-flash；',
+          bottomHelpMessage: '模型返回错误后改用这个备用模型尝试，默认值：gemini-flash-lite-latest',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -712,7 +712,7 @@ export function supportGuoba() {
         {
           field: 'gemini_vqa_model',
           label: 'gemini内容识别模型',
-          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别和工具；支持图片和视频识别；默认值：gemini-2.5-flash',
+          bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别和工具；支持图片和视频识别；默认值：gemini-flash-lite-latest',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -721,7 +721,7 @@ export function supportGuoba() {
         {
           field: 'geminiSearchModel',
           label: 'gemini搜索模型',
-          bottomHelpMessage: '用于智能模式(搜索工具)-搜索来源-Gemini原生搜索；默认值：gemini-2.5-flash',
+          bottomHelpMessage: '用于智能模式(搜索工具)-搜索来源-Gemini原生搜索；默认值：gemini-flash-lite-latest',
           component: 'Select',
           componentProps: {
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
@@ -1322,10 +1322,11 @@ export function supportGuoba() {
               { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
               { label: 'QQ音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
               { label: '网易云音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
-              { label: '高德天气工具（推荐）（需配置）', value: 'Weather_Tool' },
+              { label: '高德天气搜索（推荐）（需配置）', value: 'Weather_Tool' },
               { label: 'Gemini原生搜索（推荐）（需配置）', value: 'geminiSearchTool' },
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
+              { label: '百度AI搜索（需配置）', value: 'BaiduAI_SearchTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
               { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
               { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
@@ -1334,28 +1335,34 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'azSerpKey',
-          label: 'Azure search key',
-          bottomHelpMessage: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api 访问 https://portal.azure.com 创建新的 "Bing Search" 资源；当您首次创建 Azure 账户时，微软会提供 ​​200 美元的免费信用额度​​，有效期 30 天。',
-          component: 'Input'
+          field: 'amapKey',
+          label: '高德APIKey',
+          bottomHelpMessage: '用于 高德天气搜索工具；前往 https://console.amap.com/dev/key/app 申请',
+          component: 'InputPassword'
         },
         {
           field: 'tavilyKey',
           label: 'tavily key',
-          bottomHelpMessage: 'https://app.tavily.com/ 每个月 1000 Credits 额度；填写后智能模式中的 WebsiteTool（网页内容提取工具）将使用 tavily Api；若拥有多个 Key 使用英文逗号分割',
-          component: 'Input'
+          bottomHelpMessage: '用于 Tavily search 和 Tavily 网页读取工具； https://app.tavily.com/ 每个月 1000 Credits 额度；若拥有多个 Key 使用英文逗号分割',
+          component: 'InputPassword'
         },
         {
-          field: 'amapKey',
-          label: '高德APIKey',
-          bottomHelpMessage: '用于高德天气工具',
-          component: 'Input'
+          field: 'baiduAppBuilderKey',
+          label: '百度智能云Key',
+          bottomHelpMessage: '用于 百度AI搜索；前往 https://console.bce.baidu.com/iam/#/iam/apikey/list 申请，每日免费100次；若拥有多个 Key 使用英文逗号分割',
+          component: 'InputPassword'
+        },
+        {
+          field: 'azSerpKey',
+          label: 'Azure search key',
+          bottomHelpMessage: '用于 Azure search；https://www.microsoft.com/en-us/bing/apis/bing-web-search-api 访问 https://portal.azure.com 创建新的 "Bing Search" 资源；当您首次创建 Azure 账户时，微软会提供 ​​200 美元的免费信用额度​​，有效期 30 天。',
+          component: 'InputPassword'
         },
         {
           field: 'githubAPIKey',
           label: 'github Access Token',
-          bottomHelpMessage: '去 https://github.com/settings/personal-access-tokens 生成。仅用于Github仓库读取工具。不填写的话请求Github限制为每小时 60 次',
-          component: 'Input'
+          bottomHelpMessage: '用于 Github仓库读取工具；前往 https://github.com/settings/personal-access-tokens 生成；不填写的话请求Github限制为每小时 60 次',
+          component: 'InputPassword'
         },
         {
           label: '智能模式 工具设置',

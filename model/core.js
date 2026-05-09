@@ -74,6 +74,7 @@ import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
+import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1041,7 +1042,8 @@ async function collectTools(e) {
     'tavily_WebsiteTool': TavilyExtractTool,
     'Weather_Tool': WeatherTool,
     'Send163_MusicTool': SendNetEaseMusicTool,
-    'SendQQ_MusicTool': SendQQMusicTool
+    'SendQQ_MusicTool': SendQQMusicTool,
+    'BaiduAI_SearchTool': BaiduAISearchTool,
   }
   /** 搜索/网络来源 */
   let serpTools = Object.entries(serpToolMap)

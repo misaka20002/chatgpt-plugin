@@ -153,8 +153,10 @@ const defaultConfig = {
   meme_maxFileSize: 10,
   meme_CD: 19,
   isConvertSentenceToArrayReply: false,
-  gemini_vqa_model: "gemini-2.5-flash",
-  geminiSearchModel: "gemini-2.5-flash",
+  geminiModel: 'gemini-flash-latest',
+  gemini_fallbackModel: "gemini-flash-lite-latest",
+  gemini_vqa_model: "gemini-flash-lite-latest",
+  geminiSearchModel: "gemini-flash-lite-latest",
   gemini_vqa_needMaster: true,
   ttsHD: false,
   focus_CloudTranscode: false,
@@ -247,7 +249,6 @@ const defaultConfig = {
   qwenEnableSearch: true,
   geminiKey: '',
   // geminiKeyArr: '',
-  geminiModel: 'gemini-2.0-flash',
   geminiPrompt: 'You are Gemini. Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   // origin: https://generativelanguage.googleapis.com
   geminiBaseUrl: 'https://gemini.ikechan8370.com',
@@ -321,7 +322,6 @@ const defaultConfig = {
   enableEmojiLikeTool: true,
   mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
-  gemini_fallbackModel: "gemini-2.5-flash",
   ScheduleTask_Tool: true,
   ScheduleTask_MaxPerUser: 1,
   ScheduleTask_CronMaxPerUser: 0,
@@ -331,6 +331,7 @@ const defaultConfig = {
   chatgptBlockCount: 50,
   TTSAudio_Tool: false,
   replyConfirmType: 111,
+  baiduAppBuilderKey: "",
 
   // 记忆系统配置
   enableMemory: false, // 是否启用记忆系统
@@ -436,6 +437,8 @@ export const Config = new Proxy(config, {
       return randomKeyStr(target.geminiKey, property);
     else if (property === 'getTavilyKey')
       return randomKeyStr(target.tavilyKey, property);
+    else if (property === 'getBaiduAppBuilderKey')
+      return randomKeyStr(target.baiduAppBuilderKey, property);
     else if (property === 'get_draw_PluginCharactersList') {
       return function () {
         const defaultJson = { "nahida": "nahida (genshin impact), toddler", "klee": "klee (genshin impact), toddler", "paimon": "paimon (genshin impact), toddler", "bailu": "bailu (honkai: star rail), toddler", "clara": "clara (honkai: star rail), toddler", "last(_|\\s)order|misaka": "last order(Toaru Majutsu no Index), toddler", "sayu": "sayu (genshin impact), toddler", "diona": "diona (genshin impact), toddler", "yaoyao": "yaoyao (genshin impact), toddler", "qiqi": "qiqi (genshin impact), toddler", "furina": "furina (genshin impact), toddler", "Mahiro": "Oyama Mahiro(Onichanhaoshimai), toddler", "arona": "arona (blue archive), toddler", "sora": "sora (blue archive), toddler", "kokona": "kokona (blue archive), toddler", "hoshino": "hoshino (blue archive), toddler", "Koharu": "Shimoe Koharu (Blue archive), toddler", "Gura": "Gawr Gura (Hololive), toddler", "suzuran": "suzuran (arknights), toddler", "Anya": "Anya Forger(SPY×FAMILY), light pink hair, toddler", "AzusaNya": "nakano Azusa(K-ON), toddler", "Azusa": "azusa (blue archive), toddler", "laffey": "laffey (azur lane), toddler", "nachoneko": "nachoneko (indie virtual youtuber), toddler", "ibuki": "tanga ibuki (blue archive), blond hair, toddler", "shun": "shun (small) (blue archive), toddler", "hu(_|\\s)tao": "hu tao (genshin impact), toddler", "Platelet": "girl Platelet (Hataraku Saibou), toddler", "chino": "kafuu chino (gochuumon wa usagi desu ka?), toddler", "shuvi": "shuvi (no game no life), purple hair, long hair, hair_ornament, toddler", "plana": "plana (blue archive), toddler", "kinako": "kinako (40hara), cat girl, cat ear, toddler", "kanna(_|\\s)kamui": "kanna kamui (maidragon), toddler" }
@@ -452,7 +455,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-3.1-pro-preview', 'gemini-3.1-flash-lite-preview', 'gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-3-flash-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image-preview']
+        const defaultArr = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-pro-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite-preview']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);
