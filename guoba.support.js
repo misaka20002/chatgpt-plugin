@@ -478,46 +478,46 @@ export function supportGuoba() {
           label: 'claude 设定',
           component: 'InputTextArea'
         },
-        {
-          label: '以下为Claude2方式的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'claudeAIOrganizationId',
-          label: 'claude2 OrganizationId',
-          bottomHelpMessage: 'claude.ai的OrganizationId',
-          component: 'Input'
-        },
-        {
-          field: 'claudeAISessionKey',
-          label: 'claude2 SessionKey',
-          bottomHelpMessage: 'claude.ai Cookie中的SessionKey',
-          component: 'Input'
-        },
-        {
-          field: 'claudeAIReverseProxy',
-          label: 'claude2 反代',
-          bottomHelpMessage: 'claude.ai 的反代。或许可以参考https://github.com/ikechan8370/sydney-ws-proxy/tree/claude.ai搭建',
-          component: 'Input'
-        },
-        {
-          field: 'claudeAIJA3',
-          label: 'claude2浏览器指纹',
-          bottomHelpMessage: 'claude.ai使用的浏览器TLS指纹，去https://scrapfly.io/web-scraping-tools/ja3-fingerprint或https://ja3.zone/check查看。如果用了反代就不用管',
-          component: 'Input'
-        },
-        {
-          field: 'claudeAIUA',
-          label: 'claude2浏览器UA',
-          bottomHelpMessage: 'claude.ai使用的浏览器UA，https://scrapfly.io/web-scraping-tools/http2-fingerprint或https://ja3.zone/check查看。如果用了反代就不用管',
-          component: 'Input'
-        },
-        {
-          field: 'claudeAITimeout',
-          label: 'claude2超时时间',
-          bottomHelpMessage: '等待响应的超时时间，单位为秒，默认为120。如果不使用反代而是使用代理可以适当调低。',
-          component: 'InputNumber'
-        },
+        // {
+        //   label: '以下为Claude2方式的配置',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'claudeAIOrganizationId',
+        //   label: 'claude2 OrganizationId',
+        //   bottomHelpMessage: 'claude.ai的OrganizationId',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'claudeAISessionKey',
+        //   label: 'claude2 SessionKey',
+        //   bottomHelpMessage: 'claude.ai Cookie中的SessionKey',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'claudeAIReverseProxy',
+        //   label: 'claude2 反代',
+        //   bottomHelpMessage: 'claude.ai 的反代。或许可以参考https://github.com/ikechan8370/sydney-ws-proxy/tree/claude.ai搭建',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'claudeAIJA3',
+        //   label: 'claude2浏览器指纹',
+        //   bottomHelpMessage: 'claude.ai使用的浏览器TLS指纹，去https://scrapfly.io/web-scraping-tools/ja3-fingerprint或https://ja3.zone/check查看。如果用了反代就不用管',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'claudeAIUA',
+        //   label: 'claude2浏览器UA',
+        //   bottomHelpMessage: 'claude.ai使用的浏览器UA，https://scrapfly.io/web-scraping-tools/http2-fingerprint或https://ja3.zone/check查看。如果用了反代就不用管',
+        //   component: 'Input'
+        // },
+        // {
+        //   field: 'claudeAITimeout',
+        //   label: 'claude2超时时间',
+        //   bottomHelpMessage: '等待响应的超时时间，单位为秒，默认为120。如果不使用反代而是使用代理可以适当调低。',
+        //   component: 'InputNumber'
+        // },
         {
           label: '以下为星火方式的配置',
           component: 'Divider'

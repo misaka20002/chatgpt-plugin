@@ -397,45 +397,45 @@ class Core {
         key = keys[choiceIndex]
         logger.info(`使用API Key：${key}`)
       }
-    } else if (use === 'claude2') { // 使用接口 ##############################
-      let { conversationId } = conversation
-      let client = new ClaudeAIClient({
-        organizationId: Config.claudeAIOrganizationId,
-        sessionKey: Config.claudeAISessionKey,
-        debug: Config.debug,
-        proxy: Config.proxy
-      })
-      let toSummaryFileContent
-      try {
-        if (e.source) {
-          let msgs = e.isGroup ? await e.group.getChatHistory(e.source.seq, 1) : await e.friend.getChatHistory(e.source.time, 1)
-          let sourceMsg = msgs[0]
-          let fileMsgElem = sourceMsg.message.find(msg => msg.type === 'file')
-          if (fileMsgElem) {
-            toSummaryFileContent = await extractContentFromFile(fileMsgElem, e)
-          }
-        }
-      } catch (err) {
-        logger.warn('读取文件内容出错， 忽略文件内容', err)
-      }
+    // } else if (use === 'claude2') { // 使用接口 ##############################
+    //   let { conversationId } = conversation
+    //   let client = new ClaudeAIClient({
+    //     organizationId: Config.claudeAIOrganizationId,
+    //     sessionKey: Config.claudeAISessionKey,
+    //     debug: Config.debug,
+    //     proxy: Config.proxy
+    //   })
+    //   let toSummaryFileContent
+    //   try {
+    //     if (e.source) {
+    //       let msgs = e.isGroup ? await e.group.getChatHistory(e.source.seq, 1) : await e.friend.getChatHistory(e.source.time, 1)
+    //       let sourceMsg = msgs[0]
+    //       let fileMsgElem = sourceMsg.message.find(msg => msg.type === 'file')
+    //       if (fileMsgElem) {
+    //         toSummaryFileContent = await extractContentFromFile(fileMsgElem, e)
+    //       }
+    //     }
+    //   } catch (err) {
+    //     logger.warn('读取文件内容出错， 忽略文件内容', err)
+    //   }
 
-      let attachments = []
-      if (toSummaryFileContent?.content) {
-        attachments.push({
-          extracted_content: toSummaryFileContent.content,
-          file_name: toSummaryFileContent.name,
-          file_type: 'pdf',
-          file_size: 200312,
-          totalPages: 20
-        })
-        logger.info(toSummaryFileContent.content)
-      }
-      if (conversationId) {
-        return await client.sendMessage(prompt, conversationId, attachments)
-      } else {
-        let conv = await client.createConversation()
-        return await client.sendMessage(prompt, conv.uuid, attachments)
-      }
+    //   let attachments = []
+    //   if (toSummaryFileContent?.content) {
+    //     attachments.push({
+    //       extracted_content: toSummaryFileContent.content,
+    //       file_name: toSummaryFileContent.name,
+    //       file_type: 'pdf',
+    //       file_size: 200312,
+    //       totalPages: 20
+    //     })
+    //     logger.info(toSummaryFileContent.content)
+    //   }
+    //   if (conversationId) {
+    //     return await client.sendMessage(prompt, conversationId, attachments)
+    //   } else {
+    //     let conv = await client.createConversation()
+    //     return await client.sendMessage(prompt, conv.uuid, attachments)
+    //   }
     } else if (use === 'xh') { // 使用接口 ##############################
       const cacheOptions = {
         namespace: 'xh',
