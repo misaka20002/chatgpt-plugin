@@ -21,7 +21,7 @@ export class TTSAudioTool extends AbstractTool {
       let sendable = await generateAudio(e, message)
       if (sendable) {
         await e.reply(sendable)
-        return '语音已成功发送给用户。如果没有要求，则语音内容不要与回复内容重复。If no extra description needed, just reply <EMPTY> at the next turn.'
+        return '语音已成功发送给用户. If no extra description needed, just reply <EMPTY> at the next turn.'
       }
       return '语音生成失败，请检查配置'
     } catch (err) {
@@ -29,5 +29,5 @@ export class TTSAudioTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to send a voice message to the user.'
+  description = 'Useful when you want to send a voice message to the user. 避免复读，不要让回复文本与语音内容雷同。'
 }

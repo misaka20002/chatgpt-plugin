@@ -7,7 +7,7 @@ let proxy = getProxy()
 import WebSocket from 'ws'
 import crypto from 'crypto'
 import {
-  removeCQCode,
+    removeCQCode,
 } from '../utils/paimonFuction.js'
 
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
@@ -182,7 +182,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         // 截取前 499 个UTF-8字节的字符串
         text = truncateUtf8String(text, 499);
         logger.info(`[chatgpt-tts]使用api-fish-audio生成语音，文本：\n${text}`)
-        const audioBuffer = await fish_api_generateAudio(text, Config.fish_reference_id, Config.fishApiKey, "mp3");
+        const audioBuffer = await fish_api_generateAudio(text, Config.fish_reference_id, Config.getFishApiKey, "mp3", Config.fish_base_url);
         return audioBuffer
     }
 
@@ -1232,19 +1232,20 @@ const truncateUtf8String = (str, length) => {
  * @description: Fish的API调用
  * @param {*} text
  * @param {*} reference_id ID of the reference model o be used for the speech
- * @param {*} fishApiKey
+ * @param {*} apiKey
  * @param {*} res_format Available options: wav, pcm, mp3, opus 
+ * @param {*} base_url base_url
  * @return {buffer}
  */
-async function fish_api_generateAudio(text, reference_id, fishApiKey, res_format) {
+async function fish_api_generateAudio(text, reference_id, apiKey, res_format, base_url = "https://api.fish.audio") {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 300000);
 
     try {
-        const response = await fetch('https://api.fish.audio/v1/tts', {
+        const response = await fetch(`${base_url}/v1/tts`, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${fishApiKey}`,
+                Authorization: `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({

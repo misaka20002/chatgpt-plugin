@@ -990,7 +990,7 @@ export function supportGuoba() {
         {
           field: 'siliconflow_Voice_ApiKey',
           label: 'Api Key',
-          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色',
+          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）',
           component: 'InputPassword'
         },
         {
@@ -1013,15 +1013,24 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
+          field: 'fish_base_url',
+          label: 'Fish反向代理',
+          bottomHelpMessage: '填写对 https://api.fish.audio 的反向代理；留空则使用默认',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://api.fish.audio',
+          },
+        },
+        {
           field: 'fishApiKey',
           label: 'Api Key',
-          bottomHelpMessage: '（仅限api.fish.audio）（需要配置key且云转码设置为“文件”）收费，API KEY获取地址：https://fish.audio/zh-CN/go-api/api-keys',
+          bottomHelpMessage: 'API KEY获取地址：https://fish.audio/zh-CN/go-api/api-keys ； 如果有多个用英文逗号隔开',
           component: 'InputPassword'
         },
         {
           field: 'fish_reference_id',
           label: '发音人ID',
-          bottomHelpMessage: '（仅限api.fish.audio）这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 发音人ID 决定其发音人；可用指令：#搜索fish发音人[名称]',
+          bottomHelpMessage: '这里填入你想要的模型model的代码，例如派蒙的是efc1ce3726a64bbc947d53a1465204aa；说明：api.fish.audio 不受 vits默认角色 控制，仅由 发音人ID 决定其发音人；可用指令：#搜索fish发音人[名称]',
           component: 'Input'
         },
         //   field: 'api_fish_audio_account_ID',
