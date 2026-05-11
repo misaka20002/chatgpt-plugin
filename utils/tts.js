@@ -45,7 +45,7 @@ export const speakers = Config.ttsSpace?.includes('matce.cn') ? get_matce_cn_spe
         : Config.ttsSpace?.includes("hailuo") ? getSpeakers("speakers_hailuo")
             : Config.ttsSpace?.includes("ai_hobbyist") ? getSpeakers("speakers_ai_hobbyist")
                 : Config.ttsSpace?.includes("fish.audio") ? ["fish.audio单独设置model", "指令：#搜索fish发音人[名称]"]
-                    : Config.ttsSpace?.includes("api.siliconflow.cn") ? ["api.siliconflow.cn 请在锅巴设置语音模型和发音人ID", "可以自己上传自己的语音", "官方文档: https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech"]
+                    : Config.ttsSpace?.includes("api.siliconflow.cn") ? ["可用指令: #gptsf语音模型(创建|删除|列表)", "api.siliconflow.cn 请在锅巴设置语音模型和发音人ID", "可以自己上传自己的语音", "官方文档: https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech"]
                         : ["vits语音转换API地址 填写错误，请按照锅巴的提示填写"]
 // export const vits_emotion_map = ['1: Happy (开心)', '2: Sad (伤心)', '3: Excited (兴奋)', '4: Angry (生气)', '5: Bored (无聊)', '6: Nervous (紧张)', '7: Content (满足)', '8: Frustrated (沮丧)', '9: Worried (担心)', '10: Relaxed (轻松)', '11: Enthusiastic (热情)', '12: Joyful (快乐)', '13: Melancholic (忧郁)', '14: Surprised (惊讶)', '15: Grateful (感激)', '16: Optimistic (乐观)', '17: Anxious (焦虑)', '18: Amused (逗乐)', '19: Embarrassed (尴尬)', '20: Hopeful (希望)', '21: Guilty (内疚)', '22: Restless (不安)', '23: Curious (好奇)', '24: Disappointed (失望)', '25: Thrilled (激动)', '26: Contented (满意)', '27: Impatient (不耐烦)', '28: Lonely (孤独)', '29: Disgusted (厌恶)', '30: Jealous (嫉妒)', '31: Proud (骄傲)', '32: Surprised (惊讶)', '33: Delighted (高兴)', '34: Drained (疲惫)', '35: Ecstatic (狂喜)', '36: Fulfilled (满足)', '37: Giddy (眩晕)', '38: Heartbroken (心碎)', '39: Inspired (受启发)', '40: Irritated (恼怒)', '41: Motivated (有动力)', '42: Overwhelmed (不堪重负)', '43: Peaceful (宁静)', '44: Regretful (后悔)', '45: Sentimental (感伤)', '46: Sympathetic (同情)', '47: Tired (疲倦)', '48: Uncomfortable (不舒服)', '49: Worrisome (担忧)', '50: Zealous (热心)', '51: Blissful (幸福)', '52: Depressed (抑郁)', '53: Elated (兴高采烈)', '54: Grumpy (脾气暴躁)', '55: Hopeless (绝望)', '56: Intrigued (好奇)', '57: Playful (调皮)', '58: Reflective (反思)', '59: Satisfied (满意)', '60: Shy (害羞)', '61: Suspicious (怀疑)', '62: Ambitious (雄心勃勃)', '63: Grieving (悲伤)', '64: Frightened (害怕)', '65: Helpless (无助)', '66: Lively (活力)', '67: Envious (羡慕)', '68: Impressed (印象深刻)', '69: Irrational (不理智)', '70: Longing (渴望)', '71: Restless (不安)', '72: Silly (愚蠢)', '73: Stressed (紧张)', '74: Sensitive (敏感)', '75: Thoughtful (思考)', '76: Unsettled (不稳定)', '77: Weak (脆弱)', '78: Wistful (怀念)', '79: Zealot (狂热)', '80: Thankful (感谢)', '81: Resentful (愤怒)', '82: Pessimistic (悲观)', '83: Ashamed (羞愧)', '84: Irritable (易怒)', '85: Jealous (妒忌)', '86: Numb (麻木)', '87: Resigned (顺从)', '88: Relieved (宽慰)', '89: Sorrowful (悲哀)', '90: Enraged (愤怒)', '91: Awestruck (敬畏)', '92: Gracious (亲切)', '93: Discontent (不满)', '94: Confused (困惑)', '95: Excitable (易激动)', '96: Fulfilled (满足)', '97: Jovial (快活)', '98: Lethargic (想睡)', '99: Regretful (后悔)', '100: Sarcastic (讽刺)']
 export const vits_emotion_map = ['生气/angry', '开心/happy', '中立/neutral', '难过/sad', '<unk>']
@@ -133,9 +133,23 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
 
     // 使用 https://api.siliconflow.cn
     if (space.includes('api.siliconflow.cn')) {
+        const currentIndex = Config.siliconflow_Voice_Current_Index || 0;
+        if (currentIndex === 0) {
+            throw new Error("[chatgpt-tts] SiliconFlow 文字转语音已被关闭，请在锅巴面板中重新选择发音人");
+        }
+        const voiceList = Config.siliconflow_VoiceApi || [];
+        const currentVoiceConfig = voiceList[currentIndex - 1];
+        if (!currentVoiceConfig) {
+            throw new Error(`[chatgpt-tts] 找不到指定的发音人配置 (索引: ${currentIndex})，请检查锅巴面板`);
+        }
+        const sfModel = currentVoiceConfig.siliconflow_Voice_Model;
+        const sfVoice = currentVoiceConfig.siliconflow_Voice_ReferenceId;
+        if (!sfModel || !sfVoice) {
+            throw new Error(`[chatgpt-tts] 发音人配置不完整，请检查锅巴面板是否填写了模型和发音人ID`);
+        }
         // 截取1000字
         text = text.substr(0, 999);
-        logger.info(`[chatgpt-tts]使用 api.siliconflow.cn 生成语音，文本：\n${text}`)
+        logger.info(`[chatgpt-tts]使用 api.siliconflow.cn 生成语音\n模型: ${sfModel}\n发音人: ${sfVoice}\n文本: ${text}`)
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 300000)
@@ -147,9 +161,9 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: Config.siliconflow_Voice_Model,
+                model: sfModel,
                 input: text,
-                voice: Config.siliconflow_Voice_ReferenceId
+                voice: sfVoice
             }),
             signal: controller.signal
         })

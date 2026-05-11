@@ -990,22 +990,49 @@ export function supportGuoba() {
         {
           field: 'siliconflow_Voice_ApiKey',
           label: 'Api Key',
-          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）',
+          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）；呆毛注：自定义个人音色可能没法给其他人使用',
           component: 'InputPassword'
         },
         {
-          field: 'siliconflow_Voice_Model',
-          label: '语音模型',
-          bottomHelpMessage: '推荐 FunAudioLLM/CosyVoice2-0.5B',
-          component: 'Input'
+          field: "siliconflow_VoiceApi",
+          label: "发音人",
+          bottomHelpMessage: "填写Api Key并实名认证后 自定义个人音色 可用指令: #gptsf语音模型(创建|删除|列表)",
+          component: "GSubForm",
+          componentProps: {
+            multiple: true,
+            schemas: [
+              {
+                field: 'siliconflow_Voice_Model',
+                label: '语音模型',
+                bottomHelpMessage: '例如: FunAudioLLM/CosyVoice2-0.5B 或 fnlp/MOSS-TTSD-v0.5',
+                component: "Input",
+                required: true,
+              },
+              {
+                field: 'siliconflow_Voice_ReferenceId',
+                label: '发音人ID',
+                bottomHelpMessage: '系统音色如: FunAudioLLM/CosyVoice2-0.5B:alex。自建音色填入 uri (形如 speech:name:xxx:xxx)',
+                component: "Input",
+                required: true,
+              },
+              {
+                field: 'remark',
+                label: '备注名',
+                component: "Input",
+                required: true,
+              },
+            ],
+          },
         },
         {
-          field: 'siliconflow_Voice_ReferenceId',
-          label: '发音人ID',
-          bottomHelpMessage: '推荐自己上传，CosyVoice2语音模型时可填面包大大生成的语音ID: 可莉: speech:keli:cm08sphf600du6l3t3szh0t16:bvteaayeqsrhnvkpfchr, 派蒙: speech:paimeng:cm08sphf600du6l3t3szh0t16:aokpesfnylxyxyfwmnyj',
-          component: 'Input',
+          field: 'siliconflow_Voice_Current_Index',
+          label: '当前使用的发音人',
+          bottomHelpMessage: '选择使用的发音人；新增加的发音人保存后刷新该网页后显示',
+          component: 'Select',
           componentProps: {
-            placeholder: 'speech:paimeng:cm08sphf600du6l3t3szh0t16:aokpesfnylxyxyfwmnyj',
+            options: (Config.siliconflow_VoiceApi || []).map((item, index) => {
+              return { label: item.remark || `接口配置 ${index + 1}`, value: index + 1 }
+            }).concat([{ label: "关闭siliconflow文字转语音", value: 0 }])
           },
         },
         {
