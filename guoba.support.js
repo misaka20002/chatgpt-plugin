@@ -694,9 +694,11 @@ export function supportGuoba() {
         {
           field: 'geminiModel',
           label: '模型',
-          bottomHelpMessage: '默认值：gemini-flash-latest；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
+          bottomHelpMessage: '默认值：gemini-flash-latest；只能选择/填写1个模型；可用模型每日自动更新，立即更新指令：#派蒙chatgpt立即执行每日自动任务',
           component: 'Select',
           componentProps: {
+            mode: 'tags',
+            maxTagCount: 1,
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
         },
@@ -706,6 +708,8 @@ export function supportGuoba() {
           bottomHelpMessage: '模型返回错误后改用这个备用模型尝试，默认值：gemini-flash-lite-latest',
           component: 'Select',
           componentProps: {
+            mode: 'tags',
+            maxTagCount: 1,
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
         },
@@ -715,6 +719,8 @@ export function supportGuoba() {
           bottomHelpMessage: '用于#识图 #gpt翻[英|中|译] 智能模式Gemini内容识别和工具；支持图片和视频识别；默认值：gemini-flash-lite-latest',
           component: 'Select',
           componentProps: {
+            mode: 'tags',
+            maxTagCount: 1,
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
         },
@@ -724,6 +730,8 @@ export function supportGuoba() {
           bottomHelpMessage: '用于智能模式(搜索工具)-搜索来源-Gemini原生搜索；默认值：gemini-flash-lite-latest',
           component: 'Select',
           componentProps: {
+            mode: 'tags',
+            maxTagCount: 1,
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
         },
@@ -873,7 +881,7 @@ export function supportGuoba() {
         {
           field: 'azureTTSKey',
           label: 'Azure语音服务密钥',
-          component: 'Input'
+          component: 'InputPassword'
         },
         {
           field: 'azureTTSRegion',
@@ -983,7 +991,7 @@ export function supportGuoba() {
           field: 'siliconflow_Voice_ApiKey',
           label: 'Api Key',
           bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色',
-          component: 'Input'
+          component: 'InputPassword'
         },
         {
           field: 'siliconflow_Voice_Model',
@@ -1008,7 +1016,7 @@ export function supportGuoba() {
           field: 'fishApiKey',
           label: 'Api Key',
           bottomHelpMessage: '（仅限api.fish.audio）（需要配置key且云转码设置为“文件”）收费，API KEY获取地址：https://fish.audio/zh-CN/go-api/api-keys',
-          component: 'Input'
+          component: 'InputPassword'
         },
         {
           field: 'fish_reference_id',
@@ -2218,6 +2226,37 @@ export function supportGuoba() {
         if (typeof azureSpeaker === 'object' && azureSpeaker !== null) {
           Config.getConfig().azureTTSSpeaker = azureSpeaker.code
         }
+
+        /**
+         * @description: 转换 config.{} component: 'Select' 的 mode: 'tags'
+         * @param {*} targetObj config
+         * @param {*} sourceObj data
+         * @param {*} path data[''] 中的点路径字符串值
+         * @return {*}
+         */
+        const assignFirstElementIfExists = (targetObj, sourceObj, path) => {
+          const sourceData = sourceObj[path];
+          if (sourceData == null) return;
+          const firstElement = Array.isArray(sourceData) ? sourceData[0] : sourceData;
+          if (firstElement != null) {
+            const assignPath = path.startsWith('config.') ? path.slice(7) : path;
+            const keys = assignPath.split('.');
+            let current = targetObj;
+            for (let i = 0; i < keys.length - 1; i++) {
+              const key = keys[i];
+              if (current[key] == null) {
+                current[key] = {};
+              }
+              current = current[key];
+            }
+            const lastKey = keys[keys.length - 1];
+            current[lastKey] = firstElement;
+          }
+        };
+        assignFirstElementIfExists(Config.getConfig(), data, 'geminiModel');
+        assignFirstElementIfExists(Config.getConfig(), data, 'gemini_fallbackModel');
+        assignFirstElementIfExists(Config.getConfig(), data, 'gemini_vqa_model');
+        assignFirstElementIfExists(Config.getConfig(), data, 'geminiSearchModel');
 
         // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
         Config.save();
