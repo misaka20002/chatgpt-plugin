@@ -1018,7 +1018,7 @@ export function supportGuoba() {
               {
                 field: 'siliconflow_Voice_ReferenceText',
                 label: '参考文本',
-                component: "Input",
+                component: "InputTextArea",
                 componentProps: {
                   readonly: true,
                 }

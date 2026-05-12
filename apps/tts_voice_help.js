@@ -167,6 +167,17 @@ export class voicechangehelp extends plugin {
 
     /** ^#gptsf语音模型(创建|删除|列表)$ */
     async handleSfVoiceManage(e) {
+        /** make 列表 */
+        async function buildVoiceListForwardMsg(e, localApi, title) {
+            let msgArr = [title];
+            let currIdx = Config.siliconflow_Voice_Current_Index || 0;
+            localApi.forEach((v, idx) => {
+                let isCurr = (currIdx === idx + 1) ? ' 【当前使用】' : '';
+                msgArr.push(`[${idx + 1}] 备注名: ${v.remark || '未命名'}${isCurr}\nID: ${v.siliconflow_Voice_ReferenceId}`);
+            });
+            msgArr.push("可用指令：\n #gptsf语音模型(创建|删除|列表)");
+            return await common.makeForwardMsg(e, msgArr, e.msg);
+        }
         // 1. 获取配置中的 API Key
         const apiKey = Config.siliconflow_Voice_ApiKey;
         if (!apiKey) {
@@ -184,10 +195,16 @@ export class voicechangehelp extends plugin {
             let addedCount = 0;
             let hasChanges = false;
             if (!res.error && res.result) {
+                const cloudIdSet = new Set(res.result.map(v => v.uri));
                 res.result.forEach(v => {
                     const exists = localApi.find(item => item.siliconflow_Voice_ReferenceId === v.uri);
                     if (exists) {
-                        // 覆盖本地已有的 model 和 text（remark 保持不变）
+                        // 如果之前标记了“云端不存在”，现在云端又出现了，则移除标记
+                        if (exists.remark && exists.remark.endsWith('(云端不存在)')) {
+                            exists.remark = exists.remark.slice(0, -'(云端不存在)'.length).trim();
+                            hasChanges = true;
+                        }
+                        // 更新 model 和 text（remark 保持已处理的结果）
                         if (exists.siliconflow_Voice_Model !== v.model || exists.siliconflow_Voice_ReferenceText !== v.text) {
                             exists.siliconflow_Voice_Model = v.model;
                             exists.siliconflow_Voice_ReferenceText = v.text;
@@ -205,29 +222,33 @@ export class voicechangehelp extends plugin {
                         hasChanges = true;
                     }
                 });
-
-                // 只要有变化（新增或覆盖）就保存到 Config
-                if (hasChanges) {
-                    Config.siliconflow_VoiceApi = localApi;
+                // 标记本地有但云端不存在的音色
+                for (let item of localApi) {
+                    if (!cloudIdSet.has(item.siliconflow_Voice_ReferenceId)) {
+                        let base = item.remark || '未命名';
+                        if (!base.endsWith('(云端不存在)')) {
+                            item.remark = base + '(云端不存在)';
+                            hasChanges = true;
+                        }
+                    }
                 }
+            }
+            if (hasChanges) {
+                Config.siliconflow_VoiceApi = localApi;
             }
 
             if (localApi.length === 0) {
-                return await e.reply("当前本地配置及账号下均无自定义音色。\n(提示: 使用自定义音色前需在SiliconFlow官网完成实名认证)\n可用指令：#gptsf语音模型(创建|删除)", true);
+                return await e.reply("当前本地配置及账号下均无自定义音色。\n(提示: 使用自定义音色前需在SiliconFlow官网完成实名认证)\n可用指令：#gptsf语音模型(创建|删除|列表)", true);
             }
 
-            let msgArr = [`同步完成 (新增 ${addedCount} 个)\n当前共有 ${localApi.length} 个本地音色配置`];
-            let currIdx = Config.siliconflow_Voice_Current_Index || 0;
-            localApi.forEach((v, idx) => {
-                let isCurr = (currIdx === idx + 1) ? ' 【当前使用】' : '';
-                msgArr.push(`[${idx + 1}] 备注名: ${v.remark || '未命名'}${isCurr}\nID: ${v.siliconflow_Voice_ReferenceId}`)
-            });
-            await e.reply(await common.makeForwardMsg(e, msgArr, e.msg));
+            let titleText = `同步完成 (新增 ${addedCount} 个)\n当前共有 ${localApi.length} 个本地音色配置`;
+            let forwardMsg = await buildVoiceListForwardMsg(e, localApi, titleText);
+            await e.reply(forwardMsg);
 
             await e.reply(`请在60秒内回复【序号】切换发音人 (发送 0 取消)`, true, { recallMsg: 59 });
 
             const e_index = await this.awaitContext();
-            if (!e_index || !e_index.msg || ['0','退出', '取消'].includes(e_index.msg.trim())) {
+            if (!e_index || !e_index.msg || ['0', '退出', '取消'].includes(e_index.msg.trim())) {
                 return await e.reply('[SF音色选择] 操作已取消。', true);
             }
 
@@ -252,11 +273,11 @@ export class voicechangehelp extends plugin {
                 return await e.reply("本地配置中暂无自定义音色，无法执行删除。", true);
             }
 
-            let msg = `请在60秒内回复您要删除的音色【序号】（发送 0 或 退出 取消）：\n\n`;
-            localApi.forEach((v, idx) => {
-                msg += `[${idx + 1}] 备注名: ${v.remark || '未命名'} \nID: ${v.siliconflow_Voice_ReferenceId}\n\n`;
-            });
-            await e.reply(msg.trim(), true, { recallMsg: 59 });
+            let titleText = `【音色删除】当前共有 ${localApi.length} 个本地音色配置`;
+            let forwardMsg = await buildVoiceListForwardMsg(e, localApi, titleText);
+            await e.reply(forwardMsg);
+
+            await e.reply(`请在60秒内回复您要删除的音色【序号】（发送 0 或 退出 取消）`, true, { recallMsg: 59 });
 
             const e_index = await this.awaitContext();
             if (!e_index || !e_index.msg || ['0', '退出', '取消'].includes(e_index.msg.trim())) {
@@ -269,6 +290,13 @@ export class voicechangehelp extends plugin {
             }
 
             const targetVoice = localApi[idx];
+
+            await e.reply(`确认要【从云端删除音色】 ${idx + 1}. [${targetVoice.remark || '未命名'}] 吗？（确认/取消）`, true, { recallMsg: 59 });
+            const e_Confir = await this.awaitContext();
+            if (!e_Confir || !e_Confir.msg || e_Confir.msg.trim() !== '确认') {
+                return await e.reply('[SF音色删除] 操作已取消。', true);
+            }
+
             await e.reply(`正在尝试从云端删除音色 [${targetVoice.remark || '未命名'}] ...`, true);
 
             let cloudDeleteSuccess = false;
@@ -369,11 +397,13 @@ export class voicechangehelp extends plugin {
             let audioUrl = '';
             for (let msg of e_audio.message) {
                 if (msg.type === 'record' || msg.type === 'audio' || msg.type === 'file') {
-                    audioUrl = msg.url || msg.file;
+                    if (msg.url && (msg.url.startsWith('http') || msg.url.startsWith('base64://') || msg.url.startsWith('data:'))) {
+                        audioUrl = msg.url;
+                    }
 
-                    // 补充处理：如果只收到了群文件或离线文件，但没有直链 url（通常含有 msg.id 或 msg.fid）
-                    if (!audioUrl && msg.type === 'file' && (msg.id || msg.fid)) {
-                        let fileId = msg.id || msg.fid;
+                    // 如果没有直链 url（群文件或私聊文件通常只有 file_id/id/fid）
+                    let fileId = msg.file_id || msg.id || msg.fid;
+                    if (!audioUrl && msg.type === 'file' && fileId) {
                         try {
                             if (e_audio.isGroup) {
                                 // 优先使用 TRSS 的 OneBotv11 底层 API 发起请求
@@ -381,10 +411,10 @@ export class voicechangehelp extends plugin {
                                     let res = await e_audio.bot.sendApi("get_group_file_url", {
                                         group_id: e_audio.group_id,
                                         file_id: fileId,
-                                        busid: msg.busid
+                                        busid: msg.busid || 0
                                     });
                                     // TRSS 中的 sendApi 会返回带 data 代理的结构
-                                    audioUrl = res?.url || res?.data?.url;
+                                    audioUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
                                 }
                                 // 兼容其余如 Yunzai 原生环境等情况获取文件 url
                                 else if (typeof e_audio.group?.getFileUrl === 'function') {
@@ -396,9 +426,11 @@ export class voicechangehelp extends plugin {
                                     let res = await e_audio.bot.sendApi("get_file", {
                                         file_id: fileId
                                     });
-                                    audioUrl = res?.url || res?.data?.url;
+                                    audioUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
                                 } else if (typeof e_audio.friend?.getFileUrl === 'function') {
                                     audioUrl = await e_audio.friend.getFileUrl(fileId);
+                                } else if (typeof e_audio.bot?.getFileUrl === 'function') {
+                                    audioUrl = await e_audio.bot.getFileUrl(fileId);
                                 }
                             }
                         } catch (error) {
@@ -412,14 +444,39 @@ export class voicechangehelp extends plugin {
                 return await e.reply('未检测到有效的语音/音频内容，操作取消。', true);
             }
 
-            await e.reply('正在下载并转换音频，请稍候...', true);
+            await e.reply('正在获取并转换音频，请稍候...', true);
             let audioBase64 = '';
             try {
-                const audioRes = await fetch(audioUrl);
-                const buffer = await audioRes.buffer();
-                audioBase64 = `data:audio/mpeg;base64,${buffer.toString('base64')}`;
+                if (typeof audioUrl === 'string' && audioUrl.startsWith('base64://')) {
+                    // 处理部分适配器直接返回的 base64 字符串
+                    audioBase64 = `data:audio/mpeg;base64,${audioUrl.replace('base64://', '')}`;
+                } else if (typeof audioUrl === 'string' && audioUrl.startsWith('data:audio/')) {
+                    audioBase64 = audioUrl;
+                } else if (typeof audioUrl === 'string' && audioUrl.startsWith('http')) {
+                    // 处理常规的 Http 链接
+                    const audioRes = await fetch(audioUrl);
+                    if (!audioRes.ok) {
+                        throw new Error(`HTTP请求失败，状态码: ${audioRes.status}`);
+                    }
+                    const buffer = await audioRes.buffer();
+                    audioBase64 = `data:audio/mpeg;base64,${buffer.toString('base64')}`;
+                } else {
+                    // 适配有些适配器返回的是本地绝对路径或 file:// 协议
+                    let localPath = audioUrl;
+                    if (localPath.startsWith('file://')) {
+                        const urlModule = await import('node:url');
+                        localPath = urlModule.fileURLToPath(localPath);
+                    }
+                    const fsModule = await import('node:fs');
+                    if (fsModule.existsSync(localPath)) {
+                        const buffer = fsModule.readFileSync(localPath);
+                        audioBase64 = `data:audio/mpeg;base64,${buffer.toString('base64')}`;
+                    } else {
+                        throw new Error(`无法识别的音频URL或找不到本地文件: ${audioUrl}`);
+                    }
+                }
             } catch (err) {
-                return await e.reply(`音频下载/转换失败：${err.message}`, true);
+                return await e.reply(`音频获取/转换失败：${err.message}`, true);
             }
 
             // 步骤 5：发起API请求（使用用户选择的模型）
@@ -431,10 +488,10 @@ export class voicechangehelp extends plugin {
                     // 同步到本地配置并设定为当前发音人
                     let localApi = [...(Config.siliconflow_VoiceApi || [])];
                     localApi.push({
-                        siliconflow_Voice_Model: result.model,
+                        siliconflow_Voice_Model: result.model || selectedModel,
                         siliconflow_Voice_ReferenceId: result.uri,
-                        siliconflow_Voice_ReferenceText: result.text,
-                        remark: result.customName
+                        siliconflow_Voice_ReferenceText: result.text || referenceText,
+                        remark: result.customName || customName,
                     });
                     Config.siliconflow_VoiceApi = localApi;
                     Config.siliconflow_Voice_Current_Index = localApi.length;
