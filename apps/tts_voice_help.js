@@ -22,6 +22,7 @@ import {
 } from '../utils/paimonFuction.js'
 // import { ConversationManager } from '../model/conversation.js'
 import sfApi from '../utils/tts/siliconflow.js';
+import { getOnebotFileOrMediaUrl } from '../utils/paimonFuction.js';
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/autoEmoticons/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
@@ -397,47 +398,8 @@ export class voicechangehelp extends plugin {
             let audioUrl = '';
             for (let msg of e_audio.message) {
                 if (msg.type === 'record' || msg.type === 'audio' || msg.type === 'file') {
-                    if (msg.url && (msg.url.startsWith('http') || msg.url.startsWith('base64://') || msg.url.startsWith('data:'))) {
-                        audioUrl = msg.url;
-                    }
-
-                    // 如果没有直链 url（群文件或私聊文件通常只有 file_id/id/fid）
-                    let fileId = msg.file_id || msg.id || msg.fid;
-                    if (!audioUrl && msg.type === 'file' && fileId) {
-                        try {
-                            if (e_audio.isGroup) {
-                                // 优先使用 TRSS 的 OneBotv11 底层 API 发起请求
-                                if (typeof e_audio.bot?.sendApi === 'function') {
-                                    let res = await e_audio.bot.sendApi("get_group_file_url", {
-                                        group_id: e_audio.group_id,
-                                        file_id: fileId,
-                                        busid: msg.busid || 0
-                                    });
-                                    // TRSS 中的 sendApi 会返回带 data 代理的结构
-                                    audioUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
-                                }
-                                // 兼容其余如 Yunzai 原生环境等情况获取文件 url
-                                else if (typeof e_audio.group?.getFileUrl === 'function') {
-                                    audioUrl = await e_audio.group.getFileUrl(fileId);
-                                }
-                            } else {
-                                // 处理私聊文件的情况
-                                if (typeof e_audio.bot?.sendApi === 'function') {
-                                    let res = await e_audio.bot.sendApi("get_file", {
-                                        file_id: fileId
-                                    });
-                                    audioUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
-                                } else if (typeof e_audio.friend?.getFileUrl === 'function') {
-                                    audioUrl = await e_audio.friend.getFileUrl(fileId);
-                                } else if (typeof e_audio.bot?.getFileUrl === 'function') {
-                                    audioUrl = await e_audio.bot.getFileUrl(fileId);
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`获取文件链接异常:`, error);
-                        }
-                    }
-                    break;
+                    audioUrl = await getOnebotFileOrMediaUrl(e_audio, msg);
+                    if (audioUrl) break;
                 }
             }
             if (!audioUrl) {

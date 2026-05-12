@@ -815,3 +815,63 @@ export async function getImageBase64(url) {
     return undefined;
   }
 }
+
+/**
+ * 从 e.message[i] 的 file_id 提取文件，或直接获取图片 (image)、音频 (record) 等消息类型的直链 (url) 或本地路径
+
+        let fileUrl = '';
+        for (let msg of e.message) {
+          if (msg.type === 'record' || msg.type === 'file') { // 想要什么类型自己写
+            fileUrl = await getOnebotFileOrMediaUrl(e, msg);
+            if (fileUrl) break;
+          }
+        }
+
+ * @param {Object} e - Yunzai 的事件对象
+ * @param {Object} msg - 消息体对象片段，例如 e.message[i]
+ * @returns {Promise<string>} 返回文件的 URL、base64 字符串或本地绝对路径
+ */
+export async function getOnebotFileOrMediaUrl(e, msg) {
+  let fileUrl = '';
+
+  // 1. 如果消息本身自带直接可用的 url (例如部分适配器的 image, record 或 http 链接)，直接返回
+  if (msg.url && (msg.url.startsWith('http') || msg.url.startsWith('base64://') || msg.url.startsWith('data:'))) {
+    return msg.url;
+  }
+
+  // 2. 尝试提取 file_id 各种消息类型中的标识：
+  let fileId = msg.file_id || msg.id || msg.fid || msg.file;
+  if (!fileId) return '';
+  try {
+    if (e.isGroup) {
+      // TRSS-Yunzai
+      if (msg.type === 'file' && typeof e.group?.fs?.download === 'function') {
+        let res = await e.group.fs.download(fileId, msg.busid || 0);
+        fileUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
+      }
+      // Miao-Yunzai
+      else if (typeof e.group?.getFileUrl === 'function') {
+        fileUrl = await e.group.getFileUrl(fileId);
+      }
+      // TRSS-Yunzai
+      else if (typeof e.group?.getLocalFileInfo === 'function') {
+        let res = await e.group.getLocalFileInfo(fileId);
+        fileUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
+      }
+    } else {
+      // TRSS-Yunzai
+      if (typeof e.friend?.getLocalFileInfo === 'function') {
+        let res = await e.friend.getLocalFileInfo(fileId);
+        fileUrl = res?.url || res?.data?.url || res?.file || res?.data?.file;
+      }
+      // Miao-Yunzai
+      else if (typeof e.friend?.getFileUrl === 'function') {
+        fileUrl = await e.friend.getFileUrl(fileId);
+      }
+    }
+  } catch (error) {
+    logger.error(`[paimonFuction] 获取文件/Record链接异常:`, error);
+  }
+
+  return fileUrl || '';
+}
