@@ -314,6 +314,7 @@ const defaultConfig = {
   agent_SandboxSwitch: false,
   auto_makeForwardMsg: 2000,
   getPixivTool: false,
+  getPixiv18Tool: false,
   switch_EmojiTool: false,
   switch_ChatCooldown: true,
   gemini_temperature: 0.9,

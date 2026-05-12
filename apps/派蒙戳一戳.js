@@ -330,29 +330,29 @@ export class PaimonChuo extends plugin {
                 let mutetype = Math.ceil(Math.random() * 15)
                 switch (mutetype) {
                     case 1:
-                        // await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
-                        // break;
+                    // await e.reply(await segment.image(`http://oiapi.net/API/face_pat/?QQ=${e.operator_id}`))
+                    // break;
                     case 2:
-                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
-                        // break;
+                    // await e.reply(await segment.image(`https://oiapi.net/API/Face_Diu?QQ=${e.operator_id}`))
+                    // break;
                     case 3:
-                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
-                        // break;
+                    // await e.reply(await segment.image(`https://oiapi.net/API/Face_Pound?QQ=${e.operator_id}`))
+                    // break;
                     case 4:
-                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
-                        // break;
+                    // await e.reply(await segment.image(`https://oiapi.net/API/Face_Kiss?QQ=${e.operator_id}`))
+                    // break;
                     case 5:
                         await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bqwebp"))))
                         break;
                     case 6:
-                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
-                        // break;
+                    // await e.reply(await segment.image(`https://oiapi.net/API/Face_Pat/?QQ=${e.operator_id}`))
+                    // break;
                     case 7:
-                        // await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
-                        // break;
+                    // await e.reply(await segment.image(`https://oiapi.net/API/Face_Petpet?QQ=${e.operator_id}`))
+                    // break;
                     case 8:
-                        // await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bq_img"))))
-                        // break;
+                    // await e.reply(await segment.image(await convertWebpToJpg(getRandomUrl("bq_img"))))
+                    // break;
                     case 9:
                     case 10:
                         const randomPlayingMsg = await generate_msg_randomPlayingMsg()
@@ -635,9 +635,16 @@ export class PaimonChuo extends plugin {
 
 }
 
-/**从https://api.lolicon.app/setu/v2/ 中返回图片地址数组，支持2个tag参数，tag中支持20个或| */
-export async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2 = '', num = 1) {
-    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}&num=${num}`;
+/**
+ * @description: 从https://api.lolicon.app/setu/v2/ 中返回图片地址数组，支持2个tag参数，tag中支持20个或|
+ * @param {*} tag1
+ * @param {*} tag2
+ * @param {*} num
+ * @param {*} r18 0为非 R18，1为 R18，2为混合
+ * @return {*}
+ */
+export async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2 = '', num = 1, r18 = 0) {
+    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}&num=${num}${r18 ? `&r18=${r18}` : ""}`;
     for (let i = 0; i < 3; i++) {
         try {
             const response = await fetch(url)

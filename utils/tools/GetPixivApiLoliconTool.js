@@ -1,5 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { get_url_from_api_lolicon } from '../../apps/派蒙戳一戳.js'
+import { Config } from '../config.js'
 
 /**
  * Tool: 从 Lolicon API 获取图片
@@ -46,7 +47,7 @@ export class GetPixivApiLoliconTool extends AbstractTool {
         }
 
         try {
-            const picUrls = await get_url_from_api_lolicon(tag1, tag2, num)
+            const picUrls = await get_url_from_api_lolicon(tag1, tag2, num, Config.getPixiv18Tool ? 2 : 0)
 
             if (!picUrls || !Array.isArray(picUrls) || picUrls.length === 0) {
                 return `No images found for tags: ${tag1}${tag2 ? ` and ${tag2}` : ''}. Try using different or more general tags.`

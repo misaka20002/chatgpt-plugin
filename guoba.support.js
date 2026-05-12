@@ -1455,15 +1455,21 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'TTSAudio_Tool',
+          label: '工具新增-智能发送语音',
+          bottomHelpMessage: '新增智能发送语音工具，提供给AI让Ta可以在适当的时候给你发送语音；需要先配置语音模式下可正常发送语音',
+          component: 'Switch'
+        },
+        {
           field: 'getPixivTool',
           label: '工具新增-Pixiv搜图',
           bottomHelpMessage: '新增工具提供给AI搜索并发送Pixiv的插图',
           component: 'Switch'
         },
         {
-          field: 'TTSAudio_Tool',
-          label: '工具新增-智能发送语音',
-          bottomHelpMessage: '新增智能发送语音工具，提供给AI让Ta可以在适当的时候给你发送语音；需要先配置语音模式下可正常发送语音',
+          field: 'getPixiv18Tool',
+          label: '工具调整-Pixiv搜图18+',
+          bottomHelpMessage: '↑ 开启后 Pixiv搜图工具 可以搜索并发送18+图片功能',
           component: 'Switch'
         },
         {
