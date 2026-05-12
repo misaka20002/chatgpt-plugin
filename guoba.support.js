@@ -1016,10 +1016,17 @@ export function supportGuoba() {
                 required: true,
               },
               {
+                field: 'siliconflow_Voice_ReferenceText',
+                label: '参考文本',
+                component: "Input",
+                componentProps: {
+                  readonly: true,
+                }
+              },
+              {
                 field: 'remark',
                 label: '备注名',
                 component: "Input",
-                required: true,
               },
             ],
           },
@@ -1367,10 +1374,10 @@ export function supportGuoba() {
               { label: 'QQ音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
               { label: '网易云音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
               { label: '高德天气搜索（推荐）（需配置）', value: 'Weather_Tool' },
-              { label: 'Gemini原生搜索（推荐）（需配置）', value: 'geminiSearchTool' },
+              { label: '百度AI搜索（推荐）（需配置）', value: 'BaiduAI_SearchTool' },
+              { label: 'Gemini原生搜索（需配置）', value: 'geminiSearchTool' },
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
-              { label: '百度AI搜索（需配置）', value: 'BaiduAI_SearchTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
               { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
               { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
@@ -1393,7 +1400,7 @@ export function supportGuoba() {
         {
           field: 'baiduAppBuilderKey',
           label: '百度智能云Key',
-          bottomHelpMessage: '用于 百度AI搜索；前往 https://console.bce.baidu.com/iam/#/iam/apikey/list 申请，每日免费100次；若拥有多个 Key 使用英文逗号分割',
+          bottomHelpMessage: '用于 百度AI搜索；前往 https://console.bce.baidu.com/iam/#/iam/apikey/list 申请；百度AI搜索 每日免费50次，未开通“按量后付费”不会自动扣费；若拥有多个 Key 使用英文逗号分割',
           component: 'InputPassword'
         },
         {
