@@ -1,12 +1,12 @@
 <img decoding="async" align=right src="https://github.com/misaka20002/chatgpt-plugin/assets/40714502/498efc25-c2d0-4bba-9872-274feff31f08" width="40%">
 
-# 简介：
+# 简介
 - 最完善的戳一戳功能，整合数十种api
 - ~~最清晰的Vits语音，支持中日英三语发音（感谢genshinvoice.top提供的api支持！）~~
 - 让机器人更真实地 cos 任意角色
 - 新增一些小玩意
 #### 欢迎加入交流群共同讨论 [285744328](https://qm.qq.com/q/nPegdVc8HC) 或 [1022982073](https://qm.qq.com/q/tEqFnH0kTe)
-## 更新记录：
+## 更新记录
 - ~~vit2语音源新增Bert-VITS2源（感谢genshinvoice.top提供的api支持！）~~
 - 2024年1月11日，新增 `戳一戳` ；增加指令 `#tts语音帮助`
 - ~~2024年3月31日更新了碧蓝档案角色语音，并将自动转日语输出。~~
@@ -32,7 +32,7 @@
 - 2026年4月1日，接入 api.siliconflow.cn 语音合成；智能模式中增加 `智能发送语音` ；增加自定义个人音色指令 `#gptsf语音模型(创建|删除|列表)`
 - 2026年4月15日，智能模式接入 [sf插件-Skills](https://github.com/AIGC-Yunzai/siliconflow-plugin) 新增 `flux绘画` `Midjourney绘画` `Gemini大香蕉` `GPT-Image-2` `即梦绘画` `即梦视频`
 - 2026年5月1日，智能模式中增加 `QQ音乐搜索` `百度AI搜索`；增加指令 `#gpt偷图` 智能为 `根据情绪发送表情` 工具添加图片
-## 小玩意：
+## 小玩意
 - 戳一戳功能
   - 整合#chatgpt设置AI第一人称 和锅巴控制
   - 最完善的戳一戳功能，整合数十种api
@@ -72,8 +72,15 @@ git fetch --all
 git reset --hard origin/main
 pnpm i
 ```
+## 插件配置
 
-## 预览：
+> [!WARNING]
+> 非常不建议手动修改配置文件，本插件已兼容 [Guoba-plugin](https://github.com/guoba-yunzai/guoba-plugin) ，请使用锅巴插件对配置项进行修改
+> 
+
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/d9f6281d-4a90-41ac-aa8b-ad795d7bebad" />
+
+## 预览
 
 <img decoding="async" src="https://github.com/user-attachments/assets/8bc41dd8-badc-4fce-9092-0445d1c7a5f8" width="40%">
 
