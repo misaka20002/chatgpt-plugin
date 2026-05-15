@@ -227,7 +227,7 @@ export class voicechangehelp extends plugin {
                 for (let item of localApi) {
                     if (!cloudIdSet.has(item.siliconflow_Voice_ReferenceId)) {
                         let base = item.remark || '未命名';
-                        if (!base.endsWith('(云端不存在)')) {
+                        if (!base.endsWith('(云端不存在)') && !base.endsWith('(系统预置音色)')) {
                             item.remark = base + '(云端不存在)';
                             hasChanges = true;
                         }
