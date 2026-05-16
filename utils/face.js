@@ -536,11 +536,18 @@ export async function convertFacesAndCQCode(msg, handleAt = false, isProcessCQAt
         tmpFace += msg[i]
       } else {
         foundFace = false
-        if (faceMapReverse[tmpFace] || faceMapReverse['/' + tmpFace] || faceMapReverse[_.trimStart(tmpFace, '/')]) {
+        let faceIdStr = faceMapReverse[tmpFace] || faceMapReverse['/' + tmpFace] || faceMapReverse[_.trimStart(tmpFace, '/')]
+        if (faceIdStr) {
           if (tmpMsg) {
             msgs.push(tmpMsg)
           }
-          msgs.push(segment.face(parseInt(faceMapReverse[tmpFace] || faceMapReverse['/' + tmpFace] || faceMapReverse[_.trimStart(tmpFace, '/')])))
+          if (segment.face)
+            msgs.push(segment.face(parseInt(faceIdStr)))
+          else {
+            /** 手动构造消息段对象来代替原始的 segment.face 调用 */
+            const buildFace = (id) => ({ type: 'face', id: id, data: { id: id.toString() } });
+            msgs.push(buildFace(parseInt(faceIdStr)))
+          }
           tmpMsg = ''
         } else {
           tmpMsg += `[${tmpFace}]`
@@ -597,7 +604,7 @@ export async function convertFacesAndCQCode(msg, handleAt = false, isProcessCQAt
           finalMsgs.push(item)
         }
       } else {
-        // 非字符串类型（如 segment.face, segment.at）直接添加
+        // 非字符串类型（如对象类型），直接添加
         finalMsgs.push(item)
       }
     }
