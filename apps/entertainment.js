@@ -12,12 +12,12 @@ import AzureTTS from '../utils/tts/microsoft-azure.js'
 import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import { URL } from 'node:url'
 import { getBots } from '../utils/bot.js'
-import {CustomGoogleGeminiClient} from "../client/CustomGoogleGeminiClient.js";
+import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
 import {
   hidePrivacyInfo,
   recognitionResultsByGemini,
   getMediaTargetUrl,
- } from '../utils/paimonFuction.js'
+} from '../utils/paimonFuction.js'
 
 let useSilk = false
 try {
@@ -27,7 +27,7 @@ try {
   useSilk = false
 }
 export class Entertainment extends plugin {
-  constructor (e) {
+  constructor(e) {
     super({
       name: 'ChatGPT-Plugin 娱乐小功能',
       dsc: '让你的聊天更有趣！现已支持主动打招呼、表情合成、群聊词云统计、文本翻译与图片ocr小功能！',
@@ -65,7 +65,7 @@ export class Entertainment extends plugin {
           fnc: 'translate'
         },
         {
-          reg: '^#(chatgpt)?(设置|修改)翻译来源(openai|gemini|星火|通义千问|xh|qwen)$',
+          reg: '^#(chatgpt|gpt|GPT)?(设置|修改)翻译来源(openai|gemini|星火|通义千问|xh|qwen)$',
           fnc: 'translateSource'
         },
         {
@@ -110,7 +110,7 @@ export class Entertainment extends plugin {
     }
   }
 
-  async ocr (e) {
+  async ocr(e) {
     let replyMsg
     let imgOcrText = await getImageOcrText(e)
     if (!imgOcrText) {
@@ -121,21 +121,26 @@ export class Entertainment extends plugin {
     await this.reply(replyMsg, e.isGroup)
   }
 
-  async translate (e) {
+  async translate(e) {
     const translateLangLabels = translateLangSupports.map(item => item.label).join('，')
     const translateLangLabelAbbrS = translateLangSupports.map(item => item.abbr).join('，')
-    if (e.msg.trim() === '#chatgpt翻译帮助') {
+
+    const regExp = /^#(寄批踢|gpt|GPT)?翻(.)([\s\S]*)/
+    const match = e.msg.trim().match(regExp)
+
+    if (match[3] == '帮助') {
       await this.reply(`支持以下语种的翻译：
 ${translateLangLabels}
 在使用本工具时，请采用简写的方式描述目标语言。此外，可以引用消息或图片来进行翻译。
 示例：
 1. #gpt翻英 你好
-2. #gpt翻中 你好
-3. #gpt翻译 hello`)
+2. #gpt翻日 你好
+3. #gpt翻中 你好
+4. #gpt翻译 hello
+5. #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen]`)
       return true
     }
-    const regExp = /^#(寄批踢|gpt|GPT)?翻(.)([\s\S]*)/
-    const match = e.msg.trim().match(regExp)
+
     let languageCode = match[2] === '译' ? 'auto' : match[2]
     let pendingText = match[3]
     const isImg = !!(await parseSourceImg(e))?.length
@@ -162,12 +167,12 @@ ${translateLangLabels}
     if (isImg) {
       let imgOcrText
       // 呆毛版 gemini的识图结果
-        let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, e.img)
-        if (imgRecognitionByGeminiText) {
-          imgOcrText = [imgRecognitionByGeminiText]
-        } else
+      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, e.img)
+      if (imgRecognitionByGeminiText) {
+        imgOcrText = [imgRecognitionByGeminiText]
+      } else
         imgOcrText = await getImageOcrText(e)
-      
+
       multiText = Array.isArray(imgOcrText)
       if (imgOcrText) {
         pendingText = imgOcrText
@@ -224,7 +229,7 @@ ${translateLangLabels}
     return true
   }
 
-  translateSource (e) {
+  translateSource(e) {
     let command = e.msg
     if (command.includes('openai')) {
       Config.translateSource = 'openai'
@@ -244,7 +249,7 @@ ${translateLangLabels}
     this.reply('√成功设置翻译源为' + Config.translateSource)
   }
 
-  async wordcloud (e) {
+  async wordcloud(e) {
     if (e.isGroup) {
       let groupId = e.group_id
       let lock = await redis.get(`CHATGPT:WORDCLOUD:${groupId}`)
@@ -267,7 +272,7 @@ ${translateLangLabels}
     }
   }
 
-  async wordcloud_latest (e) {
+  async wordcloud_latest(e) {
     if (e.isGroup) {
       let groupId = e.group_id
       let lock = await redis.get(`CHATGPT:WORDCLOUD:${groupId}`)
@@ -300,7 +305,7 @@ ${translateLangLabels}
     }
   }
 
-  async wordcloud_new (e) {
+  async wordcloud_new(e) {
     if (e.isGroup) {
       let groupId = e.group_id
       let userId
@@ -401,13 +406,13 @@ ${translateLangLabels}
     return true
   }
 
-  async sendMessage (e) {
+  async sendMessage(e) {
     if (e.msg.match(/^#chatgpt打招呼帮助/) !== null) {
       await this.reply('设置主动打招呼的群聊名单，群号之间以,隔开，参数之间空格隔开\n' +
-          '#chatgpt打招呼+群号：立即在指定群聊发起打招呼' +
-          '#chatgpt查看打招呼\n' +
-          '#chatgpt删除打招呼：删除主动打招呼群聊，可指定若干个群号\n' +
-          '#chatgpt设置打招呼：可指定1-3个参数，依次是更新打招呼列表、打招呼间隔时间和触发概率、更新打招呼所有配置项')
+        '#chatgpt打招呼+群号：立即在指定群聊发起打招呼' +
+        '#chatgpt查看打招呼\n' +
+        '#chatgpt删除打招呼：删除主动打招呼群聊，可指定若干个群号\n' +
+        '#chatgpt设置打招呼：可指定1-3个参数，依次是更新打招呼列表、打招呼间隔时间和触发概率、更新打招呼所有配置项')
       return false
     }
     let groupId = e.msg.replace(/^#chatgpt打招呼/, '')
@@ -421,9 +426,9 @@ ${translateLangLabels}
     let sendable = message
     logger.info(`打招呼给群聊${groupId}：` + message)
     if (Config.defaultUseTTS) {
-        //let audio = await generateVitsAudio(message, Config.defaultTTSRole)
-        //sendable = segment.record(audio)
-        sendable = await generateAudio(e, message)
+      //let audio = await generateVitsAudio(message, Config.defaultTTSRole)
+      //sendable = segment.record(audio)
+      sendable = await generateAudio(e, message)
     }
     if (!groupId) {
       await this.reply(sendable)
@@ -433,7 +438,7 @@ ${translateLangLabels}
     }
   }
 
-  async sendRandomMessage () {
+  async sendRandomMessage() {
     if (Config.debug) {
       logger.info('开始处理：ChatGPT随机打招呼。')
     }
@@ -463,7 +468,7 @@ ${translateLangLabels}
               }
               const randomIndex = Math.floor(Math.random() * ttsSupportKinds.length)
               switch (ttsSupportKinds[randomIndex]) {
-                case 1 : {
+                case 1: {
                   const isEn = AzureTTS.supportConfigurations.find(config => config.code === defaultAzureTTSRole)?.language.includes('en')
                   if (isEn) {
                     message = (await translate(message, '英')).replace('\n', '')
@@ -473,7 +478,7 @@ ${translateLangLabels}
                   })
                   break
                 }
-                case 2 : {
+                case 2: {
                   if (Config.autoJapanese) {
                     try {
                       message = await translate(message, '日')
@@ -488,7 +493,7 @@ ${translateLangLabels}
                   }
                   break
                 }
-                case 3 : {
+                case 3: {
                   message = (await translate(message, '日')).replace('\n', '')
                   try {
                     audio = await VoiceVoxTTS.generateAudio(message, {
@@ -518,7 +523,7 @@ ${translateLangLabels}
     }
   }
 
-  async handleSentMessage (e) {
+  async handleSentMessage(e) {
     const addReg = /^#chatgpt设置打招呼[:：]?\s?(\S+)(?:\s+(\d+))?(?:\s+(\d+))?$/
     const delReg = /^#chatgpt删除打招呼[:：\s]?(\S+)/
     const checkReg = /^#chatgpt查看打招呼$/
@@ -622,7 +627,7 @@ ${translateLangLabels}
     return true
   }
 
-async vqa (e) {
+  async vqa(e) {
     // 只有主人才可以用识图功能
     if (Config.gemini_vqa_needMaster && !e.isMaster) return false
 
@@ -633,7 +638,7 @@ async vqa (e) {
 
     // 1. 获取图片源
     let img = await parseSourceImg(e)
-    
+
     // 2. 获取视频源 (根据你的描述，视频url在 e.get_Video 中)
     // 假设 get_Video 是一个数组，取第一个
     let videoUrl = e.get_Video && e.get_Video.length > 0 ? e.get_Video[0].url : null
@@ -660,10 +665,10 @@ async vqa (e) {
       // 下载媒体资源
       const response = await fetch(targetUrl)
       if (!response.ok) throw new Error('下载媒体资源失败')
-      
+
       const buffer = await response.arrayBuffer()
       const base64Data = Buffer.from(buffer).toString('base64')
-      
+
       // 获取 Content-Type，如果获取不到则根据类型给默认值
       let mimeType = response.headers.get('content-type')
       if (!mimeType || mimeType === 'application/octet-stream') {
@@ -671,8 +676,8 @@ async vqa (e) {
       }
 
       // 处理提示词
-      let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') || 
-                (isVideo ? 'describe this video in Simplified Chinese' : 'describe this image in Simplified Chinese')
+      let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') ||
+        (isVideo ? 'describe this video in Simplified Chinese' : 'describe this image in Simplified Chinese')
 
       // 发送请求，使用 media 参数
       let res = await client.sendMessage(msg, {
@@ -681,7 +686,7 @@ async vqa (e) {
           data: base64Data
         }
       })
-      
+
       await e.reply(res.text, true)
     } catch (err) {
       await e.reply('❌识别失败：' + hidePrivacyInfo(err.message), true)

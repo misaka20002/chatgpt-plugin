@@ -390,6 +390,18 @@ export class voicechangehelp extends plugin {
             const referenceText = e_text.msg.trim();
 
             // 步骤 4：获取语音/音频文件
+            await e.reply(`参考文本已记录。\n\n请在120秒内发送一段【语音】或【音频文件】(建议8-10秒，无杂音，发送0取消)：`, true);
+            const e_audio = await this.awaitContext();
+            if (!e_audio || (e_audio.msg && e_audio.msg.trim() === '0')) return await e.reply('操作已取消', true);
+
+            // 解析 Yunzai 消息中的音频 URL
+            let audioUrl = '';
+            for (let msg of e_audio.message) {
+                if (msg.type === 'record' || msg.type === 'audio' || msg.type === 'file') {
+                    audioUrl = await getOnebotFileOrMediaUrl(e_audio, msg);
+                    if (audioUrl) break;
+                }
+            }
             if (!audioUrl) {
                 return await e.reply('未检测到有效的语音/音频内容，操作取消。', true);
             }

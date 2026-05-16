@@ -2,6 +2,7 @@ import { Config } from '../utils/config.js'
 // import { parseSourceImg } from '../utils/common.js'
 import fetch from 'node-fetch'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
+import axios from 'axios'
 
 /**
  * @description: 获取gemini的识图/识视频结果，需要填写了gemini的token
@@ -76,7 +77,7 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
     return res.text
 
   } catch (err) {
-    logger.error('派蒙第一人称对话-获取gemini的识别结果出错: ' + err)
+    logger.error('[recognitionResultsByGemini] 识别结果出错: ' + err)
     return '识别出错：' + (err.message || "网络或API错误")
   }
 }
@@ -915,29 +916,29 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     // 4. 图片处理逻辑 (增加对视频类型的放行过滤，防止处理 MP4 时 sharp 报错)
     const isVideo = contentType.includes('video') || url.endsWith('.mp4');
 
-    if (opt.maxPixels && !isVideo) {
-      try {
-        // 获取图片尺寸
-        let dimensions = imageSize(buffer);
-        dimensions = proportionalCalculationWidthHeight(dimensions.width, dimensions.height, opt.maxPixels);
-        // 使用 sharp 缩放图片
-        buffer = await sharp(buffer)
-          .resize(dimensions.width, dimensions.height, { withoutEnlargement: true })
-          .timeout({ seconds: 10 })
-          .toBuffer();
-      } catch (err) {
-        // sharp 处理超时或失败
-        if (err.message.includes('timeout')) {
-          logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理超时`));
-          if (e.reply && !e.isFromHandUpRepaint) e.reply('引用的图片过大，sharp处理失败.', true);
-          return null;
-        } else {
-          logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理失败: ${err.message}`));
-          if (e.reply && !e.isFromHandUpRepaint) e.reply('sharp图片处理失败.', true);
-          return null;
-        }
-      }
-    }
+    // if (opt.maxPixels && !isVideo) {
+    //   try {
+    //     // 获取图片尺寸
+    //     let dimensions = imageSize(buffer);
+    //     dimensions = proportionalCalculationWidthHeight(dimensions.width, dimensions.height, opt.maxPixels);
+    //     // 使用 sharp 缩放图片
+    //     buffer = await sharp(buffer)
+    //       .resize(dimensions.width, dimensions.height, { withoutEnlargement: true })
+    //       .timeout({ seconds: 10 })
+    //       .toBuffer();
+    //   } catch (err) {
+    //     // sharp 处理超时或失败
+    //     if (err.message.includes('timeout')) {
+    //       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理超时`));
+    //       if (e.reply && !e.isFromHandUpRepaint) e.reply('引用的图片过大，sharp处理失败.', true);
+    //       return null;
+    //     } else {
+    //       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理失败: ${err.message}`));
+    //       if (e.reply && !e.isFromHandUpRepaint) e.reply('sharp图片处理失败.', true);
+    //       return null;
+    //     }
+    //   }
+    // }
 
     // 5. 格式化输出
     if (isReturnBuffer) {

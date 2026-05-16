@@ -980,7 +980,7 @@ export function supportGuoba() {
           field: 'autoJapanese',
           label: 'vits模式日语输出',
           bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
-            '若想使用插件的翻译功能，发送"#chatgpt翻译帮助"查看使用方法，支持图片翻译，引用翻译',
+            '若想使用插件的翻译功能，发送"#gpt翻译帮助"查看使用方法，支持图片翻译，引用翻译',
           component: 'Switch'
         },
         {
@@ -1929,7 +1929,7 @@ export function supportGuoba() {
         {
           field: 'translateSource',
           label: '翻译来源',
-          bottomHelpMessage: '#gpt翻译 使用的AI来源',
+          bottomHelpMessage: '设置 #gpt翻译 使用的AI来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen]',
           component: 'Select',
           componentProps: {
             options: [
