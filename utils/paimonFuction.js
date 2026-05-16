@@ -32,109 +32,52 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
   if (!targetUrl)
     ({ targetUrl, isVideo } = getMediaTargetUrl(e));
 
-  if (!targetUrl)
-    return "识别出错：请传入要识别的媒体链接"
-  else {
-    let client = new CustomGoogleGeminiClient({
-      e,
-      userId: e.sender.user_id,
-      key: Config.getGeminiKey,
-      model: Config.gemini_vqa_model,
-      baseUrl: Config.geminiBaseUrl,
-      debug: Config.debug
-    })
+  if (!targetUrl) return "识别出错：请传入要识别的媒体链接";
+
+  let client = new CustomGoogleGeminiClient({
+    e,
+    userId: e.sender.user_id,
+    key: Config.getGeminiKey,
+    model: Config.gemini_vqa_model,
+    baseUrl: Config.geminiBaseUrl,
+    debug: Config.debug
+  })
 
     try {
-      // 媒体下载大小限制 (提取到外部公用)
       const limitMB = Config.mediaMaxSizeInMB || 10;
       const maxSizeInBytes = limitMB * 1024 * 1024;
 
-      let base64Data = '';
-      let mimeType = '';
+    const blobRes = await url2Base64(targetUrl, false, true, { maxSizeBytes: maxSizeInBytes });
 
-      // 判断是否是 base64 或 data URI
-      if (targetUrl.startsWith('base64://') || targetUrl.startsWith('data:')) {
-
-        if (targetUrl.startsWith('data:')) {
-          // 解析 data:image/png;base64,xxxxx 格式
-          const match = targetUrl.match(/^data:(.*?);base64,(.*)$/);
-          if (match) {
-            mimeType = match[1];
-            base64Data = match[2];
-          } else {
-            return "识别出错：无效的 Data URI 数据格式。";
-          }
-        } else if (targetUrl.startsWith('base64://')) {
-          // 解析 base64://xxxxx 格式
-          base64Data = targetUrl.replace('base64://', '');
-        }
-
-        // 计算 Base64 实际的字节大小进行限制检查
-        const bufferData = Buffer.from(base64Data, 'base64');
-        if (bufferData.byteLength > maxSizeInBytes) {
-          return `识别出错：媒体文件过大(${(bufferData.byteLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
-        }
-
-        // 针对 base64:// 补充默认 mimeType
-        if (!mimeType) {
-          mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
-        }
-
-      } else {
-        // 走网络下载逻辑
-        // 增加超时时间，视频下载可能较慢
-        const response = await fetch(targetUrl, { timeout: 120000 });
-        if (!response.ok) {
-          return "识别出错：媒体链接下载失败或已失效。";
-        }
-
-        const headerLen = response.headers.get ? response.headers.get('content-length') : (response.headers['content-length'] || response.headers['size']);
-
-        if (headerLen) {
-          const contentLength = parseInt(headerLen);
-          if (!isNaN(contentLength) && contentLength > maxSizeInBytes) {
-            return `识别出错：媒体文件过大(${(contentLength / 1024 / 1024).toFixed(1)}MB)，已超过限制 ${limitMB}MB，取消识别。`;
-          }
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-
-        // 实际下载后二次检查 防止 header 缺失或不准确的情况
-        if (arrayBuffer.byteLength > maxSizeInBytes) {
-          return `识别出错：下载后的文件实际大小(${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)超过限制 ${limitMB}MB，取消识别。`;
-        }
-
-        base64Data = Buffer.from(arrayBuffer).toString('base64');
-
-        // 自动探测 MimeType
-        mimeType = response.headers.get('content-type');
-        // 如果 header 没给或者不准确，回退到默认值
-        if (!mimeType || mimeType === 'application/octet-stream') {
-          mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
-        }
-      }
-
-      // 最终数据检查
-      if (!base64Data) {
-        return "识别出错：媒体文件为空或链接失效。";
-      }
-
-      const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
-      let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this content in Simplified Chinese'
-
-      let res = await client.sendMessage(msg, {
-        system: systemPrompt,
-        media: {
-          mimeType: mimeType,
-          data: base64Data
-        }
-      })
-      return res.text
-
-    } catch (err) {
-      logger.error('派蒙第一人称对话-获取gemini的识别结果出错: ' + err)
-      return '识别出错：' + (err.message || "网络或API错误")
+    if (!blobRes || !blobRes.imageBlob) {
+      return `识别出错：媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB。`;
     }
+
+    // 自动获取探测到的 MimeType
+    let mimeType = blobRes.imageBlob.type;
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      mimeType = isVideo ? 'video/mp4' : 'image/jpeg'; // Fallback
+    }
+
+    // 提取纯 Base64 数据
+    const arrayBuffer = await blobRes.imageBlob.arrayBuffer();
+    let base64Data = Buffer.from(arrayBuffer).toString('base64');
+
+    const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
+    let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this content in Simplified Chinese'
+
+    let res = await client.sendMessage(msg, {
+      system: systemPrompt,
+      media: {
+        mimeType: mimeType,
+        data: base64Data
+      }
+    })
+    return res.text
+
+  } catch (err) {
+    logger.error('派蒙第一人称对话-获取gemini的识别结果出错: ' + err)
+    return '识别出错：' + (err.message || "网络或API错误")
   }
 }
 
@@ -874,4 +817,144 @@ export async function getOnebotFileOrMediaUrl(e, msg) {
   }
 
   return fileUrl || '';
+}
+
+/**
+ * @description: URL下载图片(或视频)转Base64 （默认） 或 Buffer 或 Blob，支持 base64:// 协议及 file:// 本地路径
+ * @param {string} url 可以是 http(s)://, base64://, data:image/...;base64, 或 file:// (及本地绝对路径)
+ * @param {*} isReturnBuffer 是否返回 Buffer ，默认 false
+ * @param {*} isReturnBlob 是否返回 blob ，默认 false
+ * @param {object} opt 可选
+ * @param {number} opt.maxPixels 图片缩放选项 { maxPixels: 1048576 } 表示最大像素为 1024*1024=1048576
+ * @param {number} opt.maxSizeBytes 最大下载字节
+ * @param {number} opt.onlyCheck 仅检查大小不下载
+ * @param {*} e e 可选，用于回复
+ * @return {*}
+ */
+export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = false, opt = {}, e = {}) {
+  try {
+    let buffer;
+    let contentLength;
+    let contentType = 'image/jpeg'; // 默认类型
+
+    const maxSizeInBytes = opt.maxSizeBytes || 10 * 1024 * 1024; // 10MB in bytes
+
+    // 1. 判断是否为 base64 直传 (兼容 base64:// 和标准的 data: URL)
+    if (url.startsWith('base64://') || url.startsWith('data:')) {
+      let base64Str = url;
+
+      // 提取纯 Base64 字符串 和 Content-Type
+      if (url.startsWith('base64://')) {
+        base64Str = url.replace(/^base64:\/\//i, '');
+      } else if (url.startsWith('data:')) {
+        const match = url.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          contentType = match[1];
+          base64Str = match[2];
+        }
+      }
+
+      buffer = Buffer.from(base64Str, 'base64');
+      contentLength = buffer.length;
+
+    }
+    // 2. 判断是否为 file:// 协议或本地绝对路径 (兼容 Windows / Linux)
+    else if (url.startsWith('file://') || /^[a-zA-Z]:(\\|\/)|^\//.test(url)) {
+      const fs = await import('node:fs');
+      let localPath = url;
+
+      // 解析 file:// 协议为实际路径
+      if (localPath.startsWith('file://')) {
+        const urlModule = await import('node:url');
+        localPath = urlModule.fileURLToPath(localPath);
+      }
+
+      if (!fs.existsSync(localPath)) {
+        throw new Error(`找不到本地文件: ${localPath}`);
+      }
+
+      buffer = fs.readFileSync(localPath);
+      contentLength = buffer.length;
+
+      // 简单推断 contentType，用于后续 Blob 和格式化
+      const ext = localPath.split('.').pop().toLowerCase();
+      const mimeMap = {
+        'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'gif': 'image/gif', 'webp': 'image/webp',
+        'mp4': 'video/mp4', 'webm': 'video/webm',
+        'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'ogg': 'audio/ogg', 'm4a': 'audio/mp4'
+      };
+      contentType = mimeMap[ext] || 'application/octet-stream';
+
+    } else {
+      // 3. 常规 URL 下载
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 60000 // 设置超时时间为60秒
+      });
+
+      // 获取长度和类型
+      contentLength = response.headers?.['content-length'] || response.headers?.get('size') || response.data.byteLength;
+      // 兼容 axios 不同版本的 headers 获取方式
+      contentType = response.headers?.['content-type'] || response.headers?.get('content-type') || 'image/jpeg';
+
+      buffer = Buffer.from(response.data, 'binary');
+    }
+
+    // 4. 校验文件大小
+    if (contentLength && parseInt(contentLength) > maxSizeInBytes) {
+      logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 出错]`), logger.red(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`));
+      if (e.reply) {
+        if (!e.isFromHandUpRepaint) e.reply(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`, true);
+      }
+      return null;
+    }
+
+    if (opt.onlyCheck) return true;
+
+    // 4. 图片处理逻辑 (增加对视频类型的放行过滤，防止处理 MP4 时 sharp 报错)
+    const isVideo = contentType.includes('video') || url.endsWith('.mp4');
+
+    if (opt.maxPixels && !isVideo) {
+      try {
+        // 获取图片尺寸
+        let dimensions = imageSize(buffer);
+        dimensions = proportionalCalculationWidthHeight(dimensions.width, dimensions.height, opt.maxPixels);
+        // 使用 sharp 缩放图片
+        buffer = await sharp(buffer)
+          .resize(dimensions.width, dimensions.height, { withoutEnlargement: true })
+          .timeout({ seconds: 10 })
+          .toBuffer();
+      } catch (err) {
+        // sharp 处理超时或失败
+        if (err.message.includes('timeout')) {
+          logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理超时`));
+          if (e.reply && !e.isFromHandUpRepaint) e.reply('引用的图片过大，sharp处理失败.', true);
+          return null;
+        } else {
+          logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理失败: ${err.message}`));
+          if (e.reply && !e.isFromHandUpRepaint) e.reply('sharp图片处理失败.', true);
+          return null;
+        }
+      }
+    }
+
+    // 5. 格式化输出
+    if (isReturnBuffer) {
+      return buffer;
+    } else if (isReturnBlob) {
+      const imageBlob = new Blob([buffer], { type: contentType });
+      const fileName = isVideo ? 'video.mp4' : 'image.png';
+      return { imageBlob, contentLength, fileName };
+    } else {
+      return buffer.toString('base64');
+    }
+
+  } catch (error) {
+    logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(error.message || error));
+    if (e.reply) {
+      if (!e.isFromHandUpRepaint) e.reply('引用的文件地址已失效或解析失败，请重新发送.', true);
+    }
+    return null;
+  }
 }
