@@ -1929,7 +1929,7 @@ export function supportGuoba() {
         {
           field: 'translateSource',
           label: '翻译来源',
-          bottomHelpMessage: '#gpt翻译使用的AI来源',
+          bottomHelpMessage: '#gpt翻译 使用的AI来源',
           component: 'Select',
           componentProps: {
             options: [
