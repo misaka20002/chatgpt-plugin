@@ -811,6 +811,12 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'autoJapanese',
+          label: '日语语音输出',
+          bottomHelpMessage: '语音模式时，先将机器人的文字回复翻译成日文后获取语音；需要配置 杂项-翻译来源',
+          component: 'Switch'
+        },
+        {
           field: 'cloudTranscode',
           label: '云转码API地址',
           bottomHelpMessage: '目前只支持node-silk语音转码，可在本地node-silk无法使用时尝试使用云端资源转码',
@@ -975,13 +981,6 @@ export function supportGuoba() {
               value: '随机'
             }].concat(speakers.map(s => { return { label: s, value: s } }))
           }
-        },
-        {
-          field: 'autoJapanese',
-          label: 'vits模式日语输出',
-          bottomHelpMessage: '使用vits语音时，将机器人的文字回复翻译成日文后获取语音。' +
-            '若想使用插件的翻译功能，发送"#gpt翻译帮助"查看使用方法，支持图片翻译，引用翻译',
-          component: 'Switch'
         },
         {
           label: 'siliconflow 语音api设置',
@@ -1925,6 +1924,10 @@ export function supportGuoba() {
         {
           label: '杂项',
           component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          label: 'GPT翻译',
+          component: 'Divider'
         },
         {
           field: 'translateSource',
