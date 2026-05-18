@@ -7,11 +7,11 @@ export class SendAvatarTool extends AbstractTool {
     properties: {
       qq: {
         type: 'string',
-        description: 'if you need to send avatar of a user, input his qq.If there are multiple qq, separate them with a space'
+        description: 'QQ numbers to fetch avatars. Separate multiple with space.'
       },
       targetGroupIdOrQQNumber: {
         type: 'string',
-        description: 'Fill in the target user\'s qq number or groupId when you need to send avatar to specific user or group, otherwise leave blank'
+        description: 'Target QQ or group ID to send avatars. Leave blank for default.'
       }
     },
     required: ['qq', 'targetGroupIdOrQQNumber']
@@ -49,5 +49,5 @@ export class SendAvatarTool extends AbstractTool {
     return `the ${pictures.length > 1 ? 'users: ' + qq + '\'s avatar' : 'avatar'} has been sent to group ${target}`
   }
 
-  description = 'Use this tool to SEND/DISPLAY user avatar images to a group or user. This tool fetches and sends avatar pictures as messages. DO NOT use this tool for analyzing or recognizing avatar content - use recognize_image tool instead for that purpose. If no extra description needed, just reply <EMPTY> at the next turn'
+  description = 'Fetch and send QQ avatars to a group/user. NOT for analyzing image content. Reply <EMPTY> if no extra text needed.'
 }

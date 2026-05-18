@@ -29,11 +29,11 @@ export class EmojiLikeTool extends AbstractTool {
             emotion: {
                 type: 'string',
                 enum: ['happy', 'proud', 'shy', 'sad', 'conflicted', 'angry', 'surprised', 'confused', 'pleading', 'scared', 'awkward', 'speechless', 'disgusted', 'bored', 'like', 'love'],
-                description: 'The emotion/reaction type to express. Choose the most appropriate emotion based on the context.'
+                description: 'Emotion to express.'
             },
             messageId: {
                 type: 'string',
-                description: 'Which message to react to. If not specified, will react to the referenced/replied message, or current message as fallback.'
+                description: 'Target message ID. Defaults to referenced/current message.'
             }
         },
         required: ['emotion']
@@ -75,5 +75,5 @@ export class EmojiLikeTool extends AbstractTool {
         }
     }
 
-    description = 'React to a message with an emoji by specifying an emotion type. The tool will randomly select an appropriate emoji from the emotion category. Automatically targets the referenced/replied message if available. Available emotions: happy, proud, shy, sad, conflicted, angry, surprised, confused, pleading, scared, awkward, speechless, disgusted, bored, like, love. Use this tool when you want to express emotions through emoji reactions instead of or in addition to text responses.'
+    description = 'React to a message with an emoji based on emotion type. Defaults to referenced message.'
 }
