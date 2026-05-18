@@ -350,7 +350,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                             delete body.functions;
                                         }
                                         if (this._debug) {
-                                            console.log(JSON.stringify(body));
+                                            console.log("body: " + JSON.stringify(body, null, 2));
                                         }
                                         if (this._apiOrg) {
                                             headers['OpenAI-Organization'] = this._apiOrg;
@@ -474,7 +474,7 @@ var ChatGPTAPI = /** @class */ (function () {
                                     case 5:
                                         response = (_d.sent());
                                         if (this._debug) {
-                                            console.log(response);
+                                            console.log("response: " + response, null, 2);
                                         }
                                         if (response === null || response === void 0 ? void 0 : response.id) {
                                             result.id = response.id;

@@ -200,7 +200,7 @@ export function supportGuoba() {
         {
           field: 'enableSuggestedResponses',
           label: '开启回复建议',
-          bottomHelpMessage: '开启后，如果模型返回数据包含 suggestedResponses 则发出来',
+          bottomHelpMessage: '开启后，如果模型返回数据包含 suggestedResponses 则发出来，如果不包含 suggestedResponses 则 POST OpenAI API 生成回复建议',
           component: 'Switch'
         },
         {

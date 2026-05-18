@@ -1536,7 +1536,7 @@ export class chatgpt extends plugin {
           try {
             chatMessage.suggestedResponses = await generateSuggestedResponse(chatMessage.conversation)
           } catch (err) {
-            logger.debug('生成建议回复失败', err)
+            logger.info('生成建议回复失败', err)
           }
         }
         if (Config.isConvertSentenceToArrayReply) {

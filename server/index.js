@@ -483,7 +483,7 @@ export async function createServer () {
         }
       }
     } catch (error) {
-      logger.debug(error)
+      logger.info(error)
     }
   })
   server.get('/ws', {

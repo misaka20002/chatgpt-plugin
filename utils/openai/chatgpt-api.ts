@@ -357,7 +357,7 @@ export class ChatGPTAPI {
                 }
 
                 if (this._debug) {
-                    console.log(JSON.stringify(body))
+                    console.log("body: " + JSON.stringify(body, null, 2))
                 }
 
                 if (this._apiOrg) {
@@ -480,7 +480,7 @@ export class ChatGPTAPI {
                             (await res.json()) as types.openai.CreateChatCompletionResponse
 
                         if (this._debug) {
-                            console.log(response)
+                            console.log("response: " + JSON.stringify(response, null, 2))
                         }
 
                         if (response?.id) {

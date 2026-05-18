@@ -18,7 +18,7 @@ export function readPrompts () {
             example = JSON.parse(example)
           }
         } catch (err) {
-          logger.debug(err)
+          logger.info(err)
         }
         prompts.push({
           name,

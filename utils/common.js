@@ -49,7 +49,7 @@ try {
   }
   _puppeteer = new Puppeteer(puppeteerCfg)
 } catch (e) {
-  logger.debug('未能加载puppeteer，尝试降级到Yunzai的puppeteer尝试')
+  logger.info('未能加载puppeteer，尝试降级到Yunzai的puppeteer尝试')
   _puppeteer = puppeteer
 }
 
