@@ -204,7 +204,7 @@ export class memes extends plugin {
     } catch (err) {
       await e.reply('更新失败：' + hidePrivacyInfo(err.message))
     }
-    await e.reply('更新完成')
+    await e.reply('更新完成，重启云崽生效')
   }
 
   async memesHelp(e) {
