@@ -339,6 +339,10 @@ const defaultConfig = {
   memoryMinImportance: 1, // 附加到对话的最低重要性阈值（1-10）
   memoryContextLimit: 10, // 每次对话附加的最大记忆数量
 
+  // MCP 协议配置
+  enableMcp: false, // 是否启用通用的 MCP 协议
+  mcpServers: '{}', // 通用 MCP 服务器的配置列表，JSON 格式
+
 }
 const _path = process.cwd()
 let config = {}

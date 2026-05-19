@@ -276,6 +276,27 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableMcp',
+          label: '启用通用 MCP 协议',
+          bottomHelpMessage: '启用后，将允许插件连接通用 MCP 协议服务器，加载工具到智能模式。修改后需重启生效。',
+          component: 'Switch'
+        },
+        {
+          field: 'mcpServers',
+          label: 'MCP 服务器配置 (JSON)',
+          bottomHelpMessage: '配置通用 MCP 服务器，支持本地进程(stdio)与远程(SSE)方式。可在单个服务器配置中写 `"enabled": false` 随时单独关闭。例如：\n' +
+            '{\n' +
+            '  "mcpServers": {\n' +
+            '    "nocturne_memory": {\n' +
+            '      "enabled": true,\n' +
+            '      "command": "python",\n' +
+            '      "args": ["D:/code/chatgpt-plugin/ckproject/nocturne_memory/backend/mcp_wrapper.py"]\n' +
+            '    }\n' +
+            '  }\n' +
+            '}',
+          component: 'InputTextArea'
+        },
+        {
           label: '对话',
           component: 'SOFT_GROUP_BEGIN'
         },

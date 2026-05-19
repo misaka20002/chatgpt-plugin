@@ -1,4 +1,5 @@
 import { Config, defaultOpenAIAPI } from '../utils/config.js'
+import McpManager from '../utils/mcp.js'
 import {
   extractContentFromFile,
   formatDate,
@@ -1124,6 +1125,19 @@ async function collectTools(e) {
       fullTools.push(new ToolClass())
     }
   });
+
+  // 加载已启用的通用 MCP 工具
+  if (Config.enableMcp) {
+    try {
+      const mcpTools = McpManager.getTools()
+      mcpTools.forEach(mcpTool => {
+        tools.push(mcpTool)
+        fullTools.push(mcpTool)
+      })
+    } catch (err) {
+      logger.error(`[MCP] 加载 MCP 工具到对话失败: ${err.message}`)
+    }
+  }
 
   let systemAddition = ''
   if (e.isGroup) {

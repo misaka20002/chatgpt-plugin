@@ -8,3 +8,4 @@ prompts/*
 !prompts/.gitkeep
 node_modules/
 .vs/
+ckproject/

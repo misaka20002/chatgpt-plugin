@@ -37,9 +37,21 @@ for (let i in files) {
   }
   apps[name] = ret[i].value[Object.keys(ret[i].value)[0]]
 }
+import McpManager from './utils/mcp.js'
+
 global.chatgpt = {
 
 }
+
+// 启动通用 MCP 协议客户端
+if (Config.enableMcp) {
+  try {
+    await McpManager.init()
+  } catch (err) {
+    logger.error(`[MCP] 初始化失败: ${err.message}`)
+  }
+}
+
 // 启动服务器
 if (Config.enableToolbox) {
   logger.info('开启工具箱配置项，工具箱启动中')
