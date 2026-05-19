@@ -1135,7 +1135,7 @@ async function collectTools(e) {
         fullTools.push(mcpTool)
       })
     } catch (err) {
-      logger.error(`[MCP] 加载 MCP 工具到对话失败: ${err.message}`)
+      logger.error(`[Chatgpt][mcp] 加载 MCP 工具到对话失败: ${err.message}`)
     }
   }
 

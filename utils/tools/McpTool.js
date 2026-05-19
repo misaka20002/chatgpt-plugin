@@ -12,7 +12,7 @@ export class McpTool extends AbstractTool {
 
   func = async (args) => {
     try {
-      logger.info(`[MCP][${this.serverName}] 正在调用工具 ${this.name}，参数: ${JSON.stringify(args)}`)
+      logger.info(`[Chatgpt][mcp][${this.serverName}] 正在调用工具 ${this.name}，参数: ${JSON.stringify(args)}`)
       const response = await this.client.callTool({
         name: this.name,
         arguments: args
@@ -26,7 +26,7 @@ export class McpTool extends AbstractTool {
       }
       return JSON.stringify(response)
     } catch (err) {
-      logger.error(`[MCP][${this.serverName}] 工具 ${this.name} 调用失败: ${err.message}`)
+      logger.error(`[Chatgpt][mcp][${this.serverName}] 工具 ${this.name} 调用失败: ${err.message}`)
       return `Error calling MCP tool ${this.name}: ${err.message}`
     }
   }

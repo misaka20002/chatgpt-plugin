@@ -341,7 +341,18 @@ const defaultConfig = {
 
   // MCP 协议配置
   enableMcp: false, // 是否启用通用的 MCP 协议
-  mcpServers: '{}', // 通用 MCP 服务器的配置列表，JSON 格式
+  mcpServers: `{
+  "mcpServers": {
+    "nocturne_memory": {
+      "enabled": false,
+      "command": "python",
+      "args": ["/root/nocturne_memory/backend/mcp_server.py"],
+      "env": {
+        "NAMESPACE": "default"
+      }
+    }
+  }
+}`, // 通用 MCP 服务器的配置列表，JSON 格式
 
 }
 const _path = process.cwd()

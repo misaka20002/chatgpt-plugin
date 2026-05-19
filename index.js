@@ -48,7 +48,7 @@ if (Config.enableMcp) {
   try {
     await McpManager.init()
   } catch (err) {
-    logger.error(`[MCP] 初始化失败: ${err.message}`)
+    logger.error(`[Chatgpt][mcp] 初始化失败: ${err.message}`)
   }
 }
 

@@ -24,7 +24,7 @@ class McpManager {
       return
     }
 
-    logger.info('[MCP] 正在初始化通用 MCP 客户端管理器...')
+    logger.info('[Chatgpt][mcp] 正在初始化通用 MCP 客户端管理器...')
 
     let servers = {}
     try {
@@ -37,7 +37,7 @@ class McpManager {
         }
       }
     } catch (e) {
-      logger.error(`[MCP] 解析 mcpServers 配置文件 JSON 失败: ${e.message}。请检查锅巴面板中的配置格式。`)
+      logger.error(`[Chatgpt][mcp] 解析 mcpServers 配置文件 JSON 失败: ${e.message}。请检查锅巴面板中的配置格式。`)
       return
     }
 
@@ -48,11 +48,11 @@ class McpManager {
 
       // 支持在单条 MCP 配置中写 "enabled": false 随时单独关闭
       if (serverConfig.enabled === false) {
-        logger.info(`[MCP] 服务器 [${name}] 已被配置单独关闭，跳过启动`)
+        logger.info(`[Chatgpt][mcp] 服务器 [${name}] 已被配置单独关闭，跳过启动`)
         continue
       }
 
-      logger.info(`[MCP] 正在连接 MCP 服务器 [${name}]...`)
+      logger.info(`[Chatgpt][mcp] 正在连接 MCP 服务器 [${name}]...`)
       try {
         const client = new Client(
           { name: 'chatgpt-plugin-mcp-client', version: Config.version || '1.0.0' },
@@ -62,7 +62,7 @@ class McpManager {
         let transport
         if (serverConfig.url) {
           // SSE 远程服务器模式
-          logger.info(`[MCP] 服务器 [${name}] 使用 SSE 协议，连接地址: ${serverConfig.url}`)
+          logger.info(`[Chatgpt][mcp] 服务器 [${name}] 使用 SSE 协议，连接地址: ${serverConfig.url}`)
           transport = new SSEClientTransport(new URL(serverConfig.url))
         } else if (serverConfig.command) {
           // 兼容 Windows 和 Ubuntu：在 Linux (非 win32) 平台下，将 'python' 自动映射为 'python3'
@@ -82,7 +82,7 @@ class McpManager {
           })
 
           // Stdio 本地子进程模式
-          logger.info(`[MCP] 服务器 [${name}] 使用 Stdio 协议，执行命令: ${execCommand}，参数: ${JSON.stringify(resolvedArgs)}`)
+          logger.info(`[Chatgpt][mcp] 服务器 [${name}] 使用 Stdio 协议，执行命令: ${execCommand}，参数: ${JSON.stringify(resolvedArgs)}`)
           transport = new StdioClientTransport({
             command: execCommand,
             args: resolvedArgs,
@@ -92,7 +92,7 @@ class McpManager {
             }
           })
         } else {
-          logger.warn(`[MCP] 服务器 [${name}] 配置无效，必须包含 command 或 url`)
+          logger.warn(`[Chatgpt][mcp] 服务器 [${name}] 配置无效，必须包含 command 或 url`)
           continue
         }
 
@@ -111,14 +111,14 @@ class McpManager {
           }
         }
 
-        logger.info(`[MCP] 服务器 [${name}] 连接成功！加载了 ${loadedCount} 个工具。`)
+        logger.info(`[Chatgpt][mcp] 服务器 [${name}] 连接成功！加载了 ${loadedCount} 个工具。`)
       } catch (err) {
-        logger.error(`[MCP] 服务器 [${name}] 初始化连接失败: ${err.message}`)
+        logger.error(`[Chatgpt][mcp] 服务器 [${name}] 初始化连接失败: ${err.message}`)
       }
     }
 
     this.initialized = true
-    logger.info(`[MCP] 通用 MCP 客户端管理器初始化完成，共成功加载了 ${this.tools.length} 个 MCP 工具！`)
+    logger.info(`[Chatgpt][mcp] 通用 MCP 客户端管理器初始化完成，共成功加载了 ${this.tools.length} 个 MCP 工具！`)
   }
 
   getTools() {
@@ -126,13 +126,13 @@ class McpManager {
   }
 
   async destroy() {
-    logger.info('[MCP] 正在销毁所有 MCP 客户端连接...')
+    logger.info('[Chatgpt][mcp] 正在销毁所有 MCP 客户端连接...')
     for (const [name, client] of this.clients) {
       try {
         await client.close()
-        logger.info(`[MCP] 服务器 [${name}] 连接已安全关闭`)
+        logger.info(`[Chatgpt][mcp] 服务器 [${name}] 连接已安全关闭`)
       } catch (e) {
-        logger.error(`[MCP] 关闭服务器 [${name}] 失败: ${e.message}`)
+        logger.error(`[Chatgpt][mcp] 关闭服务器 [${name}] 失败: ${e.message}`)
       }
     }
     this.clients.clear()

@@ -32,7 +32,7 @@
 - 2026年4月1日，接入 api.siliconflow.cn 语音合成；智能模式中增加 `智能发送语音` ；增加自定义个人音色指令 `#gptsf语音模型(创建|删除|列表)`
 - 2026年4月15日，智能模式接入 [sf插件-Skills](https://github.com/AIGC-Yunzai/siliconflow-plugin) 新增 `flux绘画` `Midjourney绘画` `Gemini大香蕉` `GPT-Image-2` `即梦绘画` `即梦视频`
 - 2026年5月1日，智能模式中增加 `QQ音乐搜索` `百度AI搜索`；增加指令 `#gpt偷图` 智能为 `根据情绪发送表情` 工具添加图片
-- 2026年5月19日，重磅新增 `通用 MCP 协议支持`！支持在锅巴面板可视化配置并拉起通用 MCP 服务端（如长期记忆 `nocturne_memory`），支持 stdio 本地进程和 SSE 远程连接模式，完全兼容 Windows 和 Ubuntu 环境，支持以相对路径免修改跨平台运行。
+- 2026年5月19日，新增面包版 `通用 MCP 协议支持` 以适配各种 MCP 服务（如 [独立人格记忆 `nocturne_memory`](https://github.com/Dataojitori/nocturne_memory)），支持 stdio 本地进程和 SSE 远程连接
 ## 小玩意
 - 戳一戳功能
   - 整合#chatgpt设置AI第一人称 和锅巴控制
@@ -49,10 +49,6 @@
   - 在锅巴开启关闭
 - Ai智能调用画图插件：
   - 自动使用nai插件、ap插件、sf插件的画图，用法：锅巴内开启后直接告知Bot你想要画画的内容，需要先安装nai插件/ap插件/sf插件，具体请查阅锅巴设置
-- 通用 MCP 协议支持 (Model Context Protocol)：
-  - 支持将通用的 MCP 服务器（如各类长期记忆系统、天气系统等）配置并挂载至大模型的智能模式中。
-  - 完全图形化配置：支持在锅巴面板一键开关 MCP，并支持以与 Cursor / Claude Desktop 完全一致的标准 JSON 格式粘贴配置。
-  - 完美跨平台兼容：在 Linux 平台下自动进行 Python 命令映射（`python` -> `python3`），且支持 `./` 或 `../` 相对路径编写，免去跨平台手动更改路径的痛苦。
 
 ## 安装方法
 
