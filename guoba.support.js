@@ -1631,7 +1631,7 @@ export function supportGuoba() {
         {
           field: 'enableMemory',
           label: '启用记忆系统',
-          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验；需要在系统提示词中写入积极调用 MemoryTool ；呆毛注：目前推荐关闭这个记忆功能，改用下面的面包版MCP独立人格记忆。可用指令： #记忆帮助',
+          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验；需要在系统提示词中写入积极调用 Memory_Tool ；呆毛注：目前推荐关闭这个记忆功能，改用下面的面包版MCP独立人格记忆。可用指令： #记忆帮助',
           component: 'Switch'
         },
         {
@@ -1681,16 +1681,16 @@ export function supportGuoba() {
           bottomHelpMessage: '配置通用 MCP 服务器，支持本地进程(stdio)与远程(SSE)方式；可在单个服务器配置中写 `"enabled": true` `"enabled": false` 随时单独开启/关闭；目前推荐的MCP服务有: 1.独立人格记忆: https://github.com/Dataojitori/nocturne_memory ；请严格按照JSON格式书写，必要时使用https://json-online.com/check/；修改后需重启生效',
           component: 'InputTextArea',
           componentProps: {
-            placeholder: ''+
-            '{\n' +
-            '  "mcpServers": {\n' +
-            '    "nocturne_memory": {\n' +
-            '      "enabled": false,\n' +
-            '      "command": "python",\n' +
-            '      "args": ["/root/nocturne_memory/backend/mcp_server.py""]\n' +
-            '    }\n' +
-            '  }\n' +
-            '}',
+            placeholder: '' +
+              '{\n' +
+              '  "mcpServers": {\n' +
+              '    "nocturne_memory": {\n' +
+              '      "enabled": false,\n' +
+              '      "command": "python",\n' +
+              '      "args": ["/root/nocturne_memory/backend/mcp_server.py""]\n' +
+              '    }\n' +
+              '  }\n' +
+              '}',
           },
         },
         {
