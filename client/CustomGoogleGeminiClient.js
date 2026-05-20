@@ -396,6 +396,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
     responseContent = response.candidates[0].content
     let groundingMetadata = response.candidates[0].groundingMetadata
+    // 当模型没按要求写对参数时
     if (response.candidates[0].finishReason === 'MALFORMED_FUNCTION_CALL') {
       return await executeRetry(`遇到 MALFORMED_FUNCTION_CALL 错误`, () => {
         throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误,重试次数已用完')

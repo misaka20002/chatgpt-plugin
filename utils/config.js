@@ -344,7 +344,7 @@ const defaultConfig = {
   mcpServers: `{
   "mcpServers": {
     "nocturne_memory": {
-      "enabled": false,
+      "enabled": true,
       "command": "python",
       "args": ["/root/nocturne_memory/backend/mcp_server.py"],
       "env": {

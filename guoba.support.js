@@ -1631,7 +1631,7 @@ export function supportGuoba() {
         {
           field: 'enableMemory',
           label: '启用记忆系统',
-          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验；需要在系统提示词中写入积极调用 MemoryTool ；呆毛注：目前推荐关闭这个记忆功能，改用下面的面包版MCP独立人格记忆。可用指令： #记忆帮助',
+          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验；需要在系统提示词中写入积极调用 MemoryTool ；可用指令： #记忆帮助',
           component: 'Switch'
         },
         {
@@ -1685,7 +1685,7 @@ export function supportGuoba() {
             '{\n' +
             '  "mcpServers": {\n' +
             '    "nocturne_memory": {\n' +
-            '      "enabled": false,\n' +
+            '      "enabled": true,\n' +
             '      "command": "python",\n' +
             '      "args": ["/root/nocturne_memory/backend/mcp_server.py""]\n' +
             '    }\n' +
