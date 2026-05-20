@@ -294,11 +294,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     if (systemMessage) {
       body.system_instruction = {
-        parts: {
-          text: systemMessage
-        }
+        parts: [{ text: systemMessage }] 
       }
     }
+
     if (this.tools?.length > 0) {
       body.tools.push({
         function_declarations: this.tools.map(tool => tool.function())
@@ -344,6 +343,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       method: 'POST',
       body: JSON.stringify(body),
       headers: {
+        'Content-Type': 'application/json',
         'x-goog-api-key': this._key
       }
     })
