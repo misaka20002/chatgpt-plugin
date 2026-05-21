@@ -412,8 +412,8 @@ https://afdian.net/a/ikechan8370
 
 感谢以下贡献者
 
-<a href="https://github.com/ikechan8370/chatgpt-plugin/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ikechan8370/chatgpt-plugin" />
+<a href="https://github.com/misaka20002/chatgpt-plugin/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=misaka20002/chatgpt-plugin" />
 </a>
 
 

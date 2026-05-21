@@ -1787,6 +1787,10 @@ function getRandomUrl(type) {
             "https://v2.xxapi.cn/api/randomAcgPic?type=wap&return=302",
             "https://api.suyanw.cn/api/comic/api.php", // 返回下载图片的
             // "https://cdn.seovx.com/d/?mom=302",
+            "https://ai.ycxom.top:3002/api/random/picture/二次元",
+            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/acg",
+            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/wallpaper",
+            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/img",
         ],
         "scy": [ // 三次元
             // "https://api.btstu.cn/sjbz/api.php",
@@ -1801,6 +1805,8 @@ function getRandomUrl(type) {
             "https://v2.xxapi.cn/api/baisi?return=302",
             "https://api.suyanw.cn/api/ksxjj",
             // "https://cdn.seovx.com/?mom=302",
+            "https://ai.ycxom.top:3002/api/random/picture/三次元",
+            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/girl",
         ],
         "ecywebp": [ // 二次元 webp格式
             "https://t.mwm.moe/mp",
@@ -1820,6 +1826,7 @@ function getRandomUrl(type) {
             "",
         ],
         "bq_img": [ // 表情
+            // "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/Iochi_Mari",
         ],
         "bqwebp": [
             "https://t.alcy.cc/xhl",
