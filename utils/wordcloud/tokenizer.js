@@ -1,7 +1,8 @@
 import { Config } from '../config.js'
 import fs from 'fs'
 import nodejieba from '@node-rs/jieba'
-import { getChatHistory_w } from '../paimonFuction.js'
+import { msgHistoryMgr } from '../../model/Onebot11_MessageHistoryManager.js'
+
 
 class Tokenizer {
   async getHistory (e, groupId, date = new Date(), duration = 0, userId) {
@@ -10,7 +11,7 @@ class Tokenizer {
     }
 
     let group = e.bot.pickGroup(groupId)
-    let sourceArr = await getChatHistory_w(group, 1000, e.source?.seq || e.reply_id, duration, date);    
+    let sourceArr = await msgHistoryMgr.getChatHistorySafe(group, 1000, e.source?.seq || e.reply_id, duration, date);    
     
     logger.info(`[getChatHistory_w] 获取到${sourceArr.length}个群消息`);
     if (userId) {

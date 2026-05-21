@@ -48,18 +48,18 @@ export class Entertainment extends plugin {
           reg: `^(${emojiRegex()}){2}$`,
           fnc: 'combineEmoj'
         },
-        // {
-        //   reg: '^#?(今日词云|群友在聊什么)$',
-        //   fnc: 'wordcloud'
-        // },
-        // {
-        //   reg: '^#(|最新)词云(\\d{1,2}h{0,1}|)$',
-        //   fnc: 'wordcloud_latest'
-        // },
-        // {
-        //   reg: '^#(我的)?(本月|本周|今日)?词云$',
-        //   fnc: 'wordcloud_new'
-        // },
+        {
+          reg: '^#?(今日词云|群友在聊什么)$',
+          fnc: 'wordcloud'
+        },
+        {
+          reg: '^#(|最新)词云(\\d{1,2}h{0,1}|)$',
+          fnc: 'wordcloud_latest'
+        },
+        {
+          reg: '^#(我的)?(本月|本周|今日)?词云$',
+          fnc: 'wordcloud_new'
+        },
         {
           reg: '^#((寄批踢|gpt|GPT)?翻[sS]*|chatgpt翻译帮助)',
           fnc: 'translate'
