@@ -1,48 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>WordCloud</title>
     <script src="{{pluResPath}}/wordcloud/js2wordcloud.min.js"></script>
-</head>
-<body>
-    <div id="wordcloud2" style="width: 640px;height: 350px"></div>
-    <script>
-      let list = JSON.parse('{{@ list}}')
-      var wc = new Js2WordCloud(document.getElementById('wordcloud2'))
-      wc.setOption({
-        tooltip: {
-          show: true
-        },
-        list: list,
-        color: 'random-light',
-        fontFamily: 'Microsoft YaHei'
-      })
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
 
+        body {
+            width: 640px;
+            transform: scale(1.5);
+            transform-origin: 0 0;
+            /* 可爱的粉色波点背景 */
+            background-color: #fff0f5; 
+            background-image: radial-gradient(#ffc0cb 15%, transparent 16%), radial-gradient(#ffc0cb 15%, transparent 16%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            padding: 25px;
+            font-family: "TsukuARdGothic-Regular", "ZCOOL KuaiLe", "Comic Sans MS", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        /* 更加晶莹剔透的卡片设计 */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            padding: 25px 20px;
+            box-shadow: 0 10px 30px rgba(255, 105, 180, 0.15), inset 0 0 15px rgba(255, 240, 245, 0.8);
+            border: 3px solid #ffb6c1; /* 明显的粉色边框 */
+            position: relative;
+        }
+
+        /* 顶部信息容器 */
+        .header-container {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        /* 大标题 */
+        .header-title {
+            font-size: 22px;
+            color: #ff6b8b;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #ffe4e1;
+        }
+
+        /* 新增：时长与热度标签 */
+        .header-info {
+            display: inline-block;
+            font-size: 14px;
+            color: #ff7b9a;
+            font-weight: bold;
+            background: #fff5f7;
+            padding: 5px 18px;
+            border-radius: 20px;
+            border: 1px dashed #ffb6c1;
+            letter-spacing: 1px;
+        }
+
+        /* 词云容器 */
+        #wordcloud2 {
+            width: 100%;
+            height: 320px; 
+            margin-top: 15px; 
+        }
+
+        /* 底部 Logo */
+        .logo {
+            font-size: 13px;
+            text-align: center;
+            color: #ff9eaa;
+            margin-top: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="header-container">
+            <!-- 动态获取的标题 (带有群名/人名) -->
+            <div class="header-title">{{title}}</div>
+            <!-- 动态获取的时长和热度 -->
+            <div class="header-info">
+                ⏱️ 时长: {{durationText}} &nbsp;|&nbsp; 🌸 词汇热度: {{wordCount}}
+            </div>
+        </div>
+
+        <div id="wordcloud2"></div>
+        <div class="logo">🐾 Created By Paimon-ChatGPT-Plugin {{version}} 🐾</div>
+    </div>
+
+    <script>
+        let list = JSON.parse('{{@ list}}')
+        var wc = new Js2WordCloud(document.getElementById('wordcloud2'))
+
+        // 成五颜六色的马卡龙可爱糖果色系
+        const cuteColorfulColors = [
+            '#FF6B8B', '#FFB347', '#FFD700', '#85E3FF', '#B5EAD7',
+            '#C7CEEA', '#FF9CEE', '#F28482', '#F6CA06', '#87CEEB',
+            '#98D8C8', '#F4A261', '#E76F51', '#9D88B3', '#FFAEA5',
+            '#A2D2FF', '#FFC8DD', '#FFAFCC', '#BDE0FE', '#CDB4DB',
+            '#FF99C8', '#FCF6BD', '#D0F4DE', '#A9DEF9', '#E4C1F9'
+        ];
+
+        wc.setOption({
+            tooltip: {
+                show: false
+            },
+            list: list,
+            shape: 'circle',
+            gridSize: 5,
+            maxFontSize: 75,
+            minFontSize: 12,
+            color: function () {
+                return cuteColorfulColors[Math.floor(Math.random() * cuteColorfulColors.length)];
+            },
+            backgroundColor: 'transparent',
+            fontFamily: '"TsukuARdGothic-Regular", "ZCOOL KuaiLe", "Comic Sans MS", "PingFang SC", "Microsoft YaHei"'
+        })
     </script>
-    <div class="logo">Created By Yunzai-Bot and ChatGPT-Plugin {{version}}</div>
 </body>
 
 </html>
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        user-select: none;
-    }
-    body {
-        font-family: sans-serif;
-        font-size: 16px;
-        width: 640px;
-        color: #1e1f20;
-        transform: scale(1.5);
-        transform-origin: 0 0;
-    }
-    .logo {
-        font-size: 14px;
-        font-family: "tttgbnumber";
-        text-align: center;
-        color: #7994a7;
-    }
-</style>
