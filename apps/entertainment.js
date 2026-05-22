@@ -49,7 +49,7 @@ export class Entertainment extends plugin {
           fnc: 'combineEmoj'
         },
         {
-          reg: '^#?(今日词云|群友在聊什么)$',
+          reg: '^#(群友在聊什么)$',
           fnc: 'wordcloud'
         },
         {
@@ -57,7 +57,7 @@ export class Entertainment extends plugin {
           fnc: 'wordcloud_latest'
         },
         {
-          reg: '^#(我的)?(本月|本周|今日)?词云$',
+          reg: '^#(我|他|她|它)?的?(本月|本周|今日)?词云$',
           fnc: 'wordcloud_new'
         },
         {
@@ -309,12 +309,17 @@ ${translateLangLabels}
     if (e.isGroup) {
       let groupId = e.group_id
       let userId
-      if (e.msg.includes('我的')) {
+      if (e.msg.includes('我')) {
         userId = e.sender.user_id
       }
       let at = e.message.find(m => m.type === 'at')
-      if (at) {
-        userId = at.qq
+      if (e.msg.includes('他') || e.msg.includes('她') || e.msg.includes('它')) {
+        if (at)
+          userId = at.qq
+        else {
+          await this.reply('请At一位群友', true)
+          return true
+        }
       }
       let lock = await redis.get(`CHATGPT:WORDCLOUD_NEW:${groupId}_${userId}`)
       if (lock) {

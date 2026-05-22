@@ -11,7 +11,8 @@ import {
 } from '../utils/common.js'
 import { KeyvFile } from 'keyv-file'
 import SydneyAIClient from '../utils/SydneyAIClient.js'
-import { getChatHistoryGroup } from '../utils/chat.js'
+// import { getChatHistoryGroup } from '../utils/chat.js'
+import { msgHistoryMgr } from '../model/Onebot11_MessageHistoryManager.js'
 import { APTool } from '../utils/tools/APTool.js'
 import { OfficialChatGPTClient } from '../utils/message.js'
 import { ClaudeAPIClient } from '../client/ClaudeAPIClient.js'
@@ -116,7 +117,7 @@ async function handleSystem(e, system, settings) {
         opt.masterName = e.bot.getFriendList().get(parseInt(master))?.nickname
       }
       const groupContextLength = settings.groupContextLength ?? Config.groupContextLength
-      let chats = await getChatHistoryGroup(e, groupContextLength)
+      let chats = await msgHistoryMgr.getGroupHistoryContext(e, groupContextLength)
       opt.chats = chats
       const namePlaceholder = '[name]'
       const defaultBotName = 'ChatGPT'
@@ -239,7 +240,7 @@ class Core {
     //   system = mergeSystemPrompt(system, e)
 
     //   if (opt.settings.enableGroupContext && e.isGroup) {
-    //     let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+    //     let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
     //     const namePlaceholder = '[name]'
     //     const defaultBotName = 'Copilot'
     //     const groupContextTip = Config.groupContextTip
@@ -337,7 +338,7 @@ class Core {
           max_tokens: Config.claudeApiMaxToken
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
-          let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+          let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
           const namePlaceholder = '[name]'
           const defaultBotName = 'GeminiPro'
           const groupContextTip = Config.groupContextTip
@@ -672,7 +673,7 @@ class Core {
       system = mergeSystemPrompt(system, e, { replyTimestamps: conversation.replyTimestamps })
 
       if (opt.settings.enableGroupContext && e.isGroup) {
-        let chats = await getChatHistoryGroup(e, Config.groupContextLength)
+        let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
         const namePlaceholder = '[name]'
         const defaultBotName = 'GeminiPro'
         const groupContextTip = Config.groupContextTip

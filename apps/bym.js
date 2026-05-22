@@ -1,10 +1,9 @@
 import { Config } from '../utils/config.js'
-import { getChatHistoryGroup } from '../utils/chat.js'
+// import { getChatHistoryGroup } from '../utils/chat.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
 import { customSplitRegex, filterResponseChunk } from '../utils/text.js'
 import core, { roleMap } from '../model/core.js'
 import { formatDate } from '../utils/common.js'
-
 
 /** 使机器人可以对其第一人称回应 */
 const reg_chatgpt_for_firstperson_call = Config.enableBYM ? Config.assistantLabel : `Chatgpt-plugin-bot-name-${Math.floor(10000 + Math.random() * 90000)}`;

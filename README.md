@@ -27,12 +27,17 @@
 - 2025年11月22日，优化算法：智能模式中-Bot可以根据人设 对对话者 `修改群名片、禁言、设置头衔`（而不会误伤）了；新增 `强制移除CQ码`
 - 2025年12月2日，智能模式中增加 `根据情绪发送表情` `Pixiv搜图` `AI短暂拉黑群友` `科学计算` `at/戳一戳群友`
 - 2025年12月12日，智能模式中增加 `#我的记忆` `#群记忆` `#记忆帮助` `智能贴表情`
-- 2026年1月1日，Gemini模式、OpenAI API模式支持多工具并行调用
+- 2026年1月1日，Gemini模式、OpenAI API模式支持多工具并行调用[^1]
 - 2026年2月22日，增加 `CQ码At群友` `对话速率限制` ；智能模式中增加 `定时任务工具` `图片/视频内容识别`
 - 2026年4月1日，接入 api.siliconflow.cn 语音合成；智能模式中增加 `智能发送语音` ；增加自定义个人音色指令 `#gptsf语音模型(创建|删除|列表)`
 - 2026年4月15日，智能模式接入 [sf插件-Skills](https://github.com/AIGC-Yunzai/siliconflow-plugin) 新增 `flux绘画` `Midjourney绘画` `Gemini大香蕉` `GPT-Image-2` `即梦绘画` `即梦视频`
 - 2026年5月1日，智能模式中增加 `QQ音乐搜索` `百度AI搜索`；增加指令 `#gpt偷图` 智能为 `根据情绪发送表情` 工具添加图片
-- 2026年5月19日，新增面包版 `通用 MCP 协议支持` 以适配各种 MCP 服务（如 [独立人格记忆 `nocturne_memory`](https://github.com/Dataojitori/nocturne_memory)），支持 stdio 本地进程和 SSE 远程连接
+- 2026年5月20日，新增 `通用 MCP 协议支持` 以适配各种 MCP 服务（如 [独立人格记忆 `nocturne_memory`](https://github.com/Dataojitori/nocturne_memory)），支持 stdio 本地进程和 SSE 远程连接[^2]
+
+[^1]: 由 [@127Wzc](https://github.com/127Wzc) 贡献添加
+[^2]: 由 [@eggacheb](https://github.com/eggacheb) 贡献添加
+
+
 ## 小玩意
 - 戳一戳功能
   - 整合#chatgpt设置AI第一人称 和锅巴控制
