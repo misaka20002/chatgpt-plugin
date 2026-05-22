@@ -18,7 +18,7 @@
             transform: scale(1.5);
             transform-origin: 0 0;
             /* 可爱的粉色波点背景 */
-            background-color: #fff0f5; 
+            background-color: #fff0f5;
             background-image: radial-gradient(#ffc0cb 15%, transparent 16%), radial-gradient(#ffc0cb 15%, transparent 16%);
             background-size: 20px 20px;
             background-position: 0 0, 10px 10px;
@@ -32,7 +32,8 @@
             border-radius: 24px;
             padding: 25px 20px;
             box-shadow: 0 10px 30px rgba(255, 105, 180, 0.15), inset 0 0 15px rgba(255, 240, 245, 0.8);
-            border: 3px solid #ffb6c1; /* 明显的粉色边框 */
+            border: 3px solid #ffb6c1;
+            /* 明显的粉色边框 */
             position: relative;
         }
 
@@ -65,12 +66,29 @@
             letter-spacing: 1px;
         }
 
-        /* 词云容器 */
-        #wordcloud2 {
+        .wordcloud-wrapper {
             width: 100%;
-            height: 320px; 
-            margin-top: 15px; 
+            height: 320px;
+            /* 保持原本占据的高度，防止破坏卡片布局 */
+            margin-top: 15px;
+            position: relative;
         }
+
+        /* 词云实际渲染容器：物理尺寸放大2倍，视觉缩小为0.5 */
+        #wordcloud2 {
+            width: 200%;
+            /* 物理宽度两倍 */
+            height: 640px;
+            /* 物理高度两倍 (320*2) */
+            transform: scale(0.5);
+            /* 视觉上缩小一半，抵消放大 */
+            transform-origin: 0 0;
+            /* 从左上角开始缩放 */
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
 
         /* 底部 Logo */
         .logo {
@@ -96,7 +114,11 @@
             </div>
         </div>
 
-        <div id="wordcloud2"></div>
+        <!-- 将词云放进包装器，防止 absolute 撑破布局 -->
+        <div class="wordcloud-wrapper">
+            <div id="wordcloud2"></div>
+        </div>
+
         <div class="logo">🐾 Created By Paimon-ChatGPT-Plugin {{version}} 🐾</div>
     </div>
 
@@ -113,15 +135,23 @@
             '#FF99C8', '#FCF6BD', '#D0F4DE', '#A9DEF9', '#E4C1F9'
         ];
 
+        let len = list.length || 1;
+
+        let dpiScale = 2; // 与 CSS 放大的倍数对应 (2倍物理像素)
+        let dynamicMax = Math.min(140, Math.max(70, 160 - len * 0.9)) * dpiScale;
+        let dynamicMin = Math.min(40, Math.max(12, 45 - len * 0.35)) * dpiScale;
+        let dynamicGrid = Math.min(12, Math.max(5, 16 - len * 0.1)) * dpiScale;
+
         wc.setOption({
             tooltip: {
                 show: false
             },
             list: list,
             shape: 'circle',
-            gridSize: 5,
-            maxFontSize: 75,
-            minFontSize: 12,
+            gridSize: dynamicGrid,
+            maxFontSize: dynamicMax,
+            minFontSize: dynamicMin,
+            shrinkToFit: true,
             color: function () {
                 return cuteColorfulColors[Math.floor(Math.random() * cuteColorfulColors.length)];
             },

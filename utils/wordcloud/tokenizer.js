@@ -102,61 +102,74 @@ class Tokenizer {
     // duration represents the number of hours to go back, should in range [0, 24]
     let chats = await this.getHistory(e, groupId, new Date(), duration, userId)
     let durationStr = duration > 0 ? `${duration}小时` : '今日'
-    logger.mark(`聊天记录拉取完成，获取到${durationStr}内${chats.length}条聊天记录，准备分词中`)
+    logger.mark(`[词云生成] 聊天记录拉取完成，获取到${durationStr}内${chats.length}条聊天记录，准备分词中`)
 
     const _path = process.cwd()
     let stopWordsPath = `${_path}/plugins/chatgpt-plugin/utils/wordcloud/cn_stopwords.txt`
-    const data = fs.readFileSync(stopWordsPath)
-    const stopWords = String(data)?.split('\n') || []
-    let chatContent = chats
+    let stopWords = []
+    try {
+      const data = fs.readFileSync(stopWordsPath, 'utf8')
+      stopWords = String(data).split('\n').map(s => s.trim())
+    } catch (err) {
+      logger.warn(`[词云生成] 停用词表读取失败，将使用默认分词。原因: ${err.message}`)
+    }
+
+    // 预处理：提取所有纯文本内容，过滤掉空消息
+    let chatTexts = chats
       .map(c => c.message
-        // 只统计文本内容
-        .filter(item => item.type == 'text')
-        .map(textItem => `${textItem.text}`)
+        .filter(item => item.type === 'text')
+        .map(textItem => textItem.text)
         .join('').trim()
       )
-      .map(c => {
-        // let length = c.length
-        let threshold = 2
-        // if (length < 100 && length > 50) {
-        //   threshold = 6
-        // } else if (length <= 50 && length > 25) {
-        //   threshold = 3
-        // } else if (length <= 25) {
-        //   threshold = 2
-        // }
-        return nodejieba.extract(c, threshold)
+      .filter(text => text.length > 0)
+
+    let chatContent = chatTexts
+      .map(text => {
+        // 根据句子长度动态决定提取多少个关键词：大约每 10 个字提取 1 个词，最少 2 个，最多 20 个
+        let threshold = Math.max(2, Math.min(20, Math.ceil(text.length / 10)))
+        return nodejieba.extract(text, threshold)
       })
       .reduce((acc, curr) => acc.concat(curr), [])
       .map(c => c.keyword)
-      .filter(c => stopWords.indexOf(c) < 0)
+      // 过滤停用词，并建议过滤掉单字（单字在词云中通常是无意义的助词或标点）
+      .filter(c => c.length > 1 && stopWords.indexOf(c) < 0)
+
     if (Config.debug) {
       logger.info(chatContent)
     }
+
+    // 统计词频
     const countMap = {}
     for (const value of chatContent) {
-      if (countMap[value]) {
-        countMap[value]++
-      } else {
-        countMap[value] = 1
-      }
+      countMap[value] = (countMap[value] || 0) + 1
     }
-    let list = Object.keys(countMap).map(k => {
-      return [k, countMap[k]]
-    })
-    function compareByFrequency(a, b) {
-      const freA = a[1]
-      const freB = b[1]
-      if (freA < freB) {
-        return 1
-      }
-      if (freA > freB) {
-        return -1
-      }
-      return 0
+
+    // 转换为数组并按词频降序排序 (简化了排序函数)
+    let list = Object.entries(countMap).sort((a, b) => b[1] - a[1])
+
+    // 消息少的时候放宽（允许只出现 1 次的词），消息多的时候严格（要求出现 3 次以上）
+    let msgCount = chatTexts.length;
+    let minFreq = 1; // 默认最宽松
+    if (msgCount > 800) {
+      minFreq = 4;
+    } else if (msgCount > 300) {
+      minFreq = 3;
+    } else if (msgCount > 100) {
+      minFreq = 2;
     }
-    logger.mark('分词统计完成，绘制词云中...')
-    return list.filter(s => s[1] > 2).sort(compareByFrequency).slice(0, topK)
+
+    // 按动态门槛过滤并截取
+    let finalKeywords = list.filter(s => s[1] >= minFreq).slice(0, topK)
+
+    // 如果过滤后发现词汇量连预期的一半都不到，说明大家聊天可能太碎片化，自动降低门槛再试一次
+    if (finalKeywords.length < (topK / 3) && minFreq > 1) {
+      logger.mark(`[词云生成] 当前严格模式(>=${minFreq}次)提取词数(${finalKeywords.length})过少，自动降低门槛...`)
+      minFreq -= 1;
+      finalKeywords = list.filter(s => s[1] >= minFreq).slice(0, topK)
+    }
+
+    logger.mark(`[词云生成] 分词统计完成，最低词频阈值: ${minFreq}，列表长度: ${finalKeywords.length}，绘制词云中...`)
+    return finalKeywords
   }
 }
 
