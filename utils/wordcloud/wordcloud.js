@@ -1,5 +1,8 @@
 import Tokenizer from './tokenizer.js'
 import { render } from '../common.js'
+import {
+  getUserDetailedInfo,
+} from '../../utils/paimonFuction.js'
 
 export async function makeWordcloud(e, groupId, duration = 0, userId) {
   let tokenizer = getTokenizer(e)
@@ -26,13 +29,13 @@ export async function makeWordcloud(e, groupId, duration = 0, userId) {
   if (e.msg.includes('本周')) durationText = '本周'
   else if (e.msg.includes('本月')) durationText = '本月'
   else if (e.msg.includes('今日') || e.msg.includes('今天') || e.msg.includes('群友在聊什么')) durationText = '今日'
-  else if (duration > 0 && duration <= 24) durationText = `${duration}小时`
+  else if (duration > 0) durationText = `${Math.round(duration)}小时`
 
   // 组装超可爱的标题
   let title = `✨ ${groupName} 词云 ✨`
   if (userId) {
-    let member = e.group?.pickMember(userId)
-    let targetName = member?.card || member?.nickname || userId
+    let user = await getUserDetailedInfo(e, userId);
+    let targetName = user?.card || userId
     title = `✨ ${targetName} 的词云 ✨`
   }
 

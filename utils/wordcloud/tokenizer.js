@@ -5,18 +5,21 @@ import { msgHistoryMgr } from '../../model/Onebot11_MessageHistoryManager.js'
 
 
 class Tokenizer {
-  async getHistory (e, groupId, date = new Date(), duration = 0, userId) {
+  async getHistory(e, groupId, date = new Date(), duration = 0, userId) {
     if (!groupId) {
       throw new Error('no valid group id')
     }
 
     let group = e.bot.pickGroup(groupId)
-    let sourceArr = await msgHistoryMgr.getChatHistorySafe(group, 1000, e.source?.seq || e.reply_id, duration, date);    
-    
-    logger.info(`[getChatHistorySafe] 获取到${sourceArr.length}个群消息`);
+    let sourceArr = await msgHistoryMgr.getChatHistorySafe(group, 1000, e.source?.seq || e.reply_id, duration, date);
+
+    logger.info(`[Tokenizer.getHistory] 获取到${sourceArr.length}个群消息`);
     if (userId) {
-      sourceArr = sourceArr.filter(chat => chat.sender.user_id === userId);
-      logger.info(`筛选出${sourceArr.length}个${userId}发送的群消息`);
+      sourceArr = sourceArr.filter(chat => {
+        const chatUserId = chat.sender?.user_id || chat.user_id || '';
+        return String(chatUserId) === String(userId);
+      });
+      logger.info(`[Tokenizer.getHistory] 筛选出${sourceArr.length}个 "${userId}" 发送的群消息`);
     }
 
     return sourceArr
@@ -25,7 +28,7 @@ class Tokenizer {
     let latestChat = await group.getChatHistory(undefined, 1)
     let seq = latestChat[0].seq || latestChat[0].message_id
     let chats = latestChat
-    function compareByTime (a, b) {
+    function compareByTime(a, b) {
       const timeA = a.time
       const timeB = b.time
       if (timeA < timeB) {
@@ -56,7 +59,7 @@ class Tokenizer {
     // Step 4: Get the end of the specified date by current time
     const endOfSpecifiedDate = currentTime
     while (isTimestampInDateRange(chats[0]?.time, startOfSpecifiedDate, endOfSpecifiedDate) &&
-    isTimestampInDateRange(chats[chats.length - 1]?.time, startOfSpecifiedDate, endOfSpecifiedDate)) {
+      isTimestampInDateRange(chats[chats.length - 1]?.time, startOfSpecifiedDate, endOfSpecifiedDate)) {
       let chatHistory
       try {
         chatHistory = await group.getChatHistory(seq, 20)
@@ -83,12 +86,12 @@ class Tokenizer {
     }
     chats = chats.filter(chat => isTimestampInDateRange(chat.time, startOfSpecifiedDate, endOfSpecifiedDate))
     if (userId) {
-      chats = chats.filter(chat => chat.sender.user_id === userId)
+      chats = chats.filter(chat => String(chat.sender?.user_id || chat.user_id || '') === String(userId))
     }
     return chats
   }
 
-  async getKeywordTopK (e, groupId, topK = 100, duration = 0, userId) {
+  async getKeywordTopK(e, groupId, topK = 100, duration = 0, userId) {
     if (!nodejieba) {
       throw new Error('未安装node-rs/jieba，娱乐功能-词云统计不可用')
     }
@@ -107,7 +110,7 @@ class Tokenizer {
     const stopWords = String(data)?.split('\n') || []
     let chatContent = chats
       .map(c => c.message
-      // 只统计文本内容
+        // 只统计文本内容
         .filter(item => item.type == 'text')
         .map(textItem => `${textItem.text}`)
         .join('').trim()
@@ -141,7 +144,7 @@ class Tokenizer {
     let list = Object.keys(countMap).map(k => {
       return [k, countMap[k]]
     })
-    function compareByFrequency (a, b) {
+    function compareByFrequency(a, b) {
       const freA = a[1]
       const freB = b[1]
       if (freA < freB) {
@@ -158,7 +161,7 @@ class Tokenizer {
 }
 
 class ShamrockTokenizer extends Tokenizer {
-  async getHistory (e, groupId, date = new Date(), duration = 0, userId) {
+  async getHistory(e, groupId, date = new Date(), duration = 0, userId) {
     logger.mark('当前使用Shamrock适配器')
     if (!groupId) {
       throw new Error('no valid group id')
@@ -230,13 +233,13 @@ class ShamrockTokenizer extends Tokenizer {
     }
     chats = chats.filter(chat => isTimestampInDateRange(chat.time, startOfSpecifiedDate, endOfSpecifiedDate))
     if (userId) {
-      chats = chats.filter(chat => chat.sender.user_id === userId)
+      chats = chats.filter(chat => String(chat.sender?.user_id || chat.user_id || '') === String(userId))
     }
     return chats
   }
 }
 
-function isTimestampInDateRange (timestamp, startOfSpecifiedDate, endOfSpecifiedDate) {
+function isTimestampInDateRange(timestamp, startOfSpecifiedDate, endOfSpecifiedDate) {
   if (!timestamp) {
     return false
   }
