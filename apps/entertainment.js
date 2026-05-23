@@ -49,11 +49,11 @@ export class Entertainment extends plugin {
           fnc: 'combineEmoj'
         },
         {
-          reg: '^#(群友在聊什么)$',
+          reg: '^#群友在聊什么$',
           fnc: 'wordcloud'
         },
         {
-          reg: '^#(|最新)词云(\\d{1,2}h{0,1}|)$',
+          reg: '^#(最新)?词云(\\d{1,2}h{0,1}|)$',
           fnc: 'wordcloud_latest'
         },
         {

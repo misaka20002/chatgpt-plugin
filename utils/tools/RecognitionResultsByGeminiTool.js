@@ -31,7 +31,7 @@ export class RecognitionResultsByGeminiTool extends AbstractTool {
     required: []
   }
 
-  description = 'Use this tool to ANALYZE/RECOGNIZE image OR video content. Returns text descriptions. Use when checking: 1) Image/Video content details, 2) Answering questions about visual media, 3) User avatars.'
+  description = 'Analyzes images or videos to return text descriptions. Use for explicit URLs, QQ avatars, or historical media. DO NOT use for media in the current message if you have native vision capabilities.'
 
   func = async function (opts, e) {
     const { imageUrl, videoUrl, question, qq } = opts
