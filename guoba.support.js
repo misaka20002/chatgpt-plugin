@@ -1378,6 +1378,7 @@ export function supportGuoba() {
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
+              { label: '必应图片搜索工具（分辨率低）', value: 'SerpImageTool_Bing' },
               { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
               { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
               { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
@@ -1455,15 +1456,21 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'agent_SandboxSwitch',
-          label: '工具新增-沙箱',
-          bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',
-          component: 'Switch'
-        },
-        {
           field: 'TTSAudio_Tool',
           label: '工具新增-智能发送语音',
           bottomHelpMessage: '新增智能发送语音工具，提供给AI让Ta可以在适当的时候给你发送语音；需要先配置语音模式下可正常发送语音',
+          component: 'Switch'
+        },
+        {
+          field: 'agent_MarkmapToolSwitch',
+          label: '工具新增-思维导图',
+          bottomHelpMessage: '新增生成 markmap思维导图 工具',
+          component: 'Switch'
+        },
+        {
+          field: 'agent_SandboxSwitch',
+          label: '工具新增-沙箱',
+          bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',
           component: 'Switch'
         },
         {

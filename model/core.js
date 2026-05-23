@@ -64,6 +64,7 @@ import { TavilyExtractTool } from '../utils/tools/TavilyExtractTool.js'
 import { Sf_image_edit } from '../utils/tools/Sf_image_edit.js'
 import { GeminiSearchTool } from '../utils/tools/GeminiSearchTool.js'
 import { SerpImageTool_by_baidu } from '../utils/tools/SearchImageTool_by_baidu.js'
+import { SerpImageTool_by_bing } from '../utils/tools/SerpImageTool_by_bing.js'
 import { BlockUserTool } from '../utils/tools/Block_User.js'
 import { AtOtherUserTool } from '../utils/tools/At_otherUser.js'
 import { SendGroupPokeTool } from '../utils/tools/SendGroupPoke.js'
@@ -77,6 +78,7 @@ import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
+import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1062,6 +1064,7 @@ async function collectTools(e) {
     new SendVideoTool(),
     // new ImageCaptionTool(), // OCR 工具
     new SerpImageTool_by_baidu(),
+    new SerpImageTool_by_bing(),
     new BilibiliSearchVideoTool(),
     new SendAvatarTool(),
     // new SerpImageTool(), // 该工具使用的 url 不再提供服务
@@ -1110,6 +1113,7 @@ async function collectTools(e) {
     { condition: !Config.disable_sendMessage_tool, ToolClass: SendMessageToSpecificGroupOrUserTool },
     { condition: Config.switch_atOtherUserTool, ToolClass: AtOtherUserTool },
     { condition: Config.poke_userIDs, ToolClass: SendGroupPokeTool },
+    { condition: Config.agent_MarkmapToolSwitch, ToolClass: GenerateMarkmapTool },
     { condition: Config.agent_SandboxSwitch, ToolClass: SandboxJSTool },
     { condition: Config.getPixivTool, ToolClass: GetPixivApiLoliconTool },
     { condition: Config.switch_EmojiTool, ToolClass: EmojiTool },
@@ -1174,6 +1178,9 @@ async function collectTools(e) {
     // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
     if (Config.serpSourceArr.includes('SerpImageTool_Baidu')) {
       tools.push(new SerpImageTool_by_baidu())
+    }
+    if (Config.serpSourceArr.includes('SerpImageTool_Bing')) {
+      tools.push(new SerpImageTool_by_bing())
     }
     if (Config.serpSourceArr.includes('Bilibili_SearchVideoTool')) {
       tools.push(new BilibiliSearchVideoTool())

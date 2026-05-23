@@ -311,6 +311,7 @@ const defaultConfig = {
   isProcessCQAtCode: true,
   getCurrentTime: true,
   poke_userIDs: true,
+  agent_MarkmapToolSwitch: false,
   agent_SandboxSwitch: false,
   auto_makeForwardMsg: 2000,
   getPixivTool: false,
