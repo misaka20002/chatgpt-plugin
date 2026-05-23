@@ -1462,6 +1462,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableUserProfileTool',
+          label: '工具新增-用户画像工具',
+          bottomHelpMessage: '根据用户在群聊中的历史消息，使用子LLM生成用户画像（兴趣偏好、交流风格、活跃特征、性格倾向）；仅限群聊使用；可在Bot人设中加入"你将总是使用 userProfile 工具分析用户"',
+          component: 'Switch'
+        },
+        {
           field: 'agent_MarkmapToolSwitch',
           label: '工具新增-思维导图',
           bottomHelpMessage: '新增生成 markmap思维导图 工具',

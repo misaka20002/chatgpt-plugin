@@ -79,6 +79,7 @@ import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
+import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1122,6 +1123,7 @@ async function collectTools(e) {
     { condition: Config.mediaRecognitionGeminiTool, ToolClass: RecognitionResultsByGeminiTool },
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
+    { condition: Config.enableUserProfileTool, ToolClass: UserProfileTool },
   ];
 
   optionalTools.forEach(({ condition, ToolClass }) => {
