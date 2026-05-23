@@ -11,7 +11,7 @@ class Tokenizer {
     }
 
     let group = e.bot.pickGroup(groupId)
-    let sourceArr = await msgHistoryMgr.getChatHistorySafe(group, 1000, e.source?.seq || e.reply_id, duration, date);
+    let sourceArr = await msgHistoryMgr.getChatHistorySafe(group, 2000, e.source?.seq || e.reply_id, duration, date);
 
     logger.info(`[Tokenizer.getHistory] 获取到${sourceArr.length}个群消息`);
     if (userId) {
