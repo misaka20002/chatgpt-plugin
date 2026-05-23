@@ -1915,7 +1915,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply('切换成功')
   }
 
-  async copilotSetting (e) {
+  async copilotSetting(e) {
     const code = 'let results = []\n' +
       'Object.keys(localStorage).forEach(key => {\n' +
       '    try {\n' +
@@ -1934,7 +1934,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     e.reply(`可以在浏览器控制台使用以下代码获取相关配置。\n\`\`\`javacript\n${code}\n\`\`\``)
   }
 
-  async geminiOpenSearchCE (e) {
+  async geminiOpenSearchCE(e) {
     let msg = e.msg
     let open = msg.includes('开启')
     if (msg.includes('搜索')) {
@@ -1944,10 +1944,13 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       Config.geminiEnableCodeExecution = open
       open && (Config.geminiEnableGoogleSearch = !open)
     }
-    await e.reply('操作成功')
+    if (open)
+      await e.reply('开启成功\n\n注意！注意！注意！开启后将无法使用智能模式！', true)
+    else
+      await e.reply('关闭成功', true)
   }
 
-  async refreshBingAi () {
+  async refreshBingAi() {
     if (Config.bingAiRefreshToken) {
       let client = new BingAIClient(Config.bingAiToken, Config.sydneyReverseProxy, Config.debug, Config._2captchaKey, Config.bingAiClientId, Config.bingAiScope, Config.bingAiRefreshToken, Config.bingAiOid, Config.bingReasoning)
       let json = await client.doRefreshToken()

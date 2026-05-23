@@ -286,13 +286,13 @@ export function supportGuoba() {
         {
           field: 'apiKey',
           label: 'OpenAI API Key',
-          bottomHelpMessage: 'OpenAI的ApiKey，用于访问OpenAI的API接口',
+          bottomHelpMessage: 'OpenAI的ApiKey，用于访问OpenAI的API接口；可用指令： #chatgpt切换API #chatgpt[开启|关闭]API流',
           component: 'InputPassword'
         },
         {
           field: 'model',
           label: 'OpenAI 模型',
-          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型。可用指令：  #chatgpt切换API #chatgpt[开启|关闭]API流',
+          bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型',
           component: 'Input'
         },
         {
@@ -429,13 +429,13 @@ export function supportGuoba() {
         //   component: 'Switch'
         // },
         {
-          label: '以下为智谱清言（ChatGLM）方式的配置。',
+          label: '以下为智谱清言（ChatGLM）方式的配置',
           component: 'Divider'
         },
         {
           field: 'chatglmRefreshToken',
           label: 'refresh token',
-          bottomHelpMessage: 'chatglm_refresh_token 6个月有效期',
+          bottomHelpMessage: 'chatglm_refresh_token 6个月有效期；可用指令： #chatgpt切换智谱',
           component: 'Input'
         },
         {
@@ -445,7 +445,7 @@ export function supportGuoba() {
         {
           field: 'claudeApiKey',
           label: 'claude API Key',
-          bottomHelpMessage: '前往 https://console.anthropic.com/settings/keys 注册和生成。可以填写多个，用英文逗号隔开',
+          bottomHelpMessage: '前往 https://console.anthropic.com/settings/keys 注册和生成；可以填写多个，用英文逗号隔开；可用指令： #chatgpt切换claude #chatgpt设置claudeKey',
           component: 'InputPassword'
         },
         {
@@ -525,7 +525,7 @@ export function supportGuoba() {
         {
           field: 'xhmode',
           label: '星火模式',
-          bottomHelpMessage: '设置星火使用的对话模式',
+          bottomHelpMessage: '设置星火使用的对话模式；可用指令： #chatgpt切换星火 #chatgpt设置星火token',
           component: 'Select',
           componentProps: {
             options: [
@@ -612,7 +612,7 @@ export function supportGuoba() {
         {
           field: 'qwenApiKey',
           label: '通义千问API Key',
-          bottomHelpMessage: '通义千问的ai人格使用“API方式”中的设置，请自行设置',
+          bottomHelpMessage: '通义千问的ai人格使用“API方式”中的设置，请自行设置；可用指令： #chatgpt切换千问',
           component: 'InputPassword'
         },
         {
@@ -660,7 +660,7 @@ export function supportGuoba() {
         {
           field: 'azApiKey',
           label: 'Azure API Key',
-          bottomHelpMessage: '管理密钥，用于访问Azure的API接口',
+          bottomHelpMessage: '管理密钥，用于访问Azure的API接口；可用指令： #chatgpt切换azure',
           component: 'InputPassword'
         },
         {
@@ -682,13 +682,13 @@ export function supportGuoba() {
         {
           field: 'geminiBaseUrl',
           label: 'Gemini反代',
-          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliy.top （常见报错：500 Internal Server Error）',
+          bottomHelpMessage: '对https://generativelanguage.googleapis.com的反代，可以填入https://gemini.ikechan8370.com 或 https://gemini.maliy.top （常见报错：500 Internal Server Error）；可用指令： #chatgpt切换gemini #chatgpt设置geminikey #chatgpt(开启|关闭)gemini(搜索|代码执行)',
           component: 'Input'
         },
         {
           field: 'geminiKey',
           label: 'API密钥',
-          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取，如果有多个用英文逗号隔开，Key将轮替使用；可用指令：#chatgpt设置geminikey  #chatgpt切换gemini',
+          bottomHelpMessage: '前往https://makersuite.google.com/app/apikey获取，如果有多个用英文逗号隔开，Key将轮替使用',
           component: 'InputPassword'
         },
         {

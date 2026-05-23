@@ -266,7 +266,7 @@ export namespace openai {
          * @type {string|Array}
          * @memberof ChatCompletionRequestMessage
          */
-        content: string | ChatCompletionContentPart[]
+        content: string | ChatCompletionContentPart[] | null
         /**
          * The name of the user in a multi-user chat
          * @type {string}

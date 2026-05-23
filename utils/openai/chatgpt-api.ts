@@ -1,6 +1,7 @@
 import Keyv from 'keyv'
 import pTimeout from 'p-timeout'
 import QuickLRU from 'quick-lru'
+// @ts-ignore
 import { v4 as uuidv4 } from 'uuid'
 
 import * as tokenizer from './tokenizer.js'
@@ -305,12 +306,9 @@ export class ChatGPTAPI {
             opts,
             completionParams
         )
-        console.log(`[ChatGPT][API] 输入Token(${numTokens}) | 回复上限(${maxTokens}) | 总上下文(${this._maxModelTokens})`)
-        if (numTokens + maxTokens > this._maxModelTokens) {
-            console.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${numTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`)
-        }
+
         if (trimInfo.trimmed) {
-            console.log(
+            console.info(
                 `[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}。若这类日志频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`
             )
         }
@@ -330,7 +328,7 @@ export class ChatGPTAPI {
         const responseP = new Promise<types.ChatMessage & { conversation: openai.ChatCompletionRequestMessage[] }>(
             async (resolve, reject) => {
                 const url = `${this._apiBaseUrl}/chat/completions`
-                const headers = {
+                const headers: Record<string, string> = {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${this._apiKey}`
                 }
@@ -339,6 +337,10 @@ export class ChatGPTAPI {
                     ...completionParams,
                     messages,
                     stream
+                }
+
+                if (stream) {
+                    body.stream_options = { include_usage: true }
                 }
 
                 const modelStr = body.model || CHATGPT_MODEL
@@ -397,6 +399,11 @@ export class ChatGPTAPI {
                                         result.id = response.id
                                     }
 
+                                    if ((response as any).usage) {
+                                        if (!result.detail) result.detail = {} as any
+                                        result.detail.usage = (response as any).usage
+                                    }
+
                                     if (response.choices?.length) {
                                         const delta = response.choices[0].delta
                                         if (delta.function_call && delta.function_call !== null) {
@@ -447,7 +454,13 @@ export class ChatGPTAPI {
                                         if (delta.role) {
                                             result.role = delta.role
                                         }
+
+                                        const existingUsage = result.detail?.usage
                                         result.detail = response
+                                        if (existingUsage && !(result.detail as any).usage) {
+                                            (result.detail as any).usage = existingUsage
+                                        }
+
                                         onProgress?.(result)
                                     }
                                 } catch (err) {
@@ -526,17 +539,20 @@ export class ChatGPTAPI {
                 }
             }
         ).then(async (message) => {
-            if (message.detail && !message.detail.usage) {
-                try {
-                    const promptTokens = numTokens
-                    const completionTokens = await this._getTokenCount(message.text)
-                    message.detail.usage = {
-                        prompt_tokens: promptTokens,
-                        completion_tokens: completionTokens,
-                        total_tokens: promptTokens + completionTokens,
-                        estimated: true
-                    }
-                } catch (err) { }
+            const usage = message.detail?.usage || {
+                prompt_tokens: numTokens,
+                completion_tokens: 0,
+                total_tokens: numTokens
+            };
+
+            const apiPromptTokens = usage.prompt_tokens;
+            const outTokens = usage.completion_tokens || 0;
+            const totalTokenCount = usage.total_tokens || (apiPromptTokens + outTokens);
+
+            console.info(`[Chatgpt][API] 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 输出Token(${outTokens}) | 累计Token(${totalTokenCount})`);
+
+            if (apiPromptTokens + maxTokens > this._maxModelTokens) {
+                console.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${apiPromptTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`);
             }
 
             const cleanedCurrentMessages = currentMessages.map(m => ({
