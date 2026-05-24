@@ -1378,6 +1378,7 @@ export function supportGuoba() {
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
+              { label: 'Github仓库读取（需配置Token）', value: 'GithubAPI' },
               { label: '必应图片搜索工具（分辨率低）', value: 'SerpImageTool_Bing' },
               { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
               { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
@@ -1416,7 +1417,61 @@ export function supportGuoba() {
           component: 'InputPassword'
         },
         {
-          label: '智能模式 工具设置',
+          label: '常用工具',
+          component: 'Divider'
+        },
+        {
+          field: 'toolDefaultArr',
+          label: '默认工具',
+          component: 'Select',
+          bottomHelpMessage: '智能模式中的默认工具，是其他工具的前置；推荐全部开启',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [
+              { label: '发送图片url工具', value: 'SendPicture' },
+              { label: '发送视频url工具', value: 'SendVideo' },
+              { label: '查询用户信息工具', value: 'QueryUserinfo' },
+              { label: '短暂拉黑用户工具', value: 'BlockUser' },
+            ]
+          }
+        },
+        {
+          field: 'toolGroupAdminArr',
+          label: '群管理工具',
+          component: 'Select',
+          bottomHelpMessage: '智能模式中的群管理工具；开启后检测到Bot为群管理员/群主才赋予该工具（已优化算法不会误伤其他群友）；推荐全部开启',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [
+              { label: '禁言', value: 'Jinyan' },
+              { label: '踢人', value: 'KickOut' },
+              { label: '设置头衔', value: 'SetTitle' },
+              { label: '修改群昵称', value: 'EditCard' },
+              { label: '消息工具（撤回、加精）', value: 'HandleMsg' },
+            ]
+          }
+        },
+        {
+          field: 'toolGameQueryArr',
+          label: '游戏查询工具',
+          component: 'Select',
+          bottomHelpMessage: '智能模式中的游戏查询工具，调用miao插件和genshin插件',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [
+              { label: '星铁查询', value: 'QueryStarRail' },
+              { label: '原神查询', value: 'QueryGenshin' },
+            ]
+          }
+        },
+        {
+          label: '可选工具',
           component: 'Divider'
         },
         {
@@ -1492,15 +1547,21 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'change_handleMsg_tool',
+          label: '工具调整-消息工具',
+          bottomHelpMessage: '智能模式中，修改“消息工具（handleMsg工具）”：1.引用消息时，bot如果要加精华时将强制指定为引用的消息；2.禁用撤回消息的功能。（该选项用于某些不够聪明的模型，例如 gemini 2.0 系列）（当你在控制台看到mark消息“[ChatGPT][handleMsg] Agent 已正确选择引用消息 source_message_id”就可以将该选项关闭了）',
+          component: 'Switch'
+        },
+        {
           field: 'disable_sendMessage_tool',
           label: '工具禁用-文字工具',
           bottomHelpMessage: '智能模式中，禁用“发送文本到当前群或指定群聊或私聊（sendMessage）工具”，适用于文字模式、图片模式、sf图片模式重复发送相同文本等问题',
           component: 'Switch'
         },
         {
-          field: 'change_handleMsg_tool',
-          label: '工具调整-msg工具',
-          bottomHelpMessage: '智能模式中，修改“handleMsg工具”：1.引用消息时，bot如果要加精华时将强制指定为引用的消息；2.禁用撤回消息的功能。（该选项用于某些不够聪明的模型，例如 gemini 2.0 系列）（当你在控制台看到mark消息“[ChatGPT][handleMsg] Agent 已正确选择引用消息 source_message_id”就可以将该选项关闭了）',
+          field: 'disable_SendAvatarTool',
+          label: '工具禁用-发送用户头像',
+          bottomHelpMessage: '智能模式中，禁用“发送用户头像”工具',
           component: 'Switch'
         },
         {

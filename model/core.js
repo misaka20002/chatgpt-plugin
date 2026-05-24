@@ -402,45 +402,45 @@ class Core {
         key = keys[choiceIndex]
         logger.info(`使用API Key：${key}`)
       }
-    // } else if (use === 'claude2') { // 使用接口 ##############################
-    //   let { conversationId } = conversation
-    //   let client = new ClaudeAIClient({
-    //     organizationId: Config.claudeAIOrganizationId,
-    //     sessionKey: Config.claudeAISessionKey,
-    //     debug: Config.debug,
-    //     proxy: Config.proxy
-    //   })
-    //   let toSummaryFileContent
-    //   try {
-    //     if (e.source) {
-    //       let msgs = e.isGroup ? await e.group.getChatHistory(e.source.seq, 1) : await e.friend.getChatHistory(e.source.time, 1)
-    //       let sourceMsg = msgs[0]
-    //       let fileMsgElem = sourceMsg.message.find(msg => msg.type === 'file')
-    //       if (fileMsgElem) {
-    //         toSummaryFileContent = await extractContentFromFile(fileMsgElem, e)
-    //       }
-    //     }
-    //   } catch (err) {
-    //     logger.warn('读取文件内容出错， 忽略文件内容', err)
-    //   }
+      // } else if (use === 'claude2') { // 使用接口 ##############################
+      //   let { conversationId } = conversation
+      //   let client = new ClaudeAIClient({
+      //     organizationId: Config.claudeAIOrganizationId,
+      //     sessionKey: Config.claudeAISessionKey,
+      //     debug: Config.debug,
+      //     proxy: Config.proxy
+      //   })
+      //   let toSummaryFileContent
+      //   try {
+      //     if (e.source) {
+      //       let msgs = e.isGroup ? await e.group.getChatHistory(e.source.seq, 1) : await e.friend.getChatHistory(e.source.time, 1)
+      //       let sourceMsg = msgs[0]
+      //       let fileMsgElem = sourceMsg.message.find(msg => msg.type === 'file')
+      //       if (fileMsgElem) {
+      //         toSummaryFileContent = await extractContentFromFile(fileMsgElem, e)
+      //       }
+      //     }
+      //   } catch (err) {
+      //     logger.warn('读取文件内容出错， 忽略文件内容', err)
+      //   }
 
-    //   let attachments = []
-    //   if (toSummaryFileContent?.content) {
-    //     attachments.push({
-    //       extracted_content: toSummaryFileContent.content,
-    //       file_name: toSummaryFileContent.name,
-    //       file_type: 'pdf',
-    //       file_size: 200312,
-    //       totalPages: 20
-    //     })
-    //     logger.info(toSummaryFileContent.content)
-    //   }
-    //   if (conversationId) {
-    //     return await client.sendMessage(prompt, conversationId, attachments)
-    //   } else {
-    //     let conv = await client.createConversation()
-    //     return await client.sendMessage(prompt, conv.uuid, attachments)
-    //   }
+      //   let attachments = []
+      //   if (toSummaryFileContent?.content) {
+      //     attachments.push({
+      //       extracted_content: toSummaryFileContent.content,
+      //       file_name: toSummaryFileContent.name,
+      //       file_type: 'pdf',
+      //       file_size: 200312,
+      //       totalPages: 20
+      //     })
+      //     logger.info(toSummaryFileContent.content)
+      //   }
+      //   if (conversationId) {
+      //     return await client.sendMessage(prompt, conversationId, attachments)
+      //   } else {
+      //     let conv = await client.createConversation()
+      //     return await client.sendMessage(prompt, conv.uuid, attachments)
+      //   }
     } else if (use === 'xh') { // 使用接口 ##############################
       const cacheOptions = {
         namespace: 'xh',
@@ -1049,69 +1049,77 @@ async function collectTools(e) {
     'Send163_MusicTool': SendNetEaseMusicTool,
     'SendQQ_MusicTool': SendQQMusicTool,
     'BaiduAI_SearchTool': BaiduAISearchTool,
+    'GithubAPI': GithubAPITool,
   }
   /** 搜索/网络来源 */
   let serpTools = Object.entries(serpToolMap)
     .filter(([key]) => Config.serpSourceArr.includes(key))
     .map(([_, ToolClass]) => new ToolClass());
 
+  /** 默认工具 */
+  const defaultToolMap = {
+    'SendPicture': SendPictureTool,
+    'SendVideo': SendVideoTool,
+    'QueryUserinfo': QueryUserinfoTool,
+    'BlockUser': BlockUserTool,
+  }
+  let defaultTools = Object.entries(defaultToolMap)
+    .filter(([key]) => Config.toolDefaultArr.includes(key))
+    .map(([_, ToolClass]) => new ToolClass());
+
+  /** 游戏查询工具 */
+  const gameQueryToolMap = {
+    'QueryStarRail': QueryStarRailTool,
+    'QueryGenshin': QueryGenshinTool,
+  }
+  let gameQueryTools = Object.entries(gameQueryToolMap)
+    .filter(([key]) => Config.toolGameQueryArr.includes(key))
+    .map(([_, ToolClass]) => new ToolClass());
+
+  /** 群管理工具 */
+  const groupAdminToolMap = {
+    'EditCard': EditCardTool,
+    'Jinyan': JinyanTool,
+    'KickOut': KickOutTool,
+    'SetTitle': SetTitleTool,
+    'HandleMsg': HandleMessageMsgTool,
+  }
+  let groupAdminTools = Object.entries(groupAdminToolMap)
+    .filter(([key]) => Config.toolGroupAdminArr.includes(key))
+    .map(([_, ToolClass]) => new ToolClass());
+
+  /** 图片/视频搜索工具（由搜索/网络来源配置控制） */
+  const serpExtraToolMap = {
+    'SerpImageTool_Baidu': SerpImageTool_by_baidu,
+    'SerpImageTool_Bing': SerpImageTool_by_bing,
+    'Bilibili_SearchVideoTool': BilibiliSearchVideoTool,
+  }
+  let serpExtraTools = Object.entries(serpExtraToolMap)
+    .filter(([key]) => Config.serpSourceArr.includes(key))
+    .map(([_, ToolClass]) => new ToolClass());
+
   /** fullTools 包括了踢人等管理员用的工具 */
   let fullTools = [
-    new EditCardTool(),
-    new QueryStarRailTool(), // 星铁工具
-    new JinyanTool(),
-    new KickOutTool(),
-    new SendPictureTool(),
-    new SendVideoTool(),
-    // new ImageCaptionTool(), // OCR 工具
-    new SerpImageTool_by_baidu(),
-    new SerpImageTool_by_bing(),
-    new BilibiliSearchVideoTool(),
-    new SendAvatarTool(),
-    // new SerpImageTool(), // 该工具使用的 url 不再提供服务
-    ...serpTools, // 展开所有开启的搜索工具
-    // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
-    // new ProcessPictureTool(), // 图像预处理工具
     new APTool(),
-    new HandleMessageMsgTool(),
-    new QueryUserinfoTool(), // 查看用户 e.sender 工具
-    // new EliMusicTool(),
-    // new EliMovieTool(),
-    // new SendMessageToSpecificGroupOrUserTool(), // 发送信息给指定群或用户
-    // new SendDiceTool(), // 暂不支持骰子了
-    new QueryGenshinTool(), // 原神工具
-    new SetTitleTool(),
-    new GithubAPITool(),
-    new BlockUserTool(),
-    // new RecognitionResultsByGeminiTool(),
+    ...defaultTools,
+    ...gameQueryTools,
+    ...groupAdminTools,
+    ...serpExtraTools,
+    ...serpTools,
   ]
 
-  // todo 3.0再重构tool的插拔和管理
   let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
-    new SendAvatarTool(),
-    // new SendDiceTool(), // 暂不支持骰子了
-    // new SendMessageToSpecificGroupOrUserTool(), // 发送信息给指定群或用户
-    // new EditCardTool(),
-    new QueryStarRailTool(), // 星铁工具
-    new QueryGenshinTool(), // 原神工具
-    // new ProcessPictureTool(), // 图像预处理工具
-    // new JinyanTool(),
-    // new KickOutTool(),
-    new SendPictureTool(),
-    // new SendAudioMessageTool(), // 发送 TTS 生成的语音工具
     new APTool(),
-    // new HandleMessageMsgTool(),
-    ...serpTools, // 展开所有开启的搜索工具
-    new QueryUserinfoTool(), // 查看用户 e.sender 工具
-    new GithubAPITool(),
-    new BlockUserTool(),
-    // new RecognitionResultsByGeminiTool(),
-    new SendVideoTool(),
+    ...defaultTools,
+    ...gameQueryTools,
+    ...serpExtraTools,
+    ...serpTools,
   ]
 
   /** 可选工具 */
   const optionalTools = [
     { condition: !Config.disable_sendMessage_tool, ToolClass: SendMessageToSpecificGroupOrUserTool },
+    { condition: !Config.disable_SendAvatarTool, ToolClass: SendAvatarTool },
     { condition: Config.switch_atOtherUserTool, ToolClass: AtOtherUserTool },
     { condition: Config.poke_userIDs, ToolClass: SendGroupPokeTool },
     { condition: Config.agent_MarkmapToolSwitch, ToolClass: GenerateMarkmapTool },
@@ -1150,11 +1158,19 @@ async function collectTools(e) {
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
     if (botInfo.role !== 'member') {
-      tools.push(new EditCardTool(), new JinyanTool(), new SetTitleTool())
-      // 管理员才给这些工具
-      if (e.isMaster || e.sender.role === 'owner' || e.sender.role === 'admin') {
-        tools.push(new KickOutTool(), new HandleMessageMsgTool())
-      }
+      /** 当Bot是管理员才给这些工具（不用担心误伤，普通群成员只能对自己禁言>_<） */
+      const allowedAdminKeys = ['EditCard', 'Jinyan', 'SetTitle']
+      /** 当Bot是管理员+当用户是管理员才给这些工具 */
+      const masterOnlyKeys = ['KickOut', 'HandleMsg']
+      Object.entries(groupAdminToolMap)
+        .filter(([key]) => Config.toolGroupAdminArr.includes(key))
+        .filter(([key]) => {
+          if (masterOnlyKeys.includes(key)) {
+            return e.isMaster || e.sender.role === 'owner' || e.sender.role === 'admin'
+          }
+          return allowedAdminKeys.includes(key)
+        })
+        .forEach(([_, ToolClass]) => tools.push(new ToolClass()))
       // 用于撤回和加精的id
       if (e.source?.seq) {
         let source = (await e.group.getChatHistory(e.source?.seq, 1)).pop()
@@ -1175,17 +1191,6 @@ async function collectTools(e) {
     const isImgUrlValid = Array.isArray(e?.img) && !e.img.some(item => typeof item === 'string' && item.length > 1000);
     if (isImgUrlValid) {
       promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`;
-    }
-  } else {
-    // tools.push(new SerpImageTool()) // 该工具使用的 url 不再提供服务
-    if (Config.serpSourceArr.includes('SerpImageTool_Baidu')) {
-      tools.push(new SerpImageTool_by_baidu())
-    }
-    if (Config.serpSourceArr.includes('SerpImageTool_Bing')) {
-      tools.push(new SerpImageTool_by_bing())
-    }
-    if (Config.serpSourceArr.includes('Bilibili_SearchVideoTool')) {
-      tools.push(new BilibiliSearchVideoTool())
     }
   }
 
