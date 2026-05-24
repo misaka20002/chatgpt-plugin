@@ -4,61 +4,147 @@
 <head>
     <meta charset="UTF-8">
     <title>Markmap 渲染</title>
+    <!-- 引入高级现代无衬线英文字体，已本地离线化以保障稳定高效加载 -->
+    <link href="{{pluResPath}}/markmap/fonts/fonts.css" rel="stylesheet">
     <style>
-        /* 1. 梦幻糖果色网格渐变背景 */
-        body {
-            margin: 0;
-            padding: 40px;
-            background-color: #ffdde1;
-            background-image:
-                radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 0.6) 0px, transparent 50%),
-                radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.6) 0px, transparent 50%),
-                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.6) 0px, transparent 50%),
-                radial-gradient(at 80% 50%, hsla(340, 100%, 76%, 0.6) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 0.6) 0px, transparent 50%),
-                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 0.6) 0px, transparent 50%),
-                radial-gradient(at 0% 0%, hsla(343, 100%, 76%, 0.6) 0px, transparent 50%);
-            font-family: "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
+        /* 1. 春樱初绽 🌸 高定马卡龙奶油流体渐变背景 */
+        html {
+            background-color: #fff8f8;
+            background-image: linear-gradient(135deg, #ffe5e7 0%, #ffeae0 35%, #f4e6ff 70%, #e0ffff 100%);
+            background-repeat: no-repeat;
+            background-size: cover;
+            min-height: 100%;
+            width: 100%;
+            min-width: fit-content;
         }
 
-        /* 2. Apple 风格高级玻璃拟态卡片容器 */
-        .container {
+        body {
+            margin: 0;
+            background: transparent;
+            font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            width: 100%;
+            min-width: fit-content;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 高端磨砂纸质/噪点纹理，提升背景高级感 */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.025;
+            pointer-events: none;
+            z-index: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* 截图容器：带有精致的内外边距 */
+        #container {
+            padding: 50px;
+            width: fit-content;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 2. 白玉玻璃拟态卡片容器 (Spring Card) */
+        .card {
             width: 1200px;
-            height: 800px;
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(30px) saturate(150%);
-            -webkit-backdrop-filter: blur(30px) saturate(150%);
-            border: 2px solid rgba(255, 255, 255, 0.9);
+            min-height: 800px;
+            height: auto;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(35px) saturate(140%);
+            -webkit-backdrop-filter: blur(35px) saturate(140%);
+            /* 微带玫瑰金粉的超细边缘线 */
+            border: 1.5px solid rgba(244, 219, 216, 0.85);
             border-radius: 40px;
-            padding: 40px 50px 30px 50px;
+            padding: 40px 45px 30px 45px;
+            /* 苹果式多层次柔焦阴影，创造极其优雅的空气立体感 */
             box-shadow:
-                0 50px 100px -20px rgba(50, 50, 93, 0.15),
-                0 30px 60px -30px rgba(0, 0, 0, 0.1),
-                inset 0 -2px 6px rgba(255, 255, 255, 0.4),
-                inset 0 2px 6px rgba(255, 255, 255, 0.9);
+                0 30px 70px -15px rgba(244, 190, 190, 0.25),
+                0 15px 35px -20px rgba(0, 0, 0, 0.06),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.9),
+                inset 0 -1.5px 3px rgba(244, 219, 216, 0.3);
             display: flex;
             flex-direction: column;
             position: relative;
             box-sizing: border-box;
+            transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* 3. 糖果色流光标题 */
-        h1.title {
-            text-align: center;
-            font-size: 42px;
-            /* 略微放大标题 */
-            margin: 10px 0 20px 0;
+        /* 3. macOS 风格标题栏包装 */
+        .window-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0 22px 0;
+            border-bottom: 1.5px dashed rgba(244, 219, 216, 0.55);
+            margin-bottom: 25px;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 8px;
+            width: 90px;
+        }
+
+        .window-buttons .btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .window-buttons .btn.close { background-color: #ff5f56; }
+        .window-buttons .btn.minimize { background-color: #ffbd2e; }
+        .window-buttons .btn.maximize { background-color: #27c93f; }
+
+        .window-title {
+            font-size: 24px;
             font-weight: 800;
-            letter-spacing: 1px;
-            background: linear-gradient(120deg, #ff7eb3 0%, #ff758c 40%, #8ca8fe 80%, #90e0ef 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0px 4px 15px rgba(255, 126, 179, 0.2);
+            text-align: center;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .window-title-box {
+            background-color: rgba(255, 255, 255, 0.72);
+            padding: 6px 28px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 180, 190, 0.35);
+            box-shadow: 
+                0 6px 15px rgba(255, 143, 163, 0.08), 
+                inset 0 1px 2px rgba(255, 255, 255, 0.9);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .window-title-text {
+            color: #c8a7a4;
+            font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+
+        .window-subtitle {
+            font-size: 11px;
+            font-weight: 800;
+            color: #c8a7a4;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            width: 90px;
+            text-align: right;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
         }
 
         /* SVG 绘图区 */
@@ -68,23 +154,31 @@
             overflow: visible;
         }
 
-        /* 4. 页脚 */
+        /* 4. 页脚设计 */
         .footer {
             margin-top: auto;
-            padding-top: 15px;
-            font-size: 15px;
-            color: #9aa0a6;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            padding-top: 20px;
+            border-top: 1.5px dashed rgba(244, 219, 216, 0.55);
+            font-size: 14px;
+            color: #c8a7a4;
+            font-weight: 700;
+            letter-spacing: 1px;
             display: flex;
             justify-content: center;
             align-items: center;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
         }
 
         .footer::before {
             content: "✨";
             margin-right: 8px;
-            font-size: 16px;
+            font-size: 14px;
+            animation: breathe 2.5s infinite ease-in-out;
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.55; transform: scale(0.9) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.15) rotate(15deg); }
         }
 
         #markdown-data {
@@ -98,66 +192,208 @@
 </head>
 
 <body>
-    <div class="container">
-        <h1 class="title">{{title}}</h1>
-        <svg id="markmap"></svg>
-        <div class="footer">Created By PaimonChatGPT-Plugin</div>
+    <div id="container">
+        <div class="card">
+            <!-- macOS 风格标题栏 -->
+            <div class="window-header">
+                <div class="window-buttons">
+                    <span class="btn close"></span>
+                    <span class="btn minimize"></span>
+                    <span class="btn maximize"></span>
+                </div>
+                <div class="window-title">
+                    <span class="window-title-box">
+                        <span class="window-title-text">{{title}}</span>
+                    </span>
+                </div>
+                <div class="window-subtitle">Mind Map</div>
+            </div>
+            
+            <svg id="markmap"></svg>
+            
+            <!-- 精致页脚 -->
+            <div class="footer">Created By PaimonChatGPT-Plugin</div>
+        </div>
     </div>
 
     <div id="markdown-data">{{markdown}}</div>
 
     <script>
-        window.onload = function () {
-            const markdownContent = document.getElementById('markdown-data').innerText || document.getElementById('markdown-data').textContent;
+        // 定义全局渲染接口，支持外部调用，支持传入自定义渲染参数 (options)
+        window.renderMarkmap = function (title, markdown, options = {}) {
+            const titleTextEl = document.querySelector('.window-title-text');
+            if (titleTextEl) titleTextEl.textContent = title;
 
             const { Transformer } = window.markmap;
             const transformer = new Transformer();
-            const { root } = transformer.transform(markdownContent);
+            const { root } = transformer.transform(markdown);
 
-            const customColors = ['#FF6B6B', '#4ECDC4', '#FFD166', '#A06CD5', '#45B7D1', '#FF9F1C', '#96F550', '#F15BB5'];
+            // 从参数或默认值获取渲染配置
+            const fontSize = options.fontSize || 21;
+            const strokeWidth = options.strokeWidth || 4.5;
+            const radius = options.radius || 8;
+            const spacingH = options.spacingHorizontal || 150;
+            const spacingV = options.spacingVertical || 16;
+            const paddingX = options.paddingX || 28;
+
+            // 莫兰迪春樱马卡龙五色板
+            const customColors = ['#ff8fa3', '#7adbbd', '#fcd373', '#8acafc', '#cbb2fe'];
             const colorFn = window.d3.scaleOrdinal(customColors);
 
             const { Markmap } = window.markmap;
             const svg = document.querySelector('#markmap');
+            
+            // 清理已有的 SVG 内容防止重叠
+            svg.innerHTML = '';
+
+            // MutationObserver: 动态监听并覆盖圆点半径
+            if (window.circleObserver) {
+                window.circleObserver.disconnect();
+            }
+            const observer = new MutationObserver(() => {
+                svg.querySelectorAll('.markmap-node > circle').forEach(c => {
+                    if (c.getAttribute('r') != radius) c.setAttribute('r', radius);
+                });
+            });
+            observer.observe(svg, { childList: true, subtree: true, attributes: true, attributeFilter: ['r'] });
+            window.circleObserver = observer;
 
             const mm = Markmap.create(svg, {
                 autoFit: true,
                 color: (node) => colorFn(node.state.path || node.state.key),
-                nodeMinHeight: 45,
-                spacingHorizontal: 120,
-                spacingVertical: 38,
-                paddingX: 25,
+                nodeMinHeight: 48,
+                spacingHorizontal: spacingH,
+                spacingVertical: spacingV,
+                paddingX: paddingX,
                 style: (id) => `
-                    ${id} * { font-family: "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif !important; }
+                    ${id} * { font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif !important; }
                     
-                    /* 1. 线条加粗 */
-                    ${id} path { 
-                        stroke-width: 4px; 
+                    /* 1. 连线：粗细适中，平滑微投影 */
+                    ${id} path.markmap-link { 
+                        stroke-width: ${strokeWidth}px; 
                         stroke-linecap: round; 
                         stroke-linejoin: round; 
-                        opacity: 0.9;
+                        opacity: 0.85;
+                        filter: drop-shadow(0 1.5px 3px rgba(244, 190, 190, 0.15));
+                        transition: stroke 0.3s ease;
                     } 
                     
-                    /* 2. 节点圆点同步放大 */
-                    ${id} circle {
+                    /* 2. 节点圆点：带微投影的白玉镂空环 */
+                    ${id} .markmap-node > circle {
                         stroke-width: 3.5px;
-                        r: 8;   /* 半径从 6.5 放大到 8，配合大字号更协调 */
                         fill: #ffffff !important; 
+                        filter: drop-shadow(0 2px 5px rgba(244, 190, 190, 0.25));
+                        cursor: pointer;
+                        transition: transform 0.2s ease;
+                    }
+                    ${id} .markmap-node:hover > circle {
+                        transform: scale(1.2);
                     }
                     
-                    /* 3. 【核心优化】正文字体大幅放大，提升清晰度与色彩对比度 */
-                    ${id} text { 
-                        font-size: 22px;    /* 字体大小从 16px 暴力提升至 22px */
-                        font-weight: 700;   /* 保持粗体 */
-                        fill: #1a1a1a;      /* 颜色由 #333 变深为 #1a1a1a，大大增加边缘锐利度与清晰度 */
-                        text-shadow: 0 2px 5px rgba(0,0,0,0.08); /* 稍微增强投影，使文字更有立体感 */
+                    /* 3. 节点文字：高端胶囊气泡封装 */
+                    ${id} .markmap-node text {
+                        fill: #4a3735 !important;
+                        font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+                    }
+                    ${id} .markmap-foreign { 
+                        font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+                        font-size: ${fontSize}px;
+                        font-weight: 700;
+                        color: #4a3735;
+                    }
+                    ${id} .markmap-foreign div { 
+                        font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+                        font-size: ${fontSize}px;
+                        font-weight: 700;
+                        color: #4a3735;
+                        line-height: 1.4;
+                        padding: 6px 12px;
+                        background: rgba(255, 255, 255, 0.65);
+                        border-radius: 12px;
+                        border: 1px solid rgba(244, 219, 216, 0.45);
+                        box-shadow: 0 4px 10px rgba(244, 190, 190, 0.12);
+                        display: inline-block;
+                        white-space: nowrap;
+                        transition: all 0.2s ease;
+                    }
+                    ${id} .markmap-foreign div:hover {
+                        background: rgba(255, 255, 255, 0.88);
+                        box-shadow: 0 6px 15px rgba(244, 190, 190, 0.2);
+                        transform: translateY(-1px);
                     }
                 `
             }, root);
 
-            setTimeout(() => {
+            // 保存实例引用到全局以供 Puppeteer/外部脚本使用
+            window.mmInstance = mm;
+
+            // 首次设置 circle r
+            svg.querySelectorAll('.markmap-node > circle').forEach(c => c.setAttribute('r', radius));
+
+            // 安全 fit
+            function safeFit() {
+                if (!mm) return;
+                const rect = svg.getBoundingClientRect();
+                if (rect.width < 1 || rect.height < 1) {
+                    setTimeout(safeFit, 100);
+                    return;
+                }
                 mm.fit();
-            }, 600);
+                setTimeout(() => autoResizeContainer(), 100);
+            }
+
+            // 自动宽高
+            function autoResizeContainer() {
+                const containerEl = document.getElementById('container');
+                const cardEl = document.querySelector('.card');
+                if (!containerEl || !cardEl || !mm) return;
+
+                const sr = mm.state && mm.state.rect;
+                if (!sr || sr.x2 - sr.x1 < 1 || sr.y2 - sr.y1 < 1) {
+                    setTimeout(autoResizeContainer, 200);
+                    return;
+                }
+
+                const svgW = sr.x2 - sr.x1;
+                const svgH = sr.y2 - sr.y1;
+
+                const extraH = 200; 
+                const extraW = 300; 
+
+                const idealW = Math.max(1200, svgW + extraW);
+                const idealH = Math.max(800, svgH + extraH);
+
+                cardEl.style.width = idealW + 'px';
+                cardEl.style.height = idealH + 'px';
+
+                const svgPxW = Math.round(idealW - 90); 
+                const svgPxH = Math.round(idealH - extraH);
+                svg.style.width = svgPxW + 'px';
+                svg.style.height = svgPxH + 'px';
+                svg.setAttribute('width', svgPxW);
+                svg.setAttribute('height', svgPxH);
+
+                setTimeout(() => {
+                    mm.fit();
+                    // 触发渲染完成的自定义事件（通知外部如 iframe 父窗口已重排尺寸）
+                    window.dispatchEvent(new CustomEvent('markmap-render-complete', { 
+                        detail: { width: idealW + 100, height: idealH + 100 } 
+                    }));
+                }, 50);
+            }
+
+            setTimeout(safeFit, 50);
+        };
+
+        // 页面生命周期 onload 入口
+        window.onload = function () {
+            const markdownContent = document.getElementById('markdown-data').innerText || document.getElementById('markdown-data').textContent;
+            const titleContent = document.querySelector('.window-title-text').textContent;
+
+            // 读取注入的自定义渲染参数
+            const options = window.customRenderOptions || {};
+
+            window.renderMarkmap(titleContent, markdownContent, options);
         };
     </script>
 </body>

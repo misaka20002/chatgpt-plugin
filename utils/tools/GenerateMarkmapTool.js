@@ -31,7 +31,14 @@ export class GenerateMarkmapTool extends AbstractTool {
         try {
             let img = await render(e, 'chatgpt-plugin', 'markmap/index', {
                 markdown: markdown,
-                title: title || '思维导图' // 使用 LLM 生成的标题
+                title: title || '思维导图',
+                // DPR 4x 超清截图，viewport 足够大让 autoResizeContainer 自由展开
+                // 截图只截 #container（fit-content），不受 viewport 大小影响
+                Viewport: {
+                    width: 2560,
+                    height: 1600,
+                    deviceScaleFactor: 4
+                }
             }, { retType: 'base64' })
 
             if (!img) {
