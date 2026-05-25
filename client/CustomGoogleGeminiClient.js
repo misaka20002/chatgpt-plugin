@@ -497,10 +497,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           // execute function
           try {
             let isAdmin = ['admin', 'owner'].includes(this.e.sender.role) || (this.e.group?.is_admin && this.e.isMaster)
-            let isOwner = ['owner'].includes(this.e.sender.role) || (this.e.group?.is_owner && this.e.isMaster)
+            // let isOwner = ['owner'].includes(this.e.sender.role) || (this.e.group?.is_owner && this.e.isMaster)
             let args = Object.assign(fc.args, {
               isAdmin,
-              isOwner,
+              // isOwner,
               sender: this.e.sender.user_id,
               mode: 'gemini'
             })

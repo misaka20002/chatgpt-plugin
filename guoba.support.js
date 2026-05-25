@@ -1378,7 +1378,7 @@ export function supportGuoba() {
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
-              { label: 'Github仓库读取（需配置Token）', value: 'GithubAPI' },
+              { label: 'Github仓库读取（需配置）', value: 'GithubAPI' },
               { label: '必应图片搜索工具（分辨率低）', value: 'SerpImageTool_Bing' },
               { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
               { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },

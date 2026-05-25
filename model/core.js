@@ -1157,7 +1157,7 @@ async function collectTools(e) {
   let systemAddition = ''
   if (e.isGroup) {
     let botInfo = await e.bot?.pickMember?.(e.group_id, getUin(e)) || await e.bot?.getGroupMemberInfo?.(e.group_id, getUin(e))
-    if (botInfo.role !== 'member') {
+    if (['admin', 'owner'].includes(botInfo.role)) {
       /** 当Bot是管理员才给这些工具（不用担心误伤，普通群成员只能对自己禁言>_<） */
       const allowedAdminKeys = ['EditCard', 'Jinyan', 'SetTitle']
       /** 当Bot是管理员+当用户是管理员才给这些工具 */
@@ -1166,7 +1166,7 @@ async function collectTools(e) {
         .filter(([key]) => Config.toolGroupAdminArr.includes(key))
         .filter(([key]) => {
           if (masterOnlyKeys.includes(key)) {
-            return e.isMaster || e.sender.role === 'owner' || e.sender.role === 'admin'
+            return e.isMaster || ['admin', 'owner'].includes(e.sender.role)
           }
           return allowedAdminKeys.includes(key)
         })
