@@ -80,6 +80,7 @@ import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
+import { GenerateMathRenderTool } from '../utils/tools/GenerateMathRenderTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1132,6 +1133,7 @@ async function collectTools(e) {
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableUserProfileTool, ToolClass: UserProfileTool },
+    { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },
   ];
 
   optionalTools.forEach(({ condition, ToolClass }) => {

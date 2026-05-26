@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Math & Markdown 渲染</title>
+
+    <!-- 引入 KaTeX 样式 (数学公式) -->
+    <link rel="stylesheet" href="{{pluResPath}}/mathRender/css/katex.min.css">
+    <script src="{{pluResPath}}/mathRender/js/katex.min.js"></script>
+
+    <style>
+        /* 复用你之前的春樱初绽背景 */
+        html {
+            background-color: #fff8f8;
+            background-image: linear-gradient(135deg, #ffe5e7 0%, #ffeae0 35%, #f4e6ff 70%, #e0ffff 100%);
+            background-repeat: no-repeat;
+            background-size: cover;
+            min-height: 100%;
+            width: 100%;
+            min-width: fit-content;
+        }
+
+        body {
+            margin: 0;
+            background: transparent;
+            font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            width: 100%;
+            min-width: fit-content;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 噪点纹理 */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.025;
+            pointer-events: none;
+            z-index: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #container {
+            padding: 50px;
+            width: fit-content;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 拟态卡片容器 */
+        .card {
+            width: 1200px;
+            /* 基础宽度 */
+            min-height: 800px;
+            height: auto;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(35px) saturate(140%);
+            -webkit-backdrop-filter: blur(35px) saturate(140%);
+            border: 1.5px solid rgba(244, 219, 216, 0.85);
+            border-radius: 40px;
+            padding: 40px 45px 30px 45px;
+            box-shadow:
+                0 30px 70px -15px rgba(244, 190, 190, 0.25),
+                0 15px 35px -20px rgba(0, 0, 0, 0.06),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.9),
+                inset 0 -1.5px 3px rgba(244, 219, 216, 0.3);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* macOS 风格标题栏 */
+        .window-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0 22px 0;
+            border-bottom: 1.5px dashed rgba(244, 219, 216, 0.55);
+            margin-bottom: 25px;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 8px;
+            width: 90px;
+        }
+
+        .window-buttons .btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .window-buttons .btn.close {
+            background-color: #ff5f56;
+        }
+
+        .window-buttons .btn.minimize {
+            background-color: #ffbd2e;
+        }
+
+        .window-buttons .btn.maximize {
+            background-color: #27c93f;
+        }
+
+        .window-title {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .window-title-box {
+            background-color: rgba(255, 255, 255, 0.72);
+            padding: 6px 28px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 180, 190, 0.35);
+            box-shadow: 0 6px 15px rgba(255, 143, 163, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+        }
+
+        .window-title-text {
+            color: #c8a7a4;
+            font-weight: 800;
+            letter-spacing: 2px;
+            font-size: 20px;
+        }
+
+        .window-subtitle {
+            font-size: 11px;
+            font-weight: 800;
+            color: #c8a7a4;
+            text-transform: uppercase;
+            width: 90px;
+            text-align: right;
+        }
+
+        /* 解决你提到的字体大小问题核心区：直接由这里接管，无需改底层 JS */
+        .markdown-body {
+            flex: 1;
+            color: #4a3735;
+            font-size: 24px;
+            /* 基础大字体，适应高清截图 */
+            line-height: 1.7;
+            padding: 10px 20px;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3 {
+            color: #ff8fa3;
+            border-bottom: 2px dashed rgba(244, 219, 216, 0.5);
+            padding-bottom: 10px;
+            margin-top: 1.5em;
+        }
+
+        .markdown-body p,
+        .markdown-body li {
+            margin-bottom: 16px;
+        }
+
+        /* 统一代码块和数学块的底色 */
+        .markdown-body pre,
+        .markdown-body code {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            font-family: Consolas, Monaco, monospace;
+            padding: 4px 8px;
+        }
+
+        .markdown-body pre {
+            padding: 20px;
+            border: 1px solid rgba(244, 219, 216, 0.6);
+            overflow-x: auto;
+        }
+
+        /* 数学公式调整：放大显示 */
+        .katex-display {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(244, 219, 216, 0.6);
+            box-shadow: 0 4px 15px rgba(244, 190, 190, 0.1);
+            font-size: 1.25em !important;
+            /* 公式比正文更大一点 */
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.15em;
+        }
+
+        /* 内联公式稍微放大 */
+
+        /* Mermaid 图表居中和美化 */
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px dashed rgba(244, 219, 216, 0.8);
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1.5px dashed rgba(244, 219, 216, 0.55);
+            font-size: 14px;
+            color: #c8a7a4;
+            font-weight: 700;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer::before {
+            content: "✨";
+            margin-right: 8px;
+            font-size: 14px;
+            animation: breathe 2.5s infinite ease-in-out;
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                opacity: 0.55;
+                transform: scale(0.9) rotate(0deg);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.15) rotate(15deg);
+            }
+        }
+
+        #raw-markdown {
+            display: none;
+        }
+    </style>
+
+    <!-- 引入相关处理库 -->
+    <!-- 1. Markdown 解析 -->
+    <script src="{{pluResPath}}/mathRender/js/markdown-it.min.js"></script>
+    <!-- 2. Mermaid 图表作图 -->
+    <script src="{{pluResPath}}/mathRender/js/mermaid.min.js"></script>
+    <!-- 3. KaTeX 拓展 (由于需要 markdown-it-katex 插件，这里直接引入 CDN 现成版) -->
+    <script src="{{pluResPath}}/mathRender/js/index.js"></script>
+
+</head>
+
+<body>
+    <div id="container">
+        <div class="card" id="render-card">
+            <!-- 标题栏 -->
+            <div class="window-header">
+                <div class="window-buttons"><span class="btn close"></span><span class="btn minimize"></span><span
+                        class="btn maximize"></span></div>
+                <div class="window-title"><span class="window-title-box"><span
+                            class="window-title-text">{{title}}</span></span></div>
+                <div class="window-subtitle">Math & Graph</div>
+            </div>
+
+            <!-- 正文渲染区 -->
+            <div id="content" class="markdown-body"></div>
+
+            <!-- 页脚 -->
+            <div class="footer">Created By PaimonChatGPT-Plugin</div>
+        </div>
+    </div>
+
+    <!-- 原始注入的数据 -->
+    <div id="raw-markdown">{{markdown}}</div>
+
+    <script>
+        window.onload = function () {
+            let rawData = document.getElementById('raw-markdown').innerText || document.getElementById('raw-markdown').textContent;
+
+            // 预处理：把 markdown 中的 ```mermaid 标签替换成 html 的 <div class="mermaid"> 供 mermaid.js 接管
+            rawData = rawData.replace(/```mermaid\n([\s\S]*?)```/g, '<div class="mermaid">$1</div>');
+
+            // 初始化 Markdown 渲染器，并挂载 KaTeX 插件
+            // 注意：window.markdownitKatex 是 @vscode/markdown-it-katex 挂载到全局的变量
+            const md = window.markdownit({
+                html: true,
+                breaks: true,
+                linkify: true
+            }).use(window.markdownitKatex);
+
+            // 将内容写入容器
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = md.render(rawData);
+
+            // 初始化 Mermaid，配置超大字体以匹配我们的 24px 正文大小，避免重蹈 "修改JS" 的覆辙
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'base',
+                themeVariables: {
+                    fontFamily: 'Outfit, Nunito, PingFang SC, sans-serif',
+                    fontSize: '20px',    // 直接在配置中覆盖字体大小
+                    primaryColor: '#ffe5e7',
+                    primaryTextColor: '#4a3735',
+                    primaryBorderColor: '#ff8fa3',
+                    lineColor: '#ff8fa3',
+                    secondaryColor: '#fcd373',
+                    tertiaryColor: '#e0ffff'
+                }
+            });
+
+            // 渲染所有图表
+            mermaid.run({ querySelector: '.mermaid' }).catch(e => console.error("Mermaid 渲染错误:", e)).finally(() => {
+                // 延迟一下通知 Puppeteer 自适应截图容器高度
+                setTimeout(() => {
+                    const card = document.getElementById('render-card');
+                    const container = document.getElementById('container');
+
+                    // 如果内容过高，自动撑开（由于 CSS 已设置 min-height 和 height: auto，基本会自动撑开）
+                    // 派发事件让 Puppeteer 如果有监听可以捕获
+                    window.dispatchEvent(new CustomEvent('math-render-complete'));
+                }, 200);
+            });
+        };
+    </script>
+</body>
+
+</html>

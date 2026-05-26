@@ -332,6 +332,7 @@ const defaultConfig = {
   mediaMaxSizeInMB: 5,
   enableEmojiLikeTool: true,
   disable_SendAvatarTool: true,
+  generateMathRender_ToolSwitch: false,
   enableUserProfileTool: false,
   mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
