@@ -797,13 +797,13 @@ export function supportGuoba() {
         {
           field: 'defaultUseTTS',
           label: '全局语音模式',
-          bottomHelpMessage: '全局默认以语音形式回复，使用默认角色音色；可用指令： #gpt发语音[内容]',
+          bottomHelpMessage: '全局默认以语音形式回复，使用默认角色音色',
           component: 'Switch'
         },
         {
           field: 'enableManualSendTTSAudio',
           label: '允许#gpt发语音',
-          bottomHelpMessage: '允许普通群友使用 #gpt发语音[内容] 指令，否则只有主人可用',
+          bottomHelpMessage: '允许任何人使用默认角色音色生成语音指令： #gpt发语音[内容] ；关闭后仅主人可用',
           component: 'Switch'
         },
         {
