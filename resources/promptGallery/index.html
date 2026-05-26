@@ -964,7 +964,54 @@
                 return new TextDecoder().decode(decrypted);
             }
 
+            // 解密图片缓存
+            // 内存缓存：同一会话内避免重复读 Cache API + 创建 blob URL
+            const decryptedImageCache = new Map();
+            // Cache API 持久化缓存：刷新页面后仍可用，省流量 + 省 CPU
+            let imageCacheName = null; // 包含 masterKey 指纹，密码变了自动失效
+
+            async function getImageCache() {
+                if (!imageCacheName && cachedMasterKey) {
+                    // 用 masterKey 的 SHA-256 前 8 位作为指纹，密码变了缓存自动失效
+                    const keyData = new Uint8Array(cachedMasterKey instanceof ArrayBuffer ? cachedMasterKey : cachedMasterKey.buffer);
+                    const hash = await crypto.subtle.digest('SHA-256', keyData);
+                    const fp = Array.from(new Uint8Array(hash)).slice(0, 4).map(b => b.toString(16).padStart(2, '0')).join('');
+                    imageCacheName = 'pg-img-' + fp;
+                }
+                if (!imageCacheName) return null;
+                try { return await caches.open(imageCacheName); } catch { return null; }
+            }
+
+            async function cleanOldImageCaches() {
+                try {
+                    const keys = await caches.keys();
+                    for (const k of keys) {
+                        if (k.startsWith('pg-img-') && k !== imageCacheName) {
+                            await caches.delete(k);
+                        }
+                    }
+                } catch {}
+            }
+
             async function decryptImage(src) {
+                // 1. 命中内存缓存直接返回
+                if (decryptedImageCache.has(src)) {
+                    return decryptedImageCache.get(src);
+                }
+                // 2. 检查 Cache API（持久化缓存，刷新页面后仍可用）
+                const cache = await getImageCache();
+                if (cache) {
+                    try {
+                        const cached = await cache.match(src);
+                        if (cached && cached.ok) {
+                            const blob = await cached.blob();
+                            const url = URL.createObjectURL(blob);
+                            decryptedImageCache.set(src, url);
+                            return url;
+                        }
+                    } catch {}
+                }
+                // 3. 从网络 fetch + 解密
                 try {
                     const resp = await fetch(src);
                     if (!resp.ok) return src;
@@ -979,7 +1026,13 @@
                     combined.set(authTag, ciphertext.length);
                     const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, cachedMasterKey, combined);
                     const blob = new Blob([decrypted], { type: 'image/png' });
-                    return URL.createObjectURL(blob);
+                    const url = URL.createObjectURL(blob);
+                    decryptedImageCache.set(src, url);
+                    // 写入 Cache API 持久化缓存
+                    if (cache) {
+                        try { await cache.put(src, new Response(blob)); } catch {}
+                    }
+                    return url;
                 } catch (e) {
                     console.warn('[PromptGallery] failed to decrypt image:', src, e);
                     return src;
@@ -1011,6 +1064,8 @@
 
             function processData(data) {
                 if (!Array.isArray(data)) throw new Error("JSON 顶层不是数组");
+                // masterKey 已设置，初始化缓存名并清理旧版本缓存
+                cleanOldImageCaches();
                 state.items = data;
                 for (const item of data) {
                     if (item.tags_by_category && typeof item.tags_by_category === "object") {
@@ -1043,6 +1098,12 @@
                 notice.textContent = "";
                 cachedMasterKey = null;
                 encryptedPayload = null;
+                imageCacheName = null;
+                // 清空内存缓存，释放 blob URL
+                for (const url of decryptedImageCache.values()) {
+                    try { URL.revokeObjectURL(url); } catch (_) {}
+                }
+                decryptedImageCache.clear();
 
                 try {
                     const resp = await fetch(DATA_URL, { cache: "no-store" });

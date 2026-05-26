@@ -1699,34 +1699,6 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
-          label: 'Prompt Gallery 画图记录',
-          component: 'Divider'
-        },
-        {
-          field: 'enablePromptGallery',
-          label: '启用画图记录',
-          bottomHelpMessage: '开启后，AI画图时将自动标注标签，并将记录（prompt、插件、图片、标签）推送到下方配置的 GitHub 仓库。首次推送时自动上传展示页面（index.html）和 Netlify 配置。浏览方式二选一：① GitHub Pages：仓库 Settings → Pages → Source 选对应分支 → 保存即可通过 https://用户名.github.io/仓库名 访问；② Netlify（国内更快）：https://app.netlify.com → Import from Git → 选择该仓库 → 直接 Deploy',
-          component: 'Switch'
-        },
-        {
-          field: 'promptGalleryRepo',
-          label: 'GitHub 仓库',
-          bottomHelpMessage: '画图记录推送的目标仓库（需新建空白仓库，建议使用私有仓库），格式：用户名/仓库名，例如：myuser/prompt-gallery。首次推送时会自动上传展示页面和 Netlify 配置，可在 https://app.netlify.com 导入该仓库部署，国内访问更快',
-          component: 'Input'
-        },
-        {
-          field: 'promptGalleryToken',
-          label: 'GitHub Token',
-          bottomHelpMessage: '具有仓库写入权限的 GitHub Personal Access Token。获取步骤：① 打开 https://github.com/settings/tokens → Generate new token (classic) ② 勾选 repo 权限 ③ 生成并复制 token 粘贴到此处',
-          component: 'InputPassword'
-        },
-        {
-          field: 'promptGalleryPassword',
-          label: '访问密码',
-          bottomHelpMessage: '设置后，gallery.json 将以 AES-256-GCM 加密推送，查看画廊页面时需输入此密码才能解密浏览。留空则不加密，数据为公开明文。建议使用私有仓库 + 密码双重保护',
-          component: 'InputPassword'
-        },
-        {
           label: '智能模式 记忆设置',
           component: 'Divider'
         },
@@ -2050,6 +2022,34 @@ export function supportGuoba() {
           bottomHelpMessage: '用户输入的图片，最大支持的文件大小；重启生效',
           helpMessage: '单位：MB',
           component: 'InputNumber'
+        },
+        {
+          label: 'Prompt Gallery 画图记录',
+          component: 'Divider'
+        },
+        {
+          field: 'enablePromptGallery',
+          label: '启用画图记录',
+          bottomHelpMessage: '开启后，AI画图时将自动标注标签，并将记录（prompt、插件、图片、标签）推送到下方配置的 GitHub 仓库。首次推送时自动上传展示页面（index.html）和 Netlify 配置。浏览方式二选一：① GitHub Pages：仓库 Settings → Pages → Source 选对应分支 → 保存即可通过 https://用户名.github.io/仓库名 访问；② Netlify（国内更快）：https://app.netlify.com → Import from Git → 选择该仓库 → 直接 Deploy',
+          component: 'Switch'
+        },
+        {
+          field: 'promptGalleryRepo',
+          label: 'GitHub 仓库',
+          bottomHelpMessage: '画图记录推送的目标仓库（需新建空白仓库，建议使用私有仓库），格式：用户名/仓库名，例如：myuser/prompt-gallery。首次推送时会自动上传展示页面和 Netlify 配置，可在 https://app.netlify.com 导入该仓库部署，国内访问更快',
+          component: 'Input'
+        },
+        {
+          field: 'promptGalleryToken',
+          label: 'GitHub Token',
+          bottomHelpMessage: '具有仓库写入权限的 GitHub Personal Access Token。获取步骤：① 打开 https://github.com/settings/tokens → Generate new token (classic) ② 勾选 repo 权限 ③ 生成并复制 token 粘贴到此处',
+          component: 'InputPassword'
+        },
+        {
+          field: 'promptGalleryPassword',
+          label: '访问密码',
+          bottomHelpMessage: '设置后，gallery.json 将以 AES-256-GCM 加密推送，查看画廊页面时需输入此密码才能解密浏览。留空则不加密，数据为公开明文。建议使用私有仓库 + 密码双重保护',
+          component: 'InputPassword'
         },
         {
           label: '杂项',

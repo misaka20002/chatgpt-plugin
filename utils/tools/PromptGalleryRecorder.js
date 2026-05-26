@@ -14,6 +14,9 @@ export const GALLERY_TAG_CATEGORIES = {
 }
 export const GALLERY_ALL_TAGS = Object.values(GALLERY_TAG_CATEGORIES).flat()
 
+// Prompt Gallery 前端版本号，修改前端后递增此值即可自动推送更新
+export const PROMPT_GALLERY_VERSION = 3
+
 /**
  * 判断 Prompt Gallery 是否已启用
  */
@@ -397,22 +400,56 @@ export async function pushToGallery({ prompt, plugin, tags, images }) {
     }
   }
 
-  // ===== 第3步：首次推送时上传 index.html 和 netlify.toml =====
-  if (isFirstPush) {
+  // ===== 第3步：首次推送或版本变更时上传 index.html 和 netlify.toml =====
+  let needUploadFrontend = isFirstPush
+  if (!needUploadFrontend) {
+    // 检查仓库中的 version.json
+    try {
+      const verResp = await fetch(`${githubApi}/repos/${repo}/contents/version.json?ref=${branch}`, { headers })
+      if (verResp.ok) {
+        const verData = await verResp.json()
+        const verContent = JSON.parse(Buffer.from(verData.content, 'base64').toString('utf-8'))
+        if (verContent.version !== PROMPT_GALLERY_VERSION) {
+          needUploadFrontend = true
+          logger.info(`[ChatGPT][PromptGallery] version mismatch (remote=${verContent.version}, local=${PROMPT_GALLERY_VERSION}), will update frontend`)
+        }
+      } else {
+        // version.json 不存在，需要上传
+        needUploadFrontend = true
+        logger.info('[ChatGPT][PromptGallery] version.json not found in repo, will upload frontend')
+      }
+    } catch (err) {
+      needUploadFrontend = true
+      logger.info('[ChatGPT][PromptGallery] failed to check version, will upload frontend:', err.message)
+    }
+  }
+
+  if (needUploadFrontend) {
     const fs = await import('fs')
     const filesToUpload = [
-      { local: '../../resources/promptGallery/index.html', remote: 'index.html', msg: 'initialize prompt gallery page' },
-      { local: '../../resources/promptGallery/netlify.toml', remote: 'netlify.toml', msg: 'add netlify deploy config' }
+      { local: '../../resources/promptGallery/index.html', remote: 'index.html', msg: 'update prompt gallery page' },
+      { local: '../../resources/promptGallery/netlify.toml', remote: 'netlify.toml', msg: 'update netlify deploy config' }
     ]
     for (const { local, remote, msg } of filesToUpload) {
       try {
         const localPath = fileURLToPath(new URL(local, import.meta.url))
         if (fs.existsSync(localPath)) {
           const content = fs.readFileSync(localPath).toString('base64')
+          // 获取已有文件 SHA（如果存在），用于更新
+          let fileSha = null
+          try {
+            const shaResp = await fetch(`${githubApi}/repos/${repo}/contents/${remote}?ref=${branch}`, { headers })
+            if (shaResp.ok) {
+              const shaData = await shaResp.json()
+              fileSha = shaData.sha
+            }
+          } catch (_) { /* 文件不存在，首次创建 */ }
+          const body = { message: `feat: ${msg}`, content, branch }
+          if (fileSha) body.sha = fileSha
           const resp = await fetch(`${githubApi}/repos/${repo}/contents/${remote}`, {
             method: 'PUT',
             headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: `feat: ${msg}`, content, branch })
+            body: JSON.stringify(body)
           })
           if (resp.ok) {
             logger.info(`[ChatGPT][PromptGallery] uploaded ${remote} to repo`)
@@ -424,6 +461,34 @@ export async function pushToGallery({ prompt, plugin, tags, images }) {
       } catch (err) {
         logger.warn(`[ChatGPT][PromptGallery] failed to upload ${remote}:`, err.message)
       }
+    }
+
+    // 上传/更新 version.json
+    try {
+      const versionContent = Buffer.from(JSON.stringify({ version: PROMPT_GALLERY_VERSION })).toString('base64')
+      let verSha = null
+      try {
+        const verShaResp = await fetch(`${githubApi}/repos/${repo}/contents/version.json?ref=${branch}`, { headers })
+        if (verShaResp.ok) {
+          const verShaData = await verShaResp.json()
+          verSha = verShaData.sha
+        }
+      } catch (_) { /* version.json 不存在 */ }
+      const verBody = { message: `feat: update gallery version to ${PROMPT_GALLERY_VERSION}`, content: versionContent, branch }
+      if (verSha) verBody.sha = verSha
+      const verResp = await fetch(`${githubApi}/repos/${repo}/contents/version.json`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(verBody)
+      })
+      if (verResp.ok) {
+        logger.info(`[ChatGPT][PromptGallery] uploaded version.json (v${PROMPT_GALLERY_VERSION}) to repo`)
+      } else {
+        const errText = await verResp.text()
+        logger.warn('[ChatGPT][PromptGallery] failed to upload version.json:', errText)
+      }
+    } catch (err) {
+      logger.warn('[ChatGPT][PromptGallery] failed to upload version.json:', err.message)
     }
   }
 
