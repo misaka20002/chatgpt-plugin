@@ -308,8 +308,8 @@ let helpData = [
     list: [
       {
         icon: 'smiley-wink',
-        title: '#chatgpt打招呼(群号|帮助)',
-        desc: '让AI随机到某个群去打招呼'
+        title: '#gpt发语音[内容]',
+        desc: '用于测试全局语音'
       },
       {
         icon: 'help',

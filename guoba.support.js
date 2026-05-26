@@ -49,6 +49,18 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'tts_First_person',
+          label: 'AI的第一人称',
+          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫；重启生效',
+          component: 'Input'
+        },
+        {
+          field: 'chat_for_First_person',
+          label: 'AI回应第一人称呼叫',
+          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉',
+          component: 'Switch'
+        },
+        {
           field: 'enablePrivateChat',
           label: '是否允许私聊机器人',
           bottomHelpMessage: 'Bot主人不受限制',
@@ -785,7 +797,13 @@ export function supportGuoba() {
         {
           field: 'defaultUseTTS',
           label: '全局语音模式',
-          bottomHelpMessage: '全局默认以语音形式回复，使用默认角色音色',
+          bottomHelpMessage: '全局默认以语音形式回复，使用默认角色音色；可用指令： #gpt发语音[内容]',
+          component: 'Switch'
+        },
+        {
+          field: 'enableManualSendTTSAudio',
+          label: '允许#gpt发语音',
+          bottomHelpMessage: '允许普通群友使用 #gpt发语音[内容] 指令，否则只有主人可用',
           component: 'Switch'
         },
         {
@@ -1776,18 +1794,6 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'tts_First_person',
-          label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫；重启生效',
-          component: 'Input'
-        },
-        {
-          field: 'chat_for_First_person',
-          label: 'AI回应第一人称呼叫',
-          bottomHelpMessage: 'AI会回应包含其第一人称的信息。修改AI的第一人称后该功能重启生效。如果不触发，则考虑指令冲突，例如先去锅巴把喵仔设置里面的机器人别名给删掉',
-          component: 'Switch'
-        },
-        {
           field: 'isConvertSentenceToArrayReply',
           label: '分多次回复',
           bottomHelpMessage: '模拟真人行为，自动分段，把ai回复分成1-3次回复。需要关闭选项 QQ开启markdown',
@@ -2155,7 +2161,7 @@ export function supportGuoba() {
           }
         },
         {
-          label: '主动打招呼（已失效）',
+          label: '主动打招呼',
           component: 'Divider'
         },
         {

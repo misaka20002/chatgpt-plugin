@@ -4,6 +4,7 @@ import { Config } from '../utils/config.js'
 import {
     getUserReplySetting,
     parseSourceImg,
+    generateAudio,
 } from '../utils/common.js'
 import {
     get_matce_cn_speaker,
@@ -153,7 +154,11 @@ export class voicechangehelp extends plugin {
                     reg: /^#gptsf语音模型(创建|删除|列表|上传|新增)$/i,
                     fnc: 'handleSfVoiceManage',
                     permission: 'master'
-                }
+                },
+                {
+                    reg: /^#gpt发语音/i,
+                    fnc: 'manualSendTTSAudio',
+                },
             ]
         })
         this.task = [
@@ -164,6 +169,30 @@ export class voicechangehelp extends plugin {
                 fnc: this.paimon_tts_Auto_tasker.bind(this)
             },
         ]
+    }
+
+    /** /^#gpt发语音/i */
+    async manualSendTTSAudio(e) {
+        if (!e.isMaster && !Config.enableManualSendTTSAudio) {
+            return false;
+        }
+        const message = e.msg.replace(/^#gpt发语音/i, '').trim();
+        if (!message) {
+            await e.reply('请提供需要转化为语音的文字内容，例如：#gpt发语音 早上好！', true);
+            return true;
+        }
+        try {
+            const sendable = await generateAudio(e, message);
+            if (sendable) {
+                await e.reply(sendable);
+            } else {
+                await e.reply('语音生成失败，请检查TTS配置或后台日志。', true);
+            }
+        } catch (err) {
+            logger.error('手动发送语音异常：', err);
+            await e.reply(`语音生成出现错误: ${err.message}`, true);
+        }
+        return true;
     }
 
     /** ^#gptsf语音模型(创建|删除|列表)$ */
