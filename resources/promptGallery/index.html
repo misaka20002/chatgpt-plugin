@@ -1,0 +1,1563 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI 画图 Prompt Gallery</title>
+        <style>
+            :root {
+                --bg: #f6f0e8;
+                --paper: rgba(255, 251, 246, 0.92);
+                --card: rgba(255, 255, 255, 0.88);
+                --text: #2c231d;
+                --muted: #716256;
+                --accent: #b44c2f;
+                --accent-strong: #8e351d;
+                --line: rgba(105, 79, 60, 0.18);
+                --shadow: 0 18px 45px rgba(71, 45, 25, 0.12);
+                --radius: 22px;
+                --gallery-image-height: 260px;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                color: var(--text);
+                font-family:
+                    "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+                    "Microsoft YaHei", sans-serif;
+                background:
+                    radial-gradient(
+                        circle at top left,
+                        rgba(208, 116, 80, 0.18),
+                        transparent 28%
+                    ),
+                    radial-gradient(
+                        circle at top right,
+                        rgba(191, 150, 89, 0.16),
+                        transparent 26%
+                    ),
+                    linear-gradient(180deg, #fbf5ee 0%, var(--bg) 100%);
+                min-height: 100vh;
+            }
+
+            .shell {
+                width: min(1440px, calc(100vw - 32px));
+                margin: 24px auto 40px;
+            }
+
+            .hero {
+                padding: 28px;
+                border: 1px solid var(--line);
+                border-radius: 30px;
+                background:
+                    linear-gradient(
+                        135deg,
+                        rgba(255, 248, 240, 0.92),
+                        rgba(245, 234, 223, 0.84)
+                    ),
+                    repeating-linear-gradient(
+                        -45deg,
+                        rgba(180, 76, 47, 0.03) 0,
+                        rgba(180, 76, 47, 0.03) 10px,
+                        rgba(255, 255, 255, 0) 10px,
+                        rgba(255, 255, 255, 0) 20px
+                    );
+                box-shadow: var(--shadow);
+                position: sticky;
+                top: 12px;
+                z-index: 20;
+                backdrop-filter: blur(14px);
+            }
+
+            .hero.collapsed {
+                display: none;
+            }
+
+            .eyebrow {
+                font-size: 12px;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                color: var(--accent);
+                margin-bottom: 10px;
+                font-weight: 700;
+            }
+
+            h1 {
+                margin: 0;
+                font-size: clamp(28px, 4vw, 48px);
+                line-height: 1.02;
+                font-weight: 800;
+            }
+
+            .subtext {
+                margin: 12px 0 0;
+                color: var(--muted);
+                font-size: 15px;
+                line-height: 1.6;
+                max-width: 860px;
+            }
+
+            .toolbar {
+                display: grid;
+                grid-template-columns:
+                    minmax(0, 1.7fr) minmax(160px, 0.7fr)
+                    minmax(180px, 0.8fr)
+                    auto auto;
+                gap: 12px;
+                margin-top: 22px;
+            }
+
+            .filter-panel {
+                display: grid;
+                gap: 16px;
+                margin-top: 18px;
+            }
+
+            .hero.collapsed .filter-panel {
+                display: none;
+            }
+
+            .input,
+            .select,
+            .button {
+                border-radius: 16px;
+                border: 1px solid var(--line);
+                background: rgba(255, 255, 255, 0.8);
+                color: var(--text);
+                min-height: 48px;
+                font-size: 14px;
+            }
+
+            .input,
+            .select {
+                padding: 0 14px;
+                width: 100%;
+                outline: none;
+            }
+
+            .input:focus,
+            .select:focus {
+                border-color: rgba(180, 76, 47, 0.45);
+                box-shadow: 0 0 0 4px rgba(180, 76, 47, 0.12);
+            }
+
+            .button {
+                padding: 0 16px;
+                cursor: pointer;
+                font-weight: 700;
+                transition:
+                    transform 120ms ease,
+                    background 120ms ease,
+                    border-color 120ms ease;
+            }
+
+            .button:hover {
+                transform: translateY(-1px);
+                border-color: rgba(180, 76, 47, 0.4);
+            }
+
+            .button:disabled {
+                cursor: not-allowed;
+                opacity: 0.55;
+                transform: none;
+            }
+
+            .button.primary {
+                background: linear-gradient(
+                    135deg,
+                    var(--accent),
+                    var(--accent-strong)
+                );
+                color: #fffaf4;
+                border-color: transparent;
+            }
+
+            .stats {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-top: 16px;
+            }
+
+            .stat {
+                padding: 10px 14px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.72);
+                border: 1px solid var(--line);
+                font-size: 13px;
+                color: var(--muted);
+            }
+
+            .notice {
+                margin-top: 14px;
+                padding: 12px 14px;
+                border-radius: 16px;
+                background: rgba(255, 244, 232, 0.88);
+                border: 1px dashed rgba(180, 76, 47, 0.36);
+                color: var(--muted);
+                font-size: 13px;
+                line-height: 1.6;
+                display: none;
+            }
+
+            .gallery {
+                column-count: 4;
+                column-gap: 18px;
+                margin-top: 22px;
+            }
+
+            .card {
+                display: inline-block;
+                width: 100%;
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                overflow: hidden;
+                box-shadow: var(--shadow);
+                margin: 0 0 18px;
+                break-inside: avoid;
+                vertical-align: top;
+            }
+
+            .media {
+                position: relative;
+                background: linear-gradient(
+                    135deg,
+                    rgba(209, 189, 172, 0.85),
+                    rgba(240, 231, 221, 0.85)
+                );
+                overflow: hidden;
+            }
+
+            .media-button {
+                width: 100%;
+                height: var(--gallery-image-height);
+                border: 0;
+                padding: 0;
+                margin: 0;
+                background: transparent;
+                display: block;
+                cursor: zoom-in;
+            }
+
+            .media img {
+                width: 100%;
+                height: var(--gallery-image-height);
+                display: block;
+                object-fit: cover;
+                object-position: center;
+            }
+
+            .media-empty {
+                min-height: var(--gallery-image-height);
+                display: grid;
+                place-items: center;
+                color: var(--muted);
+                font-size: 14px;
+                letter-spacing: 0.04em;
+            }
+
+            .media-overlay {
+                position: absolute;
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                opacity: 0;
+                transform: translateY(8px);
+                transition:
+                    opacity 160ms ease,
+                    transform 160ms ease;
+                pointer-events: none;
+            }
+
+            .card:hover .media-overlay,
+            .card:focus-within .media-overlay {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .media-cta,
+            .media-sub {
+                backdrop-filter: blur(10px);
+                background: rgba(35, 24, 16, 0.72);
+                color: #fff8ef;
+                border-radius: 999px;
+                padding: 8px 11px;
+                font-size: 12px;
+            }
+
+            .media-sub {
+                background: rgba(255, 250, 244, 0.9);
+                color: var(--accent-strong);
+            }
+
+            .media-badge {
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                padding: 8px 10px;
+                border-radius: 999px;
+                background: rgba(35, 24, 16, 0.72);
+                color: #fff8ef;
+                font-size: 12px;
+                backdrop-filter: blur(8px);
+            }
+
+            .content {
+                padding: 16px 16px 18px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .meta {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                color: var(--muted);
+                font-size: 13px;
+            }
+
+            .plugin-name {
+                font-weight: 700;
+                color: var(--accent-strong);
+            }
+
+            .prompt {
+                margin: 0;
+                white-space: pre-wrap;
+                line-height: 1.7;
+                font-size: 14px;
+                color: var(--text);
+                flex: 1;
+            }
+
+            .tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .tag {
+                display: inline-flex;
+                align-items: center;
+                min-height: 28px;
+                padding: 0 10px;
+                border-radius: 999px;
+                background: rgba(180, 76, 47, 0.1);
+                border: 1px solid rgba(180, 76, 47, 0.18);
+                color: var(--accent-strong);
+                font-size: 12px;
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            .tag[data-cat="subject"] { background: rgba(59,130,246,.08); color: #2563eb; border-color: rgba(59,130,246,.15); }
+            .tag[data-cat="style"] { background: rgba(168,85,247,.08); color: #7c3aed; border-color: rgba(168,85,247,.15); }
+            .tag[data-cat="theme"] { background: rgba(236,72,153,.08); color: #db2777; border-color: rgba(236,72,153,.15); }
+            .tag[data-cat="mood"] { background: rgba(245,158,11,.08); color: #d97706; border-color: rgba(245,158,11,.15); }
+            .tag[data-cat="color"] { background: rgba(34,197,94,.08); color: #16a34a; border-color: rgba(34,197,94,.15); }
+            .tag[data-cat="technique"] { background: rgba(99,102,241,.08); color: #4f46e5; border-color: rgba(99,102,241,.15); }
+            .tag[data-cat="composition"] { background: rgba(20,184,166,.08); color: #0d9488; border-color: rgba(20,184,166,.15); }
+            .tag[data-cat="custom"] { background: rgba(168,85,247,.08); color: #7c3aed; border-color: rgba(168,85,247,.15); }
+            /* 动态分类颜色（未知分类 fallback） */
+            .tag[data-cat]:not([data-cat=""]):not([data-cat="subject"]):not([data-cat="style"]):not([data-cat="theme"]):not([data-cat="mood"]):not([data-cat="color"]):not([data-cat="technique"]):not([data-cat="composition"]):not([data-cat="custom"]) {
+                background: rgba(180,76,47,.08); color: var(--accent); border-color: rgba(180,76,47,.15);
+            }
+
+            .actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .actions .button {
+                flex: 1 1 140px;
+                min-height: 42px;
+                font-size: 13px;
+                text-align: center;
+                line-height: 42px;
+            }
+
+            .button.subtle {
+                background: rgba(255, 248, 241, 0.9);
+            }
+
+            .empty {
+                margin-top: 22px;
+                padding: 46px 22px;
+                border: 1px dashed var(--line);
+                border-radius: 28px;
+                text-align: center;
+                color: var(--muted);
+                background: rgba(255, 255, 255, 0.66);
+                display: none;
+            }
+
+            .copy-toast {
+                position: fixed;
+                right: 20px;
+                bottom: 20px;
+                padding: 12px 16px;
+                border-radius: 14px;
+                background: rgba(35, 24, 16, 0.88);
+                color: #fff7ef;
+                font-size: 13px;
+                opacity: 0;
+                transform: translateY(8px);
+                transition:
+                    opacity 160ms ease,
+                    transform 160ms ease;
+                pointer-events: none;
+                z-index: 40;
+            }
+
+            .copy-toast.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .floating-toggle {
+                position: fixed;
+                right: 20px;
+                bottom: 84px;
+                z-index: 50;
+                min-height: 52px;
+                padding: 0 18px;
+                border-radius: 999px;
+                border: 1px solid rgba(180, 76, 47, 0.22);
+                background: linear-gradient(
+                    135deg,
+                    rgba(180, 76, 47, 0.96),
+                    rgba(142, 53, 29, 0.96)
+                );
+                color: #fffaf4;
+                box-shadow: 0 18px 32px rgba(71, 45, 25, 0.22);
+                backdrop-filter: blur(12px);
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 14px;
+            }
+
+            .floating-toggle:hover {
+                border-color: transparent;
+            }
+
+            .lightbox {
+                position: fixed;
+                inset: 0;
+                background: rgba(22, 14, 10, 0.86);
+                backdrop-filter: blur(12px);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                z-index: 60;
+            }
+
+            .lightbox.show {
+                display: flex;
+            }
+
+            .lightbox-panel {
+                width: min(1200px, 100%);
+                max-height: calc(100vh - 48px);
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 300px;
+                gap: 18px;
+                align-items: start;
+            }
+
+            .lightbox-stage {
+                position: relative;
+                background: rgba(255, 250, 244, 0.08);
+                border: 1px solid rgba(255, 247, 239, 0.12);
+                border-radius: 28px;
+                padding: 20px;
+                display: grid;
+                place-items: center;
+                min-height: 480px;
+            }
+
+            .lightbox-stage img {
+                max-width: 100%;
+                max-height: calc(100vh - 120px);
+                border-radius: 18px;
+                object-fit: contain;
+                box-shadow: 0 24px 50px rgba(0, 0, 0, 0.26);
+            }
+
+            .lightbox-side {
+                background: rgba(255, 250, 244, 0.95);
+                border-radius: 26px;
+                border: 1px solid rgba(255, 247, 239, 0.5);
+                padding: 16px;
+                color: var(--text);
+                max-height: calc(100vh - 48px);
+                overflow: auto;
+                box-shadow: var(--shadow);
+            }
+
+            .lightbox-topbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 14px;
+            }
+
+            .lightbox-title {
+                font-size: 15px;
+                font-weight: 800;
+                color: var(--accent-strong);
+            }
+
+            .icon-button {
+                border: 1px solid var(--line);
+                background: rgba(255, 255, 255, 0.9);
+                color: var(--text);
+                min-width: 42px;
+                min-height: 42px;
+                border-radius: 14px;
+                cursor: pointer;
+                font-size: 18px;
+            }
+
+            .lightbox-prompt {
+                font-size: 13px;
+                line-height: 1.7;
+                color: var(--muted);
+                background: rgba(245, 239, 232, 0.95);
+                border-radius: 18px;
+                padding: 12px;
+                margin-bottom: 14px;
+                white-space: pre-wrap;
+            }
+
+            .lightbox-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+
+            .lightbox-actions .button {
+                flex: 1 1 120px;
+                min-height: 42px;
+                text-align: center;
+                line-height: 42px;
+            }
+
+            .thumb-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .thumb {
+                border: 2px solid transparent;
+                background: transparent;
+                padding: 0;
+                border-radius: 16px;
+                overflow: hidden;
+                cursor: pointer;
+            }
+
+            .thumb.active {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(180, 76, 47, 0.15);
+            }
+
+            .thumb img {
+                width: 100%;
+                aspect-ratio: 1 / 1;
+                object-fit: cover;
+                display: block;
+            }
+
+            .stage-nav {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 46px;
+                height: 46px;
+                border-radius: 999px;
+                border: 0;
+                background: rgba(23, 16, 11, 0.6);
+                color: #fff8ef;
+                cursor: pointer;
+                font-size: 22px;
+            }
+
+            .stage-nav.prev {
+                left: 14px;
+            }
+
+            .stage-nav.next {
+                right: 14px;
+            }
+
+            .stage-count {
+                position: absolute;
+                left: 20px;
+                top: 20px;
+                padding: 8px 12px;
+                border-radius: 999px;
+                background: rgba(23, 16, 11, 0.66);
+                color: #fff8ef;
+                font-size: 12px;
+            }
+
+            .password-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(22, 14, 10, 0.7);
+                z-index: 200;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(8px);
+            }
+
+            .password-box {
+                background: var(--paper);
+                border: 1px solid var(--line);
+                border-radius: 22px;
+                padding: 36px 32px;
+                width: min(380px, calc(100vw - 40px));
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(71, 45, 25, 0.2);
+            }
+
+            .password-box h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+            .password-box p { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+            .password-box input {
+                width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+                background: #fff; font-size: 15px; color: var(--text); outline: none;
+                text-align: center; letter-spacing: .1em; margin-bottom: 12px;
+            }
+            .password-box input:focus { border-color: var(--accent); }
+            .password-box .pw-error { color: #dc2626; font-size: 13px; margin-bottom: 12px; display: none; }
+            .password-box button {
+                width: 100%; padding: 10px; border-radius: 12px; border: none;
+                background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+                cursor: pointer; transition: background .2s;
+            }
+            .password-box button:hover { background: var(--accent-strong); }
+
+            @media (max-width: 1200px) {
+                .gallery {
+                    column-count: 3;
+                }
+            }
+
+            @media (max-width: 920px) {
+                .toolbar {
+                    grid-template-columns: 1fr 1fr;
+                }
+
+                .gallery {
+                    column-count: 2;
+                }
+
+                .lightbox-panel {
+                    grid-template-columns: 1fr;
+                }
+
+                .lightbox-stage {
+                    min-height: 360px;
+                }
+            }
+
+            @media (max-width: 640px) {
+                :root {
+                    --gallery-image-height: 220px;
+                }
+
+                .shell {
+                    width: min(100vw - 20px, 100%);
+                    margin: 10px auto 24px;
+                }
+
+                .hero {
+                    padding: 20px;
+                    position: static;
+                }
+
+                .toolbar {
+                    grid-template-columns: 1fr;
+                }
+
+                .gallery {
+                    column-count: 1;
+                }
+
+                .lightbox {
+                    padding: 10px;
+                }
+
+                .lightbox-stage {
+                    padding: 12px;
+                    min-height: 280px;
+                }
+
+                .thumb-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+
+                .floating-toggle {
+                    right: 14px;
+                    bottom: 78px;
+                    width: calc(100vw - 28px);
+                    justify-content: center;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="shell">
+            <section id="heroPanel" class="hero collapsed">
+                <div class="eyebrow">Prompt Gallery</div>
+                <h1>AI 画图提示词画廊</h1>
+                <p class="subtext">
+                    页面读取同目录下的
+                    <code>gallery.json</code>，
+                    支持关键词搜索、标签筛选、插件筛选、提示词复制，以及复制当前筛选结果中的全部提示词。
+                </p>
+
+                <div class="filter-panel">
+                <div class="toolbar">
+                    <input
+                        id="searchInput"
+                        class="input"
+                        type="search"
+                        placeholder="搜索提示词、插件名、标签"
+                    />
+                    <select
+                        id="tagFilter"
+                        class="select"
+                        aria-label="按标签筛选"
+                    >
+                        <option value="">全部标签</option>
+                    </select>
+                    <select
+                        id="pluginFilter"
+                        class="select"
+                        aria-label="按插件筛选"
+                    >
+                        <option value="">全部插件</option>
+                    </select>
+                    <button id="copyVisibleBtn" class="button" type="button">
+                        复制当前筛选提示词
+                    </button>
+                    <button id="reloadBtn" class="button primary" type="button">
+                        重新读取
+                    </button>
+                </div>
+
+                <div class="stats">
+                    <div class="stat" id="totalStat">总条目 0</div>
+                    <div class="stat" id="visibleStat">当前展示 0</div>
+                    <div class="stat" id="pluginStat">插件数 0</div>
+                </div>
+
+                <div id="notice" class="notice"></div>
+                </div>
+            </section>
+
+            <section id="gallery" class="gallery" aria-live="polite"></section>
+            <section id="empty" class="empty">
+                没有匹配结果，试试换个关键词或清空筛选条件。
+            </section>
+        </main>
+
+        <div id="toast" class="copy-toast">已复制</div>
+        <button
+            id="toggleFiltersBtn"
+            class="button floating-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="heroPanel"
+        >
+            显示筛选
+        </button>
+
+        <div id="lightbox" class="lightbox" aria-hidden="true">
+            <div class="lightbox-panel">
+                <div class="lightbox-stage">
+                    <div id="lightboxCount" class="stage-count"></div>
+                    <button
+                        id="lightboxPrev"
+                        class="stage-nav prev"
+                        type="button"
+                        aria-label="上一张"
+                    >
+                        ‹
+                    </button>
+                    <img id="lightboxImage" alt="预览大图" />
+                    <button
+                        id="lightboxNext"
+                        class="stage-nav next"
+                        type="button"
+                        aria-label="下一张"
+                    >
+                        ›
+                    </button>
+                </div>
+                <aside class="lightbox-side">
+                    <div class="lightbox-topbar">
+                        <div id="lightboxTitle" class="lightbox-title">
+                            图片预览
+                        </div>
+                        <button
+                            id="lightboxClose"
+                            class="icon-button"
+                            type="button"
+                            aria-label="关闭"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div id="lightboxPrompt" class="lightbox-prompt"></div>
+                    <div class="lightbox-actions">
+                        <button
+                            id="lightboxCopyBtn"
+                            class="button"
+                            type="button"
+                        >
+                            复制提示词
+                        </button>
+                        <a
+                            id="lightboxRawBtn"
+                            class="button primary"
+                            href="#"
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            >原图新开</a
+                        >
+                    </div>
+                    <div id="thumbGrid" class="thumb-grid"></div>
+                </aside>
+            </div>
+        </div>
+
+        <div id="passwordOverlay" class="password-overlay" style="display:none">
+            <div class="password-box">
+                <h2>🔒 画廊已加密</h2>
+                <p>请输入访问密码以查看画图记录</p>
+                <input id="passwordInput" type="password" placeholder="输入密码" autocomplete="off" />
+                <div id="passwordError" class="pw-error">密码错误，请重试</div>
+                <button id="passwordSubmit" type="button">解锁</button>
+            </div>
+        </div>
+
+        <script>
+            const DATA_URL = "gallery.json";
+
+            // tag→category 反向映射，从数据动态构建
+            const TAG_TO_CAT = {};
+            // 保存原始加密数据，用于密码重试
+            let encryptedPayload = null;
+
+            const state = {
+                items: [],
+                filtered: [],
+                tags: [],
+                plugins: [],
+            };
+
+            const $ = id => document.getElementById(id);
+
+            const searchInput = $("searchInput");
+            const tagFilter = $("tagFilter");
+            const pluginFilter = $("pluginFilter");
+            const heroPanel = $("heroPanel");
+            const toggleFiltersBtn = $("toggleFiltersBtn");
+            const copyVisibleBtn = $("copyVisibleBtn");
+            const reloadBtn = $("reloadBtn");
+            const gallery = $("gallery");
+            const empty = $("empty");
+            const notice = $("notice");
+            const toast = $("toast");
+            const totalStat = $("totalStat");
+            const visibleStat = $("visibleStat");
+            const pluginStat = $("pluginStat");
+            const lightbox = $("lightbox");
+            const lightboxImage = $("lightboxImage");
+            const lightboxTitle = $("lightboxTitle");
+            const lightboxPrompt = $("lightboxPrompt");
+            const lightboxCount = $("lightboxCount");
+            const lightboxCopyBtn = $("lightboxCopyBtn");
+            const lightboxRawBtn = $("lightboxRawBtn");
+            const lightboxPrev = $("lightboxPrev");
+            const lightboxNext = $("lightboxNext");
+            const lightboxClose = $("lightboxClose");
+            const thumbGrid = $("thumbGrid");
+
+            const lightboxState = {
+                item: null,
+                index: 0,
+            };
+
+            // === AES-256-GCM 解密（Web Crypto API）===
+            let cachedMasterKey = null;
+
+            function b64ToBuf(b64) {
+                const bin = atob(b64);
+                const buf = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+                return buf;
+            }
+
+            async function deriveKey(password) {
+                const enc = new TextEncoder();
+                const hash = await crypto.subtle.digest('SHA-256', enc.encode(password));
+                return crypto.subtle.importKey('raw', hash, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+            }
+
+            async function sha256Hex(input) {
+                const enc = new TextEncoder();
+                const hash = await crypto.subtle.digest('SHA-256', enc.encode(input));
+                return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            async function decryptDataNewFormat(password, encryptedObj) {
+                const pwHash = (await sha256Hex(password)).slice(0, 16);
+                const keySlots = encryptedObj.key_slots || [];
+                let masterKeyBuf = null;
+                for (const slot of keySlots) {
+                    if (slot.pw_hash === pwHash) {
+                        try {
+                            const pwKey = await deriveKey(password);
+                            const iv = b64ToBuf(slot.iv);
+                            const combined = b64ToBuf(slot.data);
+                            masterKeyBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, pwKey, combined);
+                            break;
+                        } catch { continue; }
+                    }
+                }
+                if (!masterKeyBuf) throw new Error('密码错误或无匹配的密钥槽');
+                cachedMasterKey = await crypto.subtle.importKey('raw', masterKeyBuf, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+                const dataIv = b64ToBuf(encryptedObj.iv);
+                const dataCombined = b64ToBuf(encryptedObj.data);
+                const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: dataIv, tagLength: 128 }, cachedMasterKey, dataCombined);
+                return new TextDecoder().decode(decrypted);
+            }
+
+            async function decryptDataLegacy(password, ivB64, dataB64) {
+                const key = await deriveKey(password);
+                const iv = b64ToBuf(ivB64);
+                const combined = b64ToBuf(dataB64);
+                const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, combined);
+                return new TextDecoder().decode(decrypted);
+            }
+
+            async function decryptImage(src) {
+                try {
+                    const resp = await fetch(src);
+                    if (!resp.ok) return src;
+                    const buf = await resp.arrayBuffer();
+                    const data = new Uint8Array(buf);
+                    if (data.length < 29) return src;
+                    const iv = data.slice(0, 12);
+                    const ciphertext = data.slice(12, data.length - 16);
+                    const authTag = data.slice(data.length - 16);
+                    const combined = new Uint8Array(ciphertext.length + 16);
+                    combined.set(ciphertext, 0);
+                    combined.set(authTag, ciphertext.length);
+                    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, cachedMasterKey, combined);
+                    const blob = new Blob([decrypted], { type: 'image/png' });
+                    return URL.createObjectURL(blob);
+                } catch (e) {
+                    console.warn('[PromptGallery] failed to decrypt image:', src, e);
+                    return src;
+                }
+            }
+
+            function isEncryptedImage(img) {
+                if (!img) return false;
+                if (img.startsWith('http')) return false;
+                return img.endsWith('.enc');
+            }
+
+            function escapeHtml(value) {
+                return value
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#39;");
+            }
+
+            function formatDate(iso) {
+                if (!iso) return "";
+                try {
+                    const d = new Date(iso);
+                    return d.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+                } catch { return iso.slice(0, 10); }
+            }
+
+            function processData(data) {
+                if (!Array.isArray(data)) throw new Error("JSON 顶层不是数组");
+                state.items = data;
+                for (const item of data) {
+                    if (item.tags_by_category && typeof item.tags_by_category === "object") {
+                        for (const [cat, tags] of Object.entries(item.tags_by_category)) {
+                            if (Array.isArray(tags)) {
+                                for (const t of tags) { if (t) TAG_TO_CAT[t] = cat; }
+                            }
+                        }
+                    }
+                }
+                // 未分类标签（无 tags_by_category 或不在词表中的自创标签）归入 custom
+                for (const item of data) {
+                    if (Array.isArray(item.tags)) {
+                        for (const t of item.tags) {
+                            if (t && !TAG_TO_CAT[t]) TAG_TO_CAT[t] = "custom";
+                        }
+                    }
+                }
+                state.tags = [...new Set(data.flatMap(i => Array.isArray(i.tags) ? i.tags.filter(Boolean) : []))].sort();
+                state.plugins = [...new Set(data.map(i => i.plugin).filter(Boolean))].sort();
+                buildTagOptions();
+                buildPluginOptions();
+                applyFilters();
+                notice.style.display = "none";
+                notice.textContent = "";
+            }
+
+            async function loadData() {
+                notice.style.display = "none";
+                notice.textContent = "";
+                cachedMasterKey = null;
+                encryptedPayload = null;
+
+                try {
+                    const resp = await fetch(DATA_URL, { cache: "no-store" });
+                    if (!resp.ok) throw new Error("HTTP " + resp.status);
+                    const data = await resp.json();
+
+                    // 加密数据：弹出密码框
+                    if (data._encrypted) {
+                        encryptedPayload = data;
+                        $("passwordOverlay").style.display = "flex";
+                        // 尝试 sessionStorage 中缓存的密码
+                        const cachedPw = sessionStorage.getItem('gallery_pw');
+                        if (cachedPw) {
+                            try {
+                                const jsonStr = data.key_slots
+                                    ? await decryptDataNewFormat(cachedPw, data)
+                                    : await decryptDataLegacy(cachedPw, data.iv, data.data);
+                                processData(JSON.parse(jsonStr));
+                                $("passwordOverlay").style.display = "none";
+                                return;
+                            } catch { sessionStorage.removeItem('gallery_pw'); }
+                        }
+                        return;
+                    }
+
+                    // 无密码但有 _master_key（密码被移除，旧 .enc 图片仍可解密）
+                    if (data._master_key && data.data) {
+                        const masterKeyBuf = b64ToBuf(data._master_key);
+                        cachedMasterKey = await crypto.subtle.importKey('raw', masterKeyBuf, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+                        processData(data.data);
+                        return;
+                    }
+
+                    processData(Array.isArray(data) ? data : (data.data || data));
+                } catch (err) {
+                    state.items = []; state.filtered = []; state.tags = []; state.plugins = [];
+                    render();
+
+                    notice.innerHTML =
+                        "读取 JSON 失败：<strong>" +
+                        escapeHtml(String(err.message || err)) +
+                        "</strong>";
+                    notice.style.display = "block";
+                }
+            }
+
+            function buildTagOptions() {
+                const currentValue = tagFilter.value;
+                tagFilter.innerHTML = '<option value="">全部标签</option>';
+                for (const tag of state.tags) {
+                    const option = document.createElement("option");
+                    option.value = tag;
+                    option.textContent = tag;
+                    tagFilter.appendChild(option);
+                }
+                if (state.tags.includes(currentValue)) {
+                    tagFilter.value = currentValue;
+                }
+            }
+
+            function buildPluginOptions() {
+                const currentValue = pluginFilter.value;
+                pluginFilter.innerHTML = '<option value="">全部插件</option>';
+                for (const plugin of state.plugins) {
+                    const option = document.createElement("option");
+                    option.value = plugin;
+                    option.textContent = plugin;
+                    pluginFilter.appendChild(option);
+                }
+                if (state.plugins.includes(currentValue)) {
+                    pluginFilter.value = currentValue;
+                }
+            }
+
+            function applyFilters() {
+                const keyword = searchInput.value.trim().toLowerCase();
+                const selectedTag = tagFilter.value;
+                const selectedPlugin = pluginFilter.value;
+
+                state.filtered = state.items.filter((item) => {
+                    const prompt = String(item.prompt || "");
+                    const plugin = String(item.plugin || "");
+                    const tags = Array.isArray(item.tags)
+                        ? item.tags.filter(Boolean).map(t => String(t))
+                        : [];
+                    const matchTag = !selectedTag || tags.includes(selectedTag);
+                    const matchPlugin = !selectedPlugin || plugin === selectedPlugin;
+                    const matchKeyword =
+                        !keyword ||
+                        prompt.toLowerCase().includes(keyword) ||
+                        plugin.toLowerCase().includes(keyword) ||
+                        tags.some(t => t.toLowerCase().includes(keyword));
+                    return matchTag && matchPlugin && matchKeyword;
+                });
+
+                render();
+            }
+
+            function render() {
+                totalStat.textContent = "总条目 " + state.items.length;
+                visibleStat.textContent = "当前展示 " + state.filtered.length;
+                pluginStat.textContent = "插件数 " + state.plugins.length;
+
+                gallery.innerHTML = "";
+                empty.style.display = state.filtered.length ? "none" : "block";
+
+                const fragment = document.createDocumentFragment();
+
+                // 按时间倒序
+                const sorted = [...state.filtered].sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+
+                for (const item of sorted) {
+                    fragment.appendChild(createCard(item));
+                }
+
+                gallery.appendChild(fragment);
+            }
+
+            function createCard(item) {
+                const card = document.createElement("article");
+                card.className = "card";
+
+                const media = document.createElement("div");
+                media.className = "media";
+
+                const images = Array.isArray(item.images)
+                    ? item.images.filter(Boolean)
+                    : [];
+                const firstImage = images.length ? images[0] : "";
+                const firstEncrypted = firstImage && isEncryptedImage(firstImage);
+
+                if (firstImage) {
+                    const mediaButton = document.createElement("button");
+                    mediaButton.className = "media-button";
+                    mediaButton.type = "button";
+                    mediaButton.setAttribute(
+                        "aria-label",
+                        images.length > 1 ? "查看组图" : "查看大图",
+                    );
+                    mediaButton.addEventListener("click", () =>
+                        openLightbox(item, 0),
+                    );
+
+                    const img = document.createElement("img");
+                    if (firstEncrypted && cachedMasterKey) {
+                        img.dataset.src = firstImage;
+                        img.dataset.encrypted = "1";
+                        decryptImage(firstImage).then(url => { img.src = url; });
+                    } else if (firstEncrypted) {
+                        img.dataset.src = firstImage;
+                        img.dataset.encrypted = "1";
+                        // 无 master key，显示为空（加密图片无法解密）
+                    } else {
+                        img.src = firstImage;
+                    }
+                    img.alt = "generated image";
+                    img.loading = "lazy";
+                    img.referrerPolicy = "no-referrer";
+                    mediaButton.appendChild(img);
+                    media.appendChild(mediaButton);
+                } else {
+                    const placeholder = document.createElement("div");
+                    placeholder.className = "media-empty";
+                    placeholder.textContent = "暂无图片";
+                    media.appendChild(placeholder);
+                }
+
+                const badge = document.createElement("div");
+                badge.className = "media-badge";
+                badge.textContent = images.length + " 图";
+                media.appendChild(badge);
+
+                if (firstImage) {
+                    const overlay = document.createElement("div");
+                    overlay.className = "media-overlay";
+                    overlay.innerHTML =
+                        '<span class="media-cta">' +
+                        (images.length > 1 ? "查看组图" : "查看大图") +
+                        "</span>" +
+                        '<span class="media-sub">点击放大</span>';
+                    media.appendChild(overlay);
+                }
+
+                const content = document.createElement("div");
+                content.className = "content";
+
+                const meta = document.createElement("div");
+                meta.className = "meta";
+                meta.innerHTML =
+                    '<span class="plugin-name">' +
+                    escapeHtml(String(item.plugin || "unknown")) +
+                    "</span>" +
+                    "<span>" +
+                    escapeHtml(formatDate(item.timestamp)) +
+                    "</span>";
+
+                const prompt = document.createElement("p");
+                prompt.className = "prompt";
+                prompt.textContent = String(item.prompt || "");
+
+                const tags = Array.isArray(item.tags)
+                    ? item.tags.filter(Boolean).map(t => String(t))
+                    : [];
+                const tagsWrap = document.createElement("div");
+                tagsWrap.className = "tags";
+                for (const t of tags) {
+                    const tagNode = document.createElement("span");
+                    tagNode.className = "tag";
+                    const cat = TAG_TO_CAT[t] || "";
+                    if (cat) tagNode.dataset.cat = cat;
+                    tagNode.textContent = t;
+                    tagsWrap.appendChild(tagNode);
+                }
+
+                const actions = document.createElement("div");
+                actions.className = "actions";
+
+                const copyBtn = document.createElement("button");
+                copyBtn.className = "button";
+                copyBtn.type = "button";
+                copyBtn.textContent = "复制提示词";
+                copyBtn.addEventListener("click", async () => {
+                    await copyText(String(item.prompt || ""));
+                });
+
+                const viewBtn = document.createElement("button");
+                viewBtn.className = "button primary";
+                viewBtn.type = "button";
+                viewBtn.textContent = images.length > 1 ? "查看组图" : "查看图片";
+                if (firstImage) {
+                    viewBtn.addEventListener("click", () =>
+                        openLightbox(item, 0),
+                    );
+                } else {
+                    viewBtn.disabled = true;
+                }
+
+                const rawBtn = document.createElement("a");
+                rawBtn.className = "button subtle";
+                rawBtn.textContent = "原图新开";
+                rawBtn.target = "_blank";
+                rawBtn.rel = "noreferrer noopener";
+                if (firstImage) {
+                    if (firstEncrypted && cachedMasterKey) {
+                        rawBtn.href = "#";
+                        rawBtn.addEventListener("click", async (e) => {
+                            e.preventDefault();
+                            const url = await decryptImage(firstImage);
+                            window.open(url, "_blank");
+                        });
+                    } else if (firstEncrypted) {
+                        rawBtn.href = "#";
+                        rawBtn.style.pointerEvents = "none";
+                        rawBtn.style.opacity = "0.55";
+                    } else {
+                        rawBtn.href = firstImage;
+                    }
+                } else {
+                    rawBtn.href = "#";
+                    rawBtn.style.pointerEvents = "none";
+                    rawBtn.style.opacity = "0.55";
+                }
+
+                actions.append(copyBtn, viewBtn, rawBtn);
+                content.append(meta, prompt, tagsWrap, actions);
+                card.append(media, content);
+
+                return card;
+            }
+
+            function openLightbox(item, startIndex) {
+                const images = Array.isArray(item.images)
+                    ? item.images.filter(Boolean)
+                    : [];
+                if (!images.length) {
+                    showToast("这条没有图片");
+                    return;
+                }
+
+                lightboxState.item = item;
+                lightboxState.index = Math.max(
+                    0,
+                    Math.min(startIndex, images.length - 1),
+                );
+                renderLightbox();
+                lightbox.classList.add("show");
+                lightbox.setAttribute("aria-hidden", "false");
+                document.body.style.overflow = "hidden";
+            }
+
+            function closeLightbox() {
+                lightbox.classList.remove("show");
+                lightbox.setAttribute("aria-hidden", "true");
+                document.body.style.overflow = "";
+            }
+
+            function shiftLightbox(step) {
+                const item = lightboxState.item;
+                const images =
+                    item && Array.isArray(item.images)
+                        ? item.images.filter(Boolean)
+                        : [];
+                if (!images.length) {
+                    return;
+                }
+
+                lightboxState.index =
+                    (lightboxState.index + step + images.length) %
+                    images.length;
+                renderLightbox();
+            }
+
+            async function renderLightbox() {
+                const item = lightboxState.item;
+                const images =
+                    item && Array.isArray(item.images)
+                        ? item.images.filter(Boolean)
+                        : [];
+                if (!item || !images.length) {
+                    closeLightbox();
+                    return;
+                }
+
+                const current = images[lightboxState.index];
+                // 处理加密图片
+                if (isEncryptedImage(current) && cachedMasterKey) {
+                    const url = await decryptImage(current);
+                    lightboxImage.src = url;
+                } else if (isEncryptedImage(current)) {
+                    lightboxImage.src = "";
+                } else {
+                    lightboxImage.src = current;
+                }
+                lightboxImage.referrerPolicy = "no-referrer";
+                lightboxTitle.textContent =
+                    (item.plugin || "unknown") +
+                    " · " +
+                    formatDate(item.timestamp);
+                lightboxPrompt.textContent = String(item.prompt || "");
+                lightboxCount.textContent =
+                    lightboxState.index + 1 + " / " + images.length;
+                lightboxRawBtn.href = "#";
+                if (isEncryptedImage(current) && cachedMasterKey) {
+                    lightboxRawBtn.style.pointerEvents = "";
+                    lightboxRawBtn.style.opacity = "";
+                    lightboxRawBtn.onclick = async (e) => {
+                        e.preventDefault();
+                        const url = await decryptImage(current);
+                        window.open(url, "_blank");
+                    };
+                } else if (isEncryptedImage(current)) {
+                    lightboxRawBtn.style.pointerEvents = "none";
+                    lightboxRawBtn.style.opacity = "0.55";
+                    lightboxRawBtn.onclick = null;
+                } else {
+                    lightboxRawBtn.href = current;
+                    lightboxRawBtn.style.pointerEvents = "";
+                    lightboxRawBtn.style.opacity = "";
+                    lightboxRawBtn.onclick = null;
+                }
+                lightboxPrev.style.display =
+                    images.length > 1 ? "inline-flex" : "none";
+                lightboxNext.style.display =
+                    images.length > 1 ? "inline-flex" : "none";
+
+                thumbGrid.innerHTML = "";
+                for (let i = 0; i < images.length; i++) {
+                    const src = images[i];
+                    const thumb = document.createElement("button");
+                    thumb.className =
+                        "thumb" +
+                        (i === lightboxState.index ? " active" : "");
+                    thumb.type = "button";
+                    thumb.addEventListener("click", () => {
+                        lightboxState.index = i;
+                        renderLightbox();
+                    });
+
+                    const img = document.createElement("img");
+                    if (isEncryptedImage(src) && cachedMasterKey) {
+                        decryptImage(src).then(url => { img.src = url; });
+                    } else if (!isEncryptedImage(src)) {
+                        img.src = src;
+                    }
+                    img.alt = "thumb " + (i + 1);
+                    img.loading = "lazy";
+                    img.referrerPolicy = "no-referrer";
+                    thumb.appendChild(img);
+                    thumbGrid.appendChild(thumb);
+                }
+            }
+
+            async function copyText(text) {
+                if (!text) {
+                    showToast("没有可复制的提示词");
+                    return;
+                }
+
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showToast("提示词已复制");
+                } catch {
+                    const textarea = document.createElement("textarea");
+                    textarea.value = text;
+                    textarea.style.position = "fixed";
+                    textarea.style.opacity = "0";
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand("copy");
+                    textarea.remove();
+                    showToast("提示词已复制");
+                }
+            }
+
+            async function copyVisiblePrompts() {
+                if (!state.filtered.length) {
+                    showToast("当前没有可复制内容");
+                    return;
+                }
+
+                const payload = state.filtered
+                    .map(
+                        (item) =>
+                            "[" + (item.plugin || "unknown") + "] " +
+                            formatDate(item.timestamp) +
+                            "\n" +
+                            (item.prompt || ""),
+                    )
+                    .join("\n\n--------------------\n\n");
+
+                await copyText(payload);
+            }
+
+            function showToast(message) {
+                toast.textContent = message;
+                toast.classList.add("show");
+                clearTimeout(showToast.timer);
+                showToast.timer = setTimeout(() => {
+                    toast.classList.remove("show");
+                }, 1600);
+            }
+
+            function setFiltersCollapsed(collapsed) {
+                heroPanel.classList.toggle("collapsed", collapsed);
+                toggleFiltersBtn.setAttribute(
+                    "aria-expanded",
+                    String(!collapsed),
+                );
+                toggleFiltersBtn.textContent = collapsed
+                    ? "显示筛选"
+                    : "隐藏筛选";
+            }
+
+            // 密码提交
+            async function handlePasswordSubmit() {
+                const pw = $("passwordInput").value;
+                if (!pw || !encryptedPayload) return;
+                try {
+                    const jsonStr = encryptedPayload.key_slots
+                        ? await decryptDataNewFormat(pw, encryptedPayload)
+                        : await decryptDataLegacy(pw, encryptedPayload.iv, encryptedPayload.data);
+                    const data = JSON.parse(jsonStr);
+                    processData(data);
+                    sessionStorage.setItem('gallery_pw', pw);
+                    $("passwordOverlay").style.display = "none";
+                    $("passwordError").style.display = "none";
+                } catch {
+                    $("passwordError").style.display = "block";
+                    $("passwordInput").value = "";
+                    $("passwordInput").focus();
+                }
+            }
+
+            // 事件绑定
+            searchInput.addEventListener("input", applyFilters);
+            tagFilter.addEventListener("change", applyFilters);
+            pluginFilter.addEventListener("change", applyFilters);
+            toggleFiltersBtn.addEventListener("click", () => {
+                setFiltersCollapsed(
+                    !heroPanel.classList.contains("collapsed"),
+                );
+            });
+            copyVisibleBtn.addEventListener("click", copyVisiblePrompts);
+            reloadBtn.addEventListener("click", loadData);
+            lightboxCopyBtn.addEventListener("click", () =>
+                copyText(String(lightboxState.item?.prompt || "")),
+            );
+            lightboxPrev.addEventListener("click", () => shiftLightbox(-1));
+            lightboxNext.addEventListener("click", () => shiftLightbox(1));
+            lightboxClose.addEventListener("click", closeLightbox);
+            lightbox.addEventListener("click", (event) => {
+                if (event.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+            document.addEventListener("keydown", (event) => {
+                if (!lightbox.classList.contains("show")) {
+                    return;
+                }
+
+                if (event.key === "Escape") {
+                    closeLightbox();
+                } else if (event.key === "ArrowLeft") {
+                    shiftLightbox(-1);
+                } else if (event.key === "ArrowRight") {
+                    shiftLightbox(1);
+                }
+            });
+
+            $("passwordSubmit").addEventListener("click", handlePasswordSubmit);
+            $("passwordInput").addEventListener("keydown", e => { if (e.key === "Enter") handlePasswordSubmit(); });
+
+            // 启动
+            loadData();
+            setFiltersCollapsed(true);
+        </script>
+    </body>
+</html>

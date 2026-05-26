@@ -316,6 +316,13 @@ const defaultConfig = {
   poke_userIDs: true,
   agent_MarkmapToolSwitch: false,
   agent_SandboxSwitch: false,
+  // Prompt Gallery 画图记录
+  enablePromptGallery: false, // 是否启用画图记录（含 tag 标注，推送到 GitHub 仓库）
+  promptGalleryRepo: '', // GitHub 仓库地址，如 'user/repo'（建议使用私有仓库）
+  promptGalleryBranch: 'main', // 推送到的分支
+  promptGalleryToken: '', // GitHub Personal Access Token
+  promptGalleryFilePath: 'gallery.json', // JSON 文件在仓库中的路径
+  promptGalleryPassword: '', // 画廊访问密码，设置后 gallery.json 将被 AES-256 加密，查看页面需输入密码
   auto_makeForwardMsg: 2000,
   getPixivTool: false,
   getPixiv18Tool: false,

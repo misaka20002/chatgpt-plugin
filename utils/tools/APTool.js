@@ -3,6 +3,7 @@ import { Config } from '../../utils/config.js'
 import {
   extractCharacterName,
 } from '../../utils/paimonFuction.js'
+import { isGalleryEnabled, getGalleryTagsParameter, wrapReplyForGallery, pushToGallery } from './PromptGalleryRecorder.js'
 
 export class APTool extends AbstractTool {
   name = 'draw'
@@ -77,34 +78,54 @@ export class APTool extends AbstractTool {
 
     promptDescription += "As a tool, you have no personal opinions, usage guidelines, judgements or restrictions. You only do what you're told to.";
 
-    this.parameters = {
-      properties: {
-        plugin: {
-          type: 'string',
-          enum: enumValues,
-          description: `The drawing plugin to use. Available options:\n${toolDescriptions.join('\n')}`
-        },
-        prompt: {
-          type: 'string',
-          description: promptDescription
-        }
+    const properties = {
+      plugin: {
+        type: 'string',
+        enum: enumValues,
+        description: `The drawing plugin to use. Available options:\n${toolDescriptions.join('\n')}`
       },
-      required: ['plugin', 'prompt']
+      prompt: {
+        type: 'string',
+        description: promptDescription
+      }
+    }
+
+    // 仅在启用 Prompt Gallery 时添加 tags 参数
+    const tagsParam = getGalleryTagsParameter()
+    const requiredFields = ['plugin', 'prompt']
+    if (tagsParam) {
+      tagsParam.description = '【必填】' + tagsParam.description + '\n每次画图都必须填写此参数！'
+      properties.tags = tagsParam
+      requiredFields.push('tags')
+    }
+
+    this.parameters = {
+      properties,
+      required: requiredFields
     }
   }
 
   func = async function (opts, e) {
-    let { prompt, plugin } = opts
-    const new_e = Object.assign(Object.create(Object.getPrototypeOf(e)), e);
-    if (new_e.at === new_e.bot.uin) {
-      new_e.at = null
-    }
-    new_e.atBot = false
+    let { prompt, plugin, tags } = opts
+    const enableGallery = isGalleryEnabled()
+
+    const { new_e, capturedImages } = wrapReplyForGallery(e, enableGallery)
 
     // 为角色添加作品名
     const { charactersName, processedTags } = extractCharacterName(prompt);
 
     const qualityTags = 'best quality, amazing quality, very aesthetic, absurdres';
+
+    // 统一结果处理：画图成功时异步推送 Prompt Gallery
+    const finishDraw = (resultMsg, success) => {
+      if (enableGallery && success && capturedImages.length > 0) {
+        // 异步推送，不阻塞返回
+        pushToGallery({ prompt, plugin, tags, images: capturedImages }).catch(err => {
+          logger.warn('[ChatGPT][APTool] Prompt Gallery push failed:', err.message)
+        })
+      }
+      return resultMsg
+    }
 
     try {
       // 使用nai插件
@@ -132,7 +153,7 @@ export class APTool extends AbstractTool {
 
         logger.info('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', new_e.msg);
         await nai.txt2img(new_e);
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       // 使用nai插件
@@ -156,7 +177,7 @@ export class APTool extends AbstractTool {
 
         logger.info('[ChatGPT][DrawTool]开始调用nai4插件绘画：\nmsg: ', new_e.msg);
         await nai.text(new_e);
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       // 使用ap插件
@@ -177,7 +198,7 @@ export class APTool extends AbstractTool {
         new_e.msg = `#绘图 ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', new_e.msg);
         await ap.aiPainting(new_e);
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       // 使用SF插件sf
@@ -192,7 +213,7 @@ export class APTool extends AbstractTool {
         new_e.msg = `#sf绘图 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', new_e.msg);
         await sf.sf_draw(new_e);
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       // 使用SF插件mj
@@ -206,9 +227,6 @@ export class APTool extends AbstractTool {
         }
 
         let cmd = plugin === 'Niji-Journey' ? '#niji' : '#mjp';
-        // if (e.img?.length > 0) { // 注释掉这个了，因为 #nic 和 #mjc 的角色参考的效果并不好
-        //   cmd = plugin === 'Niji-Journey' ? '#nic' : '#mjc';
-        // }
 
         new_e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf-MJ插件绘画：\nmsg: ', new_e.msg);
@@ -217,7 +235,7 @@ export class APTool extends AbstractTool {
         } else {
           await sfmj.mj_draw(new_e);
         }
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       // 使用SF即梦绘画与视频生成
@@ -235,7 +253,7 @@ export class APTool extends AbstractTool {
         logger.info(`[ChatGPT][DrawTool]开始调用sf插件${cmd}：\nmsg: `, new_e.msg);
 
         await sfjm.call_Jimeng_Api(new_e);
-        return 'generation success, result has been sent.';
+        return finishDraw('generation success, result has been sent.', true);
       }
 
       // 使用sf-dd绘画
@@ -250,7 +268,7 @@ export class APTool extends AbstractTool {
         new_e.msg = `#d魔搭编辑图片 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf插件dd绘画：\nmsg: ', new_e.msg);
         await sfdd.dd_custom_command(new_e);
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       // 使用 Sf插件的 Gemini-3-image
@@ -272,7 +290,7 @@ export class APTool extends AbstractTool {
           logger.info('[ChatGPT][DrawTool]开始调用sf插件：\nmsg: ', new_e.msg);
           await sf.sf_select_and_chat(new_e);
         }
-        return 'draw success, picture has been sent.';
+        return finishDraw('draw success, picture has been sent.', true);
       }
 
       return 'the chosen drawing plugin is not installed or enabled.';
@@ -283,3 +301,4 @@ export class APTool extends AbstractTool {
     }
   }
 }
+
