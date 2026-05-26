@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <!-- 金色渐变 -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fde047"/>
+      <stop offset="50%" style="stop-color:#facc15"/>
+      <stop offset="100%" style="stop-color:#eab308"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 主星（大四角星） -->
+  <path d="M64 8 L72 48 L112 56 L72 64 L64 104 L56 64 L16 56 L56 48 Z" 
+        fill="url(#goldGrad)"/>
+  
+  <!-- 右上小星星 -->
+  <path d="M100 16 L103 26 L113 29 L103 32 L100 42 L97 32 L87 29 L97 26 Z" 
+        fill="url(#goldGrad)"/>
+  
+  <!-- 左下小星星 -->
+  <path d="M28 86 L31 96 L41 99 L31 102 L28 112 L25 102 L15 99 L25 96 Z" 
+        fill="url(#goldGrad)"/>
+</svg>

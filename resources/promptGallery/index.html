@@ -3,6 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/svg+xml" href="logo.svg" />
         <title>AI 画图 Prompt Gallery</title>
         <style>
             :root {
@@ -1115,7 +1116,7 @@
                         encryptedPayload = data;
                         $("passwordOverlay").style.display = "flex";
                         // 尝试 sessionStorage 中缓存的密码
-                        const cachedPw = sessionStorage.getItem('gallery_pw');
+                        const cachedPw = localStorage.getItem('gallery_pw');
                         if (cachedPw) {
                             try {
                                 const jsonStr = data.key_slots
@@ -1124,7 +1125,7 @@
                                 processData(JSON.parse(jsonStr));
                                 $("passwordOverlay").style.display = "none";
                                 return;
-                            } catch { sessionStorage.removeItem('gallery_pw'); }
+                            } catch { localStorage.removeItem('gallery_pw'); }
                         }
                         return;
                     }
@@ -1567,7 +1568,7 @@
                         : await decryptDataLegacy(pw, encryptedPayload.iv, encryptedPayload.data);
                     const data = JSON.parse(jsonStr);
                     processData(data);
-                    sessionStorage.setItem('gallery_pw', pw);
+                    localStorage.setItem('gallery_pw', pw);
                     $("passwordOverlay").style.display = "none";
                     $("passwordError").style.display = "none";
                 } catch {

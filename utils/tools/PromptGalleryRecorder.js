@@ -15,7 +15,7 @@ export const GALLERY_TAG_CATEGORIES = {
 export const GALLERY_ALL_TAGS = Object.values(GALLERY_TAG_CATEGORIES).flat()
 
 // Prompt Gallery 前端版本号，修改前端后递增此值即可自动推送更新
-export const PROMPT_GALLERY_VERSION = 3
+export const PROMPT_GALLERY_VERSION = 4
 
 /**
  * 判断 Prompt Gallery 是否已启用
@@ -428,7 +428,8 @@ export async function pushToGallery({ prompt, plugin, tags, images }) {
     const fs = await import('fs')
     const filesToUpload = [
       { local: '../../resources/promptGallery/index.html', remote: 'index.html', msg: 'update prompt gallery page' },
-      { local: '../../resources/promptGallery/netlify.toml', remote: 'netlify.toml', msg: 'update netlify deploy config' }
+      { local: '../../resources/promptGallery/netlify.toml', remote: 'netlify.toml', msg: 'update netlify deploy config' },
+      { local: '../../resources/promptGallery/logo.svg', remote: 'logo.svg', msg: 'update prompt gallery logo' }
     ]
     for (const { local, remote, msg } of filesToUpload) {
       try {
