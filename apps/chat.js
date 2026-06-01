@@ -789,9 +789,13 @@ export class chatgpt extends plugin {
 
     // 呆毛版 gemini的识图结果 + prompt
     if (Config.mediaRecognitionSource == "Gemini") {
-      let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, (e.img || []), (e.get_Video || []).map(v => v.url))
-      if (imgRecognitionByGeminiText) {
-        prompt = (e.senderNickname ? `${e.senderNickname}(ID:${e.senderUser_id})` : "") + (e.sourceMsg || "") + '消息中多媒体内容识别信息："' + imgRecognitionByGeminiText + '"\n' + prompt
+      // 仅当存在图片或视频时才调用识别，避免纯文本消息触发错误提示
+      const hasMedia = (e.img && e.img.length > 0) || (e.get_Video && e.get_Video.length > 0)
+      if (hasMedia) {
+        let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, e.img || [], (e.get_Video || []).map(v => v.url))
+        if (imgRecognitionByGeminiText) {
+          prompt = (e.senderNickname ? `${e.senderNickname}(ID:${e.senderUser_id})` : "") + (e.sourceMsg || "") + '消息中多媒体内容识别信息："' + imgRecognitionByGeminiText + '"\n' + prompt
+        }
       }
     }
     else {
