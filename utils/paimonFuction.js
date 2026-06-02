@@ -185,28 +185,42 @@ export function convertSentenceToArray(inputArr) {
 
 /**
  * @description: 获取Gemini可用的模型列表
- * @param {string} apiKey - Google AI API密钥，默认从配置中获取
+ * @param {string} apiKey - Google AI API密钥
+ * @param {string} geminiBaseUrl - Google AI API基础URL
  * @return {Promise<Array>} 返回可用模型的数组
  */
-export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey) {
+export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey, geminiBaseUrl = Config.geminiBaseUrl) {
   // 构建请求URL（考虑自定义baseUrl的情况）
-  const baseUrl = Config.geminiBaseUrl || 'https://generativelanguage.googleapis.com';
+  const baseUrl = geminiBaseUrl || 'https://generativelanguage.googleapis.com';
   const endpoint = baseUrl.endsWith('/') ?
     `${baseUrl.slice(0, -1)}/v1beta/models` :
     `${baseUrl}/v1beta/models`;
 
   // 将API密钥作为URL参数
   const url = `${endpoint}?key=${apiKey}`;
+  const timeoutMs = 60000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   // 发送请求
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'User-Agent': 'Node/1.0.0',
-      'Accept': '*/*'
-    },
-    timeout: 60000 // 60秒超时
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Node/1.0.0',
+        'Accept': '*/*'
+      },
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`获取Gemini模型API请求超时: ${timeoutMs / 1000}秒`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new Error(`获取Gemini模型API请求失败: ${response.status} ${response.statusText}`);
