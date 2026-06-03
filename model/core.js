@@ -882,7 +882,7 @@ class Core {
           /** 工具调用轮次计数器 */
           let toolRoundCount = 0
           /** 工具调用最大轮次数 */
-          const maxToolRounds = 3
+          const maxToolRounds = 5
           // 只要模型返回了需要调用工具，且没有超过最大轮次，就继续循环
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount < maxToolRounds) {
             toolRoundCount++
@@ -988,6 +988,12 @@ class Core {
           // 判断退出原因，如果是达到最大轮次强制退出的，打印警告
           if ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount >= maxToolRounds) {
             logger.warn(`工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制终止工具循环`)
+            // 清除残留的 tool_calls，防止返回含 tool_calls 但无对应 tool response 的消息破坏对话历史
+            msg.functionCall = undefined
+            msg.toolCalls = undefined
+            if (!msg.text) {
+              msg.text = '嗯，先说到这里吧。'
+            }
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
