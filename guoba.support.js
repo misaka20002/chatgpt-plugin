@@ -1844,6 +1844,12 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          field: 'paimon_globalInnerOs',
+          label: '呆毛版 思考模式指令(首轮)',
+          bottomHelpMessage: '填写 DeepSeek V4 思考模式指令，仅在第一轮 user 消息末尾自动拼接。参考：https://github.com/victorchen96/deepseek_v4_rolepaly_instruct',
+          component: 'InputTextArea'
+        },
+        {
           label: '以下为戳一戳设置',
           component: 'Divider'
         },

@@ -966,6 +966,12 @@ export class chatgpt extends plugin {
       }
     }
 
+    // 呆毛版 思考模式指令 - 仅在第一轮 user 消息末尾添加
+    if (Config.paimon_globalInnerOs && previousConversation?.num === 0) {
+      prompt += Config.paimon_globalInnerOs
+      logger.info(`[chatgpt] 已添加思考模式指令（首次对话）`)
+    }
+
     try {
       if (Config.debug) {
         logger.mark({ conversation })

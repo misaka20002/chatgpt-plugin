@@ -89,6 +89,7 @@ const defaultConfig = {
   chat_for_First_person: true,
   isReplacePromptForSenderMsg: false,
   paimon_globalLimitBreak: "",
+  paimon_globalInnerOs: "",
   drawByJsonToPlugin: false,
   drawToolsArr: [],
   sf_markdownPic: false,
