@@ -651,7 +651,8 @@ class Core {
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId,
         search: Config.geminiEnableGoogleSearch, // Gemini 原生搜索，开启后无法使用智能模式，默认关闭
-        codeExecution: Config.geminiEnableCodeExecution // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
+        codeExecution: Config.geminiEnableCodeExecution, // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
+        paimon_globalInnerOs: Config.paimon_globalInnerOs
       }
 
       if (Config.mediaRecognitionSource == "Orignal") {
@@ -787,6 +788,7 @@ class Core {
         // systemMessage: promptPrefix
       }
       option.systemMessage = system
+      option.paimon_globalInnerOs = Config.paimon_globalInnerOs
       if (conversation) {
         if (!conversation.conversationId) {
           conversation.conversationId = uuid()

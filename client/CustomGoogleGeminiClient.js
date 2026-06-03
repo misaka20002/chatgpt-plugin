@@ -181,6 +181,15 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     }
 
+    // 思考模式指令：裁剪后给第一条 user 消息注入，已有则跳过
+    if (opt.paimon_globalInnerOs) {
+      const firstUser = history.find(m => m.role === 'user')
+      if (firstUser && firstUser.parts?.[0]?.text != null
+        && !firstUser.parts[0].text.includes(opt.paimon_globalInnerOs)) {
+        firstUser.parts[0].text += opt.paimon_globalInnerOs
+      }
+    }
+
     let systemMessage = opt.system
 
     // 存储前清除多媒体数据，并保留 mime_type 的辅助函数

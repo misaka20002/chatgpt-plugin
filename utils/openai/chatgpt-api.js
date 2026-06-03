@@ -236,6 +236,16 @@ export class ChatGPTAPI {
             throw new Error('sendMessage requires content or appendMessages');
         }
         const { messages, maxTokens, numTokens, trimInfo } = await this._buildMessages(currentMessages, opts, completionParams);
+        // 思考模式指令：只注入到消息列表中的第一条 user 消息
+        // 若内容已包含则跳过（chat.js 已在首轮注入，避免重复）
+        // 仅处理纯文本 content，跳过多模态数组
+        if (opts.paimon_globalInnerOs) {
+          const firstUser = messages.find(m => m.role === 'user')
+          if (firstUser && typeof firstUser.content === 'string'
+            && !firstUser.content.includes(opts.paimon_globalInnerOs)) {
+            firstUser.content += opts.paimon_globalInnerOs
+          }
+        }
         if (trimInfo.trimmed) {
             console.info(`[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}。若这类日志频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`);
         }
