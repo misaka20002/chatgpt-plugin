@@ -991,6 +991,8 @@ class Core {
             // 清除残留的 tool_calls，防止返回含 tool_calls 但无对应 tool response 的消息破坏对话历史
             msg.functionCall = undefined
             msg.toolCalls = undefined
+            // 同步更新 Redis 中已存储的消息副本，防止下一轮加载历史时仍携带 tool_calls
+            upsertMessage(msg).catch(err => logger.warn('[chatgpt] 清理存储中的工具调用记录失败', err))
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {
