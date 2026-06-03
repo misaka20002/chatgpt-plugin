@@ -1333,6 +1333,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'llm_maxToolRounds',
+          label: '工具调用最大轮次',
+          bottomHelpMessage: '智能模式中 工具调用最大轮次数，仅支持Gemini模式、OpenAI API模式（呆毛注：因为已支持多工具并行调用，所以通常3轮次就足够处理日常任务了，按需增加）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+          }
+        },
+        {
           field: 'geminiForceToolKeywords',
           label: '强制工具关键词',
           bottomHelpMessage: '强制工具/Agent关键词；包含这里关键词的问题一定会调用工具；目前支持 API、Gemini 接口',

@@ -882,7 +882,7 @@ class Core {
           /** 工具调用轮次计数器 */
           let toolRoundCount = 0
           /** 工具调用最大轮次数 */
-          const maxToolRounds = 5
+          const maxToolRounds = Config.llm_maxToolRounds
           // 只要模型返回了需要调用工具，且没有超过最大轮次，就继续循环
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount < maxToolRounds) {
             toolRoundCount++
@@ -991,9 +991,6 @@ class Core {
             // 清除残留的 tool_calls，防止返回含 tool_calls 但无对应 tool response 的消息破坏对话历史
             msg.functionCall = undefined
             msg.toolCalls = undefined
-            if (!msg.text) {
-              msg.text = '嗯，先说到这里吧。'
-            }
           }
         } catch (err) {
           if (err.message?.indexOf('context_length_exceeded') > 0) {

@@ -294,7 +294,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     if (systemMessage) {
       body.system_instruction = {
-        parts: [{ text: systemMessage }] 
+        parts: [{ text: systemMessage }]
       }
     }
 
@@ -414,7 +414,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
       /** 工具调用最大轮次数 */
-      const maxToolRounds = 3
+      const maxToolRounds = Config.llm_maxToolRounds
       // 最多允许连续 maxToolRounds 轮工具调用，不限制单次并行调用的工具数量
       // 注意：不再按工具名判断"重复调用"，同一工具不同 action 是合法场景（如 scheduleGroupTask 的 list→remove）
       const toolLimitReached = opt.toolChain.depth >= maxToolRounds;
