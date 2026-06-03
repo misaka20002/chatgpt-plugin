@@ -652,7 +652,8 @@ class Core {
         conversationId: conversation.conversationId,
         search: Config.geminiEnableGoogleSearch, // Gemini 原生搜索，开启后无法使用智能模式，默认关闭
         codeExecution: Config.geminiEnableCodeExecution, // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
-        paimon_globalInnerOs: Config.paimon_globalInnerOs
+        paimon_globalInnerOs: Config.paimon_globalInnerOs,
+        thinkingLevel: Config.geminiThinkingLevel || ''
       }
 
       if (Config.mediaRecognitionSource == "Orignal") {
@@ -726,6 +727,9 @@ class Core {
       let completionParams = {}
       if (Config.model) {
         completionParams.model = Config.model
+      }
+      if (Config.reasoningEffort) {
+        completionParams.reasoning_effort = Config.reasoningEffort
       }
       const currentDate = new Date().toISOString().split('T')[0]
       let promptPrefix = `You are ${Config.assistantLabel} ${useCast?.api || opt.system.api || defaultPropmtPrefix}

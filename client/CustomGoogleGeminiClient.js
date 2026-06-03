@@ -301,6 +301,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       },
       tools: []
     }
+    if (opt.thinkingLevel) {
+      body.generationConfig.thinkingConfig = {
+        thinkingLevel: opt.thinkingLevel
+      }
+    }
     if (systemMessage) {
       body.system_instruction = {
         parts: [{ text: systemMessage }]

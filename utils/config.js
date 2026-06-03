@@ -345,6 +345,8 @@ const defaultConfig = {
   ScheduleTask_CronTasks: [],
   rateLimiting: 0,
   chatgptBlockCount: 50,
+  reasoningEffort: "",
+  geminiThinkingLevel: "",
   TTSAudio_Tool: false,
   enableManualSendTTSAudio: false,
   replyConfirmType: 111,

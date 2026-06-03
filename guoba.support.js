@@ -308,6 +308,24 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'reasoningEffort',
+          label: '思考程度',
+          bottomHelpMessage: '控制模型的思考/推理深度，适用于Openai系列、DeepSeek等推理模型。不修改为模型默认值。如果有bug请选不修改。',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '不修改', value: '' },
+              { label: 'none（无思考）', value: 'none' },
+              { label: 'minimal（极低）', value: 'minimal' },
+              { label: 'low（低）', value: 'low' },
+              { label: 'medium（中）', value: 'medium' },
+              { label: 'high（高）', value: 'high' },
+              { label: 'xhigh（极高-OpenAI）', value: 'xhigh' },
+              { label: 'max（最高-DeepSeek）', value: 'max' },
+            ]
+          }
+        },
+        {
           field: 'apiMaxToken',
           label: '回复内容最大Token数',
           bottomHelpMessage: '模型单次回复的Token上限，默认4096（要预留至少 10000 个输入Token，否则回复报错，推荐“回复内容最大Token数”+10000≤“模型总上下文Token数”）。补充说明：这个值越大，可用于历史/群聊上下文的空间就越小；当输入Token + 回复内容最大Token数接近或超过“模型总上下文Token数”时，插件可能会压缩历史，严重时会触发上下文超限重试。',
@@ -712,6 +730,21 @@ export function supportGuoba() {
             mode: 'tags',
             maxTagCount: 1,
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
+          }
+        },
+        {
+          field: 'geminiThinkingLevel',
+          label: '思考程度',
+          bottomHelpMessage: '控制Gemini 3系列模型的思考深度(thinkingLevel)。minimal≈关闭思考。不修改为模型默认值。如果有bug请选不修改。Gemini 2.5系列不支持此参数，请用thinkingBudget。',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '不修改', value: '' },
+              { label: 'minimal（极低）', value: 'minimal' },
+              { label: 'low（低）', value: 'low' },
+              { label: 'medium（中）', value: 'medium' },
+              { label: 'high（高）', value: 'high' },
+            ]
           }
         },
         {
