@@ -59,6 +59,23 @@ export class memoryManage extends plugin {
   }
 
   /**
+   * 分批发送合并转发消息，每批最多20条
+   */
+  async sendChunkedForwardMsg(e, messages, title) {
+    const CHUNK_SIZE = 20
+    if (messages.length <= CHUNK_SIZE) {
+      await e.reply(await makeForwardMsg(e, messages, title))
+      return
+    }
+    const totalChunks = Math.ceil(messages.length / CHUNK_SIZE)
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = messages.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
+      const chunkTitle = `${title} [${i + 1}/${totalChunks}]`
+      await e.reply(await makeForwardMsg(e, chunk, chunkTitle))
+    }
+  }
+
+  /**
    * 查看自己的记忆
    */
   async myMemories(e) {
@@ -97,7 +114,7 @@ export class memoryManage extends plugin {
         return msg
       })
 
-      await e.reply(await makeForwardMsg(e, messages, `我的记忆 (共${memories.length}条)`))
+      await this.sendChunkedForwardMsg(e, messages, `我的记忆 (共${memories.length}条)`)
     } catch (err) {
       logger.error('[Memory] 获取记忆失败:', err)
       await e.reply('获取记忆失败', true)
@@ -158,7 +175,7 @@ export class memoryManage extends plugin {
         messages.push(msg)
       }
 
-      await e.reply(await makeForwardMsg(e, messages, `群记忆统计 (${Object.keys(userMemoriesMap).length}人)`))
+      await this.sendChunkedForwardMsg(e, messages, `群记忆统计 (${Object.keys(userMemoriesMap).length}人)`)
     } catch (err) {
       logger.error('[Memory] 获取群记忆失败:', err)
       await e.reply('获取群记忆失败', true)
@@ -226,7 +243,7 @@ export class memoryManage extends plugin {
       })
 
       const userName = memories[0].userName || targetUserId
-      await e.reply(await makeForwardMsg(e, messages, `${userName}的记忆 (共${memories.length}条)`))
+      await this.sendChunkedForwardMsg(e, messages, `${userName}的记忆 (共${memories.length}条)`)
     } catch (err) {
       logger.error('[Memory] 获取用户记忆失败:', err)
       await e.reply('获取记忆失败', true)
