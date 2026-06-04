@@ -292,7 +292,24 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
-          label: '以下为API方式(默认)的配置',
+          field: 'api_default_USE',
+          label: '默认使用的模型提供商',
+          bottomHelpMessage: '请在本页配置好对应模型提供商的配置；如果已经对话过建议执行 `#结束全部模型对话` 避免引起404错误',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: 'OpenAI API', value: 'api' },
+              { label: '智谱清言', value: 'chatglm4' },
+              { label: 'Claude', value: 'claude' },
+              { label: '星火', value: 'xh' },
+              { label: '通义千问', value: 'qwen' },
+              { label: 'Azure', value: 'azure' },
+              { label: 'Gemini', value: 'gemini' }
+            ]
+          }
+        },
+        {
+          label: '以下为OpenAI API方式的配置',
           component: 'Divider'
         },
         {
@@ -300,6 +317,18 @@ export function supportGuoba() {
           label: 'OpenAI API Key',
           bottomHelpMessage: 'OpenAI的ApiKey，用于访问OpenAI的API接口；可用指令： #chatgpt切换API #chatgpt[开启|关闭]API流',
           component: 'InputPassword'
+        },
+        {
+          field: 'openAiBaseUrl',
+          label: 'OpenAI API/反代地址',
+          bottomHelpMessage: 'OpenAI兼容API服务器地址。插件在执行对话时将拼接 /chat/completions ；默认值为 https://api.openai.com/v1',
+          component: 'Input'
+        },
+        {
+          field: 'openAiForceUseReverse',
+          label: '强制使用API地址',
+          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接；使用第三方API时请开启',
+          component: 'Switch'
         },
         {
           field: 'model',
@@ -310,7 +339,7 @@ export function supportGuoba() {
         {
           field: 'reasoningEffort',
           label: '思考程度',
-          bottomHelpMessage: '控制模型的思考/推理深度，适用于Openai系列、DeepSeek等推理模型。不修改为模型默认值。如果有bug请选不修改。',
+          bottomHelpMessage: '控制模型的思考/推理深度；不修改（默认）为使用模型默认值',
           component: 'Select',
           componentProps: {
             options: [
@@ -326,6 +355,12 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'promptPrefixOverride',
+          label: '设定',
+          bottomHelpMessage: '你可以在这里写入你希望AI回答的风格，比如你叫作“派蒙”，我希望优先回答中文，回答长一点等',
+          component: 'InputTextArea'
+        },
+        {
           field: 'apiMaxToken',
           label: '回复内容最大Token数',
           bottomHelpMessage: '模型单次回复的Token上限，默认4096（要预留至少 10000 个输入Token，否则回复报错，推荐“回复内容最大Token数”+10000≤“模型总上下文Token数”）。补充说明：这个值越大，可用于历史/群聊上下文的空间就越小；当输入Token + 回复内容最大Token数接近或超过“模型总上下文Token数”时，插件可能会压缩历史，严重时会触发上下文超限重试。',
@@ -336,24 +371,6 @@ export function supportGuoba() {
           label: '模型总上下文Token数',
           bottomHelpMessage: '模型支持的输入+回复总Token上限，默认32000（参考：gpt-4o-mini为128000）。补充说明：这个值如果配置得明显小于模型实际支持的上下文，插件会更早压缩历史或群聊记录；通常应按模型真实能力填写。',
           component: 'InputNumber'
-        },
-        {
-          field: 'openAiBaseUrl',
-          label: 'OpenAI API/反代地址',
-          bottomHelpMessage: 'OpenAI兼容API服务器地址。插件在执行对话时将拼接 /chat/completions ；默认值为 https://api.openai.com/v1',
-          component: 'Input'
-        },
-        {
-          field: 'openAiForceUseReverse',
-          label: '强制使用API地址',
-          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接；使用第三方API时请开启',
-          component: 'Switch'
-        },
-        {
-          field: 'promptPrefixOverride',
-          label: 'AI风格',
-          bottomHelpMessage: '你可以在这里写入你希望AI回答的风格，比如希望优先回答中文，回答长一点等',
-          component: 'InputTextArea'
         },
         {
           field: 'temperature',
@@ -549,7 +566,7 @@ export function supportGuoba() {
         //   component: 'InputNumber'
         // },
         {
-          label: '以下为星火方式的配置',
+          label: '以下为星火API方式的配置',
           component: 'Divider'
         },
         {
@@ -735,7 +752,7 @@ export function supportGuoba() {
         {
           field: 'geminiThinkingLevel',
           label: '思考程度',
-          bottomHelpMessage: '控制Gemini 3系列模型的思考深度(thinkingLevel)。minimal≈关闭思考。不修改为模型默认值。如果有bug请选不修改。Gemini 2.5系列不支持此参数，请用thinkingBudget。',
+          bottomHelpMessage: '模型的思考深度(thinkingLevel)；minimal≈关闭思考；仅支持Gemini-3及以上；不修改（默认）为使用模型默认值',
           component: 'Select',
           componentProps: {
             options: [
@@ -2410,7 +2427,7 @@ export function supportGuoba() {
 
       ],
       // 获取配置数据方法（用于前端填充显示数据）
-      getConfigData() {
+      async getConfigData() {
         // 生成循环任务展示标签
         const cronTasks = Config.ScheduleTask_CronTasks || []
         const configObj = Object.assign({}, Config)
@@ -2418,10 +2435,21 @@ export function supportGuoba() {
           const content = (t.content || '').replace(/\[CQ:[^\]]+\]/g, '').trim()
           return `${t.user_id} | ${t.group_id || '私聊'} | [${t.taskId}] | ${t.cronExpression} | ${content}`
         })
+
+        // For api_default_USE
+        let currentUse = await redis.get('CHATGPT:USE')
+        configObj.api_default_USE = currentUse || ''
+
         return configObj
       },
       // 设置配置的方法（前端点确定后调用的方法）
-      setConfigData(data, { Result }) {
+      async setConfigData(data, { Result }) {
+        // For api_default_USE
+        if (data.api_default_USE) {
+          await redis.set('CHATGPT:USE', data.api_default_USE)
+          delete data.api_default_USE
+        }
+
         for (let [keyPath, value] of Object.entries(data)) {
           // 处理循环任务标签删除同步
           if (keyPath === 'ScheduleTask_CronTasks_Display') {
