@@ -57,6 +57,8 @@ export type SendMessageOptions = {
     completionParams?: Partial<
         Omit<openai.CreateChatCompletionRequest, 'messages' | 'n' | 'stream'>
     >
+    /** 面包版 思考模式/全局破限：注入到第一条 user 消息的 prompt 文本 */
+    paimon_globalInnerOs?: string
 }
 
 export type MessageActionType = 'next' | 'variant'

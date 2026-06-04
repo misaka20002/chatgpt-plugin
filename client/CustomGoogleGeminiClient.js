@@ -181,7 +181,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     }
 
-    // 思考模式指令：裁剪后给第一条 user 消息注入，已有则跳过
+    // 面包版 思考模式/全局破限：裁剪后给第一条 user 消息注入，已有则跳过
     if (opt.paimon_globalInnerOs) {
       const firstUser = history.find(m => m.role === 'user')
       if (firstUser && firstUser.parts?.[0]?.text != null
