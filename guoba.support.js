@@ -1896,8 +1896,11 @@ export function supportGuoba() {
         {
           field: 'paimon_globalInnerOs',
           label: '面包版 思考模式/全局破限',
-          bottomHelpMessage: '可填写思考模式/全局破限提示词，自动在第一轮 user 消息末尾自动拼接。目前可选：1. https://github.com/victorchen96/deepseek_v4_rolepaly_instruct',
-          component: 'InputTextArea'
+          bottomHelpMessage: '可填写思考模式/全局破限提示词，将通过算法确保在聊天记录中 user 消息末尾拼接思考模式/全局破限提示词。目前可选：1. https://github.com/victorchen96/deepseek_v4_rolepaly_instruct',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: '此功能略消耗CPU，如不需要请确保输入框为空',
+          },
         },
         {
           label: '以下为戳一戳设置',
