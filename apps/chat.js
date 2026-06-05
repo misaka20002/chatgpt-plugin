@@ -832,8 +832,8 @@ export class chatgpt extends plugin {
           break
       }
     }
-    // 呆毛版 全局破限
-    prompt += Config.paimon_globalLimitBreak
+    // // 呆毛版 全局破限
+    // prompt += Config.paimon_globalLimitBreak || ''
 
     logger.info(`chatgpt prompt: ${prompt}`)
     let previousConversation

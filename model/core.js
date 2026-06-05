@@ -371,7 +371,10 @@ class Core {
           if (imageUrl) {
             const base64String = await getImageBase64(imageUrl);
             if (base64String) {
-              opt.image = base64String;
+              option.media = {
+                mimeType: 'image/jpeg',
+                data: base64String
+              };
             }
           }
         }
@@ -656,13 +659,17 @@ class Core {
         thinkingLevel: Config.geminiThinkingLevel || ''
       }
 
+      // 记录点: opt.media
       if (Config.mediaRecognitionSource == "Orignal") {
         // const image = await parseSourceImg(e)
         let imageUrl = e.img ? e.img[0] : undefined;
         if (imageUrl) {
           const base64String = await getImageBase64(imageUrl);
           if (base64String) {
-            option.image = base64String;
+            option.media = {
+              mimeType: 'image/jpeg',
+              data: base64String
+            };
           }
         }
       }

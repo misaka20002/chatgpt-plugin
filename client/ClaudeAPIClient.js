@@ -100,7 +100,7 @@ export class ClaudeAPIClient extends BaseClient {
   /**
    *
    * @param text
-   * @param {{conversationId: string?, parentMessageId: string?, stream: boolean?, onProgress: function?, functionResponse: FunctionResponse?, system: string?, image: string?, model: string?}} opt
+   * @param {{conversationId: string?, parentMessageId: string?, stream: boolean?, onProgress: function?, functionResponse: FunctionResponse?, system: string?, media: { mimeType: string, data: string }?, model: string?}} opt
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
   async sendMessage (text, opt = {}) {
@@ -131,13 +131,13 @@ export class ClaudeAPIClient extends BaseClient {
      * }>}
      */
     let thisContent = [{ type: 'text', text }]
-    if (opt.image) {
+    if (opt.media) {
       thisContent.push({
         type: 'image',
         source: {
           type: 'base64',
-          media_type: 'image/jpeg',
-          data: opt.image
+          media_type: opt.media.mimeType || 'image/jpeg',
+          data: opt.media.data
         }
       })
     }

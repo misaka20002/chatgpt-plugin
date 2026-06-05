@@ -69,6 +69,7 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
 
     let res = await client.sendMessage(msg, {
       system: systemPrompt,
+      // 记录点: opt.media
       media: {
         mimeType: mimeType,
         data: base64Data

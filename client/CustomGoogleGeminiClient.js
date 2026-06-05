@@ -114,7 +114,6 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     onProgress: function?,
    *     functionResponse?: FunctionResponse | FunctionResponse[],
    *     system: string?,
-   *     image: string?,
    *     video: string?,
    *     media: { mimeType: string, data: string }?,
    *     maxOutputTokens: number?,
@@ -255,22 +254,24 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         parentMessageId: opt.parentMessageId || undefined
       }
 
-    // 逻辑：优先使用 media (带明确类型)，其次 video (默认为MP4)，最后 fallback 到 image (默认为JPEG)
-    // 推荐以后都使用 opt.media
+    // 记录点: opt.media
+    // 逻辑：使用 media (带明确类型) 传递图片或视频
     if (opt.media) {
+      let mime_type = opt.media.mimeType;
+      let data = opt.media.data;
+      // 去除可能携带的 data URL scheme 头部
+      if (data.startsWith('data:')) {
+        const match = data.match(/^data:(.*?);base64,(.*)$/);
+        if (match) {
+          mime_type = mime_type || match[1];
+          data = match[2];
+        }
+      }
       // 支持通用媒体类型（视频、不同格式图片）
       thisMessage.parts.push({
         inline_data: {
-          mime_type: opt.media.mimeType, // 例如 'video/mp4' 或 'image/png'
-          data: opt.media.data
-        }
-      })
-    } else if (opt.image) {
-      // 旧版图片参数兼容
-      thisMessage.parts.push({
-        inline_data: {
-          mime_type: 'image/jpeg',
-          data: opt.image
+          mime_type: mime_type, // 例如 'video/mp4' 或 'image/png'
+          data: data
         }
       })
     }
@@ -341,7 +342,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (opt.codeExecution) {
       body.tools.push({ code_execution: {} })
     }
-    // if (opt.image) {
+    // if (opt.media) {
     //   delete body.tools
     //   delete body.tool_config
     // }
@@ -536,6 +537,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         depth: opt.toolChain.depth + 1,
         calledTools: [...opt.toolChain.calledTools, ...toolNames]
       };
+
+      // 防止在工具回调的轮次中再次携带媒体文件，避免 API 报错 Request contains an invalid argument
+      delete responseOpt.media
 
       // 达到工具调用上限时，强制下一轮不使用工具，让模型必须生成文本回复
       if (toolLimitReached) {

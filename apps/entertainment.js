@@ -686,6 +686,7 @@ ${translateLangLabels}
 
       // 发送请求，使用 media 参数
       let res = await client.sendMessage(msg, {
+        // 记录点: opt.media
         media: {
           mimeType: mimeType,
           data: base64Data
