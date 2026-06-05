@@ -35,6 +35,7 @@ import { collectProcessors } from '../utils/postprocessors/BasicProcessor.js'
 import {
   hidePrivacyInfo,
 } from '../utils/paimonFuction.js'
+import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
 
 let version = Config.version
@@ -966,14 +967,15 @@ export class chatgpt extends plugin {
       }
     }
 
-    // 面包版 思考模式/全局破限：裁剪后给第一条 user 消息注入，已有则跳过
+    // 面包版 思考模式/全局破限：裁剪后给第一条 user 消息注入（包裹标记以便后续替换），已有则跳过
     if (Config.paimon_globalInnerOs && previousConversation?.num === 0) {
-      prompt += Config.paimon_globalInnerOs
+      prompt += `\n${INNER_OS_BEGIN}${Config.paimon_globalInnerOs}${INNER_OS_END}`
     }
 
     try {
       if (Config.debug) {
         logger.mark({ conversation })
+        logger.debug(`[Chatgpt] 对话历史记录数: ${conversation.messages?.length ?? 0}, 限制: ${Config.chatgptBlockCount}`)
       }
 
       // 回复确认

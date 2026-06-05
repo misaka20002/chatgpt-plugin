@@ -7,6 +7,7 @@ import * as tokenizer from './tokenizer.js';
 import * as types from './types.js';
 import globalFetch from 'node-fetch';
 import { fetchSSE } from './fetch-sse.js';
+import { syncInnerOs } from '../innerOs.js';
 const CHATGPT_MODEL = 'gpt-4o-mini';
 const USER_LABEL_DEFAULT = 'User';
 const ASSISTANT_LABEL_DEFAULT = 'ChatGPT';
@@ -236,14 +237,31 @@ export class ChatGPTAPI {
             throw new Error('sendMessage requires content or appendMessages');
         }
         const { messages, maxTokens, numTokens, trimInfo } = await this._buildMessages(currentMessages, opts, completionParams);
-        // 面包版 思考模式/全局破限：裁剪后给第一条 user 消息注入，已有则跳过
-        if (opts.paimon_globalInnerOs) {
-            const firstUser = messages.find(m => m.role === 'user');
-            if (firstUser && typeof firstUser.content === 'string'
-                && !firstUser.content.includes(opts.paimon_globalInnerOs)) {
-                firstUser.content += opts.paimon_globalInnerOs;
+        // 面包版 思考模式/全局破限：注入到首条 user 消息（API 负载），并持久化当前轮
+        syncInnerOs(messages, opts.paimon_globalInnerOs, {
+          getText: m => Array.isArray(m.content) ? (m.content.find(p => p.type === 'text')?.text ?? '') : m.content,
+          setText: (m, t) => {
+            if (Array.isArray(m.content)) {
+              const textPart = m.content.find(p => p.type === 'text')
+              if (textPart) textPart.text = t
+            } else {
+              m.content = t
             }
-        }
+          },
+        })
+        syncInnerOs(currentMessages, opts.paimon_globalInnerOs, {
+          getText: m => m.text,
+          setText: (m, t) => {
+            m.text = t
+            if (typeof m.originalContent === 'string') {
+              m.originalContent = t
+            } else if (Array.isArray(m.originalContent)) {
+              const textPart = m.originalContent.find(p => p.type === 'text')
+              if (textPart) textPart.text = t
+            }
+          },
+          upsert: m => this._upsertMessage(m),
+        })
         if (trimInfo.trimmed) {
             console.info(`[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}。若这类日志频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`);
         }

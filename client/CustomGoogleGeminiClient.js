@@ -11,6 +11,7 @@ import {
 } from '../utils/common.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
 import { Config } from '../utils/config.js'
+import { syncInnerOs } from '../utils/innerOs.js';
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
@@ -180,14 +181,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     }
 
-    // 面包版 思考模式/全局破限：裁剪后给第一条 user 消息注入，已有则跳过
-    if (opt.paimon_globalInnerOs) {
-      const firstUser = history.find(m => m.role === 'user')
-      if (firstUser && firstUser.parts?.[0]?.text != null
-        && !firstUser.parts[0].text.includes(opt.paimon_globalInnerOs)) {
-        firstUser.parts[0].text += opt.paimon_globalInnerOs
-      }
-    }
+    // 面包版 思考模式/全局破限：确保第一条 user 消息使用最新配置，并持久化到 Redis
+    syncInnerOs(history, opt.paimon_globalInnerOs, {
+      getText: m => m.parts?.[0]?.text ?? '',
+      setText: (m, t) => { if (m.parts?.[0]) m.parts[0].text = t },
+      upsert: m => this.upsertMessage(m),
+    })
 
     let systemMessage = opt.system
 
