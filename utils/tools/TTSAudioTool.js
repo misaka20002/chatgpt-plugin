@@ -29,5 +29,5 @@ export class TTSAudioTool extends AbstractTool {
     }
   }
 
-  description = 'Useful when you want to send a voice message to the user. 避免复读，不要让回复文本与语音内容雷同。'
+  description = 'Sends a voice message to the user. CRITICAL RULE: Unless explicitly requested by the user, you MUST NOT repeat the audio message content in your subsequent text reply.'
 }
