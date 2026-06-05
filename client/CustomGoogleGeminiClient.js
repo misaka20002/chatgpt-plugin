@@ -409,10 +409,13 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       });
     }
 
-    responseContent = response.candidates[0].content
-    let groundingMetadata = response.candidates[0].groundingMetadata
+    const candidate = response.candidates[0]
+    responseContent = candidate.content
+    let groundingMetadata = candidate.groundingMetadata
+    const finishReason = candidate.finishReason || 'UNKNOWN'
+
     // 当模型没按要求写对参数时
-    if (response.candidates[0].finishReason === 'MALFORMED_FUNCTION_CALL') {
+    if (finishReason === 'MALFORMED_FUNCTION_CALL') {
       return await executeRetry(`遇到 MALFORMED_FUNCTION_CALL 错误`, () => {
         throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误,重试次数已用完')
       });
@@ -420,11 +423,24 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
     // 检查 responseContent 是否为空
     if (!responseContent || !responseContent.parts || responseContent.parts.length === 0) {
-      return await executeRetry(`responseContent.parts 为空`, () => {
-        throw new Error('responseContent.parts 为空,重试次数已用完')
-      });
-    }
+      // 检查是否因为策略拦截导致内容为空
+      const blockedReasons = ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'OTHER']
+      if (blockedReasons.includes(finishReason)) {
+        return await executeRetry(`API返回内容被拦截 (finishReason: ${finishReason})`, () => {
+          throw new Error(`API返回内容被拦截 (finishReason: ${finishReason}),重试次数已用完`)
+        });
+      }
 
+      if (finishReason === 'STOP') {
+        // 模型正常生成结束，但返回了空内容，赋一个默认空文本以防止后续解构报错
+        responseContent = { role: 'model', parts: [{ text: '' }] }
+      } else {
+        // 其他未知中断情况
+        return await executeRetry(`responseContent.parts 为空 (finishReason: ${finishReason})`, () => {
+          throw new Error(`responseContent.parts 为空 (finishReason: ${finishReason}),重试次数已用完\n详情: ${JSON.stringify(candidate)}`)
+        });
+      }
+    }
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
