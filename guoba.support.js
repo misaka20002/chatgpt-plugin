@@ -1607,8 +1607,8 @@ export function supportGuoba() {
         },
         {
           field: 'generateMathRender_ToolSwitch',
-          label: '工具新增-公式及作图',
-          bottomHelpMessage: '新增 生成支持 Markdown 语法图片、数学公式（纯文本渲染）图片以及数学作图（Mermaid 结构图 / 函数图） 工具',
+          label: '工具新增-公式及流程图',
+          bottomHelpMessage: '新增 生成支持 Markdown 语法图片、数学公式（纯文本渲染）图片以及流程图（Mermaid 结构图 / 函数图） 工具',
           component: 'Switch'
         },
         {
