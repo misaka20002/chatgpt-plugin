@@ -1612,6 +1612,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'generateGraphCalculator_ToolSwitch',
+          label: '工具新增-图形计算器',
+          bottomHelpMessage: '新增数学函数图形计算器； 生成 y=x^2、sin(x)、sqrt(x) 等笛卡尔坐标系函数图像 工具',
+          component: 'Switch'
+        },
+        {
           field: 'agent_SandboxSwitch',
           label: '工具新增-沙箱',
           bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',

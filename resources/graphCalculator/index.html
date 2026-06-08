@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Graph Calculator</title>
+    <style>
+        html {
+            background-color: #f8fbff;
+            background-image: linear-gradient(135deg, #fff1f2 0%, #eef7ff 38%, #f6ffe8 72%, #fff7df 100%);
+            background-repeat: no-repeat;
+            background-size: cover;
+            min-height: 100%;
+            width: 100%;
+            min-width: fit-content;
+        }
+
+        body {
+            margin: 0;
+            background: transparent;
+            font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            width: 100%;
+            min-width: fit-content;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            opacity: 0.028;
+            pointer-events: none;
+            z-index: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #container {
+            padding: 50px;
+            width: fit-content;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            width: 1280px;
+            min-height: 880px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(35px) saturate(145%);
+            -webkit-backdrop-filter: blur(35px) saturate(145%);
+            border: 1.5px solid rgba(215, 228, 238, 0.92);
+            border-radius: 34px;
+            padding: 38px 42px 30px;
+            box-shadow:
+                0 30px 70px -18px rgba(90, 126, 150, 0.24),
+                0 15px 35px -20px rgba(0, 0, 0, 0.08),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.9),
+                inset 0 -1.5px 3px rgba(215, 228, 238, 0.3);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .window-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0 22px;
+            border-bottom: 1.5px dashed rgba(166, 190, 205, 0.48);
+            margin-bottom: 25px;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 8px;
+            width: 90px;
+        }
+
+        .window-buttons .btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .window-buttons .close {
+            background-color: #ff5f56;
+        }
+
+        .window-buttons .minimize {
+            background-color: #ffbd2e;
+        }
+
+        .window-buttons .maximize {
+            background-color: #27c93f;
+        }
+
+        .window-title {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .window-title-box {
+            background-color: rgba(255, 255, 255, 0.76);
+            padding: 6px 28px;
+            border-radius: 24px;
+            border: 1px solid rgba(145, 175, 195, 0.32);
+            box-shadow: 0 6px 15px rgba(94, 133, 158, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.92);
+        }
+
+        .window-title-text {
+            color: #638195;
+            font-weight: 800;
+            letter-spacing: 1px;
+            font-size: 20px;
+        }
+
+        .window-subtitle {
+            font-size: 11px;
+            font-weight: 800;
+            color: #638195;
+            text-transform: uppercase;
+            width: 90px;
+            text-align: right;
+        }
+
+        .graph-shell {
+            display: grid;
+            grid-template-columns: 1fr 260px;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .canvas-panel {
+            background: rgba(255, 255, 255, 0.64);
+            border: 1px solid rgba(166, 190, 205, 0.55);
+            border-radius: 22px;
+            padding: 22px;
+            box-sizing: border-box;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.85);
+        }
+
+        canvas {
+            display: block;
+            width: 880px;
+            height: 660px;
+        }
+
+        .side-panel {
+            background: rgba(255, 255, 255, 0.58);
+            border: 1px solid rgba(166, 190, 205, 0.55);
+            border-radius: 22px;
+            padding: 22px;
+            box-sizing: border-box;
+            color: #405464;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            color: #638195;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .legend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 13px;
+        }
+
+        .legend-item {
+            display: grid;
+            grid-template-columns: 16px 1fr;
+            gap: 10px;
+            align-items: start;
+            font-size: 18px;
+            line-height: 1.35;
+            font-weight: 800;
+            word-break: break-word;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-top: 5px;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.72);
+        }
+
+        .range-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .range-box {
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid rgba(166, 190, 205, 0.38);
+            border-radius: 14px;
+            padding: 10px 12px;
+        }
+
+        .range-label {
+            font-size: 11px;
+            color: #7d97a7;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .range-value {
+            color: #405464;
+            font-size: 18px;
+            font-weight: 900;
+            margin-top: 4px;
+        }
+
+        .error-box {
+            display: none;
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: rgba(255, 245, 230, 0.85);
+            border: 1px solid rgba(255, 177, 84, 0.42);
+            color: #85582b;
+            font-weight: 800;
+            font-size: 18px;
+            line-height: 1.45;
+        }
+
+        .footer {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1.5px dashed rgba(166, 190, 205, 0.48);
+            font-size: 14px;
+            color: #638195;
+            font-weight: 800;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #raw-graph-data {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="card" id="render-card">
+            <div class="window-header">
+                <div class="window-buttons"><span class="btn close"></span><span class="btn minimize"></span><span
+                        class="btn maximize"></span></div>
+                <div class="window-title"><span class="window-title-box"><span
+                            class="window-title-text">{{title}}</span></span></div>
+                <div class="window-subtitle">Cartesian</div>
+            </div>
+
+            <div class="graph-shell">
+                <div class="canvas-panel">
+                    <canvas id="graph" width="1760" height="1320"></canvas>
+                    <div id="error-box" class="error-box"></div>
+                </div>
+                <aside class="side-panel">
+                    <div>
+                        <div class="panel-title">Functions</div>
+                        <div id="legend" class="legend-list"></div>
+                    </div>
+                    <div class="range-grid">
+                        <div class="range-box">
+                            <div class="range-label">x min</div>
+                            <div class="range-value" id="x-min"></div>
+                        </div>
+                        <div class="range-box">
+                            <div class="range-label">x max</div>
+                            <div class="range-value" id="x-max"></div>
+                        </div>
+                        <div class="range-box">
+                            <div class="range-label">y min</div>
+                            <div class="range-value" id="y-min"></div>
+                        </div>
+                        <div class="range-box">
+                            <div class="range-label">y max</div>
+                            <div class="range-value" id="y-max"></div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="footer">Created By PaimonChatGPT-Plugin</div>
+        </div>
+    </div>
+
+    <div id="raw-graph-data">{{graphData}}</div>
+
+    <script>
+        const colors = ['#ee6c8a', '#2f8fd3', '#34a853', '#f2a227', '#8a63d2', '#00a5a5'];
+        const supportedFunctions = {
+            sin: 'sin',
+            cos: 'cos',
+            tan: 'tan',
+            asin: 'asin',
+            acos: 'acos',
+            atan: 'atan',
+            sqrt: 'sqrt',
+            abs: 'abs',
+            log: 'log10',
+            ln: 'log',
+            exp: 'exp',
+            floor: 'floor',
+            ceil: 'ceil',
+            round: 'round',
+            min: 'min',
+            max: 'max',
+            pow: 'pow'
+        };
+
+        function normalizeExpression(input) {
+            let expr = String(input || '').trim();
+            expr = expr.replace(/[：]/g, ':')
+                .replace(/[，]/g, ',')
+                .replace(/[（]/g, '(')
+                .replace(/[）]/g, ')')
+                .replace(/−/g, '-')
+                .replace(/\s+/g, '')
+                .toLowerCase();
+
+            expr = expr.replace(/^f\(x\)=/, '').replace(/^y=/, '');
+            expr = expr.replace(/π/g, 'pi');
+            expr = expr.replace(/x²/g, 'x^2').replace(/x³/g, 'x^3');
+            expr = expr.replace(/x(\d+(?:\.\d+)?)(?![\d.])/g, 'x^$1');
+            expr = expr.replace(/\^/g, '**');
+            expr = expr.replace(/\bpi\b/g, 'Math.PI').replace(/\be\b/g, 'Math.E');
+
+            Object.keys(supportedFunctions)
+                .sort((a, b) => b.length - a.length)
+                .forEach(name => {
+                    expr = expr.replace(new RegExp(`\\b${name}\\s*\\(`, 'g'), `Math.${supportedFunctions[name]}(`);
+                });
+
+            expr = expr.replace(/(\d)(x)/g, '$1*$2');
+            expr = expr.replace(/(\d|x|\))(?=Math\.)/g, '$1*');
+            expr = expr.replace(/(\d|x|\))(?=\()/g, '$1*');
+            expr = expr.replace(/Math\.log10\*\(/g, 'Math.log10(');
+            expr = expr.replace(/\)(?=(\d|x))/g, ')*');
+            expr = expr.replace(/(Math\.PI|Math\.E)(?=(\d|x|\(|Math\.))/g, '$1*');
+            return expr;
+        }
+
+        function compileExpression(input) {
+            const expr = normalizeExpression(input);
+            if (!expr || !/^[0-9A-Za-z_+\-*/%().,\s]+$/.test(expr)) {
+                throw new Error(`Unsupported expression: ${input}`);
+            }
+
+            const identifiers = expr.match(/[A-Za-z_][A-Za-z0-9_.]*/g) || [];
+            const allowed = new Set(['x', 'Math.PI', 'Math.E', ...Object.values(supportedFunctions).map(name => `Math.${name}`)]);
+            const illegal = identifiers.find(token => !allowed.has(token));
+            if (illegal) {
+                throw new Error(`Unsupported token "${illegal}" in ${input}`);
+            }
+
+            const fn = new Function('x', `"use strict"; return (${expr});`);
+            return {
+                source: String(input),
+                js: expr,
+                evaluate(x) {
+                    return fn(x);
+                }
+            };
+        }
+
+        function niceStep(range, targetTicks) {
+            const rough = range / targetTicks;
+            const power = Math.pow(10, Math.floor(Math.log10(rough)));
+            const fraction = rough / power;
+            const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+            return niceFraction * power;
+        }
+
+        function formatNumber(value) {
+            if (!Number.isFinite(value)) return '';
+            if (Math.abs(value) >= 1000 || Math.abs(value) < 0.001 && value !== 0) {
+                return value.toExponential(1);
+            }
+            return Number(value.toFixed(4)).toString();
+        }
+
+        function fitYRange(series, yMin, yMax) {
+            if (Number.isFinite(yMin) && Number.isFinite(yMax)) {
+                return [yMin, yMax];
+            }
+
+            const values = [];
+            series.forEach(item => item.points.forEach(point => {
+                if (point.valid) values.push(point.y);
+            }));
+
+            if (!values.length) return [-10, 10];
+            let min = Math.min(...values);
+            let max = Math.max(...values);
+            if (min === max) {
+                min -= 1;
+                max += 1;
+            }
+
+            const padding = (max - min) * 0.12;
+            return [
+                Number.isFinite(yMin) ? yMin : min - padding,
+                Number.isFinite(yMax) ? yMax : max + padding
+            ];
+        }
+
+        function drawGraph(data) {
+            const canvas = document.getElementById('graph');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const pad = { left: 120, right: 48, top: 54, bottom: 104 };
+            const plotWidth = width - pad.left - pad.right;
+            const plotHeight = height - pad.top - pad.bottom;
+            const xMin = Number.isFinite(data.xMin) ? data.xMin : -10;
+            const xMax = Number.isFinite(data.xMax) ? data.xMax : 10;
+            const samples = Math.max(600, Math.min(2400, Math.floor(plotWidth)));
+            const compiled = data.expressions.map(compileExpression);
+            const series = compiled.map(fn => {
+                const points = [];
+                for (let i = 0; i <= samples; i++) {
+                    const x = xMin + (xMax - xMin) * i / samples;
+                    let y = NaN;
+                    try {
+                        y = fn.evaluate(x);
+                    } catch (error) {
+                        y = NaN;
+                    }
+                    points.push({ x, y, valid: Number.isFinite(y) && Math.abs(y) < 1e6 });
+                }
+                return { fn, points };
+            });
+
+            const [yMin, yMax] = fitYRange(series, data.yMin, data.yMax);
+            const toX = x => pad.left + (x - xMin) / (xMax - xMin) * plotWidth;
+            const toY = y => pad.top + (yMax - y) / (yMax - yMin) * plotHeight;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = 'rgba(255,255,255,0.82)';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.strokeStyle = '#d6e1e8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(pad.left, pad.top, plotWidth, plotHeight);
+
+            const xStep = niceStep(xMax - xMin, 10);
+            const yStep = niceStep(yMax - yMin, 8);
+            ctx.font = '700 28px -apple-system, BlinkMacSystemFont, "PingFang SC", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            for (let x = Math.ceil(xMin / xStep) * xStep; x <= xMax + xStep * 0.5; x += xStep) {
+                const px = toX(x);
+                ctx.strokeStyle = Math.abs(x) < xStep * 0.001 ? '#8ca8b9' : '#e7eef3';
+                ctx.lineWidth = Math.abs(x) < xStep * 0.001 ? 4 : 2;
+                ctx.beginPath();
+                ctx.moveTo(px, pad.top);
+                ctx.lineTo(px, pad.top + plotHeight);
+                ctx.stroke();
+
+                ctx.fillStyle = '#6e8798';
+                ctx.fillText(formatNumber(x), px, pad.top + plotHeight + 22);
+            }
+
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax + yStep * 0.5; y += yStep) {
+                const py = toY(y);
+                ctx.strokeStyle = Math.abs(y) < yStep * 0.001 ? '#8ca8b9' : '#e7eef3';
+                ctx.lineWidth = Math.abs(y) < yStep * 0.001 ? 4 : 2;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, py);
+                ctx.lineTo(pad.left + plotWidth, py);
+                ctx.stroke();
+
+                ctx.fillStyle = '#6e8798';
+                ctx.fillText(formatNumber(y), pad.left - 18, py);
+            }
+
+            series.forEach((item, index) => {
+                ctx.strokeStyle = colors[index % colors.length];
+                ctx.lineWidth = 6;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+
+                let drawing = false;
+                let previousY = null;
+                item.points.forEach(point => {
+                    const visible = point.valid && point.y >= yMin - (yMax - yMin) && point.y <= yMax + (yMax - yMin);
+                    if (!visible || previousY !== null && Math.abs(point.y - previousY) > (yMax - yMin) * 0.55) {
+                        drawing = false;
+                        previousY = point.valid ? point.y : null;
+                        return;
+                    }
+
+                    const px = toX(point.x);
+                    const py = toY(point.y);
+                    if (!drawing) {
+                        ctx.moveTo(px, py);
+                        drawing = true;
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                    previousY = point.y;
+                });
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = '#405464';
+            ctx.font = '900 34px -apple-system, BlinkMacSystemFont, "PingFang SC", Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('x', pad.left + plotWidth, height - 28);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('y', pad.left + 22, pad.top + 18);
+
+            document.getElementById('x-min').textContent = formatNumber(xMin);
+            document.getElementById('x-max').textContent = formatNumber(xMax);
+            document.getElementById('y-min').textContent = formatNumber(yMin);
+            document.getElementById('y-max').textContent = formatNumber(yMax);
+
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '';
+            compiled.forEach((fn, index) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `<span class="legend-dot" style="background:${colors[index % colors.length]}"></span><span>${fn.source}</span>`;
+                legend.appendChild(item);
+            });
+        }
+
+        window.onload = function () {
+            const raw = document.getElementById('raw-graph-data').textContent || '{}';
+            const errorBox = document.getElementById('error-box');
+            try {
+                const data = JSON.parse(raw);
+                drawGraph(data);
+            } catch (error) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = error.message;
+            } finally {
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('graph-render-complete'));
+                }, 200);
+            }
+        };
+    </script>
+</body>
+
+</html>
