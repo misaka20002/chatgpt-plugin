@@ -170,15 +170,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
     let history = await this.getHistory(opt.parentMessageId)
 
+    let maxHistory = 0
     if (Config.chatgptBlockCount) {
       // 限制历史记录最大轮数（按条数限制） maxHistory 必须是偶数
-      let maxHistory = Config.chatgptBlockCount;
+      maxHistory = Config.chatgptBlockCount;
       if (maxHistory % 2 !== 0) maxHistory += 1; // 强制保证是偶数，防止 Gemini 角色交替报错
-
-      if (history.length > maxHistory) {
-        // 截取最新的 maxHistory 条记录，确保开头是 user，结尾是 model
-        history = history.slice(-maxHistory);
-      }
     }
 
     // 面包版 思考模式/全局破限：确保第一条 user 消息使用最新配置，并持久化到 Redis
@@ -229,7 +225,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     // }
     const idThis = crypto.randomUUID()
     const idModel = crypto.randomUUID()
-    if (opt.functionResponse && !typeof Array.isArray(opt.functionResponse)) {
+    if (opt.functionResponse && !Array.isArray(opt.functionResponse)) {
       opt.functionResponse = [opt.functionResponse]
     }
     const thisMessage = opt.functionResponse?.length > 0
@@ -275,6 +271,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       })
     }
     history.push(_.cloneDeep(thisMessage))
+    const maxHistoryWithCurrentMessage = maxHistory > 0 ? maxHistory + 1 : 0
+    const normalizedHistory = normalizeGeminiHistory(history, maxHistoryWithCurrentMessage)
+    history = normalizedHistory.history
+    if (this.debug && normalizedHistory.changed) {
+      logger.info(`[Chatgpt][Gemini] cleaned invalid function-call history: ${JSON.stringify(normalizedHistory.stats)}`)
+    }
 
     // retryConfig 根据是否处于备用模式决定使用的模型名称
     const modelToUse = retryConfig.isFallback ? retryConfig.fallbackModel : this.model;
@@ -618,6 +620,152 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
  * @param {Content} responseContent
  * @returns {{final: string, responseContent}}
  */
+function normalizeGeminiHistory(history, maxHistory = 0) {
+  const stats = {
+    originalLength: history?.length || 0,
+    trimmed: 0,
+    droppedLeadingModel: 0,
+    droppedFunctionResponse: 0,
+    droppedFunctionCall: 0,
+    strippedFunctionCall: 0,
+    finalLength: 0
+  }
+  let normalized = Array.isArray(history) ? history.filter(Boolean) : []
+
+  if (maxHistory > 0 && normalized.length > maxHistory) {
+    let start = normalized.length - maxHistory
+
+    // Gemini requires a functionResponse turn to be immediately preceded by
+    // its model functionCall turn. Include the whole tool exchange when the
+    // configured history limit cuts into the middle of it.
+    while (start > 0 && isGeminiFunctionResponse(normalized[start])) {
+      start--
+    }
+    while (start > 0 && isGeminiFunctionCall(normalized[start])) {
+      start--
+    }
+
+    normalized = normalized.slice(start)
+    stats.trimmed = start
+  }
+
+  normalized = stripInvalidGeminiFunctionTurns(normalized, stats)
+
+  // Keep Gemini history starting from a user turn. If the suffix starts at a
+  // model turn, dropping it can expose an orphan functionResponse, so clean
+  // again after each leading drop.
+  while (normalized.length > 0 && normalized[0]?.role !== 'user') {
+    normalized.shift()
+    stats.droppedLeadingModel++
+    normalized = stripInvalidGeminiFunctionTurns(normalized, stats)
+  }
+
+  stats.finalLength = normalized.length
+  return {
+    history: normalized,
+    stats,
+    changed: stats.trimmed > 0 ||
+      stats.droppedLeadingModel > 0 ||
+      stats.droppedFunctionResponse > 0 ||
+      stats.droppedFunctionCall > 0 ||
+      stats.strippedFunctionCall > 0
+  }
+}
+
+function stripInvalidGeminiFunctionTurns(history, stats) {
+  const cleaned = []
+
+  for (let i = 0; i < history.length; i++) {
+    const content = history[i]
+    if (isGeminiFunctionResponse(content)) {
+      if (isGeminiFunctionCall(cleaned[cleaned.length - 1])) {
+        cleaned.push(content)
+      } else {
+        stats.droppedFunctionResponse++
+      }
+      continue
+    }
+
+    if (isGeminiFunctionCall(content)) {
+      if (isMatchingGeminiFunctionResponse(content, history[i + 1])) {
+        cleaned.push(content)
+        continue
+      }
+
+      const textOnlyContent = stripGeminiFunctionCallParts(content)
+      if (textOnlyContent) {
+        cleaned.push(textOnlyContent)
+        stats.strippedFunctionCall++
+      } else {
+        stats.droppedFunctionCall++
+      }
+      continue
+    }
+
+    cleaned.push(content)
+  }
+
+  return cleaned
+}
+
+function isGeminiFunctionCall(content) {
+  return Array.isArray(content?.parts) && content.parts.some(part => part?.functionCall)
+}
+
+function isGeminiFunctionResponse(content) {
+  return Array.isArray(content?.parts) && content.parts.some(part => part?.functionResponse)
+}
+
+function isMatchingGeminiFunctionResponse(functionCallContent, functionResponseContent) {
+  if (!isGeminiFunctionResponse(functionResponseContent)) {
+    return false
+  }
+
+  const functionCallNames = getGeminiFunctionCallNames(functionCallContent)
+  const functionResponseNames = getGeminiFunctionResponseNames(functionResponseContent)
+  if (functionCallNames.length === 0 || functionCallNames.length !== functionResponseNames.length) {
+    return false
+  }
+
+  const responseNameCounts = new Map()
+  for (const name of functionResponseNames) {
+    responseNameCounts.set(name, (responseNameCounts.get(name) || 0) + 1)
+  }
+
+  for (const name of functionCallNames) {
+    const count = responseNameCounts.get(name) || 0
+    if (count <= 0) {
+      return false
+    }
+    responseNameCounts.set(name, count - 1)
+  }
+
+  return true
+}
+
+function getGeminiFunctionCallNames(content) {
+  return (content.parts || [])
+    .map(part => part?.functionCall?.name)
+    .filter(Boolean)
+}
+
+function getGeminiFunctionResponseNames(content) {
+  return (content.parts || [])
+    .map(part => part?.functionResponse?.name)
+    .filter(Boolean)
+}
+
+function stripGeminiFunctionCallParts(content) {
+  const parts = content.parts?.filter(part => !part?.functionCall) || []
+  if (parts.length === 0) {
+    return null
+  }
+  return {
+    ...content,
+    parts
+  }
+}
+
 function handleSearchResponse(responseContent) {
   let final = ''
 
