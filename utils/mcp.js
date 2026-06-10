@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { Config } from './config.js'
 import { McpTool } from './tools/McpTool.js'
 
@@ -60,11 +61,33 @@ class McpManager {
         )
 
         let transport
-        if (serverConfig.url) {
-          // SSE 远程服务器模式
+        const configuredType = typeof serverConfig.type === 'string' ? serverConfig.type.toLowerCase() : ''
+        const transportType = configuredType || (serverConfig.url ? 'sse' : (serverConfig.command ? 'stdio' : ''))
+
+        if (!['stdio', 'http', 'sse'].includes(transportType)) {
+          logger.warn(`[Chatgpt][mcp] 服务器 [${name}] 配置类型无效: ${serverConfig.type}`)
+          continue
+        }
+
+        if (transportType === 'http') {
+          if (!serverConfig.url) {
+            logger.warn(`[Chatgpt][mcp] 服务器 [${name}] Streamable HTTP 配置无效，必须包含 url`)
+            continue
+          }
+          logger.info(`[Chatgpt][mcp] 服务器 [${name}] 使用 Streamable HTTP 协议，连接地址: ${serverConfig.url}`)
+          transport = new StreamableHTTPClientTransport(new URL(serverConfig.url))
+        } else if (transportType === 'sse') {
+          if (!serverConfig.url) {
+            logger.warn(`[Chatgpt][mcp] 服务器 [${name}] SSE 配置无效，必须包含 url`)
+            continue
+          }
           logger.info(`[Chatgpt][mcp] 服务器 [${name}] 使用 SSE 协议，连接地址: ${serverConfig.url}`)
           transport = new SSEClientTransport(new URL(serverConfig.url))
-        } else if (serverConfig.command) {
+        } else if (transportType === 'stdio') {
+          if (!serverConfig.command) {
+            logger.warn(`[Chatgpt][mcp] 服务器 [${name}] Stdio 配置无效，必须包含 command`)
+            continue
+          }
           // 兼容 Windows 和 Ubuntu：在 Linux (非 win32) 平台下，将 'python' 自动映射为 'python3'
           let execCommand = serverConfig.command
           if (execCommand === 'python' && process.platform !== 'win32') {
@@ -91,9 +114,6 @@ class McpManager {
               ...(serverConfig.env || {})
             }
           })
-        } else {
-          logger.warn(`[Chatgpt][mcp] 服务器 [${name}] 配置无效，必须包含 command 或 url`)
-          continue
         }
 
         await client.connect(transport)

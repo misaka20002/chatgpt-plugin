@@ -2,7 +2,9 @@ import { Config } from './utils/config.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { supportConfigurations as voxRoleList } from './utils/tts/voicevox.js'
+import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/mcpServersGuoba.js'
 import lodash from "lodash";
+
 // 支持锅巴
 export function supportGuoba() {
   return {
@@ -1840,20 +1842,81 @@ export function supportGuoba() {
         },
         {
           field: 'mcpServers',
-          label: 'MCP 服务器配置 (JSON)',
-          bottomHelpMessage: '配置通用 MCP 服务器，支持本地进程(stdio)与远程(SSE)方式；可在单个服务器配置中写 `"enabled": true` `"enabled": false` 随时单独开启/关闭；目前推荐的MCP服务有: 1.独立人格记忆: https://github.com/Dataojitori/nocturne_memory ；请严格按照JSON格式书写，必要时使用https://json-online.com/check/；修改后需重启生效',
-          component: 'InputTextArea',
+          label: 'MCP 服务器配置',
+          bottomHelpMessage: '配置 MCP 服务器: stdio 使用 command/args/env，http 使用 Streamable HTTP，sse 使用旧版 SSE；修改后需要重启生效',
+          component: 'GSubForm',
           componentProps: {
-            placeholder: '' +
-              '{\n' +
-              '  "mcpServers": {\n' +
-              '    "nocturne_memory": {\n' +
-              '      "enabled": true,\n' +
-              '      "command": "python",\n' +
-              '      "args": ["/root/nocturne_memory/backend/mcp_server.py""]\n' +
-              '    }\n' +
-              '  }\n' +
-              '}',
+            multiple: true,
+            schemas: [
+              {
+                field: 'name',
+                label: '名称',
+                required: true,
+                bottomHelpMessage: '唯一名称，会作为 mcpServers 中的服务器 key',
+                component: 'Input',
+                componentProps: {
+                  placeholder: 'nocturne_memory'
+                }
+              },
+              {
+                field: 'enabled',
+                label: '启用',
+                defaultValue: true,
+                bottomHelpMessage: '关闭后仅跳过该 MCP 服务器，不删除配置',
+                component: 'Switch'
+              },
+              {
+                field: 'type',
+                label: '类型',
+                required: true,
+                defaultValue: 'stdio',
+                bottomHelpMessage: 'stdio 为本地进程模式；http 为 Streamable HTTP；sse 为 SSE',
+                component: 'Select',
+                componentProps: {
+                  options: [
+                    { label: 'stdio', value: 'stdio' },
+                    { label: 'http', value: 'http' },
+                    { label: 'sse', value: 'sse' }
+                  ]
+                }
+              },
+              {
+                field: 'url',
+                label: 'URL',
+                bottomHelpMessage: '若使用 http/sse 类型必填，例如 http://127.0.0.1:3000/mcp',
+                component: 'Input',
+                componentProps: {
+                  placeholder: 'http://127.0.0.1:3000/mcp'
+                }
+              },
+              {
+                field: 'command',
+                label: '命令',
+                bottomHelpMessage: '若使用 stdio 类型必填，例如 python、node、npx',
+                component: 'Input',
+                componentProps: {
+                  placeholder: 'python'
+                }
+              },
+              {
+                field: 'args',
+                label: '参数',
+                bottomHelpMessage: '若使用 stdio 填写的参数，每行一个；保存时会转换为 JSON 数组',
+                component: 'InputTextArea',
+                componentProps: {
+                  placeholder: '/root/nocturne_memory/backend/mcp_server.py'
+                }
+              },
+              {
+                field: 'env',
+                label: '环境变量',
+                bottomHelpMessage: '若使用 stdio 的环境变量，每行一个 KEY=value；value 中可以包含 =',
+                component: 'InputTextArea',
+                componentProps: {
+                  placeholder: 'NAMESPACE=default'
+                }
+              }
+            ]
           },
         },
         {
@@ -2444,6 +2507,7 @@ export function supportGuoba() {
           const content = (t.content || '').replace(/\[CQ:[^\]]+\]/g, '').trim()
           return `${t.user_id} | ${t.group_id || '私聊'} | [${t.taskId}] | ${t.cronExpression} | ${content}`
         })
+        configObj.mcpServers = formatMcpServersForGuoba(configObj.mcpServers)
 
         // For api_default_USE
         let currentUse = await redis.get('CHATGPT:USE')
@@ -2469,6 +2533,13 @@ export function supportGuoba() {
             const tasks = Config.ScheduleTask_CronTasks || []
             lodash.set(Config.getConfig(), 'ScheduleTask_CronTasks', tasks.filter(t => remainingIds.includes(t.taskId)))
             continue
+          }
+          if (keyPath === 'mcpServers') {
+            try {
+              value = stringifyMcpServersFromGuoba(value)
+            } catch (err) {
+              return Result.error(`MCP 服务器配置保存失败: ${err.message}`)
+            }
           }
           // 处理黑名单
           if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
