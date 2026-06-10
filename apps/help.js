@@ -13,8 +13,8 @@ let helpData = [
       },
       {
         icon: 'chat',
-        title: '#chat1/#chat3/#chatglm/#bing/#claude/#xh',
-        desc: '分别使用API/API3/ChatGLM/Bing/Claude/星火模式与机器人聊天，无论主人设定了何种全局模式'
+        title: '#chat1/#chatglm/#claude/#xh/#gemini',
+        desc: '分别使用API/ChatGLM/Claude/星火/gemini模式与机器人聊天，无论主人设定了何种全局模式'
       },
       {
         icon: 'chat-private',
@@ -66,28 +66,33 @@ let helpData = [
         title: '#我的记忆',
         desc: '#群记忆 #记忆帮助'
       },
+      {
+        icon: 'list',
+        title: '#gpt删除前n条对话',
+        desc: '对话聊天记录的微调'
+      },
     ]
   },
-  {
-    group: '画图',
-    list: [
-      {
-        icon: 'draw',
-        title: '#chatgpt画图+prompt(/张数/图片大小)',
-        desc: '调用OpenAI Dalle API进行绘图，需要有API key并消耗余额。图片大小只能是256x256/512x512/1024x1024中的一个.默认为1张、512x512'
-      },
-      {
-        icon: 'draw',
-        title: '#chatgpt改图',
-        desc: '调用OpenAI Dalle API进行改图，需要有API key并消耗余额。可同时发送图片或回复图片'
-      },
-      {
-        icon: 'switch',
-        title: '#chatgpt开启/关闭画图',
-        desc: '开启或关闭画图功能'
-      }
-    ]
-  },
+  // {
+  //   group: '画图',
+  //   list: [
+  //     {
+  //       icon: 'draw',
+  //       title: '#chatgpt画图+prompt(/张数/图片大小)',
+  //       desc: '调用OpenAI Dalle API进行绘图，需要有API key并消耗余额。图片大小只能是256x256/512x512/1024x1024中的一个.默认为1张、512x512'
+  //     },
+  //     {
+  //       icon: 'draw',
+  //       title: '#chatgpt改图',
+  //       desc: '调用OpenAI Dalle API进行改图，需要有API key并消耗余额。可同时发送图片或回复图片'
+  //     },
+  //     {
+  //       icon: 'switch',
+  //       title: '#chatgpt开启/关闭画图',
+  //       desc: '开启或关闭画图功能'
+  //     }
+  //   ]
+  // },
   {
     group: '管理',
     list: [
@@ -153,8 +158,8 @@ let helpData = [
       },
       {
         icon: 'switch',
-        title: '#chatgpt切换浏览器/API/API3/Bing/ChatGLM/Claude/Gemini',
-        desc: '切换使用的后端为浏览器或OpenAI API/反代官网API/Bing/自建ChatGLM/Slack Claude/Gemini'
+        title: '#chatgpt切换/API/ChatGLM/Claude/Gemini',
+        desc: '切换使用的后端为或OpenAI API/自建ChatGLM/Slack Claude/Gemini'
       },
       {
         icon: 'confirm',

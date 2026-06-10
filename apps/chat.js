@@ -23,6 +23,7 @@ import {
 } from '../utils/common.js'
 
 import fetch from 'node-fetch'
+import { KeyvFile } from 'keyv-file'
 import { deleteConversation, getConversations, getLatestMessageIdByConversationId } from '../utils/conversation.js'
 import { convertSpeaker, speakers } from '../utils/tts.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
@@ -152,6 +153,10 @@ export class chatgpt extends plugin {
           reg: '^#(图片)?gemini[sS]*',
           /** 执行方法 */
           fnc: 'gemini'
+        },
+        {
+          reg: /^#(chat)?gpt(清除|删除)(前面?|最近的?)(\d+)条对话$/i,
+          fnc: 'clearContextByCount'
         },
         {
           /** 命令正则匹配 */
@@ -342,6 +347,376 @@ export class chatgpt extends plugin {
         }
       }
     }
+  }
+
+  async getClearContextMode(e) {
+    const userData = await getUserData(e.user_id)
+    return (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+  }
+
+  getClearContextScope(e, use) {
+    if (use === 'azure') {
+      return e.sender.user_id
+    }
+    return (e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id
+  }
+
+  getClearContextConversationKey(e, use) {
+    const scope = this.getClearContextScope(e, use)
+    switch (use) {
+      case 'api':
+        return `CHATGPT:CONVERSATIONS:${scope}`
+      case 'chatglm':
+        return `CHATGPT:CONVERSATIONS_CHATGLM:${scope}`
+      case 'xh':
+        return `CHATGPT:CONVERSATIONS_XH:${scope}`
+      case 'azure':
+        return `CHATGPT:CONVERSATIONS_AZURE:${scope}`
+      case 'qwen':
+        return `CHATGPT:CONVERSATIONS_QWEN:${scope}`
+      case 'gemini':
+        return `CHATGPT:CONVERSATIONS_GEMINI:${scope}`
+      case 'claude':
+        return `CHATGPT:CONVERSATIONS_CLAUDE:${scope}`
+      default:
+        return ''
+    }
+  }
+
+  getClearContextMessageSuffix(use) {
+    switch (use) {
+      case 'qwen':
+        return 'QWEN'
+      case 'gemini':
+        return 'Gemini'
+      case 'claude':
+        return 'Claude'
+      default:
+        return ''
+    }
+  }
+
+  getMessageRedisKey(messageId, suffix = '') {
+    return `CHATGPT:MESSAGE${suffix ? '_' + suffix : ''}:${messageId}`
+  }
+
+  getConversationExpireOption() {
+    return Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {}
+  }
+
+  async getKeyvCache(namespace) {
+    let Keyv
+    try {
+      Keyv = (await import('keyv')).default
+    } catch (err) {
+      throw new Error('依赖keyv未安装，请执行pnpm install keyv')
+    }
+    return new Keyv({
+      namespace,
+      store: new KeyvFile({ filename: 'cache.json' })
+    })
+  }
+
+  parseClearContextConversation(raw) {
+    if (!raw) {
+      return null
+    }
+    try {
+      return JSON.parse(raw)
+    } catch (err) {
+      logger.warn('[Chatgpt] parse conversation failed', err)
+      return null
+    }
+  }
+
+  async getStoredMessage(messageId, suffix = '') {
+    const raw = await redis.get(this.getMessageRedisKey(messageId, suffix))
+    if (!raw) {
+      return null
+    }
+    try {
+      return JSON.parse(raw)
+    } catch (err) {
+      logger.warn('[Chatgpt] parse stored message failed', err)
+      return null
+    }
+  }
+
+  isUserMessage(message) {
+    return (message?.role || '').toLowerCase() === 'user'
+  }
+
+  applyClearContextMeta(previousConversation, deletedCount) {
+    previousConversation.num = Math.max(0, (Number(previousConversation.num) || 0) - deletedCount)
+    previousConversation.utime = new Date()
+    if (Array.isArray(previousConversation.replyTimestamps)) {
+      previousConversation.replyTimestamps = previousConversation.replyTimestamps.slice(
+        0,
+        Math.max(0, previousConversation.replyTimestamps.length - deletedCount)
+      )
+    }
+  }
+
+  async saveClearContextConversation(key, previousConversation) {
+    await redis.set(key, JSON.stringify(previousConversation), this.getConversationExpireOption())
+  }
+
+  async clearParentChainContext(key, suffix, count) {
+    const previousConversation = this.parseClearContextConversation(await redis.get(key))
+    if (!previousConversation?.parentMessageId) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    const keysToDelete = []
+    let deletedCount = 0
+    let nextParentMessageId = previousConversation.parentMessageId
+
+    while (nextParentMessageId && deletedCount < count) {
+      const turnKeys = []
+      let scanMessageId = nextParentMessageId
+      let parentBeforeTurn
+      let foundUserTurn = false
+
+      while (scanMessageId) {
+        const message = await this.getStoredMessage(scanMessageId, suffix)
+        if (!message) {
+          break
+        }
+
+        turnKeys.push(this.getMessageRedisKey(scanMessageId, suffix))
+        const parentMessageId = message.parentMessageId
+        if (this.isUserMessage(message)) {
+          parentBeforeTurn = parentMessageId
+          foundUserTurn = true
+          break
+        }
+        scanMessageId = parentMessageId
+      }
+
+      if (!foundUserTurn) {
+        break
+      }
+
+      keysToDelete.push(...turnKeys)
+      nextParentMessageId = parentBeforeTurn
+      deletedCount++
+    }
+
+    if (deletedCount === 0) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    for (const messageKey of [...new Set(keysToDelete)]) {
+      await redis.del(messageKey)
+    }
+
+    if (nextParentMessageId) {
+      previousConversation.parentMessageId = nextParentMessageId
+    } else {
+      delete previousConversation.parentMessageId
+    }
+    this.applyClearContextMeta(previousConversation, deletedCount)
+    await this.saveClearContextConversation(key, previousConversation)
+
+    return { success: true, deletedCount }
+  }
+
+  trimMessageArrayByCount(messages, count) {
+    if (!Array.isArray(messages)) {
+      return 0
+    }
+
+    let deletedCount = 0
+    while (deletedCount < count) {
+      let userIndex = -1
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (this.isUserMessage(messages[i])) {
+          userIndex = i
+          break
+        }
+      }
+
+      if (userIndex < 0) {
+        break
+      }
+
+      messages.splice(userIndex)
+      deletedCount++
+    }
+
+    return deletedCount
+  }
+
+  async clearAzureContextByCount(key, count) {
+    const previousConversation = this.parseClearContextConversation(await redis.get(key))
+    if (!previousConversation?.messages?.length) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    const deletedCount = this.trimMessageArrayByCount(previousConversation.messages, count)
+    if (deletedCount === 0) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    this.applyClearContextMeta(previousConversation, deletedCount)
+    await this.saveClearContextConversation(key, previousConversation)
+    return { success: true, deletedCount }
+  }
+
+  async clearXhContextByCount(key, count) {
+    const supportedXhModes = ['api', 'apiv2', 'apiv3', 'apiv3.5', 'apiv4.0']
+    if (!supportedXhModes.includes(Config.xhmode)) {
+      return { success: false, unsupported: true }
+    }
+
+    const previousConversation = this.parseClearContextConversation(await redis.get(key))
+    const conversationId = previousConversation?.conversation?.conversationId
+    if (!conversationId || typeof conversationId === 'object') {
+      return { success: true, deletedCount: 0 }
+    }
+
+    const conversationsCache = await this.getKeyvCache('xh')
+    const historyKey = `ChatXH_${conversationId}`
+    const conversation = await conversationsCache.get(historyKey)
+    if (!conversation?.messages?.length) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    const deletedCount = this.trimMessageArrayByCount(conversation.messages, count)
+    if (deletedCount === 0) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    await conversationsCache.set(historyKey, conversation)
+    this.applyClearContextMeta(previousConversation, deletedCount)
+    await this.saveClearContextConversation(key, previousConversation)
+    return { success: true, deletedCount }
+  }
+
+  async clearChatglmContextByCount(e, key, count) {
+    const previousConversation = this.parseClearContextConversation(await redis.get(key))
+    if (!previousConversation?.parentMessageId) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    const conversationsCache = await this.getKeyvCache('chatglm_6b')
+    const historyKey = `ChatGLMUser_${e.sender.user_id}`
+    const conversation = await conversationsCache.get(historyKey)
+    if (!conversation?.messages?.length) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    const idsToDelete = new Set()
+    let deletedCount = 0
+    let nextParentMessageId = previousConversation.parentMessageId
+
+    while (nextParentMessageId && deletedCount < count) {
+      const turnIds = []
+      let scanMessageId = nextParentMessageId
+      let parentBeforeTurn
+      let foundUserTurn = false
+
+      while (scanMessageId) {
+        const message = conversation.messages.find(item => item.id === scanMessageId)
+        if (!message) {
+          break
+        }
+
+        turnIds.push(message.id)
+        const parentMessageId = message.parentMessageId
+        if (this.isUserMessage(message)) {
+          parentBeforeTurn = parentMessageId
+          foundUserTurn = true
+          break
+        }
+        scanMessageId = parentMessageId
+      }
+
+      if (!foundUserTurn) {
+        break
+      }
+
+      turnIds.forEach(id => idsToDelete.add(id))
+      nextParentMessageId = parentBeforeTurn
+      deletedCount++
+    }
+
+    if (deletedCount === 0) {
+      return { success: true, deletedCount: 0 }
+    }
+
+    conversation.messages = conversation.messages.filter(message => !idsToDelete.has(message.id))
+    await conversationsCache.set(historyKey, conversation)
+
+    if (nextParentMessageId) {
+      previousConversation.parentMessageId = nextParentMessageId
+    } else {
+      delete previousConversation.parentMessageId
+    }
+    this.applyClearContextMeta(previousConversation, deletedCount)
+    await this.saveClearContextConversation(key, previousConversation)
+
+    return { success: true, deletedCount }
+  }
+
+  async clearContextByCount(e) {
+    const match = e.msg.trim().match(/^#(chat)?gpt(清除|删除)(前面?|最近的?)(\d+)条对话$/i)
+    if (!match) {
+      return false
+    }
+
+    const count = Math.max(1, parseInt(match[4]) || 1)
+    const use = await this.getClearContextMode(e)
+    const unsupportedModes = ['bing', 'api3', 'claude2', 'chatglm4', 'browser']
+
+    let result
+    try {
+      if (unsupportedModes.includes(use)) {
+        result = { success: false, unsupported: true }
+      } else {
+        const conversationKey = this.getClearContextConversationKey(e, use)
+        switch (use) {
+          case 'api':
+          case 'qwen':
+          case 'gemini':
+          case 'claude':
+            result = await this.clearParentChainContext(conversationKey, this.getClearContextMessageSuffix(use), count)
+            break
+          case 'azure':
+            result = await this.clearAzureContextByCount(conversationKey, count)
+            break
+          case 'xh':
+            result = await this.clearXhContextByCount(conversationKey, count)
+            break
+          case 'chatglm':
+            result = await this.clearChatglmContextByCount(e, conversationKey, count)
+            break
+          default:
+            result = { success: false, unsupported: true }
+        }
+      }
+    } catch (err) {
+      logger.error('[Chatgpt] clear context by count failed', err)
+      result = { success: false, error: err.message }
+    }
+
+    if (result?.unsupported) {
+      await this.reply(`当前${use}模式暂不支持按条清除，请使用结束对话`, true)
+      return true
+    }
+
+    if (!result?.success) {
+      await this.reply(`按条清除对话失败：${result?.error || '未知错误'}`, true)
+      return true
+    }
+
+    if (!result.deletedCount) {
+      await this.reply('当前没有可清除的对话记录', true)
+      return true
+    }
+
+    await this.reply(`已清除当前${use}模式最近 ${result.deletedCount} 条对话`, true)
+    return true
   }
 
   async switch2Picture(e) {

@@ -146,17 +146,17 @@ export class voicechangehelp extends plugin {
                     permission: 'master'
                 },
                 {
-                    reg: /^#gpt偷(图|表情包?)$/i,
+                    reg: /^#(chat)?gpt偷(图|表情包?)$/i,
                     fnc: 'save_EmojiImg',
                     permission: 'master'
                 },
                 {
-                    reg: /^#gptsf语音模型(创建|删除|列表|上传|新增)$/i,
+                    reg: /^#(chat)?gptsf语音模型(创建|删除|列表|上传|新增)$/i,
                     fnc: 'handleSfVoiceManage',
                     permission: 'master'
                 },
                 {
-                    reg: /^#gpt发语音/i,
+                    reg: /^#(chat)?gpt发语音/i,
                     fnc: 'manualSendTTSAudio',
                 },
             ]
@@ -171,12 +171,12 @@ export class voicechangehelp extends plugin {
         ]
     }
 
-    /** /^#gpt发语音/i */
+    /** /^#(chat)?gpt发语音/i */
     async manualSendTTSAudio(e) {
         if (!e.isMaster && !Config.enableManualSendTTSAudio) {
             return false;
         }
-        const message = e.msg.replace(/^#gpt发语音/i, '').trim();
+        const message = e.msg.replace(/^#(chat)?gpt发语音/i, '').trim();
         if (!message) {
             await e.reply('请提供需要转化为语音的文字内容，例如：#gpt发语音 早上好！', true);
             return true;
@@ -195,7 +195,7 @@ export class voicechangehelp extends plugin {
         return true;
     }
 
-    /** ^#gptsf语音模型(创建|删除|列表)$ */
+    /** /^#(chat)?gptsf语音模型(创建|删除|列表|上传|新增)$/i */
     async handleSfVoiceManage(e) {
         /** make 列表 */
         async function buildVoiceListForwardMsg(e, localApi, title) {
@@ -214,7 +214,7 @@ export class voicechangehelp extends plugin {
             return await e.reply("请先在锅巴面板中配置 siliconflow_Voice_ApiKey", true);
         }
 
-        const action = e.msg.replace(/#gptsf语音模型/i, '').trim();
+        const action = e.msg.replace(/#(chat)?gptsf语音模型/i, '').trim();
 
         // ======= 【列表查询 / 同步 / 选择】 =======
         if (action === '列表') {
@@ -478,7 +478,7 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /** /^#gpt(偷图|偷表情包?)$/i */
+    /** /^#(chat)?gpt偷(图|表情包?)$/i */
     async save_EmojiImg(e) {
         await parseSourceImg(e);
         if (!e.img || !e.img.length) {
