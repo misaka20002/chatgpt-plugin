@@ -35,6 +35,7 @@ import Core from '../model/core.js'
 import { collectProcessors } from '../utils/postprocessors/BasicProcessor.js'
 import {
   hidePrivacyInfo,
+  removeCQCode,
 } from '../utils/paimonFuction.js'
 import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
@@ -1820,6 +1821,7 @@ export class chatgpt extends plugin {
           ttsRegex = ''
         }
         ttsResponse = response.replace(ttsRegex, '')
+        ttsResponse = removeCQCode(ttsResponse)
         // 处理azure语音会读出emoji的问题
         try {
           let emojiStrip

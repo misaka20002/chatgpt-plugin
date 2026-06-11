@@ -342,12 +342,13 @@ export function hidePrivacyInfo(text) {
  */
 export function removeCQCode(msg) {
   if (!msg) return ''
+  const cqCodeRegex = /\[CQ[:,，][^\]]+\]/g
   // 如果是数组, 使用 reduce 进行处理和过滤
   if (Array.isArray(msg)) {
     return msg.reduce((acc, item) => {
       if (typeof item === 'string') {
         // 替换 CQ 码
-        const cleanedText = item.replace(/\[CQ:[^\]]+\]/g, '').trim()
+        const cleanedText = item.replace(cqCodeRegex, '').trim()
         // 只有当文本不为空时才推入结果数组
         if (cleanedText) {
           acc.push(cleanedText)
@@ -361,8 +362,8 @@ export function removeCQCode(msg) {
   }
   // 如果不是字符串, 直接返回原值
   if (typeof msg !== 'string') return msg
-  // 匹配 [CQ:...] 格式的 CQ 码
-  return msg.replace(/\[CQ:[^\]]+\]/g, '').trim()
+  // 匹配 [CQ:...] 和 [CQ,...] 格式的 CQ 码
+  return msg.replace(cqCodeRegex, '').trim()
 }
 
 /**

@@ -568,12 +568,13 @@ export async function convertFacesAndCQCode(msg, handleAt = false, isProcessCQAt
 
   // 处理 CQ at 码
   if (isProcessCQAtCode) {
-    const cqAtRegex = /\[CQ:at,(?:id|qq)=(\d+)\]/gi
+    const cqAtRegex = /\[CQ[:,，]at[,，](?:id|qq)=(\d+)[^\]]*\]/gi
     let finalMsgs = []
 
     for (let item of msgs) {
       // 只处理字符串类型的消息
       if (typeof item === 'string') {
+        cqAtRegex.lastIndex = 0
         if (cqAtRegex.test(item)) {
           cqAtRegex.lastIndex = 0
           let lastIndex = 0

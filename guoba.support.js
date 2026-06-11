@@ -880,7 +880,7 @@ export function supportGuoba() {
         {
           field: 'autoJapanese',
           label: '日语语音输出',
-          bottomHelpMessage: '语音模式时，先将机器人的文字回复翻译成日文后获取语音；需要配置 杂项-翻译来源',
+          bottomHelpMessage: '语音模式时，先将机器人的文字回复翻译成日文后获取语音，同时应用于 工具新增-智能发送语音；需要先配置 杂项-翻译来源',
           component: 'Switch'
         },
         {
