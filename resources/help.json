@@ -86,35 +86,6 @@
             ]
         }
     ],
-    "AI画图": [
-        {
-            "icon": "fas fa-paint-brush",
-            "title": "画图",
-            "text": "调用**OpenAI Dalle API**进行绘图，需要有**API key**并消耗余额。图片大小只能是<span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">256x256</span><span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">512x512</span><span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">1024x1024</span>中的一个，默认画图**1**张，大小<span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">512x512</span>",
-            "list": [
-                "#chatgpt画图+prompt",
-                "#chatgpt画图+prompt(/张数/图片大小)"
-            ]
-        },
-        {
-            "icon": "fas fa-paint-brush",
-            "title": "改图",
-            "text": "调用**OpenAI Dalle API**进行绘图，需要有**API key**并消耗余额。可同时发送图片或回复图片",
-            "list": [
-                "#chatgpt改图"
-            ]
-        },
-        {
-            "icon": "fas fa-toggle-on",
-            "title": "画图开关",
-            "text": "开启或关闭画图功能",
-            "list": [
-                "#chatgpt开启画图",
-                "#chatgpt关闭画图"
-            ],
-            "tip": "管理员功能"
-        }
-    ],
     "设定": [
         {
             "icon": "fas fa-paint-brush",

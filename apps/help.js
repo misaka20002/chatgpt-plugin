@@ -73,26 +73,6 @@ let helpData = [
       },
     ]
   },
-  // {
-  //   group: '画图',
-  //   list: [
-  //     {
-  //       icon: 'draw',
-  //       title: '#chatgpt画图+prompt(/张数/图片大小)',
-  //       desc: '调用OpenAI Dalle API进行绘图，需要有API key并消耗余额。图片大小只能是256x256/512x512/1024x1024中的一个.默认为1张、512x512'
-  //     },
-  //     {
-  //       icon: 'draw',
-  //       title: '#chatgpt改图',
-  //       desc: '调用OpenAI Dalle API进行改图，需要有API key并消耗余额。可同时发送图片或回复图片'
-  //     },
-  //     {
-  //       icon: 'switch',
-  //       title: '#chatgpt开启/关闭画图',
-  //       desc: '开启或关闭画图功能'
-  //     }
-  //   ]
-  // },
   {
     group: '管理',
     list: [

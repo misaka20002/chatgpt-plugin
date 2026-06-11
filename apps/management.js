@@ -203,11 +203,6 @@ export class ChatgptManagement extends plugin {
           permission: 'master'
         },
         {
-          reg: '^#chatgpt(开启|关闭)画图$',
-          fnc: 'switchDraw',
-          permission: 'master'
-        },
-        {
           reg: '^#chatgpt查看(API|api)设定$',
           fnc: 'queryAPIPromptPrefix',
           permission: 'master'
@@ -1378,24 +1373,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     Config.sydney = this.e.msg
     await this.reply('Bing Sydney模式的设定设置成功', true)
     this.finish('saveBingPromptPrefix')
-  }
-
-  async switchDraw(e) {
-    if (e.msg.indexOf('开启') > -1) {
-      if (Config.enableDraw) {
-        await this.reply('当前已经开启chatgpt画图功能', true)
-      } else {
-        Config.enableDraw = true
-        await this.reply('chatgpt画图功能开启成功', true)
-      }
-    } else {
-      if (!Config.enableDraw) {
-        await this.reply('当前未开启chatgpt画图功能', true)
-      } else {
-        Config.enableDraw = false
-        await this.reply('chatgpt画图功能关闭成功', true)
-      }
-    }
   }
 
   async queryAPIPromptPrefix(e) {

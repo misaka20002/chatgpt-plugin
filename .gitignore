@@ -9,3 +9,4 @@ prompts/*
 node_modules/
 .vs/
 ckproject/
+AGENTS.md

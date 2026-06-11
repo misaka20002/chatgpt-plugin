@@ -1045,17 +1045,6 @@
     "title": "绘图设置",
     "view": [
       {
-        "type": "check",
-        "label": "绘图功能开关",
-        "data": "enableDraw"
-      },
-      {
-        "type": "number",
-        "label": "绘图CD",
-        "placeholder": "绘图指令的CD时间",
-        "data": "drawCD"
-      },
-      {
         "type": "url",
         "label": "emojiAPI地址",
         "placeholder": "合成emoji的API地址",
