@@ -59,6 +59,7 @@ import { BingAIClient } from '../client/CopilotAIClient.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
 import { getImageBase64 } from '../utils/paimonFuction.js'
+import { sendToolCallForwardMsg } from '../utils/toolForward.js'
 import { GithubAPITool } from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
@@ -569,7 +570,9 @@ class Core {
           msg = await this.qwenApi.sendMessage(prompt, option)
           if (Config.debug)
             logger.info(JSON.stringify(msg, null, 2))
+          let toolRoundCount = 0
           while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
+            toolRoundCount++
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
             }
@@ -590,6 +593,9 @@ class Core {
               break;
             }
 
+            logger.info(`[Chatgpt][Qwen] execution function: ${JSON.stringify({ name, args })}`)
+            const toolArgsForForward = { ...args }
+
             // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
             if (!args.groupId) {
               args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -604,6 +610,14 @@ class Core {
               sender
             }, args), e)
             logger.mark(`function ${name} execution result: ${functionResult}`)
+            logger.info(`[Chatgpt][Qwen] function ${name} execution result: ${JSON.stringify(functionResult)}`)
+            sendToolCallForwardMsg(e, [{
+              platform: '千问',
+              round: toolRoundCount,
+              name,
+              args: toolArgsForForward,
+              result: functionResult
+            }], '千问工具调用与返回')
             option.parentMessageId = msg.id
             option.name = name
             // 不然普通用户可能会被openai限速
@@ -934,6 +948,7 @@ class Core {
               toolCalls: pendingToolCalls
             }]
             let previousMessageId = msg.id
+            const toolForwardRecords = []
 
             for (const toolCall of pendingToolCalls) {
               let name = toolCall.function.name
@@ -945,6 +960,7 @@ class Core {
               }
 
               logger.info(`[Chatgpt][API] execution function: ${JSON.stringify({ name, args })}`)
+              const toolArgsForForward = { ...args }
 
               if (!args.groupId) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -972,6 +988,14 @@ class Core {
                 logger.error(functionResult)
               }
 
+              toolForwardRecords.push({
+                platform: 'OpenAI API',
+                round: toolRoundCount,
+                name,
+                args: toolArgsForForward,
+                result: functionResult
+              })
+
               const toolMessageId = crypto.randomUUID()
               toolMessages.push({
                 id: toolMessageId,
@@ -984,6 +1008,8 @@ class Core {
               })
               previousMessageId = toolMessageId
             }
+
+            sendToolCallForwardMsg(e, toolForwardRecords, 'OpenAI API工具调用与返回')
 
             option.parentMessageId = msg.id
             option.appendMessages = toolMessages

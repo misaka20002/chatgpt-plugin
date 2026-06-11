@@ -233,6 +233,7 @@ const defaultConfig = {
   toolGroupAdminArr: ["EditCard", "Jinyan", "KickOut", "SetTitle", "HandleMsg"],
   extraUrl: '',
   smartMode: false,
+  forwardToolCallResult: false,
   llm_maxToolRounds: 3,
   // claude2
   // claudeAIOrganizationId: '',

@@ -294,6 +294,10 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
+          label: '对话 通用设置',
+          component: 'Divider'
+        },
+        {
           field: 'api_default_USE',
           label: '默认使用的模型提供商',
           bottomHelpMessage: '请在本页配置好对应模型提供商的配置；如果已经对话过建议执行 `#结束全部模型对话` 避免引起404错误',
@@ -309,6 +313,24 @@ export function supportGuoba() {
               { label: 'Gemini', value: 'gemini' }
             ]
           }
+        },
+        {
+          field: 'mediaRecognitionSource',
+          label: '内容识别来源',
+          component: 'Select',
+          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
+          componentProps: {
+            options: [
+              { label: '模型内置', value: 'Orignal' },
+              { label: 'Gemini内容识别', value: 'Gemini' },
+            ]
+          }
+        },
+        {
+          field: 'imgOcr',
+          label: '对话中图片OCR',
+          bottomHelpMessage: '调用本地适配器imageOcr图片文字识别功能（需要适配器支持）；推荐关闭该功能',
+          component: 'Switch'
         },
         {
           label: '以下为OpenAI API方式的配置',
@@ -1378,7 +1400,13 @@ export function supportGuoba() {
         {
           field: 'smartMode',
           label: '智能模式 开关',
-          bottomHelpMessage: '支持对话 Api、千问、Gemini。开启后机器人可以群管、收发图片、发视频发音乐、联网搜索等。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
+          bottomHelpMessage: '支持 OpenAI API、千问、Gemini。开启后Bot可以使用以下群管、绘画、发视频发音乐、联网搜索等工具。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
+          component: 'Switch'
+        },
+        {
+          field: 'forwardToolCallResult',
+          label: '发送工具调用与返回',
+          bottomHelpMessage: '智能模式中，将工具调用参数和工具返回结果以合并转发发送到当前会话；默认关闭',
           component: 'Switch'
         },
         {
@@ -1416,24 +1444,6 @@ export function supportGuoba() {
         //   bottomHelpMessage: '公益接口https://cpe.ikechan8370.com 或https://misaka20001-cp-extra.hf.space；参考搭建：https://github.com/ikechan8370/chatgpt-plugin-extras；作用：图片OCR/图片ai标题/图生图前处理等',
         //   component: 'Input'
         // },
-        {
-          field: 'mediaRecognitionSource',
-          label: '内容识别来源',
-          component: 'Select',
-          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
-          componentProps: {
-            options: [
-              { label: '模型内置', value: 'Orignal' },
-              { label: 'Gemini内容识别', value: 'Gemini' },
-            ]
-          }
-        },
-        {
-          field: 'imgOcr',
-          label: '对话中图片OCR',
-          bottomHelpMessage: '调用本地适配器imageOcr图片文字识别功能（需要适配器支持）；推荐关闭该功能',
-          component: 'Switch'
-        },
         {
           field: 'serpSourceArr',
           label: '搜索/网络来源',

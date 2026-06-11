@@ -9,6 +9,7 @@ import {
 import {
   makeForwardMsg,
 } from '../utils/common.js'
+import { sendToolCallForwardMsg } from '../utils/toolForward.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
 import { Config } from '../utils/config.js'
 import { syncInnerOs } from '../utils/innerOs.js';
@@ -496,9 +497,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         }
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
+      const toolForwardRecords = []
       for (let fc of functionCall) {
         logger.info(`[Chatgpt][Gemini] execution function: ${JSON.stringify(fc)}`)
         const funcName = fc.name
+        const toolArgsForForward = _.cloneDeep(fc.args || {})
         let chosenTool = this.tools.find(t => t.name === funcName)
         /**
          * @type {FunctionResponse}
@@ -530,7 +533,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           try {
             let isAdmin = ['admin', 'owner'].includes(this.e.sender.role) || (this.e.group?.is_admin && this.e.isMaster)
             // let isOwner = ['owner'].includes(this.e.sender.role) || (this.e.group?.is_owner && this.e.isMaster)
-            let args = Object.assign(fc.args, {
+            let args = Object.assign({}, toolArgsForForward, {
               isAdmin,
               // isOwner,
               sender: this.e.sender.user_id,
@@ -545,8 +548,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             }
           }
         }
+        toolForwardRecords.push({
+          platform: 'Gemini',
+          round: opt.toolChain.depth + 1,
+          name: funcName,
+          args: toolArgsForForward,
+          result: functionResponse.response.content
+        })
         fcResults.push(functionResponse)
       }
+      sendToolCallForwardMsg(this.e, toolForwardRecords, 'Gemini工具调用与返回')
       let responseOpt = _.cloneDeep(opt)
       responseOpt.parentMessageId = idModel
       responseOpt.functionResponse = fcResults

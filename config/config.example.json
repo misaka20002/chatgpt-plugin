@@ -156,6 +156,7 @@
   "serpSourceArr": [],
   "extraUrl": "",
   "smartMode": false,
+  "forwardToolCallResult": false,
   "is_recallMsg": true,
   "removeCQCodeFocus": true,
   "switch_atOtherUserTool": false,
