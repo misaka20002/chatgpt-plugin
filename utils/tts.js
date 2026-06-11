@@ -177,19 +177,19 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         return Buffer.from(await response.arrayBuffer());
     }
 
-    // 使用 ai_hobbyist
-    else if (space.includes('ai_hobbyist')) {
-        // 截取1000字
-        text = text.substr(0, 999);
-        logger.info(`[chatgpt-tts]使用ai_hobbyist生成语音，文本：\n${text}`)
-        let audioLink
-        for (let i = 0; i < 2; i++) {
-            try { audioLink = await ai_hobbyist_getVoice(speaker, text) }
-            catch (err) { }
-            if (audioLink) return audioLink
-            await sleep_pai(10000)
-        }
-    }
+    // // 使用 ai_hobbyist
+    // else if (space.includes('ai_hobbyist')) {
+    //     // 截取1000字
+    //     text = text.substr(0, 999);
+    //     logger.info(`[chatgpt-tts]使用ai_hobbyist生成语音，文本：\n${text}`)
+    //     let audioLink
+    //     for (let i = 0; i < 2; i++) {
+    //         try { audioLink = await ai_hobbyist_getVoice(speaker, text) }
+    //         catch (err) { }
+    //         if (audioLink) return audioLink
+    //         await sleep_pai(10000)
+    //     }
+    // }
 
     // 使用 Fish API
     else if (space.includes('api.fish.audio')) {
