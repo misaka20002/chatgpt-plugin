@@ -1,18 +1,15 @@
 import { Configuration, OpenAIApi } from 'openai'
-import { Config, defaultOpenAIAPI, defaultOpenAIReverseProxy } from './config.js'
+import { Config, defaultOpenAIAPI } from './config.js'
 import fs from 'fs'
-import { isCN, mkdirs } from './common.js'
+import { mkdirs } from './common.js'
 import { getProxy } from './proxy.js'
 let proxy = getProxy()
+function getOpenAIBasePath () {
+  return Config.openAiBaseUrl || defaultOpenAIAPI
+}
+
 export async function createImage (prompt, n = 1, size = '512x512') {
-  let basePath = Config.openAiBaseUrl
-  if (Config.openAiBaseUrl && Config.proxy && !Config.openAiForceUseReverse) {
-    // 如果配了proxy，而且有反代，但是没开启强制反代
-    basePath = defaultOpenAIReverseProxy
-  }
-  if (!Config.openAiBaseUrl) {
-    basePath = await isCN() ? defaultOpenAIReverseProxy : defaultOpenAIAPI
-  }
+  const basePath = getOpenAIBasePath()
   const configuration = new Configuration({
     apiKey: Config.apiKey,
     basePath
@@ -34,14 +31,7 @@ export async function createImage (prompt, n = 1, size = '512x512') {
 }
 
 export async function imageVariation (imageUrl, n = 1, size = '512x512') {
-  let basePath = Config.openAiBaseUrl
-  if (Config.openAiBaseUrl && Config.proxy && !Config.openAiForceUseReverse) {
-    // 如果配了proxy，而且有反代，但是没开启强制反代
-    basePath = defaultOpenAIReverseProxy
-  }
-  if (!Config.openAiBaseUrl) {
-    basePath = await isCN() ? defaultOpenAIReverseProxy : defaultOpenAIAPI
-  }
+  const basePath = getOpenAIBasePath()
   const configuration = new Configuration({
     apiKey: Config.apiKey,
     basePath
@@ -111,14 +101,7 @@ export async function resizeAndCropImage(inputFilePath, outputFilePath, size = 5
 }
 
 export async function editImage (originalImage, mask = [], prompt, num = 1, size = '512x512') {
-  let basePath = Config.openAiBaseUrl
-  if (Config.openAiBaseUrl && Config.proxy && !Config.openAiForceUseReverse) {
-    // 如果配了proxy，而且有反代，但是没开启强制反代
-    basePath = defaultOpenAIReverseProxy
-  }
-  if (!Config.openAiBaseUrl) {
-    basePath = await isCN() ? defaultOpenAIReverseProxy : defaultOpenAIAPI
-  }
+  const basePath = getOpenAIBasePath()
   const configuration = new Configuration({
     apiKey: Config.apiKey,
     basePath

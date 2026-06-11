@@ -1,4 +1,7 @@
-import { Config, defaultOpenAIAPI } from '../utils/config.js'
+import {
+  Config,
+  // defaultOpenAIAPI
+} from '../utils/config.js'
 import McpManager from '../utils/mcp.js'
 import {
   extractContentFromFile,
@@ -7,7 +10,7 @@ import {
   getMasterQQ,
   getUin,
   getUserData,
-  isCN
+  // isCN
 } from '../utils/common.js'
 import { KeyvFile } from 'keyv-file'
 import SydneyAIClient from '../utils/SydneyAIClient.js'
@@ -773,13 +776,14 @@ class Core {
         maxResponseTokens: Config.apiMaxToken,
         chatgptBlockCount: Config.chatgptBlockCount,
       }
-      if (!Config.openAiForceUseReverse) {
-        let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
-        if (opts.apiBaseUrl !== defaultOpenAIAPI && openAIAccessible) {
-          // 如果配了proxy(或者不在国内)，而且有反代，但是没开启强制反代,将baseurl删掉
-          delete opts.apiBaseUrl
-        }
-      }
+
+      // if (!Config.openAiForceUseReverse) {
+      //   let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
+      //   if (opts.apiBaseUrl !== defaultOpenAIAPI && openAIAccessible) {
+      //     // 如果配了proxy(或者不在国内)，而且有反代，但是没开启强制反代,将baseurl删掉
+      //     delete opts.apiBaseUrl
+      //   }
+      // }
 
       // const client = new OpenAI({
       //   apiKey: Config.apiKey,

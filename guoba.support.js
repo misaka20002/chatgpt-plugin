@@ -323,14 +323,11 @@ export function supportGuoba() {
         {
           field: 'openAiBaseUrl',
           label: 'OpenAI API/反代地址',
-          bottomHelpMessage: 'OpenAI兼容API服务器地址。插件在执行对话时将拼接 /chat/completions ；默认值为 https://api.openai.com/v1',
-          component: 'Input'
-        },
-        {
-          field: 'openAiForceUseReverse',
-          label: '强制使用API地址',
-          bottomHelpMessage: '强制使用 OpenAI API/反代地址 而不是走OpenAI官网链接；使用第三方API时请开启',
-          component: 'Switch'
+          bottomHelpMessage: 'OpenAI兼容API服务器地址，通常以 /v1 结尾；默认值为 https://api.openai.com/v1',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://api.openai.com/v1'
+          }
         },
         {
           field: 'model',
