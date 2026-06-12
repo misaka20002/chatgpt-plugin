@@ -481,14 +481,23 @@ export class PaimonChuo extends plugin {
 
     /** 随机回复预设派蒙文案 */
     async send_paimon_msg(e) {
-        let text_number = Math.ceil(Math.random() * paimon_word_list['length'])
-        let message0 = paimon_word_list[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
+        const wordList = getPokeTextReplies()
+        let text_number = Math.ceil(Math.random() * wordList['length'])
+        let message0 = wordList[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
         // chuo_text_generateAndSendAudio(message0, e);
         await e.reply(message0)
     }
 
     /** 随机回复文案 */
     async send_randow_text_msg(e) {
+        const customWordList = getCustomPokeTextReplies()
+        if (customWordList.length) {
+            let text_number = Math.ceil(Math.random() * customWordList['length'])
+            let message = customWordList[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
+            await e.reply(message)
+            return
+        }
+
         let mutetype = Math.ceil(Math.random() * 20)
         let message = ''
         switch (mutetype) {
@@ -633,6 +642,18 @@ export class PaimonChuo extends plugin {
         return true;
     }
 
+}
+
+function getPokeTextReplies() {
+    const customList = getCustomPokeTextReplies()
+    return customList.length ? customList : paimon_word_list
+}
+
+function getCustomPokeTextReplies() {
+    const customText = Config.paimon_chou_custom_text
+    if (!customText) return []
+    const customList = Array.isArray(customText) ? customText : customText.toString().split(/\r?\n/)
+    return customList.map(item => item?.toString().trim()).filter(Boolean)
 }
 
 /**

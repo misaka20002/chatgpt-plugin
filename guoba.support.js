@@ -2026,6 +2026,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'paimon_chou_custom_text',
+          label: '戳一戳文本回复自定义',
+          bottomHelpMessage: '自定义戳一戳文本回复，每行一段；为空时使用内置随机文案。文案中的“派蒙”二字会按“AI的第一人称”自动替换',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: '不要戳啦\n再戳要生气了'
+          }
+        },
+        {
           field: 'paimon_chou_IsSendLocalpic',
           label: '戳一戳发送本地图片（重启生效）',
           bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在"云崽根目录/data/autoEmoticons/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦） https://github.com/AIGC-Yunzai/siliconflow-plugin。',

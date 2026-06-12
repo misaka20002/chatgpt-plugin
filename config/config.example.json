@@ -64,6 +64,7 @@
   "paimon_chuoyichuo_ByMsgGroups": [],
   "paimon_chuoyichuo_Probability_ByMsgGroups": 5,
   "paimon_chou_cd": 20,
+  "paimon_chou_custom_text": "",
   "paimon_chou_IsSendLocalpic": true,
   "paimon_chou_IsUseLoliconApi": false,
   "paimon_chou_text_generateAndSendAudio": true,
