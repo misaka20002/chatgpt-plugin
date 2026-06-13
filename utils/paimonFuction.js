@@ -104,7 +104,7 @@ export function convertSentenceToArray(inputArr) {
       for (let i = 0; i < arr.length; i++) {
         tempSentence += arr[i];
         if (i % 2 !== 0 || i === arr.length - 1) {
-          let cleaned = tempSentence.replace(/。|\n$|^{|}$|^(，|,)/gm, "").trim();
+          let cleaned = tempSentence.replace(/\n$|^{|}$|^(，|,)/gm, "").trim();
           if (cleaned) {
             flatList.push(cleaned);
           }
@@ -179,6 +179,12 @@ export function convertSentenceToArray(inputArr) {
       }
     }
     logicalGroups[i] = compactedGroup;
+
+    // 每组最后一个字符串去掉末尾句号（模拟真人，分段末尾不加句号）
+    const lastItem = compactedGroup[compactedGroup.length - 1];
+    if (typeof lastItem === 'string') {
+      compactedGroup[compactedGroup.length - 1] = lastItem.replace(/。+$/g, '');
+    }
   }
 
   return logicalGroups;
