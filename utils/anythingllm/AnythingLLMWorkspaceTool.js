@@ -1,5 +1,5 @@
-import { AbstractTool } from './AbstractTool.js'
-import { getAnythingLLMClient } from '../anythingllm/client.js'
+import { AbstractTool } from '../tools/AbstractTool.js'
+import { getAnythingLLMClient } from './client.js'
 import { Config } from '../config.js'
 
 /**

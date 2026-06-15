@@ -552,21 +552,21 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_mingyanjingju()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`”咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
+                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
                     break
                 }
             case 9:
                 message = await get_msg_gushici()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`”咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
+                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
                     break
                 }
             case 10:
                 message = await get_msg_hefengwenanapi()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`”咳咳~”派蒙开始模仿女仆讲话：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
+                    await e.reply((`“咳咳~”派蒙开始模仿女仆讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
                     break
                 }
             // case 10:
@@ -785,7 +785,6 @@ async function get_msg_hefengwenanapi() {
         return null
     }
 }
-
 
 /**随机疯狂星期四 返回文本/错误则返回null */
 async function get_msg_KFC() {
