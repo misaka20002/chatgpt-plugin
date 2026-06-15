@@ -552,21 +552,28 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_mingyanjingju()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    await e.reply((`”咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
                     break
                 }
             case 9:
                 message = await get_msg_gushici()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+                    await e.reply((`”咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
+                    break
+                }
+            case 10:
+                message = await get_msg_hefengwenanapi()
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e);
+                    await e.reply((`”咳咳~”派蒙开始模仿女仆讲话：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
                     break
                 }
             // case 10:
             //     message = await get_msg_wyyrp() // 句子的效果不好，禁用
             //     if (message) {
             //         chuo_text_generateAndSendAudio(message, e);
-            //         await e.reply((`“咳咳~”派蒙开始网抑云：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
+            //         await e.reply((`”咳咳~”派蒙开始网抑云：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
             //         break
             //     }
             case 11:
@@ -755,6 +762,23 @@ async function get_msg_gushici() {
         }
         res = await res.json()
         return res.data.content
+    }
+    catch (err) {
+        logger.error(err)
+        return null
+    }
+}
+
+/**和风女仆文案 返回文本/错误则返回null */
+async function get_msg_hefengwenanapi() {
+    let url = 'http://113.31.103.19:8848'
+    try {
+        let res = await fetch(url).catch((err) => logger.error(err))
+        if (!res) {
+            throw new Error('[派蒙戳一戳][和风女仆文案] 接口请求失败')
+        }
+        const text = await res.text()
+        return text.trim()
     }
     catch (err) {
         logger.error(err)
