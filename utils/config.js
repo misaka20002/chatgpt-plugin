@@ -374,6 +374,18 @@ const defaultConfig = {
   }
 }`, // 通用 MCP 服务器的配置列表，JSON 格式
 
+  // AnythingLLM 知识库配置
+  anythingllm_enable: false, // 是否启用 AnythingLLM 知识库功能
+  anythingllm_baseUrl: 'http://localhost:3001', // AnythingLLM 服务地址
+  anythingllm_apiKey: '', // AnythingLLM API 密钥（在 AnythingLLM 设置中获取）
+  anythingllm_defaultWorkspace: 'general-knowledge', // 默认工作区 slug
+  anythingllm_timeout: 30000, // 请求超时时间（毫秒）
+  anythingllm_maxRetries: 3, // 最大重试次数
+  anythingllm_mode: 'query', // 查询模式: chat(带上下文对话) 或 query(仅检索)
+  anythingllm_includeSources: true, // 是否在回复中包含引用来源
+  anythingllm_cacheEnable: true, // 是否启用查询结果缓存
+  anythingllm_cacheTTL: 300000, // 缓存有效期（毫秒，默认 5 分钟）
+
 }
 const _path = process.cwd()
 let config = {}

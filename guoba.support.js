@@ -1839,6 +1839,102 @@ export function supportGuoba() {
           }
         },
         {
+          label: 'AnythingLLM 知识库',
+          component: 'Divider'
+        },
+        {
+          field: 'anythingllm_enable',
+          label: '启用 AnythingLLM 知识库',
+          bottomHelpMessage: '启用后可使用 RAG 知识检索功能，AI 将能够从知识库中检索相关信息回答问题；修改后需重启生效',
+          component: 'Switch'
+        },
+        {
+          field: 'anythingllm_baseUrl',
+          label: 'AnythingLLM 服务地址',
+          bottomHelpMessage: 'AnythingLLM 服务的完整地址，例如：http://localhost:3001 或 http://192.168.1.100:3001',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'http://localhost:3001'
+          }
+        },
+        {
+          field: 'anythingllm_apiKey',
+          label: 'API 密钥',
+          bottomHelpMessage: '在 AnythingLLM 管理界面中生成的 API Key。路径：Settings → API Keys → Generate New API Key',
+          component: 'InputPassword',
+          componentProps: {
+            placeholder: '请输入 AnythingLLM API Key'
+          }
+        },
+        {
+          field: 'anythingllm_defaultWorkspace',
+          label: '默认工作区',
+          bottomHelpMessage: '默认使用的工作区 slug（英文标识符），例如：general-knowledge、genshin-impact 等。需要在 AnythingLLM 中先创建工作区',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'general-knowledge'
+          }
+        },
+        {
+          field: 'anythingllm_mode',
+          label: '查询模式',
+          bottomHelpMessage: 'chat 模式：带上下文的完整对话，由 AnythingLLM 生成回答；query 模式：仅返回检索到的相关文档片段，由你的 AI 模型生成回答（推荐）',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: 'query - 仅检索（推荐）', value: 'query' },
+              { label: 'chat - 带上下文对话', value: 'chat' }
+            ]
+          }
+        },
+        {
+          field: 'anythingllm_includeSources',
+          label: '显示引用来源',
+          bottomHelpMessage: '开启后，AI 回复知识库内容时会附带引用来源（文档名称）',
+          component: 'Switch'
+        },
+        {
+          field: 'anythingllm_timeout',
+          label: '请求超时时间',
+          bottomHelpMessage: '单次查询的超时时间，单位：毫秒。默认 30000（30秒）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 5000,
+            max: 120000,
+            step: 1000,
+            addonAfter: '毫秒'
+          }
+        },
+        {
+          field: 'anythingllm_maxRetries',
+          label: '最大重试次数',
+          bottomHelpMessage: '请求失败时的最大重试次数，默认 3 次',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 5,
+            step: 1
+          }
+        },
+        {
+          field: 'anythingllm_cacheEnable',
+          label: '启用查询缓存',
+          bottomHelpMessage: '开启后，相同的查询在缓存有效期内会直接返回缓存结果，减少 API 调用',
+          component: 'Switch'
+        },
+        {
+          field: 'anythingllm_cacheTTL',
+          label: '缓存有效期',
+          bottomHelpMessage: '查询结果缓存的有效时间，单位：毫秒。默认 300000（5分钟）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 60000,
+            max: 3600000,
+            step: 60000,
+            addonAfter: '毫秒'
+          }
+        },
+        {
           label: 'MCP',
           component: 'Divider'
         },

@@ -78,6 +78,8 @@ import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResult
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
+import { AnythingLLMQueryTool } from '../utils/tools/AnythingLLMQueryTool.js'
+import { AnythingLLMWorkspaceTool } from '../utils/tools/AnythingLLMWorkspaceTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
@@ -1184,6 +1186,8 @@ async function collectTools(e) {
     { condition: Config.enableUserProfileTool, ToolClass: UserProfileTool },
     { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },
     { condition: Config.generateGraphCalculator_ToolSwitch, ToolClass: GenerateGraphCalculatorTool },
+    { condition: Config.anythingllm_enable, ToolClass: AnythingLLMQueryTool },
+    { condition: Config.anythingllm_enable, ToolClass: AnythingLLMWorkspaceTool },
   ];
 
   optionalTools.forEach(({ condition, ToolClass }) => {
