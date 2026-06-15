@@ -777,8 +777,8 @@ async function get_msg_hefengwenanapi() {
         if (!res) {
             throw new Error('[派蒙戳一戳][和风女仆文案] 接口请求失败')
         }
-        const text = await res.text()
-        return text.trim()
+        const data = await res.json()
+        return data.text?.trim() || null
     }
     catch (err) {
         logger.error(err)
