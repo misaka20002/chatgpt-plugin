@@ -1,4 +1,4 @@
-import plugin from '../../../lib/plugins/plugin.js';
+﻿import plugin from '../../../lib/plugins/plugin.js';
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
@@ -563,7 +563,9 @@ export class PaimonChuo extends plugin {
                     break
                 }
             case 10:
-                message = await get_msg_hefengwenanapi()
+                const _info = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
+                const _nm = _info?.card || _info?.nickname || 'i'
+                message = await get_msg_hefengwenanapi(_nm)
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
                     await e.reply((`“咳咳~”派蒙开始模仿女仆讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
@@ -770,8 +772,9 @@ async function get_msg_gushici() {
 }
 
 /**和风女仆文案 返回文本/错误则返回null */
-async function get_msg_hefengwenanapi() {
+async function get_msg_hefengwenanapi(name) {
     let url = 'http://113.31.103.19:8848'
+    if (name) url += '?name=' + encodeURIComponent(name)
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
