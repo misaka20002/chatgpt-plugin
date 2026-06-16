@@ -1,4 +1,4 @@
-﻿import plugin from '../../../lib/plugins/plugin.js';
+import plugin from '../../../lib/plugins/plugin.js';
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
@@ -564,7 +564,7 @@ export class PaimonChuo extends plugin {
                 }
             case 10:
                 const _info = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
-                const _nm = _info?.card || _info?.nickname || 'i'
+                const _nm = _info?.title || _info?.card || _info?.nickname || 'i'
                 message = await get_msg_hefengwenanapi(_nm)
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e);
