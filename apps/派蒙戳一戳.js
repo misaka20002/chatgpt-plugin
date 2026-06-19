@@ -18,6 +18,7 @@ import {
 } from '../utils/common.js'
 import fs from 'fs'
 import sharp from 'sharp'
+import { getComplaint } from '../models/fadian.js'
 
 // 如使用非icqq请在此处填写机器人QQ号
 let BotQQ = ''
@@ -39,11 +40,17 @@ export class PaimonChuo extends plugin {
         super({
             name: '派蒙戳一戳',
             dsc: '戳一戳机器人触发效果',
-            event: 'notice.group.poke',
+            event: '*',
             priority: 1000,
             rule: [
                 {
                     fnc: 'chuoyichuo',
+                    event: 'notice.group.poke',
+                    log: false
+                },
+                {
+                    fnc: 'atTrigger',
+                    event: 'message.*',
                     log: false
                 }
             ]
@@ -76,16 +83,17 @@ export class PaimonChuo extends plugin {
             if (cfg.masterQQ.includes(e.operator_id) || cfg.qq == e.operator_id || BotQQ == e.operator_id) {
                 return;
             }
+            let fmts = Config.paimon_chou_formats || {}
             let mutetype = Math.ceil(Math.random() * 3)
             switch (mutetype) {
                 case 1:
-                    await e.reply(`呜呜，有什么开心不开心的都冲${Config.tts_First_person}来吧QAQ`, true)
+                    await e.reply((fmts.mute_fallback1 || "呜呜，有什么开心不开心的都冲{name}来吧QAQ").replace(/\{name\}/g, Config.tts_First_person), true)
                     break;
                 case 2:
-                    await e.reply(`请戳${Config.tts_First_person}吧，${Config.tts_First_person}...${Config.tts_First_person}什么都愿意做QAQ`, true)
+                    await e.reply((fmts.mute_fallback2 || "请戳{name}吧，{name}...{name}什么都愿意做QAQ").replace(/\{name\}/g, Config.tts_First_person), true)
                     break;
                 case 3:
-                    await e.reply(`呜呜呜，${Config.tts_First_person}愿意为你做任何事情`, true)
+                    await e.reply((fmts.mute_fallback3 || "呜呜呜，{name}愿意为你做任何事情").replace(/\{name\}/g, Config.tts_First_person), true)
                     break;
             }
             await common.sleep(1000);
@@ -132,6 +140,7 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机图片生效]')
                 }
+                let fmts = Config.paimon_chou_formats || {}
                 let mutetype
                 if (Config.paimon_chou_IsUseLoliconApi) mutetype = Math.ceil(Math.random() * 5)
                 else mutetype = Math.ceil(Math.random() * 3)
@@ -139,27 +148,27 @@ export class PaimonChuo extends plugin {
                 switch (mutetype) {
                     case 1:
                         url = getRandomUrl("ecywebp");
-                        await e.reply(`喵>_< ${Config.tts_First_person}有点开心，这是${Config.tts_First_person}私藏的画片哦`)
+                        await e.reply((fmts.img_reply1 || "喵>_< {name}有点开心，这是{name}私藏的画片哦").replace(/\{name\}/g, Config.tts_First_person))
                         await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 2:
                         url = getRandomUrl("scy");
-                        await e.reply(`这是${Config.tts_First_person}今天找到的画片哦，主人喜欢吗？`)
+                        await e.reply((fmts.img_reply2 || "这是{name}今天找到的画片哦，主人喜欢吗？").replace(/\{name\}/g, Config.tts_First_person))
                         await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 3:
                         url = getRandomUrl("ecy");
-                        await e.reply(`主人，快看快看${Config.tts_First_person}发现了什么？`)
+                        await e.reply((fmts.img_reply3 || "主人，快看快看{name}发现了什么？").replace(/\{name\}/g, Config.tts_First_person))
                         await e.reply([await segment.image(await convertWebpToJpg(url))]);
                         break;
                     case 4:
                         url = (await get_url_from_api_lolicon('ロリ|loli|萝莉|风景|壁纸', ''))?.[0];
-                        await this.reply(`主人主人，${Config.tts_First_person}今天捡到了一张奇怪的明信片，拿给你看看`, false, { recallMsg: 100 })
+                        await this.reply((fmts.img_reply4 || "主人主人，{name}今天捡到了一张奇怪的明信片，拿给你看看").replace(/\{name\}/g, Config.tts_First_person), false, { recallMsg: 100 })
                         await this.reply([await segment.image(await convertWebpToJpg(url))], false, { recallMsg: 100 });
                         break;
                     case 5:
                         url = (await get_url_from_api_lolicon('ロリ|loli|萝莉', 'vtb|fgo|pcr|AzurLane|Genshin Impact|原神|BlueArchive|ブルーアーカイブ'))?.[0];
-                        await this.reply(`呜呜，${Config.tts_First_person}给你一张涩涩的画片，不要再戳戳人家了`, false, { recallMsg: 100 })
+                        await this.reply((fmts.img_reply5 || "呜呜，{name}给你一张涩涩的画片，不要再戳戳人家了").replace(/\{name\}/g, Config.tts_First_person), false, { recallMsg: 100 })
                         await this.reply([await segment.image(await convertWebpToJpg(url))], false, { recallMsg: 100 });
                         break;
                 }
@@ -255,9 +264,10 @@ export class PaimonChuo extends plugin {
                         // logger.mark('派蒙戳一戳调试：\nusrinfo=',JSON.stringify(usrinfo),'；\nbotinfo=',JSON.stringify(botinfo))
                         /* botinfo = { "group_id": __num__, "user_id": __num__, "nickname": "小派蒙", "card": "", "sex": "female", "age": 9, "join_time": 1698625488, "last_sent_time": 1706151598, "level": 1, "role": "owner", "title": "", "title_expire_time": 0, "shutup_time": 0, "update_time": 0 }
                         usrinfo = { "group_id": __num__, "user_id": __num__, "nickname": "_昵称_", "card": "_群昵称_", "sex": "male", "age": 88, "area": "", "join_time": 1705783666, "last_sent_time": 1706152333, "level": 1, "rank": "潜水", "role": "member", "title": "", "title_expire_time": 4294967295, "shutup_time": 0, "update_time": 1706151633 } ； */
+                        let fmts = Config.paimon_chou_formats || {}
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
-                            await e.reply(`是不是要${Config.tts_First_person}揍揍你才开心呀！`)
+                            await e.reply((fmts.mute_perm1 || "是不是要{name}揍揍你才开心呀！").replace(/\{name\}/g, Config.tts_First_person))
                             await common.sleep(100)
                             await e.group.muteMember(e.operator_id, 60 * jinyan_times);
                             await common.sleep(100)
@@ -276,46 +286,48 @@ export class PaimonChuo extends plugin {
                             await common.sleep(10);
                             await e.group.muteMember(e.operator_id, 120 * jinyan_times);
                             await common.sleep(50)
-                            await e.reply(`让你面壁思过${2 * jinyan_times}分钟，哼😤～`)
+                            await e.reply((fmts.mute_perm2 || "让你面壁思过{minutes}分钟，哼😤～").replace(/\{minutes\}/g, 2 * jinyan_times))
                         }
                         else if (mutetype == 3) {
-                            await e.reply(`要怎么样才能让你不戳${Config.tts_First_person}啊!`)
+                            await e.reply((fmts.mute_perm3 || "要怎么样才能让你不戳{name}啊!").replace(/\{name\}/g, Config.tts_First_person))
                             await common.sleep(100)
                             await e.group.muteMember(e.operator_id, 60 * jinyan_times);
                             await common.sleep(100)
                             await e.reply('大变态！')
                         }
                         else if (mutetype == 4) {
-                            await e.reply(`干嘛戳${Config.tts_First_person}，${Config.tts_First_person}要惩罚你！`)
+                            await e.reply((fmts.mute_perm4 || "干嘛戳{name}，{name}要惩罚你！").replace(/\{name\}/g, Config.tts_First_person))
                             await common.sleep(100)
                             await e.group.muteMember(e.operator_id, 60 * jinyan_times);
 
                         }
                     } else {
+                        let fmts = Config.paimon_chou_formats || {}
                         let mutetype = Math.ceil(Math.random() * 4)
                         if (mutetype == 1) {
-                            e.reply(`呜呜呜你欺负${Config.tts_First_person}QAQ`)
+                            e.reply((fmts.mute_no_perm1 || "呜呜呜你欺负{name}QAQ").replace(/\{name\}/g, Config.tts_First_person))
                         }
                         else if (mutetype == 2) {
-                            e.reply(`主人有坏淫欺负${Config.tts_First_person}QAQ`)
+                            e.reply((fmts.mute_no_perm2 || "主人有坏淫欺负{name}QAQ").replace(/\{name\}/g, Config.tts_First_person))
                         }
                         else if (mutetype == 3) {
-                            e.reply(`气死${Config.tts_First_person}了不要戳了！`)
+                            e.reply((fmts.mute_no_perm3 || "气死{name}了不要戳了！").replace(/\{name\}/g, Config.tts_First_person))
                         }
                         else if (mutetype == 4) {
                             let text_number = Math.ceil(Math.random() * paimon_word_list['length'])
-                            e.reply((paimon_word_list[text_number - 1] + '...呜呜，如果派蒙有管理员权限就禁言你1分钟QAQ').replace(/派蒙/g, Config.tts_First_person))
+                            e.reply((paimon_word_list[text_number - 1] + (fmts.mute_no_perm4 || '...呜呜，如果{name}有管理员权限就禁言你1分钟QAQ')).replace(/派蒙/g, Config.tts_First_person).replace(/\{name\}/g, Config.tts_First_person))
                         }
                     }
                 }
                 // 如果是主人戳
                 else if (cfg.masterQQ.includes(e.operator_id)) {
+                    let fmts = Config.paimon_chou_formats || {}
                     let mutetype = Math.ceil(Math.random() * 2)
                     if (mutetype == 1) {
-                        e.reply(`主人连你也欺负${Config.tts_First_person}，呜呜呜~`)
+                        e.reply((fmts.master_poke1 || "主人连你也欺负{name}，呜呜呜~").replace(/\{name\}/g, Config.tts_First_person))
                     }
                     else if (mutetype == 2) {
-                        e.reply('主人有什么事吗？喵~')
+                        e.reply((fmts.master_poke2 || "主人有什么事吗？喵~").replace(/\{name\}/g, Config.tts_First_person))
                     }
                 } else {
                     logger.mark('[戳一戳禁言]bot无法判断主人是谁')
@@ -457,19 +469,20 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳反击生效]')
                 }
+                let fmts = Config.paimon_chou_formats || {}
                 let mutetype = Math.round(Math.random() * 3)
                 if (mutetype == 1) {
-                    e.reply(`${Config.tts_First_person}也要戳戳你>_<`)
+                    e.reply((fmts.counter_poke1 || "{name}也要戳戳你>_<").replace(/\{name\}/g, Config.tts_First_person))
                     await common.sleep(1000)
                     await e.group.pokeMember(e.operator_id)
                 }
                 else if (mutetype == 2) {
-                    e.reply(`你刚刚是不是戳${Config.tts_First_person}了?${Config.tts_First_person}要戳回去！`)
+                    e.reply((fmts.counter_poke2 || "你刚刚是不是戳{name}了?{name}要戳回去！").replace(/\{name\}/g, Config.tts_First_person))
                     await common.sleep(1000)
                     await e.group.pokeMember(e.operator_id)
                 }
                 else if (mutetype == 3) {
-                    e.reply(`让你戳${Config.tts_First_person}，哼！！！`)
+                    e.reply((fmts.counter_poke3 || "让你戳{name}，哼！！！").replace(/\{name\}/g, Config.tts_First_person))
                     await common.sleep(1000)
                     await e.group.pokeMember(e.operator_id)
                 }
@@ -477,6 +490,26 @@ export class PaimonChuo extends plugin {
 
         }
 
+    }
+
+    async atTrigger(e) {
+        if (!Config.paimon_chuoyichuo_open) return false
+        if (!(e.atBot || e.atme)) return false
+        if (e.isPrivate) return false
+        e.operator_id = e.user_id
+        this.send_randow_text_msg(e)
+        await common.sleep(1000)
+        try {
+            if (e.group?.pokeMember) {
+                await e.group.pokeMember(e.user_id)
+            } else {
+                let member = Bot.pickMember(e.group_id, e.user_id)
+                await member.poke()
+            }
+        } catch (err) {
+            logger.info(logger.magenta(`[派蒙戳一戳]艾特反戳失败，${err.message}`))
+        }
+        return true
     }
 
     /** 随机回复预设派蒙文案 */
@@ -488,7 +521,7 @@ export class PaimonChuo extends plugin {
         await e.reply(message0)
     }
 
-    /** 随机回复文案 */
+    /** 随机回复文案（带权重） */
     async send_randow_text_msg(e) {
         const customWordList = getCustomPokeTextReplies()
         if (customWordList.length) {
@@ -498,114 +531,147 @@ export class PaimonChuo extends plugin {
             return
         }
 
-        let mutetype = Math.ceil(Math.random() * 20)
+        const weights = Config.paimon_chou_text_weights || {}
+        let totalWeight = Object.values(weights).reduce((a, b) => a + b, 0)
+        if (totalWeight <= 0) { this.send_paimon_msg(e); return }
+        let rand = Math.random() * 100
+        let selectedType = 'paimon_msg'
+        if (totalWeight !== 100) {
+            for (const [type, weight] of Object.entries(weights)) {
+                const pct = weight / totalWeight * 100
+                rand -= pct
+                if (rand <= 0) { selectedType = type; break }
+            }
+        } else {
+            for (const [type, weight] of Object.entries(weights)) {
+                rand -= weight
+                if (rand <= 0) { selectedType = type; break }
+            }
+        }
+
+        const fmts = Config.paimon_chou_formats || {}
+        const name = Config.tts_First_person
         let message = ''
-        switch (mutetype) {
-            case 1:
-                // 要今天使用过绘图的人才能激活这个奖励
+
+        switch (selectedType) {
+            case 'reward_nai3': {
                 if (await redis.get(`Yz:PaimongNai:usageLimit_day:${e.operator_id}`)) {
                     let random_nai_time = Math.ceil(Math.random() * 4)
                     if (random_nai_time == 1 || random_nai_time == 4) random_nai_time = Math.ceil(Math.random() * 6)
                     if (random_nai_time == 6) random_nai_time = Math.ceil(Math.random() * 8)
                     if (random_nai_time == 8) random_nai_time = Math.ceil(Math.random() * 10)
-                    this.addNai3UsageLimit_day(e.operator_id, random_nai_time);
-                    e.reply(`喵>_< 谢谢你和${Config.tts_First_person}玩，${Config.tts_First_person}偷偷送给你${random_nai_time}次绘画次数哦~`, false, { recallMsg: 55 })
-                    break;
+                    this.addNai3UsageLimit_day(e.operator_id, random_nai_time)
+                    e.reply((fmts.reward_nai3 || "喵>_< 谢谢你和{name}玩，{name}偷偷送给你{num}次绘画次数哦~").replace(/\{name\}/g, name).replace('{num}', random_nai_time), false, { recallMsg: 55 })
+                    return
                 }
-                this.send_paimon_msg(e);
-                break;
-            case 2:
-                await e.reply(kaomoji_list[(Math.ceil(Math.random() * kaomoji_list['length'])) - 1].replace(/派蒙/g, Config.tts_First_person))
-                break;
-            case 3:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'kaomoji': {
+                await e.reply(kaomoji_list[(Math.ceil(Math.random() * kaomoji_list['length'])) - 1].replace(/派蒙/g, name))
+                return
+            }
+            case 'love_speech': {
                 message = await generate_msg_randomHellow_TuWeiLoveSpeech()
                 await e.reply(message)
-                break;
-            case 4:
-            case 5:
-                let today = new Date();
+                return
+            }
+            case 'kfc': {
+                let today = new Date()
                 if (today.getDay() === 4) {
                     message = await get_msg_KFC()
                     if (message) {
-                        chuo_text_generateAndSendAudio(message, e);
-                        await e.reply((`“咳咳~”派蒙：\n`).replace(/派蒙/g, Config.tts_First_person) + `${message}`)
-                        break
+                        chuo_text_generateAndSendAudio(message, e)
+                        await e.reply((fmts.kfc || "“咳咳~”{name}：\n").replace(/\{name\}/g, name) + `${message}`)
+                        return
                     }
                 }
-                this.send_paimon_msg(e);
-                break;
-            case 6:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'hitokoto': {
                 message = await get_msg_hitokoto(false)
                 if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始了模仿：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.hitokoto || "“咳咳~”{name}开始了模仿：").replace(/\{name\}/g, name) + `“${message}”`)
+                    return
                 }
-            // case 7:
-            //     message = await get_msg_pphua()
-            //     if (message) {
-            //         chuo_text_generateAndSendAudio(message, e);
-            //         await e.reply((`“咳咳~”派蒙开始模仿讲冷笑话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-            //         break
-            //     }
-            case 8:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'mingyanjingju': {
                 message = await get_msg_mingyanjingju()
                 if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿伟人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.mingyanjingju || "“咳咳~”{name}开始模仿伟人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    return
                 }
-            case 9:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'gushici': {
                 message = await get_msg_gushici()
                 if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿古人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.gushici || "“咳咳~”{name}开始模仿古人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    return
                 }
-            case 10:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'hefeng': {
                 const _info = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
                 const _nm = _info?.title || _info?.card || _info?.nickname || 'i'
                 message = await get_msg_hefengwenanapi(_nm)
                 if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿女仆讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.hefeng || "“咳咳~”{name}开始模仿女仆讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    return
                 }
-            // case 10:
-            //     message = await get_msg_wyyrp() // 句子的效果不好，禁用
-            //     if (message) {
-            //         chuo_text_generateAndSendAudio(message, e);
-            //         await e.reply((`”咳咳~”派蒙开始网抑云：`).replace(/派蒙/g, Config.tts_First_person) + `”${message}”`)
-            //         break
-            //     }
-            case 11:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'aword': {
                 message = await get_msg_AWord()
                 if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始模仿别人讲话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.aword || "“咳咳~”{name}开始模仿别人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    return
                 }
-            case 12:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'sick': {
                 message = await get_msg_SickMsg()
                 if (message) {
-                    chuo_text_generateAndSendAudio(message, e);
-                    await e.reply((`“咳咳~”派蒙开始说胡话：`).replace(/派蒙/g, Config.tts_First_person) + `“${message}”`)
-                    break
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.sick || "“咳咳~”{name}开始说胡话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    return
                 }
-
-                // 如果这个第6~12都失效就发送派蒙戳一戳默认一言
-                this.send_paimon_msg(e);
-                break;
-
-            // 新增的本地一言
-            case 15:
+                this.send_paimon_msg(e)
+                return
+            }
+            case 'daiyu': {
                 message = await generate_msg_Daiyu()
-                chuo_text_generateAndSendAudio(message, e);
+                chuo_text_generateAndSendAudio(message, e)
                 await e.reply(message)
-                break;
+                return
+            }
+            case 'fadian': {
+                const _info = await e.bot.getGroupMemberInfo?.(e.group_id, e.operator_id) || await e.bot.pickMember?.(e.group_id, e.operator_id)
+                const _nm = _info?.title || _info?.card || _info?.nickname || 'i'
+                let complaint = await getComplaint()
+                message = complaint.replace(/{target_name}/g, '「 ' + _nm + ' 」')
+                if (message) {
+                    chuo_text_generateAndSendAudio(message, e)
+                    await e.reply((fmts.fadian || "「{name}开始犯病了！」").replace(/\{name\}/g, name) + `\n${message}`)
+                    return
+                }
+                this.send_paimon_msg(e)
+                return
+            }
             default:
-                this.send_paimon_msg(e);
-                break;
+                this.send_paimon_msg(e)
         }
     }
 
@@ -674,7 +740,7 @@ function getCustomPokeTextReplies() {
  * @return {*}
  */
 export async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2 = '', num = 1, r18 = 0) {
-    const url = `https://api.lolicon.app/setu/v2?size=regular&tag=${tag1}&tag=${tag2}&num=${num}${r18 ? `&r18=${r18}` : ""}`;
+    const url = `${Config.paimon_chou_apis?.lolicon || 'https://api.lolicon.app/setu/v2'}?size=regular&tag=${tag1}&tag=${tag2}&num=${num}${r18 ? `&r18=${r18}` : ""}`;
     for (let i = 0; i < 3; i++) {
         try {
             const response = await fetch(url)
@@ -703,7 +769,7 @@ export async function get_url_from_api_lolicon(tag1 = 'ロリ|loli|萝莉', tag2
  * @return {*} 返回文本/错误则返回null
  */
 async function get_msg_hitokoto(is_return_from_who = false) {
-    let url = 'https://v1.hitokoto.cn/'
+    let url = Config.paimon_chou_apis?.hitokoto || 'https://v1.hitokoto.cn/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -722,7 +788,7 @@ async function get_msg_hitokoto(is_return_from_who = false) {
 
 /**网易云热评 返回文本/错误则返回null */
 async function get_msg_wyyrp() {
-    let url = 'https://api.xingzhige.com/API/NetEase_CloudMusic_hotReview/'
+    let url = Config.paimon_chou_apis?.wyyrp || 'https://api.xingzhige.com/API/NetEase_CloudMusic_hotReview/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -739,7 +805,7 @@ async function get_msg_wyyrp() {
 
 /**随机名言警句 返回文本/错误则返回null */
 async function get_msg_mingyanjingju() {
-    let url = 'https://oiapi.net/API/Saying'
+    let url = Config.paimon_chou_apis?.mingyanjingju || 'https://oiapi.net/API/Saying'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -756,7 +822,7 @@ async function get_msg_mingyanjingju() {
 
 /**随机古诗词 返回文本/错误则返回null */
 async function get_msg_gushici() {
-    let url = 'https://oiapi.net/API/Sentences'
+    let url = Config.paimon_chou_apis?.gushici || 'https://oiapi.net/API/Sentences'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -773,7 +839,7 @@ async function get_msg_gushici() {
 
 /**和风女仆文案 返回文本/错误则返回null */
 async function get_msg_hefengwenanapi(name) {
-    let url = 'http://113.31.103.19:8848'
+    let url = Config.paimon_chou_apis?.hefeng || 'http://113.31.103.19:8848'
     if (name) url += '?name=' + encodeURIComponent(name)
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
@@ -791,7 +857,7 @@ async function get_msg_hefengwenanapi(name) {
 
 /**随机疯狂星期四 返回文本/错误则返回null */
 async function get_msg_KFC() {
-    let url = 'https://oiapi.net/API/KFC/'
+    let url = Config.paimon_chou_apis?.kfc || 'https://oiapi.net/API/KFC/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -808,7 +874,7 @@ async function get_msg_KFC() {
 
 /**随机一言 返回文本/错误则返回null */
 async function get_msg_AWord() {
-    let url = 'https://oiapi.net/API/AWord'
+    let url = Config.paimon_chou_apis?.aword || 'https://oiapi.net/API/AWord'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -825,7 +891,7 @@ async function get_msg_AWord() {
 
 /**随机发病语录 返回文本/错误则返回null */
 async function get_msg_SickMsg() {
-    let url = 'https://oiapi.net/API/SickL/'
+    let url = Config.paimon_chou_apis?.sick || 'https://oiapi.net/API/SickL/'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -846,7 +912,7 @@ async function get_msg_SickMsg() {
  * @return {*}
  */
 async function send_msg_DailyEnglish(e) {
-    let url = 'https://oiapi.net/API/Daily'
+    let url = Config.paimon_chou_apis?.dailyEnglish || 'https://oiapi.net/API/Daily'
     try {
         let res = await fetch(url).catch((err) => logger.error(err))
         if (!res) {
@@ -855,7 +921,8 @@ async function send_msg_DailyEnglish(e) {
         res = await res.json()
 
         if (res.data) {
-            e.reply(`来和${Config.tts_First_person}一起学英语吧，老师读一遍，${Config.tts_First_person}读一遍>_<\n${res.data.en}`);
+            let fmt = (Config.paimon_chou_formats?.dailyEnglish || "来和{name}一起学英语吧，老师读一遍，{name}读一遍>_<").replace(/\{name\}/g, Config.tts_First_person)
+            e.reply(`${fmt}\n${res.data.en}`);
             // 图片
             await e.reply(await segment.image(res.data.image))
             await common.sleep(100);
@@ -1811,76 +1878,14 @@ let ciku = [
  * @return {*}
  */
 function getRandomUrl(type) {
-    const urls = {
-        "ecy": [ // 二次元
-            // "https://api.btstu.cn/sjbz/api.php?lx=dongman&format=images",
-            "https://api.fuchenboke.cn/api/dongman.php",
-            // "https://i18.net/api.php?fl=dongman",
-            // "https://i18.net/acg.php",
-            "https://api.boxmoe.com/random.php", // 返回下载图片的
-            // "https://rpic.origz.com/api.php?category=pixiv",
-            "https://api.mtyqx.cn/api/random.php",
-            "https://api.mtyqx.cn/tapi/random.php",
-            "https://api.paugram.com/wallpaper/",
-            "http://www.98qy.com/sjbz/api.php",
-            "https://img.xjh.me/random_img.php",
-            "https://www.dmoe.cc/random.php", // 返回下载图片的
-            "https://moe.jitsu.top/api",
-            "https://api.horosama.com/random.php",
-            // "https://api.likepoems.com/img/pc",
-            // "https://api.likepoems.com/img/pe",
-            // "https://api.likepoems.com/img/pixiv",
-            "https://v2.xxapi.cn/api/randomAcgPic?type=pc&return=302",
-            "https://v2.xxapi.cn/api/randomAcgPic?type=wap&return=302",
-            "https://api.suyanw.cn/api/comic/api.php", // 返回下载图片的
-            // "https://cdn.seovx.com/d/?mom=302",
-            "https://ai.ycxom.top:3002/api/random/picture/二次元",
-            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/acg",
-            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/wallpaper",
-            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/img",
-        ],
-        "scy": [ // 三次元
-            // "https://api.btstu.cn/sjbz/api.php",
-            // "https://i18.net/cos.php",
-            // "https://i18.net/bing.php",
-            "https://t.alcy.cc/fj", // 三次元 webp格式
-            // "https://api.btstu.cn/sjbz/api.php",
-            "https://api.lolimi.cn/API/tup/xjj.php",
-            // "https://api.likepoems.com/img/nature",
-            // "https://api.likepoems.com/img/bing",
-            "https://v2.xxapi.cn/api/meinvpic?return=302",
-            "https://v2.xxapi.cn/api/baisi?return=302",
-            "https://api.suyanw.cn/api/ksxjj",
-            // "https://cdn.seovx.com/?mom=302",
-            "https://ai.ycxom.top:3002/api/random/picture/三次元",
-            "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/girl",
-        ],
-        "ecywebp": [ // 二次元 webp格式
-            "https://t.mwm.moe/mp",
-            "https://t.alcy.cc/ycy",
-            "https://t.alcy.cc/moez",
-            "https://t.alcy.cc/ysz", // 原神
-            "https://t.alcy.cc/mp",
-            "https://t.alcy.cc/moemp",
-            "https://t.alcy.cc/ysmp",
-            "https://www.loliapi.com/acg",
-            // "http://api.mysqil.com/pc.php",
-            // "http://api.mysqil.com/pe.php",
-            // "https://api.rls.ovh/horizontal", // avif格式
-            // "https://api.rls.ovh/vertical",
-        ],
-        "scywebp": [ // 三次元 webp格式
-            "",
-        ],
-        "bq_img": [ // 表情
-            // "https://ai.ycxom.top:3002/api/v1/media/picture/by-dir/Iochi_Mari",
-        ],
-        "bqwebp": [
-            "https://t.alcy.cc/xhl",
-            "https://t.alcy.cc/lai",
-            "https://api.suyanw.cn/api/mao",
-        ],
+    const urls = Config.paimon_chou_image_urls || {
+        ecy: ["https://api.fuchenboke.cn/api/dongman.php"],
+        scy: ["https://t.alcy.cc/fj"],
+        ecywebp: ["https://t.mwm.moe/mp"],
+        bqwebp: ["https://t.alcy.cc/xhl"],
     };
-    const randomIndex = Math.floor(Math.random() * urls[type].length);
-    return urls[type][randomIndex];
+    const list = urls[type]
+    if (!list || !list.length) return ''
+    const randomIndex = Math.floor(Math.random() * list.length);
+    return list[randomIndex];
 }
