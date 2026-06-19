@@ -1928,6 +1928,190 @@ export function supportGuoba() {
           },
         },
         {
+          label: 'Skills 管理',
+          component: 'Divider'
+        },
+        {
+          field: 'enableSkills',
+          label: '启用 AI Skills',
+          bottomHelpMessage: '注册 skill_read_file 工具，LLM 可读取已安装 Skill 的 SKILL.md 指令清单',
+          component: 'Switch'
+        },
+        {
+          field: 'skillsAllowMode',
+          label: '使用权限',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '仅主人可用', value: 'master' },
+              { label: '任何人可用', value: 'all' }
+            ]
+          },
+          bottomHelpMessage: '控制哪些用户能触发 skill_read_file 工具'
+        },
+        {
+          field: 'skillsPromptInjectMode',
+          label: '注入方式',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '全部列出', value: 'all' },
+              { label: '按关键词过滤', value: 'match' }
+            ]
+          },
+          bottomHelpMessage: '全部列出：所有已启用 skill 的 name+description 写进 tool description，约 100 tokens/skill；按关键词过滤：根据用户消息匹配 skill，零匹配时回退全量'
+        },
+        {
+          field: 'skillsManaged',
+          label: '已装 Skills 管理',
+          component: 'GSubForm',
+          bottomHelpMessage: '每行一个 skill。新装：install_name 输入 owner/repo（如 op7418/guizang-ppt-skill）、owner/repo/skill_id（如 anthropics/skills/skill-creator，适用于合集 repo）或纯名字符串（走 skills.sh 模糊匹配，如 guizang-ppt-skill）。状态切换：启用=AI 可见；禁用=目录保留但 AI 不可见；删除=保存后真删目录。保存后异步下载安装，请查看日志确认结果。\n\n本地塞 skill：在 data/skills/installed/ 下手动创建目录并放入 SKILL.md，下次对话即可自动识别，无需在此表中添加记录。此表主要用于管理从 GitHub 安装的 skill。',
+          componentProps: {
+            multiple: true,
+            schemas: [
+              {
+                field: 'install_name',
+                label: 'Skill 标识',
+                component: 'Input',
+                required: true,
+                bottomHelpMessage: '已装的显示实际 install_name；新装可输 owner/repo / owner/repo/skill_id / 纯名字符串（走 skills.sh 模糊匹配）'
+              },
+              {
+                field: 'status',
+                label: '状态',
+                component: 'Select',
+                defaultValue: 'enabled',
+                componentProps: {
+                  options: [
+                    { label: '启用', value: 'enabled' },
+                    { label: '禁用', value: 'disabled' },
+                    { label: '删除', value: 'delete' }
+                  ]
+                },
+                bottomHelpMessage: '启用=AI 可见；禁用=目录保留但 AI 不可见（软卸载）；删除=保存后真删目录'
+              }
+            ]
+          }
+        },
+        {
+          field: 'skillsRepoMonitors',
+          label: '监控仓库',
+          component: 'GSubForm',
+          bottomHelpMessage: '预配置 repo 模式机制：每个仓库会下载到 cache/repo-monitors/ 解压扫描，扫到的候选 skill 填入上面「已装 Skills 管理」下拉 options 供勾选。启动时自动刷新一次，也可用 #skills刷新repo 指令手动触发',
+          componentProps: {
+            multiple: true,
+            schemas: [
+              {
+                field: 'owner',
+                label: 'Owner',
+                component: 'Input',
+                required: true,
+                bottomHelpMessage: 'GitHub 用户名或组织名，如 cexll'
+              },
+              {
+                field: 'repo',
+                label: 'Repo',
+                component: 'Input',
+                required: true,
+                bottomHelpMessage: '仓库名，如 myclaude'
+              },
+              {
+                field: 'branch',
+                label: '分支',
+                component: 'Input',
+                defaultValue: 'main',
+                bottomHelpMessage: '默认 main，可填 master 等其他分支名'
+              },
+              {
+                field: 'enabled',
+                label: '启用',
+                component: 'Switch',
+                defaultValue: true,
+                bottomHelpMessage: '关闭仅跳过该 repo 刷新，不删除 cache 中已有候选'
+              }
+            ]
+          }
+        },
+        {
+          label: 'ShellTool 与命令审核',
+          component: 'Divider'
+        },
+        {
+          field: 'enableShellTool',
+          label: '启用 ShellTool',
+          bottomHelpMessage: '注册 execute_shell 工具（白名单→SubLLM审核→spawn 三层防护），支持 CLI 型 skill 真正执行命令',
+          component: 'Switch'
+        },
+        {
+          field: 'shellToolAllowMode',
+          label: '使用权限',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '仅主人可用', value: 'master' },
+              { label: '任何人可用', value: 'all' }
+            ]
+          },
+          bottomHelpMessage: '控制哪些用户能触发 execute_shell'
+        },
+        {
+          field: 'shellToolAllowedCommands',
+          label: '白名单命令',
+          component: 'Select',
+          bottomHelpMessage: '每个标签为一条命令名，白名单内的命令跳过审核直接执行；非白名单命令走 SubLLM 审核。默认含 smart-search，可自行追加 git 等命令',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [
+              { label: 'smart-search', value: 'smart-search' },
+              { label: 'git', value: 'git' },
+              { label: 'ls', value: 'ls' },
+              { label: 'cat', value: 'cat' },
+              { label: 'echo', value: 'echo' }
+            ]
+          }
+        },
+        {
+          field: 'enableCommandReview',
+          label: 'SubLLM 命令审核',
+          bottomHelpMessage: '非白名单命令提交给 SubLLM（参考 Codex auto_review 框架）做安全评估，审核异常时默认 ask_user',
+          component: 'Switch'
+        },
+        {
+          field: 'commandReviewProvider',
+          label: '审核用 provider',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '复用主对话 provider', value: '' },
+              { label: 'OpenAI', value: 'openai' },
+              { label: 'Gemini', value: 'gemini' },
+              { label: 'Claude', value: 'claude' },
+              { label: 'Qwen', value: 'qwen' }
+            ]
+          },
+          bottomHelpMessage: '复用主对话 provider，也可单独指定'
+        },
+        {
+          field: 'commandReviewModel',
+          label: '审核用模型',
+          component: 'Input',
+          bottomHelpMessage: '留空则使用主对话provider默认模型，否则使用指定模型',
+        },
+        {
+          field: 'shellToolTimeout',
+          label: '执行超时(ms)',
+          bottomHelpMessage: '对应 Config.shellToolTimeout 和 ShellTool 实例的 defaultTimeout。默认 30000，LLM 传参可覆盖此值，上限 120000',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1000,
+            max: 120000,
+            step: 1000,
+            addonAfter: '毫秒'
+          }
+        },
+        {
           label: '小功能',
           component: 'SOFT_GROUP_BEGIN'
         },
@@ -2622,6 +2806,21 @@ export function supportGuoba() {
         })
         configObj.mcpServers = formatMcpServersForGuoba(configObj.mcpServers)
 
+        // 填充 skillsManaged / skillsRepoMonitors GSubForm 数据（不进 Config.getConfig，单独落盘）
+        try {
+          const { scanInstalledSkills, readRepoMonitors } = await import('./utils/skills.js')
+          const installed = scanInstalledSkills()
+          configObj.skillsManaged = installed.map(s => ({
+            install_name: s.install_name,
+            status: s.disabled ? 'disabled' : 'enabled'
+          }))
+          configObj.skillsRepoMonitors = readRepoMonitors()
+        } catch (err) {
+          logger.warn(`[guoba] 填充 skillsManaged 失败: ${err.message}`)
+          configObj.skillsManaged = []
+          configObj.skillsRepoMonitors = []
+        }
+
         // For api_default_USE
         let currentUse = await redis.get('CHATGPT:USE')
         configObj.api_default_USE = currentUse || ''
@@ -2653,6 +2852,75 @@ export function supportGuoba() {
             } catch (err) {
               return Result.error(`MCP 服务器配置保存失败: ${err.message}`)
             }
+          }
+          // 处理 skillsManaged：GSubForm 字段不进 Config.getConfig，单独落盘到 managed.json + 异步触发安装/卸载
+          if (keyPath === 'skillsManaged') {
+            try {
+              const { installSkillFromInput, disableSkill, enableSkill, uninstallSkill, scanInstalledSkills } =
+                await import('./utils/skills.js')
+
+              const before = scanInstalledSkills().reduce((acc, s) => {
+                acc.set(s.install_name, s.disabled ? 'disabled' : 'enabled')
+                return acc
+              }, new Map())
+
+              const newList = Array.isArray(value) ? value : []
+              const after = new Map()
+              for (const item of newList) {
+                if (item && item.install_name) {
+                  after.set(item.install_name, item.status || 'enabled')
+                }
+              }
+
+              for (const [name, status] of after) {
+                if (!before.has(name)) {
+                  // fire-and-forget，不阻塞锅巴保存返回
+                  installSkillFromInput(name).catch(err =>
+                    logger.error(`[skills] 安装 ${name} 失败: ${err.message}`)
+                  )
+                } else {
+                  const oldStatus = before.get(name)
+                  if (status === 'delete' && oldStatus !== 'delete') {
+                    uninstallSkill(name).catch(err =>
+                      logger.error(`[skills] 卸载 ${name} 失败: ${err.message}`)
+                    )
+                  } else if (status === 'disabled' && oldStatus !== 'disabled') {
+                    disableSkill(name).catch(err =>
+                      logger.error(`[skills] 禁用 ${name} 失败: ${err.message}`)
+                    )
+                  } else if (status === 'enabled' && oldStatus !== 'enabled') {
+                    enableSkill(name).catch(err =>
+                      logger.error(`[skills] 启用 ${name} 失败: ${err.message}`)
+                    )
+                  }
+                }
+              }
+
+              // 行从 UI 消失（X 按钮删行）→ 软卸载，保护误操作
+              for (const [name] of before) {
+                if (!after.has(name)) {
+                  disableSkill(name).catch(err =>
+                    logger.error(`[skills] 禁用 ${name} 失败: ${err.message}`)
+                  )
+                }
+              }
+            } catch (err) {
+              return Result.error(`Skills 管理保存失败: ${err.message}`)
+            }
+            continue
+          }
+          // 处理 skillsRepoMonitors：GSubForm 字段落盘到 skill_repos.json + 异步触发刷新
+          if (keyPath === 'skillsRepoMonitors') {
+            try {
+              const { saveRepoMonitors, refreshRepoMonitors } = await import('./utils/skills.js')
+              saveRepoMonitors(value)
+              refreshRepoMonitors().catch(err =>
+                logger.error(`[skills] 监控 repo 刷新失败: ${err.message}`)
+              )
+            } catch (err) {
+              return Result.error(`监控仓库保存失败: ${err.message}`)
+            }
+            continue
           }
           // 处理黑名单
           if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {

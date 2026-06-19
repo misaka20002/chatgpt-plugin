@@ -1197,6 +1197,33 @@ async function collectTools(e) {
     }
   });
 
+  // Skills 管理
+  if (Config.enableSkills) {
+    const canUseSkills = Config.skillsAllowMode === 'master' ? (e?.isMaster === true) : true
+    if (canUseSkills) {
+      const { scanInstalledSkills } = await import('../utils/skills.js')
+      const { SkillReadFileTool } = await import('../utils/tools/SkillReadFileTool.js')
+      // scanInstalledSkills 返回所有已装 skill（含 disabled=true），这里过滤掉 disabled
+      const allSkills = scanInstalledSkills()
+      const enabledSkills = allSkills.filter(s => !s.disabled)
+      const userMessage = e?.msg?.text || ''
+      const skillTool = new SkillReadFileTool(enabledSkills, userMessage)
+      tools.push(skillTool)
+      fullTools.push(skillTool)
+    }
+  }
+
+  // ShellTool 命令执行
+  if (Config.enableShellTool) {
+    const canUseShell = Config.shellToolAllowMode === 'master' ? (e?.isMaster === true) : true
+    if (canUseShell) {
+      const { ShellTool } = await import('../utils/tools/ShellTool.js')
+      const shellTool = new ShellTool()
+      tools.push(shellTool)
+      fullTools.push(shellTool)
+    }
+  }
+
   // 加载已启用的通用 MCP 工具
   if (Config.enableMcp) {
     try {

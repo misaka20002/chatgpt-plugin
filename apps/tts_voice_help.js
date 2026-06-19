@@ -24,6 +24,7 @@ import {
 } from '../utils/paimonFuction.js'
 import sfApi from '../utils/tts/siliconflow.js';
 import { getOnebotFileOrMediaUrl } from '../utils/paimonFuction.js';
+import * as skillsManager from '../utils/skills.js'
 
 const paimonChuoYiChouSavePicDirectory = `${process.cwd()}/data/autoEmoticons/PaimonChuoYiChouPictures/savePics`
 const sleep_pai = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
@@ -1147,6 +1148,68 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         } catch (err) {
             logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
             if (e?.reply) e.reply('[派蒙chatgpt自动任务] 每日获取Gemini模型错误')
+        }
+
+        // 刷新 Skills 候选缓存
+        if (Config.skillsAutoRefresh) {
+            try {
+                const _asArray = (v) => {
+                    if (Array.isArray(v)) return v
+                    if (typeof v === 'string' && v.trim()) {
+                        try { return JSON.parse(v) } catch { return [] }
+                    }
+                    return []
+                }
+                const composioSelected = _asArray(Config.skillsComposioSelected)
+                const shSelected = _asArray(Config.skillsShSelected)
+
+                const [anthropicResult, shResult] = await Promise.allSettled([
+                    skillsManager.refreshAnthropicsSkillsCandidates(),
+                    skillsManager.refreshSkillsShCandidates()
+                ])
+                if (anthropicResult.status === 'fulfilled' && anthropicResult.value) {
+                    logger.info(`[chatgpt-skills自动任务] 成功刷新 anthropics/skills 候选: ${anthropicResult.value.length} 个`)
+                } else if (anthropicResult.status === 'rejected') {
+                    logger.error(`[chatgpt-skills自动任务] anthropics/skills 刷新失败: ${anthropicResult.reason?.message}`)
+                }
+                if (shResult.status === 'fulfilled' && shResult.value) {
+                    logger.info(`[chatgpt-skills自动任务] 成功刷新 skills.sh 候选: ${shResult.value.length} 个`)
+                } else if (shResult.status === 'rejected') {
+                    logger.error(`[chatgpt-skills自动任务] skills.sh 刷新失败: ${shResult.reason?.message}`)
+                }
+
+                // 同步锅巴勾选
+                const installed = skillsManager.scanInstalledSkills()
+                const enabledManaged = installed.filter(s => s.managed && !s.disabled)
+                const enabledManagedNames = new Set(enabledManaged.map(s => s.dirName))
+                const wantAnthropics = new Set(composioSelected)
+                const wantSkillsSh = new Set(shSelected)
+                const wantAll = new Set([...wantAnthropics, ...wantSkillsSh])
+
+                for (const name of wantAnthropics) {
+                    if (!enabledManagedNames.has(name)) {
+                        try { await skillsManager.installManagedSkill(name, 'anthropics') }
+                        catch (err) { logger.warn(`[chatgpt-skills自动任务] 安装 ${name} (anthropics) 失败: ${err.message}`) }
+                    }
+                }
+                for (const name of wantSkillsSh) {
+                    if (!enabledManagedNames.has(name)) {
+                        try { await skillsManager.installManagedSkill(name, 'skills.sh') }
+                        catch (err) { logger.warn(`[chatgpt-skills自动任务] 安装 ${name} (skills.sh) 失败: ${err.message}`) }
+                    }
+                }
+
+                for (const s of enabledManaged) {
+                    if (!wantAll.has(s.dirName)) {
+                        try { skillsManager.disableManagedSkill(s.dirName) }
+                        catch (err) { logger.warn(`[chatgpt-skills自动任务] 禁用 ${s.dirName} 失败: ${err.message}`) }
+                    }
+                }
+                const enabledCount = skillsManager.scanInstalledSkills().filter(s => !s.disabled).length
+                logger.mark(`[chatgpt-skills自动任务] 同步托管完成，当前 ${enabledCount} 个 enabled skill`)
+            } catch (err) {
+                logger.error(`[chatgpt-skills自动任务] 刷新异常：${err.message}，保留旧缓存`)
+            }
         }
 
         return true

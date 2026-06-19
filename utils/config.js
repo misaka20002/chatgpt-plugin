@@ -386,6 +386,21 @@ const defaultConfig = {
   anythingllm_cacheEnable: true, // 是否启用查询结果缓存
   anythingllm_cacheTTL: 300000, // 缓存有效期（毫秒，默认 5 分钟）
 
+  // Skills 管理（Agent Skills 标准）
+  enableSkills: false, // 总开关
+  skillsAllowMode: 'master', // 'master' 仅主人 / 'all' 任何人
+  skillsPromptInjectMode: 'all', // 'all' 全部注入 / 'match' 按关键词过滤
+  // skillsManaged / skillsRepoMonitors 是 GSubForm 字段，锅巴 setConfigData 接收数组
+  // defaultConfig 不需要给默认值——锅巴没填时 readManaged / readRepoMonitors 返回空数组
+
+  // ShellTool 命令执行 + 审核
+  enableShellTool: false, // ShellTool 总开关
+  shellToolAllowMode: 'master', // 'master' / 'all'
+  shellToolAllowedCommands: ['smart-search'], // 白名单
+  enableCommandReview: true, // 非白名单命令是否走 SubLLM 审核
+  commandReviewProvider: '', // 审核用哪个 provider，留空复用主对话 provider
+  commandReviewModel: '', // 留空用 provider 默认便宜模型
+  shellToolTimeout: 30000, // 默认执行超时
 }
 const _path = process.cwd()
 let config = {}

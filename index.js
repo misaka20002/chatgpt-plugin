@@ -52,6 +52,17 @@ if (Config.enableMcp) {
   }
 }
 
+// Skills 缓存预热：启动时异步刷新监控 repo 候选（不阻塞插件加载）
+;(async () => {
+  try {
+    const { refreshRepoMonitors } = await import('./utils/skills.js')
+    await refreshRepoMonitors()
+    logger.mark('[skills] 启动时监控 repo 候选刷新完成')
+  } catch (err) {
+    logger.warn(`[skills] 启动时监控 repo 刷新失败（不影响插件运行）: ${err.message}`)
+  }
+})()
+
 // 启动服务器
 if (Config.enableToolbox) {
   logger.info('开启工具箱配置项，工具箱启动中')
