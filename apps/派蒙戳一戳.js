@@ -532,7 +532,8 @@ export class PaimonChuo extends plugin {
         if (!e.isGroup || !e.group?.makeForwardMsg) {
             return e.reply(text)
         }
-        let name = e.sender?.title || e.sender?.card || e.sender?.nickname || `用户${e.user_id}`
+        let info = e.member || await e.bot.getGroupMemberInfo?.(e.group_id, e.user_id) || await e.bot.pickMember?.(e.group_id, e.user_id)
+        let name = info?.title || info?.card || info?.nickname || e.sender?.title || e.sender?.card || e.sender?.nickname || `用户${e.user_id}`
         let replyView = text.substring(0, 15)
         let nodes = [{ message: [text], nickname: `「${name}」,我喜欢你很久了`, user_id: Bot.uin }]
         let forwardMsg = await e.group.makeForwardMsg(nodes)
