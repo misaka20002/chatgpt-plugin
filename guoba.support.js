@@ -2134,6 +2134,138 @@ export function supportGuoba() {
           }
         },
         {
+          label: '以下为戳一戳文字回复权重配置',
+          component: 'Divider'
+        },
+        {
+          field: 'paimon_chou_text_weights',
+          label: '文字回复子类型权重（修改重启生效）',
+          bottomHelpMessage: '按百分比随机选择文字子类型。各值总和自动归一化为100%；修改后需重启生效',
+          component: 'GSubForm',
+          componentProps: {
+            multiple: false,
+            schemas: [
+              {
+                field: 'paimon_msg',
+                label: '默认卖萌文案',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'kaomoji',
+                label: '颜文字',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'love_speech',
+                label: '土味情话',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'kfc',
+                label: '疯狂星期四',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'hitokoto',
+                label: '一言',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'mingyanjingju',
+                label: '名言警句',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'gushici',
+                label: '古诗词',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'hefeng',
+                label: '和风女仆文案',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'aword',
+                label: '随机一言',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'sick',
+                label: '发病语录',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'fadian',
+                label: '发癫文案',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'daiyu',
+                label: '本地一言',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+              {
+                field: 'reward_nai3',
+                label: '绘画次数奖励',
+                component: 'InputNumber',
+                componentProps: { min: 0, max: 999, step: 1 }
+              },
+            ]
+          }
+        },
+        {
+          label: '以下为戳一戳API地址配置（修改重启生效）',
+          component: 'Divider'
+        },
+        {
+          field: 'paimon_chou_apis',
+          label: 'API地址',
+          bottomHelpMessage: 'JSON格式，修改后需重启生效。各API地址可单独替换',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: '{\n  "lolicon": "https://api.lolicon.app/setu/v2",\n  "hitokoto": "https://v1.hitokoto.cn/",\n  "dailyEnglish": "https://oiapi.net/API/Daily"\n}'
+          }
+        },
+        {
+          label: '以下为戳一戳图片地址配置（修改重启生效）',
+          component: 'Divider'
+        },
+        {
+          field: 'paimon_chou_image_urls',
+          label: '图片URL列表',
+          bottomHelpMessage: 'JSON格式，每类图片可增删URL源；修改后需重启生效',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: '{\n  "ecy": ["https://...", "https://..."],\n  "scy": ["https://..."],\n  "ecywebp": ["https://..."],\n  "bqwebp": ["https://..."]\n}'
+          }
+        },
+        {
+          label: '以下为戳一戳回复格式模板配置（修改重启生效）',
+          component: 'Divider'
+        },
+        {
+          field: 'paimon_chou_formats',
+          label: '回复格式模板',
+          bottomHelpMessage: 'JSON格式，{name}会被替换为AI第一人称，{num}/{minutes}/{text}等会被替换为对应数值；修改后需重启生效',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: '{\n  "hitokoto": "“咳咳~”{name}开始了模仿：",\n  "kfc": "“咳咳~”{name}：\\n",\n  "counter_poke1": "{name}也要戳戳你>_<"\n}'
+          }
+        },
+        {
           label: '以下为meme表情生成',
           component: 'Divider'
         },
