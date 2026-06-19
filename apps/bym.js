@@ -5,9 +5,6 @@ import { customSplitRegex, filterResponseChunk } from '../utils/text.js'
 import core, { roleMap } from '../model/core.js'
 import { formatDate } from '../utils/common.js'
 
-/** 使机器人可以对其第一人称回应 */
-const reg_chatgpt_for_firstperson_call = Config.enableBYM ? Config.assistantLabel : `Chatgpt-plugin-bot-name-${Math.floor(10000 + Math.random() * 90000)}`;
-
 export class bym extends plugin {
   constructor() {
     super({
@@ -18,7 +15,6 @@ export class bym extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: reg_chatgpt_for_firstperson_call,
           fnc: 'bym',
           priority: '-1000000',
           log: false
