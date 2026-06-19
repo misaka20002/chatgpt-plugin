@@ -15,6 +15,7 @@ import {
     generateAudio,
     getUin,
     getUserReplySetting,
+    makeForwardMsg
 } from '../utils/common.js'
 import fs from 'fs'
 import sharp from 'sharp'
@@ -132,7 +133,7 @@ export class PaimonChuo extends plugin {
                 if (Config.debug) {
                     logger.mark('[戳一戳回复随机文字生效]')
                 }
-                this.send_randow_text_msg(e)
+                await this.send_randow_text_msg(e)
             }
 
             /**回复随机图片 */
@@ -232,7 +233,7 @@ export class PaimonChuo extends plugin {
                                 break;
                             // 缺省时将返回随机音频替换为返回随机文本
                             default:
-                                this.send_randow_text_msg(e);
+                                await this.send_randow_text_msg(e);
                                 return
                         }
                         let voice_number = Math.ceil(Math.random() * voice_lists['length'])
@@ -447,11 +448,11 @@ export class PaimonChuo extends plugin {
                     if (await autoEmoticons_1.sendimg_Active(e)) {
                         return true;
                     } else {
-                        this.send_randow_text_msg(e)
+                        await this.send_randow_text_msg(e)
                         return
                     }
                 } catch (err) {
-                    this.send_randow_text_msg(e)
+                    await this.send_randow_text_msg(e)
                     return
                 }
             }
@@ -496,8 +497,10 @@ export class PaimonChuo extends plugin {
         if (!Config.paimon_chuoyichuo_open) return false
         if (!(e.atBot || e.atme)) return false
         if (e.isPrivate) return false
+        if (e.source) return false
+        if (e.msg || e.original_msg) return false
         e.operator_id = e.user_id
-        this.send_randow_text_msg(e)
+        await this.send_randow_text_msg(e)
         await common.sleep(1000)
         try {
             if (e.group?.pokeMember) {
@@ -521,13 +524,34 @@ export class PaimonChuo extends plugin {
         await e.reply(message0)
     }
 
+    /** 发送文案，长文本自动转为匿名转发 */
+    async sendReply(e, text) {
+        if (text.length <= 55) {
+            return e.reply(text)
+        }
+        if (!e.isGroup || !e.group?.makeForwardMsg) {
+            return e.reply(text)
+        }
+        let name = e.sender?.title || e.sender?.card || e.sender?.nickname || `用户${e.user_id}`
+        let replyView = text.substring(0, 15)
+        let nodes = [{ message: [text], nickname: `「${name}」,我喜欢你很久了`, user_id: Bot.uin }]
+        let forwardMsg = await e.group.makeForwardMsg(nodes)
+        try {
+            forwardMsg.data = forwardMsg.data
+                .replace(/\n/g, '')
+                .replace(/<title color="#777777" size="26">(.+?)<\/title>/g, '___')
+                .replace(/___+/, `<title color="#777777" size="26">「${name}」你知道吗，${replyView}</title>`)
+        } catch (err) {}
+        return e.reply(forwardMsg)
+    }
+
     /** 随机回复文案（带权重） */
     async send_randow_text_msg(e) {
         const customWordList = getCustomPokeTextReplies()
         if (customWordList.length) {
             let text_number = Math.ceil(Math.random() * customWordList['length'])
             let message = customWordList[text_number - 1].replace(/派蒙/g, Config.tts_First_person)
-            await e.reply(message)
+            await this.sendReply(e, message)
             return
         }
 
@@ -573,7 +597,7 @@ export class PaimonChuo extends plugin {
             }
             case 'love_speech': {
                 message = await generate_msg_randomHellow_TuWeiLoveSpeech()
-                await e.reply(message)
+                await this.sendReply(e, message)
                 return
             }
             case 'kfc': {
@@ -582,7 +606,7 @@ export class PaimonChuo extends plugin {
                     message = await get_msg_KFC()
                     if (message) {
                         chuo_text_generateAndSendAudio(message, e)
-                        await e.reply((fmts.kfc || "“咳咳~”{name}：\n").replace(/\{name\}/g, name) + `${message}`)
+                        await this.sendReply(e, (fmts.kfc || "“咳咳~”{name}：\n").replace(/\{name\}/g, name) + `${message}`)
                         return
                     }
                 }
@@ -593,7 +617,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_hitokoto(false)
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.hitokoto || "“咳咳~”{name}开始了模仿：").replace(/\{name\}/g, name) + `“${message}”`)
+                    await this.sendReply(e, (fmts.hitokoto || "“咳咳~”{name}开始了模仿：").replace(/\{name\}/g, name) + `“${message}”`)
                     return
                 }
                 this.send_paimon_msg(e)
@@ -603,7 +627,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_mingyanjingju()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.mingyanjingju || "“咳咳~”{name}开始模仿伟人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    await this.sendReply(e, (fmts.mingyanjingju || "“咳咳~”{name}开始模仿伟人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
                     return
                 }
                 this.send_paimon_msg(e)
@@ -613,7 +637,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_gushici()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.gushici || "“咳咳~”{name}开始模仿古人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    await this.sendReply(e, (fmts.gushici || "“咳咳~”{name}开始模仿古人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
                     return
                 }
                 this.send_paimon_msg(e)
@@ -625,7 +649,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_hefengwenanapi(_nm)
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.hefeng || "“咳咳~”{name}开始模仿女仆讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    await this.sendReply(e, (fmts.hefeng || "“咳咳~”{name}开始模仿女仆讲话：").replace(/\{name\}/g, name) + `“${message}”`)
                     return
                 }
                 this.send_paimon_msg(e)
@@ -635,7 +659,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_AWord()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.aword || "“咳咳~”{name}开始模仿别人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    await this.sendReply(e, (fmts.aword || "“咳咳~”{name}开始模仿别人讲话：").replace(/\{name\}/g, name) + `“${message}”`)
                     return
                 }
                 this.send_paimon_msg(e)
@@ -645,7 +669,7 @@ export class PaimonChuo extends plugin {
                 message = await get_msg_SickMsg()
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.sick || "“咳咳~”{name}开始说胡话：").replace(/\{name\}/g, name) + `“${message}”`)
+                    await this.sendReply(e, (fmts.sick || "“咳咳~”{name}开始说胡话：").replace(/\{name\}/g, name) + `“${message}”`)
                     return
                 }
                 this.send_paimon_msg(e)
@@ -654,7 +678,7 @@ export class PaimonChuo extends plugin {
             case 'daiyu': {
                 message = await generate_msg_Daiyu()
                 chuo_text_generateAndSendAudio(message, e)
-                await e.reply(message)
+                await this.sendReply(e, message)
                 return
             }
             case 'fadian': {
@@ -664,7 +688,7 @@ export class PaimonChuo extends plugin {
                 message = complaint.replace(/{target_name}/g, '「 ' + _nm + ' 」')
                 if (message) {
                     chuo_text_generateAndSendAudio(message, e)
-                    await e.reply((fmts.fadian || "「{name}开始犯病了！」").replace(/\{name\}/g, name) + `\n${message}`)
+                    await this.sendReply(e, message)
                     return
                 }
                 this.send_paimon_msg(e)
