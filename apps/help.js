@@ -310,6 +310,16 @@ let helpData = [
         icon: 'help',
         title: '#chatgpt帮助',
         desc: '获取本帮助'
+      },
+      {
+        icon: 'list',
+        title: '#(原神|星铁|崩三|绝区零|...)前瞻信息/速报/预估/盘点',
+        desc: '米家四游资源预估。支持指定游戏名或直接 #预估 默认原神'
+      },
+      {
+        icon: 'list',
+        title: '#预估js更新',
+        desc: '更新预估插件脚本（主人专用）'
       }
     ]
   }
