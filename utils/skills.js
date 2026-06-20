@@ -185,11 +185,11 @@ function resolveSkillSourceDir(extractRoot, skillId) {
     if (fs.existsSync(path.join(exact, 'SKILL.md'))) return exact
     const found = findSkillDirByName(extractRoot, skillId)
     if (found && fs.existsSync(path.join(found, 'SKILL.md'))) return found
-  } else {
-    if (fs.existsSync(path.join(extractRoot, 'SKILL.md'))) return extractRoot
-    const found = findFirstSkillDir(extractRoot)
-    if (found) return found
+    // skill_id 找不到对应子目录时 fallback 到全局搜索，避免合集 repo 内容直接在根目录的场景被误判
   }
+  if (fs.existsSync(path.join(extractRoot, 'SKILL.md'))) return extractRoot
+  const found = findFirstSkillDir(extractRoot)
+  if (found) return found
   return null
 }
 
@@ -204,7 +204,7 @@ async function tryDownloadAndExtract(owner, repo, branch, destDir) {
     const token = getGithubToken()
     if (token) headers.Authorization = `Bearer ${token}`
     try {
-      await fetchAndExtractZip(url, destDir, { headers, timeoutMs: 60000 })
+      await fetchAndExtractZip(url, destDir, { headers, timeoutMs: 180000 })
       return b
     } catch (e) {
       lastErr = e
