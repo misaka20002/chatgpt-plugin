@@ -20,7 +20,7 @@ export class Update extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: '^#(chatgpt|柴特寄批踢|GPT|ChatGPT|柴特鸡批踢|Chat|CHAT|CHATGPT|柴特|ChatGPT-Plugin|ChatGPT-plugin|chatgpt-plugin)((插件)?(强制)?更新| update)(\s*(v2|dev|DEV|main|MAIN))?$',
+          reg: '^#(chatgpt|柴特寄批踢|GPT|ChatGPT|柴特鸡批踢|Chat|CHAT|CHATGPT|柴特|ChatGPT-Plugin|ChatGPT-plugin|chatgpt-plugin)((插件)?(强制)?更新| update)(\\s*(v2|dev|DEV|main|MAIN))?$',
           fnc: 'update'
         }
       ]
