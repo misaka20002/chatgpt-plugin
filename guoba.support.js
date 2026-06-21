@@ -1928,13 +1928,17 @@ export function supportGuoba() {
           },
         },
         {
+          label: 'Coding Agent',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
           label: 'Skills 管理',
           component: 'Divider'
         },
         {
           field: 'enableSkills',
           label: '启用 AI Skills',
-          bottomHelpMessage: '注册 skill_read_file 工具，LLM 可读取已安装 Skill 的 SKILL.md 指令清单',
+          bottomHelpMessage: '注册 skill_read_file 工具，LLM 可读取已安装 Skill 的 SKILL.md 指令清单；需要先开启 智能模式',
           component: 'Switch'
         },
         {
@@ -1974,7 +1978,7 @@ export function supportGuoba() {
                 label: 'Skill 标识',
                 component: 'Input',
                 required: true,
-                bottomHelpMessage: '已装的显示实际 install_name；新装可输 owner/repo / owner/repo/skill_id / 纯名字符串（走 skills.sh 模糊匹配）'
+                bottomHelpMessage: '已装/需要自动安装 的显示实际 install_name；需要自动安装可输 owner/repo / owner/repo/skill_id / 纯名字符串（从 https://www.skills.sh/ 模糊匹配并安装，输入名称后保存配置将自动开始安装，安装详情请看控制台info）'
               },
               {
                 field: 'status',
