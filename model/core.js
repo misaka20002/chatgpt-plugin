@@ -732,7 +732,9 @@ class Core {
           await e.reply(msg, true)
         }
       })
-      option.toolMode = (opt.settings.forceTool || Config.geminiForceToolKeywords?.find(k => prompt?.includes(k))) ? 'ANY' : 'AUTO'
+      const forceToolByKeyword = Config.enableForceToolKeywords !== false &&
+        Config.geminiForceToolKeywords?.find(k => prompt?.includes(k))
+      option.toolMode = (opt.settings.forceTool || forceToolByKeyword) ? 'ANY' : 'AUTO'
 
       // 导入更多 gemini config
       option.temperature = Config.gemini_temperature
@@ -891,7 +893,7 @@ class Core {
         let msg
         try {
           // 强制调用工具 // 可能有用吧
-          if (Config.geminiForceToolKeywords && Array.isArray(Config.geminiForceToolKeywords)) {
+          if (Config.enableForceToolKeywords !== false && Config.geminiForceToolKeywords && Array.isArray(Config.geminiForceToolKeywords)) {
             let inputText = prompt || e.msg || "";
             if (Config.geminiForceToolKeywords.some(keyword => inputText.includes(keyword))) {
               // "required" 是 OpenAI 官方参数，意为强制模型必须调用 tools 里的至少一个工具

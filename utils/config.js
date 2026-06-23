@@ -302,6 +302,7 @@ const defaultConfig = {
   apiMaxToken: 4096,
   maxModelTokens: 32000,
   enableToolPrivateSend: false, // 是否允许智能模式下私聊骚扰其他群友。主人不受影响。
+  enableForceToolKeywords: true,
   geminiForceToolKeywords: [],
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',

@@ -1420,9 +1420,15 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'enableForceToolKeywords',
+          label: '启用关键词强制工具',
+          bottomHelpMessage: '命中下方关键词时强制调用工具；目前支持 API、Gemini 接口。已知 DeepSeek 模型不支持。',
+          component: 'Switch'
+        },
+        {
           field: 'geminiForceToolKeywords',
           label: '强制工具关键词',
-          bottomHelpMessage: '强制工具/Agent关键词；包含这里关键词的问题一定会调用工具；目前支持 API、Gemini 接口',
+          bottomHelpMessage: '包含这些关键词的问题会强制调用工具；目前支持 API、Gemini 接口。',
           component: 'GTags',
           componentProps: {
             placeholder: '请输入强制工具关键词',

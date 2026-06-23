@@ -158,6 +158,7 @@
   "extraUrl": "",
   "smartMode": false,
   "forwardToolCallResult": false,
+  "enableForceToolKeywords": true,
   "is_recallMsg": true,
   "removeCQCodeFocus": true,
   "switch_atOtherUserTool": false,
