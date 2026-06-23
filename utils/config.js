@@ -271,6 +271,7 @@ const defaultConfig = {
   claudeApiModel: '', // claude-3-opus-20240229 claude-3-sonnet-20240229
   claudeSystemPrompt: '', // claude api 设定
   translateSource: 'openai',
+  baiduTranslateKey: '',
   enableMd: false, // 第三方md，非QQBot。需要适配器实现segment.markdown和segment.button方可使用，否则不建议开启，会造成各种错误
   enableToolbox: false, // 默认关闭工具箱节省占用和加速启动
   enableBYM: false,

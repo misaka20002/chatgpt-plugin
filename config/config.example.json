@@ -163,5 +163,6 @@
   "removeCQCodeFocus": true,
   "switch_atOtherUserTool": false,
   "isProcessCQAtCode": true,
-  "poke_userIDs": true
+  "poke_userIDs": true,
+  "baiduTranslateKey": ""
 }
