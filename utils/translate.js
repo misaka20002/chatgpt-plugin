@@ -1,5 +1,4 @@
 import md5 from 'md5'
-import _ from 'lodash'
 import { Config } from './config.js'
 import { ChatGPTAPI } from './openai/chatgpt-api.js'
 import { newFetch } from './proxy.js'
@@ -25,80 +24,95 @@ export const translateLangSupports = [
   { code: 'id', label: '印度尼西亚语', abbr: '印', alphabet: 'Y' },
   { code: 'zh-CHS', label: '中文', abbr: '中', alphabet: 'Z' }
 ]
-const API_ERROR = '出了点小问题，待会再试试吧'
-export async function translateOld (msg, to = 'auto') {
-  let from = 'auto'
-  if (to !== 'auto') to = translateLangSupports.find(item => item.abbr == to)?.code
-  if (!to) return `未找到翻译的语种，支持的语言为：\n${translateLangSupports.map(item => item.abbr).join('，')}\n`
-  // 翻译结果为空的提示
-  const RESULT_ERROR = '找不到翻译结果'
-  // API 请求错误提示
-  const API_ERROR = '翻译服务暂不可用，请稍后再试'
-  const qs = (obj) => {
-    let res = ''
-    for (const [k, v] of Object.entries(obj)) { res += `${k}=${encodeURIComponent(v)}&` }
-    return res.slice(0, res.length - 1)
+const BAIDU_LANG_MAP = {
+  ar: 'ara',
+  de: 'de',
+  ru: 'ru',
+  fr: 'fra',
+  ko: 'kor',
+  nl: 'nl',
+  pt: 'pt',
+  ja: 'jp',
+  th: 'th',
+  es: 'spa',
+  en: 'en',
+  it: 'it',
+  vi: 'vie',
+  id: 'id',
+  'zh-CHS': 'zh'
+}
+
+function getBaiduTranslateAuth () {
+  const rawKey = Config.baiduTranslateKey?.trim()
+  if (!rawKey) return null
+
+  const [, appid, key] = rawKey.match(/^([^:：,，\s]+)[:：,，\s]+(.+)$/) || []
+  if (!appid || !key?.trim()) return null
+
+  return {
+    appid: appid.trim(),
+    key: key.trim()
   }
-  const appVersion = '5.0 (Windows NT 10.0; Win64; x64) Chrome/98.0.4750.0'
-  const payload = {
-    from,
+}
+
+async function translateByBaidu (text, to) {
+  const auth = getBaiduTranslateAuth()
+  if (!auth) return '请先在锅巴配置百度翻译Key，格式为：APPID:密钥'
+
+  const q = String(text ?? '')
+  if (!q) return '找不到翻译结果'
+
+  const salt = Date.now().toString()
+  const body = new URLSearchParams({
+    q,
+    from: 'auto',
     to,
-    bv: md5(appVersion),
-    client: 'fanyideskweb',
-    doctype: 'json',
-    version: '2.1',
-    keyfrom: 'fanyi.web',
-    action: 'FY_BY_DEFAULT',
-    smartresult: 'dict'
+    appid: auth.appid,
+    salt,
+    sign: md5(auth.appid + q + salt + auth.key)
+  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000)
+
+  try {
+    const response = await newFetch('https://fanyi-api.baidu.com/api/trans/vip/translate', {
+      method: 'POST',
+      body,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      signal: controller.signal
+    })
+    const data = await response.json()
+    if (!response.ok || data.error_code) {
+      globalThis.logger?.warn?.(`[chatgpt][translateOld] 百度翻译失败：${data.error_code || response.status} ${data.error_msg || response.statusText || ''}`)
+      return '翻译服务暂不可用，请稍后再试'
+    }
+
+    const result = data.trans_result?.map(item => item.dst).filter(Boolean).join('\n')
+    return result || '找不到翻译结果'
+  } finally {
+    clearTimeout(timer)
   }
-  const headers = {
-    Host: 'fanyi.youdao.com',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/98.0.4758.102',
-    Referer: 'https://fanyi.youdao.com/',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    Cookie: 'OUTFOX_SEARCH_USER_ID_NCOO=133190305.98519628; OUTFOX_SEARCH_USER_ID="2081065877@10.169.0.102";'
-  }
-  const api = 'https://fanyi.youdao.com/translate_o?smartresult=dict&smartresult=rule'
-  const key = 'Ygy_4c=r#e#4EX^NUGUc5'
+}
+
+export async function translateOld (msg, to = 'auto') {
+  const langCode = to === 'auto' ? 'zh-CHS' : translateLangSupports.find(item => item.abbr == to)?.code
+  const baiduTo = BAIDU_LANG_MAP[langCode]
+  if (!baiduTo) return `未找到翻译的语种，支持的语言为：\n${translateLangSupports.map(item => item.abbr).join('，')}\n`
 
   try {
     if (Array.isArray(msg)) {
       const results = []
       for (let i = 0; i < msg.length; i++) {
-        const item = msg[i]
-        const lts = '' + new Date().getTime()
-        const salt = lts + parseInt(String(10 * Math.random()), 10)
-        const sign = md5(payload.client + item + salt + key)
-        const postData = qs(Object.assign({ i: item, lts, sign, salt }, payload))
-        let { errorCode, translateResult } = await fetch(api, {
-          method: 'POST',
-          body: postData,
-          headers
-        }).then(res => res.json()).catch(err => console.error(err))
-        if (errorCode !== 0) return API_ERROR
-        translateResult = _.flattenDeep(translateResult)?.map(item => item.tgt).join('\n')
-        if (!translateResult) results.push(RESULT_ERROR)
-        else results.push(translateResult)
+        results.push(await translateByBaidu(msg[i], baiduTo))
       }
       return results
-    } else {
-      const i = msg // 翻译的内容
-      const lts = '' + new Date().getTime()
-      const salt = lts + parseInt(String(10 * Math.random()), 10)
-      const sign = md5(payload.client + i + salt + key)
-      const postData = qs(Object.assign({ i, lts, sign, salt }, payload))
-      let { errorCode, translateResult } = await fetch(api, {
-        method: 'POST',
-        body: postData,
-        headers
-      }).then(res => res.json()).catch(err => console.error(err))
-      if (errorCode !== 0) return API_ERROR
-      translateResult = _.flattenDeep(translateResult)?.map(item => item.tgt).join('\n')
-      if (!translateResult) return RESULT_ERROR
-      return translateResult
     }
+    return await translateByBaidu(msg, baiduTo)
   } catch (err) {
-    return API_ERROR
+    globalThis.logger?.warn?.(`[chatgpt][translateOld] 百度翻译异常：${err.message}`)
+    return '翻译服务暂不可用，请稍后再试'
   }
 }
 
@@ -107,7 +121,7 @@ export async function translateOld (msg, to = 'auto') {
  * @param msg 要翻译的
  * @param from 语种
  * @param to 语种
- * @param ai ai来源，支持openai, gemini, xh, qwen
+ * @param ai ai来源，支持openai, gemini, xh, qwen, baidu
  * @returns {Promise<*|string>}
  */
 export async function translate (msg, to = 'auto', from = 'auto', ai = Config.translateSource) {
@@ -118,7 +132,8 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
     }
     if (!lang) return `未找到翻译的语种，支持的语言为：\n${translateLangSupports.map(item => item.abbr).join('，')}\n`
     // if ai is not in the list, throw error
-    if (!['openai', 'gemini', 'xh', 'qwen'].includes(ai)) throw new Error('ai来源错误')
+    if (!['openai', 'gemini', 'xh', 'qwen', 'baidu'].includes(ai)) throw new Error('ai来源错误')
+    if (ai === 'baidu') return await translateOld(msg, to)
     let system = `You will be provided with a sentence in the language with language code [${from}], and your task is to translate it into [${lang}]. Just print the result without any other words.`
     if (Array.isArray(msg)) {
       let result = []
