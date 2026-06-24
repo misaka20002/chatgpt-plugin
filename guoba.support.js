@@ -1420,9 +1420,15 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'enableForceToolKeywords',
+          label: '启用关键词强制工具',
+          bottomHelpMessage: '命中下方关键词时强制调用工具；目前支持 API、Gemini 接口。已知 DeepSeek 模型不支持。',
+          component: 'Switch'
+        },
+        {
           field: 'geminiForceToolKeywords',
           label: '强制工具关键词',
-          bottomHelpMessage: '强制工具/Agent关键词；包含这里关键词的问题一定会调用工具；目前支持 API、Gemini 接口',
+          bottomHelpMessage: '包含这些关键词的问题会强制调用工具；目前支持 API、Gemini 接口。',
           component: 'GTags',
           componentProps: {
             placeholder: '请输入强制工具关键词',
@@ -2456,15 +2462,25 @@ export function supportGuoba() {
         {
           field: 'translateSource',
           label: '翻译来源',
-          bottomHelpMessage: '设置 #gpt翻译 使用的AI来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen]',
+          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]',
           component: 'Select',
           componentProps: {
             options: [
               { label: 'OpenAI', value: 'openai' },
               { label: 'Gemini', value: 'gemini' },
               { label: '星火', value: 'xh' },
-              { label: '通义千问', value: 'qwen' }
+              { label: '通义千问', value: 'qwen' },
+              { label: '百度翻译', value: 'baidu' }
             ]
+          }
+        },
+        {
+          field: 'baiduTranslateKey',
+          label: '百度翻译Key',
+          bottomHelpMessage: '申请地址 https://api.fanyi.baidu.com/manage/developer 的 申请信息中；用于上面的基于 LLM 的翻译失败后，转用旧版翻译兜底。请填写百度翻译开放平台“通用翻译API”的 APPID 和密钥，格式：APPID:密钥',
+          component: 'InputPassword',
+          componentProps: {
+            placeholder: 'APPID:密钥'
           }
         },
         {
