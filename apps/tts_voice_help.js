@@ -146,9 +146,8 @@ export class voicechangehelp extends plugin {
                     permission: 'master'
                 },
                 {
-                    reg: /^#(chat)?gpt偷(图|表情包?)$/i,
+                    reg: /^#偷(图|表情包?)$/i,
                     fnc: 'save_EmojiImg',
-                    permission: 'master'
                 },
                 {
                     reg: /^#(chat)?gptsf语音模型(创建|删除|列表|上传|新增)$/i,
@@ -478,8 +477,34 @@ export class voicechangehelp extends plugin {
         }
     }
 
-    /** /^#(chat)?gpt偷(图|表情包?)$/i */
+    async checkStealImgWhitelist(e) {
+        let whitelist = Config.stealImgWhitelist || [];
+        if (typeof whitelist === 'string') {
+            whitelist = whitelist.length > 0 ? whitelist.split(',').map(item => item.trim()) : [];
+        }
+        if (whitelist.length === 0) return true;
+        if (e.isMaster) return true;
+
+        const userId = e.sender?.user_id?.toString() || '';
+        const groupId = e.isGroup && e.group_id ? e.group_id.toString() : '';
+        for (const item of whitelist) {
+            if (!item) continue;
+            if (item.startsWith('^')) {
+                if (item.slice(1) === userId) return true;
+            } else if (item.includes('^')) {
+                const [g, q] = item.split('^');
+                if (e.isGroup && g === groupId && q === userId) return true;
+            } else if (e.isGroup && item === groupId) {
+                return true;
+            }
+        }
+        e.reply('你没有使用该指令的权限', true);
+        return false;
+    }
+
+    /** /^#偷(图|表情包?)$/i */
     async save_EmojiImg(e) {
+        if (!await this.checkStealImgWhitelist(e)) return false;
         await parseSourceImg(e);
         if (!e.img || !e.img.length) {
             e.reply(`请引用图片或将图片一起发送后重试`, true);
