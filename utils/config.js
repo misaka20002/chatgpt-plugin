@@ -309,6 +309,7 @@ const defaultConfig = {
   enablePrivateChat: false,
   whitelist: [],
   blacklist: [],
+  stealImgWhitelist: [],
   ttsRegex: '/匹配规则/匹配模式',
   slackUserToken: '',
   slackBotUserToken: '',

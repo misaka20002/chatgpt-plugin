@@ -1594,8 +1594,14 @@ export function supportGuoba() {
         {
           field: 'switch_EmojiTool',
           label: '工具新增-发送表情',
-          bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食；3.可在Bot人设中加入“你将总是使用 sendEmoji 工具”；4.Gemini识别并偷图指令： #gpt偷图',
+          bottomHelpMessage: '新增根据情绪发送表情的工具；使用方法: 1.开启后在智能模式下与AI对话将自动在 ./data/chatgpt/sendEmojiTool/ 文件夹下创建各种情绪的子文件夹；2.把你的表情图片放入对应的情绪文件夹；3.支持图片格式 .jpg .png .gif；4.中英对照表: happy - 开心、高兴, sad - 难过、伤心, angry - 生气、愤怒, love - 爱心、喜欢, confused - 困惑、疑惑, tired - 疲惫、累, excited - 兴奋、激动, scared - 害怕、恐惧, laugh - 大笑、爆笑, cry - 哭泣、流泪, cute - 可爱、卖萌, shy - 害羞、脸红, thumbsup - 点赞、赞同, thinking - 思考、沉思, surprised - 惊讶、震惊, bored - 无聊、乏味, cool - 酷、帅气, sick - 生病、不舒服, sleep - 睡觉、困, eat - 吃饭、美食；3.可在Bot人设中加入“你将总是使用 sendEmoji 工具”；4.Gemini识别并偷图指令： #偷图',
           component: 'Switch'
+        },
+        {
+          field: 'stealImgWhitelist',
+          label: '偷图白名单',
+          bottomHelpMessage: '设置可使用 #偷图 指令的白名单，格式与对话白名单相同：群号用英文逗号分割(例如群号：123456,654321)；如果想指定某QQ号则在QQ号前面添加^(例如QQ号：^123456)；如果想指定某群的某QQ号则使用 群号^qq 的格式(例如：123456^123456)。不填则所有人可用。',
+          component: 'Input'
         },
         {
           field: 'switch_atOtherUserTool',
@@ -2806,7 +2812,7 @@ export function supportGuoba() {
           if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
             value = value.toString().split(/[,，;；\|]/)
           }
-          else if (keyPath === 'blacklist' || keyPath === 'whitelist') {
+          else if (keyPath === 'blacklist' || keyPath === 'whitelist' || keyPath === 'stealImgWhitelist') {
             const inputSet = new Set()
             value = value.toString().split(/[,，;；|\s]/).reduce((acc, item) => {
               item = item.trim()
