@@ -22,7 +22,7 @@ export class GenerateMathRenderTool extends AbstractTool {
     }
 
     // 强化 Description，让模型在调用工具前区分不同图表类型的引号规则
-    description = 'Useful to render math formulas, complex equations, and diagrams (Mermaid flowcharts, state diagrams, sequence diagrams). Always strictly follow diagram-specific Mermaid quoting and syntax rules to avoid parser errors.'
+    description = 'Useful to generate images from Markdown text. Use this tool whenever the user wants to generate a markdown image, render math formulas, complex equations, or diagrams (Mermaid flowcharts, state diagrams, sequence diagrams). Always strictly follow diagram-specific Mermaid quoting and syntax rules to avoid parser errors.'
 
     func = async (opts, e) => {
         let { title, markdown } = opts

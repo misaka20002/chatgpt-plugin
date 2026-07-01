@@ -1616,15 +1616,15 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'agent_MarkmapToolSwitch',
-          label: '工具新增-思维导图',
-          bottomHelpMessage: '新增 生成markmap思维导图 工具',
+          field: 'generateMathRender_ToolSwitch',
+          label: '工具新增-Markdown图',
+          bottomHelpMessage: '新增 生成支持 Markdown 语法图片、数学公式（纯文本渲染）图片以及流程图（Mermaid 结构图 / 函数图） 工具',
           component: 'Switch'
         },
         {
-          field: 'generateMathRender_ToolSwitch',
-          label: '工具新增-公式及流程图',
-          bottomHelpMessage: '新增 生成支持 Markdown 语法图片、数学公式（纯文本渲染）图片以及流程图（Mermaid 结构图 / 函数图） 工具',
+          field: 'agent_MarkmapToolSwitch',
+          label: '工具新增-思维导图',
+          bottomHelpMessage: '新增 生成markmap思维导图 工具',
           component: 'Switch'
         },
         {
