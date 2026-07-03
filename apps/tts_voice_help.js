@@ -182,7 +182,7 @@ export class voicechangehelp extends plugin {
             return true;
         }
         try {
-            const sendable = await generateAudio(e, message);
+            const sendable = await generateAudio(e, message, undefined, 1, { noTranslate: true });
             if (sendable) {
                 await e.reply(sendable);
             } else {
