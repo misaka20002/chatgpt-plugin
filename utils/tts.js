@@ -78,7 +78,8 @@ function randomNum(minNum, maxNum) {
     }
 }
 
-export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale)) {
+export async function generateVitsAudio(text, speaker = '随机', language = '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', noiseScale = parseFloat(Config.noiseScale), noiseScaleW = parseFloat(Config.noiseScaleW), lengthScale = parseFloat(Config.lengthScale), options = {}) {
+    const { noTranslate = false } = options || {}
     // if (lengthScale === 2.99) // genshinvoice.top/api已关闭,这一段已成为历史
     // {
     //     /*        let character_voice_language = speaker.substring(speaker.length - 2);
@@ -111,7 +112,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
         .replace(/[\[|【].*好感度.*\d+[\]|】|）]/g, '') // 删除中括号好感度
 
     // #gpt翻日 硬编码替换部分角色名
-    if (Config.autoJapanese)
+    if (Config.autoJapanese && !noTranslate)
         text = text.replace(/可莉|コリー|リディア|コクリ|ケリー|コーリー|コーリ|クリ/g, 'クレー').replace(/派蒙|モンゴル|派モン/g, 'パイモン').replace(/纳西妲|ナシの実|ナヒダ/g, 'ナヒーダ').replace(/早柚/g, 'さゆ').replace(/瑶瑶/g, 'ヨォーヨ').replace(/七七/g, 'なな').replace(/迪奥娜|ディオナ/g, 'ディオナ').replace(/绮良良|綺良良/g, 'きらら').replace(/希格雯/g, 'シグウィン').replace(/白露/g, 'ビャクロ').replace(/虎克|フック本/g, 'フック').replace(/心奈|こころ|しんな|心菜|ココロナ/g, 'ココナ').replace(/小春/g, 'コハル').replace(/星野/g, 'ホシノ').replace(/日富美/g, 'ヒフミ').replace(/梓/g, 'アズサ').replace(/日奈/g, 'ヒナ').replace(/纯子|純子/g, 'ジュンコ').replace(/睦月/g, 'ムツキ').replace(/优香|優香/g, 'ユウカ').replace(/爱丽丝/g, 'アリス').replace(/真纪|真紀/g, 'マキ').replace(/切里诺|チェリーノ/g, 'チェリノ').replace(/和香/g, 'ノドカ').replace(/小瞬/g, 'シュン').replace(/纱绫|紗綾/g, 'サヤ').replace(/美游|美遊/g, 'ミユ').replace(/桃井/g, 'モモイ').replace(/妃咲/g, 'キサキ').replace(/胡桃/g, 'クルミ').replace(/阿罗娜|アローナ/g, 'アロナ').replace(/普拉娜/g, 'プラナ').replace(/愛しい人/g, 'あなた')
 
     let space = Config.ttsSpace
@@ -383,7 +384,7 @@ export async function generateVitsAudio(text, speaker = '随机', language = '�
             tts_language = "JP"
 
             // 使用网址的自动转日语，若#tts语音转日语关闭 （推荐关闭，除非网址api翻译出错）则自动使用网址api的转日语功能，若#tts语音转日语开启 则使用本插件内置的#gpt翻日 功能
-            if (!Config.autoJapanese) {
+            if (!Config.autoJapanese && !noTranslate) {
                 if (Config.debug)
                     logger.info(`[chatgpt-tts]正在使用网页api转日语，基于文本：'${text}'`)
                 let body_translation = {
