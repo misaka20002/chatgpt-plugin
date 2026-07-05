@@ -46,6 +46,10 @@ let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_
  */
 const MEME_USAGE_REDIS_PREFIX = 'Yz:paimon_meme_usage:'
 
+function escapeRegExp(str = '') {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export class memes extends plugin {
   constructor() {
     let option = {
@@ -94,7 +98,7 @@ export class memes extends plugin {
 
     }
     Object.keys(keyMap).forEach(key => {
-      let reg = `^\\s*#?${key}`
+      let reg = `^\\s*#?${escapeRegExp(key)}`
       option.rule.push({
         /** 命令正则匹配 */
         reg,
@@ -175,7 +179,7 @@ export class memes extends plugin {
     }
     let rules = []
     Object.keys(keyMap).forEach(key => {
-      let reg = `^\\s*#?${key}`
+      let reg = `^\\s*#?${escapeRegExp(key)}`
       rules.push({
         /** 命令正则匹配 */
         reg,
@@ -393,7 +397,10 @@ export class memes extends plugin {
     // 替换原有的硬编码匹配逻辑
     let target = findLongestMatchingKey(msg, keyMap);
 
+    if (!target) return false
     let targetCode = keyMap[target]
+    let info = infos[targetCode]
+    if (!info?.params_type) return false
     // let target = e.msg.replace(/^#?meme(s)?/, '')
     let text1 = _.trimStart(e.msg, '#').replace(target, '')
     if (text1.trim() === '详情' || text1.trim() === '帮助') {
@@ -403,7 +410,6 @@ export class memes extends plugin {
 
     let [text, args = ''] = text1.split('#')
     let formData = new FormData()
-    let info = infos[targetCode]
     let fileLoc
 
     // 提取 @ 信息并获取用户详情缓存
