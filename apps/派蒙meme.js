@@ -22,10 +22,6 @@ const baseUrl = Config.meme_baseUrl
  */
 const reply = Config.meme_reply
 /**
- * 是否强制使用#触发命令
- */
-const forceSharp = Config.meme_forceSharp
-/**
  * 主人保护，撅主人时会被反撅 (暂时只支持QQ)
  * @type {boolean}
  */
@@ -60,7 +56,7 @@ export class memes extends plugin {
       /** https://oicqjs.github.io/oicq/#events */
       event: 'message',
       /** 优先级，数字越小等级越高 */
-      priority: 5000,
+      priority: 1000,
       rule: [
         {
           /** 命令正则匹配 */
@@ -98,7 +94,7 @@ export class memes extends plugin {
 
     }
     Object.keys(keyMap).forEach(key => {
-      let reg = forceSharp ? `^#${key}` : `^#?${key}`
+      let reg = `^\\s*#?${key}`
       option.rule.push({
         /** 命令正则匹配 */
         reg,
@@ -179,7 +175,7 @@ export class memes extends plugin {
     }
     let rules = []
     Object.keys(keyMap).forEach(key => {
-      let reg = forceSharp ? `^#${key}` : `^#?${key}`
+      let reg = `^\\s*#?${key}`
       rules.push({
         /** 命令正则匹配 */
         reg,
@@ -366,6 +362,7 @@ export class memes extends plugin {
      */
   async memes(e) {
     if (Config.meme_turnOff) return false;
+    if (Config.meme_forceSharp && !String(e.msg || '').trimStart().startsWith('#')) return false;
 
     // meme响应CD
     let lastTime = await redis.get(`Yz:paimon_meme_cd:${e.group_id}:${e.sender.user_id || e.user_id}`);
