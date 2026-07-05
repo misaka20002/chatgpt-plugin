@@ -925,17 +925,19 @@ export function getUin (e) {
  * @param pendingText - 待处理文本
  * @param speakingEmotion - AzureTTSMode中的发言人情绪
  * @param emotionDegree - AzureTTSMode中的发言人情绪强度
+ * @param options.noTranslate - 是否跳过语音合成前的自动翻译
  * @returns {Promise<{file: string, type: string}|undefined|boolean>}
  */
-export async function generateAudio (e, pendingText, speakingEmotion, emotionDegree = 1) {
+export async function generateAudio (e, pendingText, speakingEmotion, emotionDegree = 1, options = {}) {
   if (!Config.ttsSpace && !Config.azureTTSKey && !Config.voicevoxSpace) return false
+  const { noTranslate = false } = options || {}
   pendingText = removeCQCode(pendingText)
   let wav
   const speaker = getUserSpeaker(await getUserReplySetting(e))
   let ignoreEncode = e.adapter === 'shamrock'
   try {
     if (Config.ttsMode === 'vits-uma-genshin-honkai' && Config.ttsSpace) {
-      if (Config.autoJapanese) {
+      if (Config.autoJapanese && !noTranslate) {
         try {
           pendingText = await translate(pendingText, '日')
         } catch (err) {
@@ -943,11 +945,11 @@ export async function generateAudio (e, pendingText, speakingEmotion, emotionDeg
           return false
         }
       }
-      wav = await generateVitsAudio(pendingText, speaker, '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）')
+      wav = await generateVitsAudio(pendingText, speaker, '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', undefined, undefined, undefined, { noTranslate })
     } else if (Config.ttsMode === 'azure' && Config.azureTTSKey) {
-      return await generateAzureAudio(pendingText, speaker, speakingEmotion, emotionDegree, ignoreEncode)
+      return await generateAzureAudio(pendingText, speaker, speakingEmotion, emotionDegree, ignoreEncode, { noTranslate })
     } else if (Config.ttsMode === 'voicevox' && Config.voicevoxSpace) {
-      pendingText = (await translate(pendingText, '日')).replace('\n', '')
+      if (!noTranslate) pendingText = (await translate(pendingText, '日')).replace('\n', '')
       wav = await VoiceVoxTTS.generateAudio(pendingText, {
         speaker
       })
@@ -990,10 +992,12 @@ export async function generateAudio (e, pendingText, speakingEmotion, emotionDeg
  * @param speakingEmotion - 发言人情绪
  * @param emotionDegree - 发言人情绪强度
  * @param ignoreEncode - 不在客户端处理编码
+ * @param options.noTranslate - 是否跳过语音合成前的自动翻译
  * @returns {Promise<{file: string, type: string}|boolean>}
  */
-export async function generateAzureAudio (pendingText, role = '随机', speakingEmotion, emotionDegree = 1, ignoreEncode = false) {
+export async function generateAzureAudio (pendingText, role = '随机', speakingEmotion, emotionDegree = 1, ignoreEncode = false, options = {}) {
   if (!Config.azureTTSKey) return false
+  const { noTranslate = false } = options || {}
   pendingText = removeCQCode(pendingText)
   let speaker
   try {
@@ -1012,13 +1016,13 @@ export async function generateAzureAudio (pendingText, role = '随机', speaking
       }
       let languagePrefix = azureRoleList.find(config => config.code === speaker).languageDetail.charAt(0)
       languagePrefix = languagePrefix.startsWith('E') ? '英' : languagePrefix
-      pendingText = (await translate(pendingText, languagePrefix)).replace('\n', '')
+      if (!noTranslate) pendingText = (await translate(pendingText, languagePrefix)).replace('\n', '')
     } else {
       let role, languagePrefix
       role = azureRoleList[Math.floor(Math.random() * azureRoleList.length)]
       speaker = role.code
       languagePrefix = role.languageDetail.charAt(0).startsWith('E') ? '英' : role.languageDetail.charAt(0)
-      pendingText = (await translate(pendingText, languagePrefix)).replace('\n', '')
+      if (!noTranslate) pendingText = (await translate(pendingText, languagePrefix)).replace('\n', '')
       if (role?.emotion) {
         const keys = Object.keys(role.emotion)
         speakingEmotion = keys[Math.floor(Math.random() * keys.length)]
