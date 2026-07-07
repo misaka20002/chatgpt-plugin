@@ -185,8 +185,22 @@ export class ClaudeAPIClient extends BaseClient {
       parentMessageId: idThis
     })
     await this.upsertMessage(respMessage)
+    const responseText = Array.isArray(response.content)
+      ? response.content
+        .filter(item => item?.type === 'text' && typeof item.text === 'string')
+        .map(item => item.text)
+        .join('\n')
+      : ''
+    const thinkingText = Array.isArray(response.content)
+      ? response.content
+        .filter(item => item?.type === 'thinking' && typeof item.thinking === 'string')
+        .map(item => item.thinking)
+        .join('\n')
+      : ''
+
     return {
-      text: response.content[0].text,
+      text: responseText,
+      thinking_text: thinkingText,
       conversationId: '',
       parentMessageId: idThis,
       id: idModel
