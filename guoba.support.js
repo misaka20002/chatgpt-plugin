@@ -1404,7 +1404,7 @@ export function supportGuoba() {
         {
           field: 'smartMode',
           label: '智能模式 开关',
-          bottomHelpMessage: '支持 OpenAI API、千问、Gemini。开启后Bot可以使用以下群管、绘画、发视频发音乐、联网搜索等工具。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
+          bottomHelpMessage: '支持 OpenAI API、Gemini、千问、Claude 模式。开启后Bot可以使用以下群管、绘画、发视频发音乐、联网搜索等工具。注意较费token。配合“允许机器人读取近期的群聊聊天记录”效果更佳',
           component: 'Switch'
         },
         {
@@ -1416,7 +1416,7 @@ export function supportGuoba() {
         {
           field: 'llm_maxToolRounds',
           label: '工具调用最大轮次',
-          bottomHelpMessage: '智能模式中 工具调用最大轮次数，仅支持Gemini模式、OpenAI API模式（呆毛注：因为已支持多工具并行调用，所以通常3轮次就足够处理日常任务了，按需增加）',
+          bottomHelpMessage: '智能模式中 工具调用最大轮次数，支持 OpenAI API、Gemini、千问、Claude 模式（呆毛注：因为已支持多工具并行调用，所以通常3轮次就足够处理日常任务了，按需增加）',
           component: 'InputNumber',
           componentProps: {
             min: 1,
