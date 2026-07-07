@@ -337,7 +337,7 @@ class Core {
         const client = new ClaudeAPIClient({
           key,
           model: Config.claudeApiModel || 'claude-3-sonnet-20240229',
-          debug: true,
+          debug: Config.debug,
           baseUrl: Config.claudeApiBaseUrl,
           e
           // temperature: Config.claudeApiTemperature || 0.5

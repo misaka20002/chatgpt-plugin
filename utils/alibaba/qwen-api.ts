@@ -175,7 +175,9 @@ export class QwenApi {
       completionParams
     )
 
-    console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
+    if (this._debug) {
+      console.log(`maxTokens: ${maxTokens}, numTokens: ${numTokens}`)
+    }
     const result: types.ChatMessage & { conversation: qwen.ChatCompletionRequestMessage[] } = {
       role: 'assistant',
       id: uuidv4(),
@@ -195,7 +197,7 @@ export class QwenApi {
         }
         const body = completionParams
         if (this._debug) {
-          console.log(JSON.stringify(body))
+          console.log("body: " + JSON.stringify(body, null, 2))
         }
 
         if (this._debug) {
@@ -223,8 +225,12 @@ export class QwenApi {
           const response: types.qwen.CreateChatCompletionResponse =
             await res.json()
           if (this._debug) {
-            console.log(response)
+            console.log("response: " + JSON.stringify(response, null, 2))
           }
+          const inputTokens = response.usage?.input_tokens || numTokens || 0
+          const outputTokens = response.usage?.output_tokens || 0
+          const totalTokens = inputTokens + outputTokens
+          console.info(`[Chatgpt][Qwen] 输入Token(${inputTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 输出Token(${outputTokens}) | 累计Token(${totalTokens})`)
           if (response.output?.choices?.[0]?.message?.tool_calls?.length > 0) {
             // function call result
             result.functionCall = response.output.choices[0].message.tool_calls[0].function

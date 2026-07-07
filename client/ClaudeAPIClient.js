@@ -140,6 +140,10 @@ export class ClaudeAPIClient extends BaseClient {
       body.tools = this.tools.map(tool => this._toClaudeTool(tool))
       body.tool_choice = this._getToolChoice(toolMode)
     }
+    if (this.debug) {
+      console.log("body: " + JSON.stringify(body, null, 2))
+      console.log(`sendMessage (${messages.length} messages)`, body)
+    }
     let url = `${this.baseUrl}/v1/messages`
     let result = await newFetch(url, {
       headers: {
@@ -158,12 +162,16 @@ export class ClaudeAPIClient extends BaseClient {
      */
     let response = await result.json()
     if (this.debug) {
-      console.log(JSON.stringify(response))
+      console.log("response: " + JSON.stringify(response, null, 2))
     }
     if (response.type === 'error') {
       logger.error(response.error.message)
       throw new Error(response.error.type)
     }
+    const inputTokens = response.usage?.input_tokens || 0
+    const outputTokens = response.usage?.output_tokens || 0
+    const totalTokens = inputTokens + outputTokens
+    console.info(`[Chatgpt][Claude] 输入Token(${inputTokens})${body.max_tokens ? ` | 回复上限(${body.max_tokens})` : ''} | 输出Token(${outputTokens}) | 累计Token(${totalTokens})`)
     return response
   }
 
