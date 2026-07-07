@@ -525,7 +525,10 @@ export function supportGuoba() {
         {
           field: 'claudeApiBaseUrl',
           label: 'claude API 反代',
-          component: 'Input'
+          component: 'Input',
+          componentProps: {
+            placeholder: 'http://claude-api.misaka20001.com'
+          }
         },
         {
           field: 'claudeApiMaxToken',
