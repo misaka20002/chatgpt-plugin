@@ -1411,10 +1411,10 @@ export class chatgpt extends plugin {
           await redis.set(key, JSON.stringify(previousConversation), Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {})
         }
       }
-      let response = chatMessage?.text?.replace('\n\n\n', '\n')
+      let response = typeof chatMessage?.text === 'string' ? chatMessage.text.replace('\n\n\n', '\n') : ''
       let postProcessors = await collectProcessors('post')
       /** thinking 累积器，不断追加新的思考内容，以支持 Chain-of-Thought (CoT) 推理的模型 */
-      let thinking = chatMessage.thinking_text
+      let thinking = chatMessage?.thinking_text || ''
       for (let processor of postProcessors) {
         let output = await processor.processInner({
           text: response, thinking_text: thinking
@@ -1550,7 +1550,7 @@ export class chatgpt extends plugin {
         if (json1) {
           try {
             json1 = JSON.parse(json1);
-            if (!Boolean(json1?.Tools.match(/Stable(_|\s)Diffusion/i)))
+            if (!Boolean(json1?.Tools?.match(/Stable(_|\s)Diffusion/i)))
               throw new Error("[ChatGPT]未返回绘画用JSON")
             jsonTags = json1?.tags
             jsonMsg = json1?.msg || `${Config.tts_First_person}画给你啦`

@@ -337,34 +337,51 @@ class Core {
         const client = new ClaudeAPIClient({
           key,
           model: Config.claudeApiModel || 'claude-3-sonnet-20240229',
-          debug: true,
-          baseUrl: Config.claudeApiBaseUrl
+          debug: Config.debug,
+          baseUrl: Config.claudeApiBaseUrl,
+          e
           // temperature: Config.claudeApiTemperature || 0.5
         })
+        let promptForClaude = prompt
+        let system = opt.system.claude || ''
+        system = mergeSystemPrompt(system, e, { replyTimestamps: conversation.replyTimestamps })
         let option = {
           stream: false,
           parentMessageId: conversation.parentMessageId,
           conversationId: conversation.conversationId,
-          system: opt.system.claude,
-          max_tokens: Config.claudeApiMaxToken
+          max_tokens: Config.claudeApiMaxToken,
+          temperature: Config.claudeApiTemperature
+        }
+        if (opt.enableSmart) {
+          const {
+            funcMap,
+            promptAddition,
+            systemAddition
+          } = await collectTools(e)
+          let tools = Object.keys(funcMap).map(k => funcMap[k].tool)
+          client.addTools(tools)
+          promptAddition && (promptForClaude += promptAddition)
+          systemAddition && (system += systemAddition)
+
+          const forceToolByKeyword = Config.enableForceToolKeywords !== false &&
+            Config.geminiForceToolKeywords?.find(k => promptForClaude?.includes(k) || e.msg?.includes(k))
+          option.toolMode = (opt.settings.forceTool || forceToolByKeyword) ? 'ANY' : 'AUTO'
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
           let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
           const namePlaceholder = '[name]'
-          const defaultBotName = 'GeminiPro'
+          const defaultBotName = 'Claude'
           const groupContextTip = Config.groupContextTip
           let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
 
-          option.system = mergeSystemPrompt(option.system, e, { replyTimestamps: conversation.replyTimestamps })
-
-          option.system = option.system.replaceAll(namePlaceholder, botName || defaultBotName) +
+          system = system.replaceAll(namePlaceholder, botName || defaultBotName) +
             ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
-          option.system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
-          option.system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
-          option.system += `Your nickname is ${botName} in the group,`
+          system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
+          system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
+          system += `Your nickname is ${botName} in the group,`
           if (chats) {
-            option.system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
-            option.system += chats
+            system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
+            system += chats
               .map(chat => {
                 let sender = chat.sender || {}
                 return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
@@ -372,6 +389,7 @@ class Core {
               .join('\n')
           }
         }
+        option.system = system
         // let img = await parseSourceImg(e)
         if (e.img && e.img.length > 0 && Config.mediaRecognitionSource == "Orignal") {
           let imageUrl = e.img ? e.img[0] : undefined;
@@ -386,7 +404,7 @@ class Core {
           }
         }
         try {
-          let rsp = await client.sendMessage(prompt, option)
+          let rsp = await client.sendMessage(promptForClaude, option)
           return rsp
         } catch (err) {
           errorMessage = err.message
@@ -573,7 +591,8 @@ class Core {
           if (Config.debug)
             logger.info(JSON.stringify(msg, null, 2))
           let toolRoundCount = 0
-          while (msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) {
+          const maxToolRounds = Config.llm_maxToolRounds || 3
+          while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount < maxToolRounds) {
             toolRoundCount++
             if (msg.text) {
               await e.reply(msg.text.replace('\n\n\n', '\n'))
@@ -638,6 +657,12 @@ class Core {
                 break
               }
             }
+          }
+          if ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount >= maxToolRounds) {
+            logger.warn(`千问工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制终止工具循环`)
+            msg.functionCall = undefined
+            msg.toolCalls = undefined
+            um(msg).catch(err => logger.warn('[Chatgpt][Qwen] 清理存储中的工具调用记录失败', err))
           }
         } catch (err) {
           logger.error(err)

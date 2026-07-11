@@ -155,7 +155,9 @@ var QwenApi = /** @class */ (function () {
                         return [4 /*yield*/, this._buildMessages(text, role, opts, completionParams)];
                     case 1:
                         _b = _c.sent(), messages = _b.messages, maxTokens = _b.maxTokens, numTokens = _b.numTokens;
-                        console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
+                        if (this._debug) {
+                            console.log("maxTokens: ".concat(maxTokens, ", numTokens: ").concat(numTokens));
+                        }
                         result = {
                             role: 'assistant',
                             id: uuidv4(),
@@ -179,7 +181,7 @@ var QwenApi = /** @class */ (function () {
                                         };
                                         body = completionParams;
                                         if (this._debug) {
-                                            console.log(JSON.stringify(body));
+                                            console.log("body: " + JSON.stringify(body, null, 2));
                                         }
                                         if (this._debug) {
                                             console.log("sendMessage (".concat(numTokens, " tokens)"), body);
@@ -208,8 +210,9 @@ var QwenApi = /** @class */ (function () {
                                     case 5:
                                         response = _k.sent();
                                         if (this._debug) {
-                                            console.log(response);
+                                            console.log("response: " + JSON.stringify(response, null, 2));
                                         }
+                                        console.info("[Chatgpt][Qwen] \u8F93\u5165Token(".concat(((_a = response.usage) === null || _a === void 0 ? void 0 : _a.input_tokens) || numTokens || 0, ")").concat(maxTokens ? " | \u56DE\u590D\u4E0A\u9650(".concat(maxTokens, ")") : '', " | \u8F93\u51FAToken(").concat(((_b = response.usage) === null || _b === void 0 ? void 0 : _b.output_tokens) || 0, ") | \u7D2F\u8BA1Token(").concat((((_c = response.usage) === null || _c === void 0 ? void 0 : _c.input_tokens) || numTokens || 0) + (((_d = response.usage) === null || _d === void 0 ? void 0 : _d.output_tokens) || 0), ")"));
                                         if (((_e = (_d = (_c = (_b = (_a = response.output) === null || _a === void 0 ? void 0 : _a.choices) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.message) === null || _d === void 0 ? void 0 : _d.tool_calls) === null || _e === void 0 ? void 0 : _e.length) > 0) {
                                             // function call result
                                             result.functionCall = response.output.choices[0].message.tool_calls[0].function;

@@ -34,6 +34,10 @@ export class ReasonerProcessor extends AbstractPostProcessor {
  * @returns {{thinkingText: string, text: *}|{thinkingText: *, text: *}}
  */
 const extractThinkingTextAndText = (str) => {
+  if (typeof str !== 'string') {
+    return { thinkingText: '', text: '' }
+  }
+
   // 使用正则表达式提取think标签内容
   const thinkRegex = /<think>(.*?)<\/think>/s
   const match = str.match(thinkRegex)
