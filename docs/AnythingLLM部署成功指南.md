@@ -372,8 +372,8 @@ curl -H "Authorization: Bearer ANLM-xxxxx" http://192.168.4.238:3001/api/v1/work
 
 ## 📚 相关文档
 
-- **使用指南**：`/root/TRSS-Yunzai/plugins/chatgpt-plugin/doc/AnythingLLM使用指南.md`
-- **完成报告**：`/root/TRSS-Yunzai/plugins/chatgpt-plugin/doc/AnythingLLM集成完成报告.md`
+- **使用指南**：`/root/TRSS-Yunzai/plugins/chatgpt-plugin/docs/AnythingLLM使用指南.md`
+- **完成报告**：`/root/TRSS-Yunzai/plugins/chatgpt-plugin/docs/AnythingLLM集成完成报告.md`
 
 ---
 
