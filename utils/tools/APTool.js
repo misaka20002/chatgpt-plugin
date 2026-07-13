@@ -87,6 +87,12 @@ export class APTool extends AbstractTool {
       prompt: {
         type: 'string',
         description: promptDescription
+      },
+      // 横图、竖图、方图 ， 但 gemini-Image-gg  gpt-Image-2-ss 不支持此参数
+      aspectRatio: {
+        type: 'string',
+        enum: ['square', 'landscape', 'portrait'],
+        description: 'Optional image aspect ratio: square, landscape, or portrait.'
       }
     }
 
@@ -106,7 +112,7 @@ export class APTool extends AbstractTool {
   }
 
   func = async function (opts, e) {
-    let { prompt, plugin, tags } = opts
+    let { prompt, plugin, tags, aspectRatio } = opts
     const enableGallery = isGalleryEnabled()
 
     const { new_e, capturedImages } = wrapReplyForGallery(e, enableGallery)
@@ -115,6 +121,18 @@ export class APTool extends AbstractTool {
     const { charactersName, processedTags } = extractCharacterName(prompt);
 
     const qualityTags = 'best quality, amazing quality, very aesthetic, absurdres';
+
+    const aspectRatioText = {
+      square: '方图',
+      landscape: '横图',
+      portrait: '竖图'
+    };
+
+    const aspectRatioSize = {
+      square: ' --width 1024 --height 1024',
+      landscape: ' --width 1216 --height 832',
+      portrait: ' --width 832 --height 1216'
+    };
 
     // 统一结果处理：画图成功时异步推送 Prompt Gallery
     const finishDraw = (resultMsg, success) => {
@@ -139,11 +157,13 @@ export class APTool extends AbstractTool {
           return `the user didn't install ${pluginDir}. suggest him to install`;
         }
 
-        // 随机使用宽图或竖图
-        let strPaint = '';
-        const random_nai = Math.random();
-        if (random_nai < 0.3) strPaint = '宽图';
-        else if (random_nai < 0.6) strPaint = '方图';
+        // 指定画幅时使用对应指令，未指定时保持原有随机行为（留空默认为竖图）
+        let strPaint = aspectRatioText[aspectRatio] ?? '';
+        if (!aspectRatio) {
+          const random_nai = Math.random();
+          if (random_nai < 0.3) strPaint = '宽图';
+          else if (random_nai < 0.6) strPaint = '方图';
+        }
 
         new_e.msg = `#绘画${strPaint} ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
         if (new_e.img?.length) new_e.msg += ', Reference_Strength = 0.30';
@@ -166,11 +186,13 @@ export class APTool extends AbstractTool {
           return "the user didn't install nai-plugin. suggest him to install";
         }
 
-        // 随机使用宽图或竖图
-        let strPaint = '';
-        const random_nai = Math.random();
-        if (random_nai < 0.3) strPaint = ' --width 1216 --height 832';
-        else if (random_nai < 0.6) strPaint = ' --width 1024 --height 1024';
+        // 指定画幅时使用对应尺寸，未指定时保持原有随机行为（留空默认为竖图）
+        let strPaint = aspectRatioSize[aspectRatio] ?? '';
+        if (!aspectRatio) {
+          const random_nai = Math.random();
+          if (random_nai < 0.3) strPaint = ' --width 1216 --height 832';
+          else if (random_nai < 0.6) strPaint = ' --width 1024 --height 1024';
+        }
 
         new_e.msg = `#draw ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}${strPaint}`;
         if (new_e.img?.length) new_e.msg += ', --reference_strength 0.3';
@@ -195,7 +217,8 @@ export class APTool extends AbstractTool {
             return "the user didn't install ap-plugin. suggest him to install";
           }
         }
-        new_e.msg = `#绘图 ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
+        const strPaint = aspectRatioText[aspectRatio] ?? '';
+        new_e.msg = `#绘图${strPaint} ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', new_e.msg);
         await ap.aiPainting(new_e);
         return finishDraw('draw success, picture has been sent.', true);
@@ -210,7 +233,8 @@ export class APTool extends AbstractTool {
         } catch (err) {
           return "the user didn't install siliconflow-plugin. suggest him to install";
         }
-        new_e.msg = `#sf绘图 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
+        const strPaint = aspectRatioText[aspectRatio] ?? '';
+        new_e.msg = `#sf绘图${strPaint} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf插件绘画：\nmsg: ', new_e.msg);
         await sf.sf_draw(new_e);
         return finishDraw('draw success, picture has been sent.', true);
@@ -228,7 +252,8 @@ export class APTool extends AbstractTool {
 
         let cmd = plugin === 'Niji-Journey' ? '#niji' : '#mjp';
 
-        new_e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        const strPaint = aspectRatioSize[aspectRatio] ?? '';
+        new_e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}${strPaint}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf-MJ插件绘画：\nmsg: ', new_e.msg);
         if (cmd === '#mjc' || cmd === '#nic') {
           await sfmj.mj_draw_with_link(new_e);
@@ -249,7 +274,8 @@ export class APTool extends AbstractTool {
         }
 
         let cmd = plugin === 'Jimeng-videoGeneration' ? '#即梦视频' : '#即梦绘画';
-        new_e.msg = `${cmd} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        const strPaint = plugin === 'Jimeng-paint' ? (aspectRatioText[aspectRatio] ?? '') : '';
+        new_e.msg = `${cmd}${strPaint} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
         logger.info(`[ChatGPT][DrawTool]开始调用sf插件${cmd}：\nmsg: `, new_e.msg);
 
         await sfjm.call_Jimeng_Api(new_e);
@@ -265,7 +291,8 @@ export class APTool extends AbstractTool {
         } catch (err) {
           return 'draw failed, ModelScope painting app might not be supported in your siliconflow-plugin version.';
         }
-        new_e.msg = `#d魔搭编辑图片 ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
+        const strPaint = aspectRatioText[aspectRatio] ?? '';
+        new_e.msg = `#d魔搭编辑图片${strPaint} ${charactersName}, ${Config.sfPluginToPaintPrefix}, ${processedTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用sf插件dd绘画：\nmsg: ', new_e.msg);
         await sfdd.dd_custom_command(new_e);
         return finishDraw('draw success, picture has been sent.', true);
