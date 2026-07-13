@@ -286,9 +286,6 @@
         window.onload = function () {
             let rawData = document.getElementById('raw-markdown').innerText || document.getElementById('raw-markdown').textContent;
 
-            // 预处理：把 markdown 中的 ```mermaid 标签替换成 html 的 <div class="mermaid"> 供 mermaid.js 接管
-            rawData = rawData.replace(/```mermaid\n([\s\S]*?)```/g, '<div class="mermaid">$1</div>');
-
             // 初始化 Markdown 渲染器，并挂载 KaTeX 插件
             // 注意：window.markdownitKatex 是 @vscode/markdown-it-katex 挂载到全局的变量
             const md = window.markdownit({
@@ -296,6 +293,21 @@
                 breaks: true,
                 linkify: true
             }).use(window.markdownitKatex);
+
+            // 交给 markdown-it 识别完整的 Mermaid fence，再将其转成渲染容器。
+            // 不能在 md.render() 前直接用 <div> 替换 fence：Mermaid 代码中的空行会
+            // 使后续缩进行被 Markdown 解析成 <pre><code>，最终导致 Mermaid 语法错误。
+            const defaultFenceRenderer = md.renderer.rules.fence;
+            md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+                const token = tokens[idx];
+                const language = (token.info || '').trim().split(/\s+/)[0].toLowerCase();
+
+                if (language === 'mermaid') {
+                    return '<div class="mermaid">' + md.utils.escapeHtml(token.content) + '</div>\n';
+                }
+
+                return defaultFenceRenderer(tokens, idx, options, env, self);
+            };
 
             // 将内容写入容器
             const contentDiv = document.getElementById('content');

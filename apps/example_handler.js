@@ -1,5 +1,6 @@
 /**
  * 示例后处理器。你可以在example下面写一个新的。默认会调用所有此key的处理器
+ * 详细说明： "..\docs\example_handler调用原理.md"
  */
 export class ChatGPTResponsePostHandler extends plugin {
   constructor() {
