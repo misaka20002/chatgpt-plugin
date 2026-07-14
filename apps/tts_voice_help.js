@@ -542,8 +542,11 @@ export class voicechangehelp extends plugin {
         }
 
         if (!emotions.includes(emotion)) {
-            e.reply('未能确定该表情包类别\nError: ' + aiText, true);
-            return true;
+            // Gemini 在部分地区会返回 FAILED_PRECONDITION / User location is not supported。
+            // 偷表情不应该因此失败：识别失败时兜底保存到 cute 分类。
+            logger.warn(`[偷表情] 表情类别识别失败，已使用默认分类 cute：${aiText || '无返回'}`);
+            emotion = 'cute';
+            analysis = '识别失败，默认分类';
         }
 
         const directory = path.join(process.cwd(), 'data', 'chatgpt', 'sendEmojiTool', emotion);
