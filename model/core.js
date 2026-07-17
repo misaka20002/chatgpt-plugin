@@ -88,6 +88,7 @@ import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
 import { GenerateMathRenderTool } from '../utils/tools/GenerateMathRenderTool.js'
 import { GenerateGraphCalculatorTool } from '../utils/tools/GenerateGraphCalculatorTool.js'
+import { DefaultMessageTriggerTool } from '../utils/tools/DefaultMessageTriggerTool.js'
 
 export const roleMap = {
   owner: 'group owner',
@@ -1223,6 +1224,14 @@ async function collectTools(e) {
       fullTools.push(new ToolClass())
     }
   });
+
+  if (Config.enableDefaultMessageTriggerTool) {
+    const defaultMessageTool = new DefaultMessageTriggerTool(e)
+    if (defaultMessageTool.allowedKeywords.size > 0) {
+      tools.push(defaultMessageTool)
+      fullTools.push(defaultMessageTool)
+    }
+  }
 
   // 加载已启用的通用 MCP 工具
   if (Config.enableMcp) {

@@ -452,6 +452,7 @@ const defaultConfig = {
   generateMathRender_ToolSwitch: false,
   generateGraphCalculator_ToolSwitch: false,
   enableUserProfileTool: false,
+  enableDefaultMessageTriggerTool: false,
   mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
   ScheduleTask_Tool: true,
