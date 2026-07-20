@@ -442,7 +442,8 @@ export class ChatGPTAPI {
                                             } else {
                                                 result.functionCall.arguments = (result.functionCall.arguments || '') + delta.function_call.arguments
                                             }
-                                        } else if (delta.tool_calls && delta.tool_calls.length > 0) {
+                                        }
+                                        if (delta.tool_calls && delta.tool_calls.length > 0) {
                                             if (!result.toolCalls) {
                                                 result.toolCalls = []
                                             }
@@ -473,11 +474,10 @@ export class ChatGPTAPI {
                                             if (result.toolCalls.length > 0) {
                                                 result.functionCall = result.toolCalls[0].function
                                             }
-                                        } else {
-                                            result.delta = delta.content
-                                            if (delta?.content) result.text += delta.content
-                                            if (delta?.reasoning_content) result.thinking_text += delta.reasoning_content
                                         }
+                                        result.delta = delta.content
+                                        if (delta?.content) result.text += delta.content
+                                        if (delta?.reasoning_content) result.thinking_text += delta.reasoning_content
                                         if (delta.role) {
                                             result.role = delta.role
                                         }
@@ -532,6 +532,10 @@ export class ChatGPTAPI {
                             if (message.content) {
                                 result.text = extractTextContent(message.content)
                                 result.originalContent = message.content
+                            }
+                            if (message.tool_calls && message.tool_calls.length > 0) {
+                                result.functionCall = message.tool_calls[0].function
+                                result.toolCalls = message.tool_calls
                             } else if (message.function_call && message.function_call !== null) {
                                 result.functionCall = message.function_call
                                 result.toolCalls = [{
@@ -539,9 +543,6 @@ export class ChatGPTAPI {
                                     type: 'function',
                                     function: message.function_call
                                 }]
-                            } else if (message.tool_calls && message.tool_calls.length > 0) {
-                                result.functionCall = message.tool_calls.map(tool => tool.function)[0]
-                                result.toolCalls = message.tool_calls
                             }
                             result.thinking_text = message.reasoning_content
                             if (message.role) {

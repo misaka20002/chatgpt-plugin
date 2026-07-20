@@ -1,8 +1,15 @@
 import fetch from 'node-fetch'
 
-import { formatDate, mkdirs } from '../common.js'
-import fs from 'fs'
+import { formatDate } from '../common.js'
 import { AbstractTool } from './AbstractTool.js'
+
+const BILIBILI_HEADERS = {
+  accept: 'application/json, text/plain, */*',
+  'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+  Referer: 'https://search.bilibili.com/',
+  'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+}
+
 export class BilibiliSearchVideoTool extends AbstractTool {
   name = 'searchVideo'
 
@@ -30,47 +37,58 @@ export class BilibiliSearchVideoTool extends AbstractTool {
 }
 
 export async function searchBilibili (name) {
-  let biliRes = await fetch('https://www.bilibili.com',
-    {
-      // headers: {
-      // accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-      // Accept: '*/*',
-      // 'Accept-Encoding': 'gzip, deflate, br',
-      // 'accept-language': 'en-US,en;q=0.9',
-      // Connection: 'keep-alive',
-      // 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'
-      // }
-    })
-  const headers = biliRes.headers.raw()
-  const setCookieHeaders = headers['set-cookie']
-  if (setCookieHeaders) {
-    const cookies = []
-    setCookieHeaders.forEach(header => {
-      const cookie = header.split(';')[0]
-      cookies.push(cookie)
-    })
-    const cookieHeader = cookies.join('; ')
-    let headers = {
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-      'accept-language': 'en-US,en;q=0.9',
-      Referer: 'https://www.bilibili.com',
-      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
-      cookie: cookieHeader
-    }
-    let response = await fetch(`https://api.bilibili.com/x/web-interface/search/type?keyword=${name}&search_type=video`,
-      {
-        headers
-      })
-    let json = await response.json()
-    if (json.data?.numResults > 0) {
-      let result = json.data.result.map(r => {
-        return `id: ${r.bvid}，标题：${r.title}，作者：${r.author}，播放量：${r.play}，发布日期：${formatDate(new Date(r.pubdate * 1000))}`
-      }).slice(0, Math.min(json.data?.numResults, 5)).join('\n')
-      return `这些是关键词“${name}”的搜索结果：\n${result}`
-    } else {
-      return `没有找到关键词“${name}”的搜索结果`
-    }
+  const keyword = String(name || '').trim()
+  if (!keyword) {
+    return '搜索关键词不能为空'
   }
 
-  return {}
+  const cookie = await getBilibiliVisitorCookie()
+  const searchUrl = new URL('https://api.bilibili.com/x/web-interface/search/type')
+  searchUrl.search = new URLSearchParams({
+    keyword,
+    search_type: 'video'
+  }).toString()
+
+  const response = await fetch(searchUrl, {
+    headers: {
+      ...BILIBILI_HEADERS,
+      cookie
+    }
+  })
+  if (!response.ok) {
+    throw new Error(`Bilibili search request failed: HTTP ${response.status}`)
+  }
+
+  const json = await response.json()
+  if (json.code !== 0) {
+    throw new Error(`Bilibili search request failed: ${json.message || json.code}`)
+  }
+
+  const videos = (json.data?.result || []).filter(r => r.type === 'video' && r.bvid)
+  if (videos.length === 0) {
+    return `没有找到关键词“${keyword}”的搜索结果`
+  }
+
+  const result = videos.slice(0, 5).map(r => {
+    const title = r.title.replace(/<[^>]+>/g, '')
+    return `id: ${r.bvid}，标题：${title}，作者：${r.author}，播放量：${r.play}，发布日期：${formatDate(new Date(r.pubdate * 1000))}`
+  }).join('\n')
+  return `这些是关键词“${keyword}”的搜索结果：\n${result}`
+}
+
+async function getBilibiliVisitorCookie () {
+  const response = await fetch('https://api.bilibili.com/x/frontend/finger/spi', {
+    headers: BILIBILI_HEADERS
+  })
+  if (!response.ok) {
+    throw new Error(`Bilibili visitor cookie request failed: HTTP ${response.status}`)
+  }
+
+  const json = await response.json()
+  const buvid3 = json.data?.b_3
+  const buvid4 = json.data?.b_4
+  if (!buvid3 || !buvid4) {
+    throw new Error(`Bilibili visitor cookie request failed: ${json.message || json.code || 'invalid response'}`)
+  }
+  return `buvid3=${buvid3}; buvid4=${buvid4}`
 }
