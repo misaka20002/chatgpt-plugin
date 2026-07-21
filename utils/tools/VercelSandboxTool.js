@@ -4,12 +4,37 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fetch from 'node-fetch'
 import { Config } from '../config.js'
+import { makeForwardMsg } from '../common.js'
 import { AbstractTool } from './AbstractTool.js'
 
 const MAX_REFERENCE_IMAGES = 6
 const MAX_INPUT_FILES = 16
 const RETRYABLE_STATUS = new Set([502, 503, 504])
 const BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/
+const MAX_CALL_FORWARD_CHARS = 6000
+
+function buildCallForwardBatches(command, result) {
+  const sourceMessage = `执行源码：\n${command || '(空)'}`
+  const resultMessage = `执行结果：\n${String(result ?? '')}`
+  if (sourceMessage.length + resultMessage.length <= MAX_CALL_FORWARD_CHARS) {
+    return [{ title: '远程沙箱调用', messages: [sourceMessage, resultMessage] }]
+  }
+  return [
+    { title: '远程沙箱调用 1/2（源码）', messages: [sourceMessage] },
+    { title: '远程沙箱调用 2/2（结果）', messages: [resultMessage] }
+  ]
+}
+
+async function sendCallForward(e, command, result) {
+  if (!Config.vercelSandboxSendCallForward || !e?.reply) return
+  try {
+    for (const batch of buildCallForwardBatches(command, result)) {
+      await e.reply(await makeForwardMsg(e, batch.messages, batch.title))
+    }
+  } catch (error) {
+    globalThis.logger?.warn?.(`[vercelSandbox] 发送源码与结果合并转发失败: ${error?.message || error}`)
+  }
+}
 
 function defaultSessionId(e) {
   const scope = e?.group_id || e?.group?.group_id || 'private'
@@ -443,13 +468,17 @@ export class VercelSandboxTool extends AbstractTool {
   }
 
   func = async function (args, e) {
+    const command = typeof args?.command === 'string' ? args.command.trim() : ''
+    const finish = async result => {
+      await sendCallForward(e, command, result)
+      return result
+    }
     const apiUrl = validatedApiUrl(Config.sandboxApiUrl)
     const token = String(Config.sandboxToken || '').trim()
-    if (!apiUrl) return 'vercelSandbox 尚未配置有效的 HTTPS API URL，请在锅巴中填写 sandboxApiUrl。'
-    if (!token) return 'vercelSandbox 尚未配置鉴权 Token，请在锅巴中填写 sandboxToken。'
+    if (!apiUrl) return await finish('vercelSandbox 尚未配置有效的 HTTPS API URL，请在锅巴中填写 sandboxApiUrl。')
+    if (!token) return await finish('vercelSandbox 尚未配置鉴权 Token，请在锅巴中填写 sandboxToken。')
 
-    const command = typeof args.command === 'string' ? args.command.trim() : ''
-    if (!command) return 'command is required'
+    if (!command) return await finish('command is required')
 
     const useMessageMedia = args.use_message_images !== false
     const preparedInputs = useMessageMedia
@@ -509,7 +538,7 @@ ${command}
 
       if (!response?.ok) {
         const responseText = response ? await response.text() : 'no response'
-        return `沙箱请求失败，HTTP ${response?.status || 'unknown'}: ${responseText.slice(0, 1000)}`
+        return await finish(`沙箱请求失败，HTTP ${response?.status || 'unknown'}: ${responseText.slice(0, 1000)}`)
       }
 
       temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'vercel-sandbox-'))
@@ -520,7 +549,7 @@ ${command}
       })
       const totalSent = sent.images + sent.videos + sent.audios + sent.files
 
-      return JSON.stringify({
+      const toolResult = JSON.stringify({
         success: result.exit_code === 0,
         status: result.status,
         exit_code: result.exit_code,
@@ -545,9 +574,10 @@ ${command}
           ? `已直接发送 ${sent.images} 张图片、${sent.videos} 个视频、${sent.audios} 个音频和 ${sent.files} 个附件，无需再次调用发送工具`
           : undefined
       })
+      return await finish(toolResult)
     } catch (error) {
-      if (error?.name === 'AbortError') return '沙箱请求超时'
-      return `沙箱调用失败: ${error?.message || error}`
+      if (error?.name === 'AbortError') return await finish('沙箱请求超时')
+      return await finish(`沙箱调用失败: ${error?.message || error}`)
     } finally {
       clearTimeout(timer)
       if (temporaryDirectory) {
