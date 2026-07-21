@@ -755,6 +755,7 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
     let i = []
     let text = [] // 用于存储文本消息
     let get_Video = [] // [新增] 用于存储视频消息
+    let get_File = [] // [新增] 用于存储文件消息
     let senderNickname = '' // 存储发送者昵称
     let senderUser_id = '' // 存储发送者昵称
 
@@ -803,8 +804,11 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
         })
       }
       if (val.type == "file") {
-        e.reply("不支持消息中的文件，请将该文件以图片发送...", true);
-        return e.img;
+        get_File.push({
+          url: val.url,
+          file_size: val.file_size, // 未验证
+          file_name: val.file || val.file_name // 未验证
+        })
       }
     }
     if (Boolean(i.length)) {
@@ -813,6 +817,9 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
     }
     if (Boolean(get_Video.length)) {
       e.get_Video = get_Video
+    }
+    if (Boolean(get_File.length)) {
+      e.get_File = get_File
     }
     if (text.length > 0) {
       // 如果有发送者昵称,添加到引用文本前,使用markdown引用格式
