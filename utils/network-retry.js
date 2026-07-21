@@ -67,7 +67,7 @@ function wait(delayMs, signal) {
 export async function fetchWithConnectionRetry(fetchFn, url, options = {}, retryOptions = {}) {
   const {
     maxRetries = 3,
-    delayMs = 10_000,
+    delayMs = 60_000,
     onRetry
   } = retryOptions
 

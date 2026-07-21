@@ -84,7 +84,7 @@ export async function fetchWithConnectionRetry<T>(
 ): Promise<T> {
     const {
         maxRetries = 3,
-        delayMs = 10_000,
+        delayMs = 60_000,
         onRetry
     } = retryOptions
 
