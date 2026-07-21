@@ -2343,6 +2343,40 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
+          label: '远程沙箱',
+          component: 'Divider'
+        },
+        {
+          field: 'agent_VercelSandboxSwitch',
+          label: '工具新增-远程沙箱',
+          bottomHelpMessage: '智能模式中新增 咪的天版 vercel 远程沙箱工具，支持联网执行 Shell、Python、Node.js，并自动发送 outputs/ 中的图片、音视频和普通附件；需要填写下方 API URL 与 Token；可以按需提高 智能模式-工具调用最大轮次到8次以上；部署地址 https://github.com/syfantasy/sandbox',
+          component: 'Switch'
+        },
+        {
+          field: 'vercelSandboxMasterOnly',
+          label: '远程沙箱仅主人可用',
+          bottomHelpMessage: '开启后只有主人（e.isMaster）会获得并能够调用 vercelSandbox 工具；建议保持开启',
+          component: 'Switch'
+        },
+        {
+          field: 'sandboxApiUrl',
+          label: 'vercelSandbox API URL',
+          bottomHelpMessage: '远程沙箱的 HTTPS 地址，例如 https://your-project.vercel.app',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://your-project.vercel.app'
+          }
+        },
+        {
+          field: 'sandboxToken',
+          label: 'vercelSandbox Token',
+          bottomHelpMessage: '远程沙箱的 Bearer Token',
+          component: 'InputPassword',
+          componentProps: {
+            placeholder: '请输入远程沙箱 Token'
+          }
+        },
+        {
           label: 'Prompt Gallery 画图记录',
           component: 'Divider'
         },
