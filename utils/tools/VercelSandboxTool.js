@@ -394,9 +394,9 @@ export class VercelSandboxTool extends AbstractTool {
 
   description =
     '在用户配置的 Vercel 远程沙箱中执行联网 Shell、Python、Node.js、编译和文件处理命令。' +
-    '消息或引用消息中的图片、视频、音频会写入 inputs/。' +
-    '请把生成的图片、视频、音频、PDF、压缩包或其它附件保存到 outputs/，工具会自动发送给用户。' +
-    '即使命令执行 cd /tmp，/tmp/inputs 和 /tmp/outputs 也会映射到当前会话目录。'
+    '当前消息或引用消息中的媒体会写入 inputs/，路径列表可从 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES 环境变量读取。' +
+    '请根据用户要求在一次 command 中生成相应数量和类型的结果；所有需要发送给用户的文件都应分别保存到 outputs/，插件会按实际产物逐个自动发送。' +
+    '标准输出和错误输出适合记录执行过程或返回简短文本；/tmp/inputs 和 /tmp/outputs 始终映射到当前会话目录。'
 
   parameters = {
     properties: {
