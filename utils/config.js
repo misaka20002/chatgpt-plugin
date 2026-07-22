@@ -435,6 +435,7 @@ const defaultConfig = {
   agent_SandboxSwitch: false,
   agent_VercelSandboxSwitch: false,
   vercelSandboxMasterOnly: true,
+  vercelSandboxSendCallForward: true,
   sandboxApiUrl: '',
   sandboxToken: '',
   // Prompt Gallery 画图记录

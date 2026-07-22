@@ -2359,6 +2359,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'vercelSandboxSendCallForward',
+          label: '发送沙箱执行过程',
+          bottomHelpMessage: '每次调用远程沙箱后，以合并转发发送执行源码和结果',
+          component: 'Switch'
+        },
+        {
           field: 'sandboxApiUrl',
           label: 'vercelSandbox API URL',
           bottomHelpMessage: '远程沙箱的 HTTPS 地址，例如 https://your-project.vercel.app',
