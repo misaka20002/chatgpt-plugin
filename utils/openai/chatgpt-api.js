@@ -8,6 +8,7 @@ import * as types from './types.js';
 import globalFetch from 'node-fetch';
 import { fetchSSE } from './fetch-sse.js';
 import { syncInnerOs } from '../innerOs.js';
+import { fetchWithConnectionRetry } from '../network-retry.js';
 const CHATGPT_MODEL = 'gpt-4o-mini';
 const USER_LABEL_DEFAULT = 'User';
 const ASSISTANT_LABEL_DEFAULT = 'ChatGPT';
@@ -314,6 +315,11 @@ export class ChatGPTAPI {
             if (this._debug) {
                 console.log(`sendMessage (${numTokens} tokens)`, body);
             }
+            const fetchWithRetry = (requestUrl, requestOptions) => fetchWithConnectionRetry(this._fetch, requestUrl, requestOptions, {
+                onRetry: ({ error, retry, maxRetries, delayMs }) => {
+                    console.warn(`[Chatgpt][OpenAI] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`);
+                }
+            });
             if (stream) {
                 fetchSSE(url, {
                     method: 'POST',
@@ -410,11 +416,11 @@ export class ChatGPTAPI {
                             return reject(err);
                         }
                     }
-                }, this._fetch).catch(reject);
+                }, fetchWithRetry).catch(reject);
             }
             else {
                 try {
-                    const res = await this._fetch(url, {
+                    const res = await fetchWithRetry(url, {
                         method: 'POST',
                         headers,
                         body: JSON.stringify(body),

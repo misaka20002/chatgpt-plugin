@@ -13,6 +13,7 @@ import { sendToolCallForwardMsg } from '../utils/toolForward.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
 import { Config } from '../utils/config.js'
 import { syncInnerOs } from '../utils/innerOs.js';
+import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
@@ -356,12 +357,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (this.debug) {
       logger.info("body: " + JSON.stringify(body, null, 2))
     }
-    let result = await newFetch(url, {
+    let result = await fetchWithConnectionRetry(newFetch, url, {
       method: 'POST',
       body: JSON.stringify(body),
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': this._key
+      }
+    }, {
+      onRetry: ({ error, retry, maxRetries, delayMs }) => {
+        logger.warn(`[Chatgpt][Gemini] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
       }
     })
 

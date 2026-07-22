@@ -160,6 +160,7 @@
   "forwardToolCallResult": false,
   "agent_VercelSandboxSwitch": false,
   "vercelSandboxMasterOnly": true,
+  "vercelSandboxSendCallForward": true,
   "sandboxApiUrl": "",
   "sandboxToken": "",
   "enableForceToolKeywords": true,
