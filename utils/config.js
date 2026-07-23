@@ -625,7 +625,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-pro-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest']
+        const defaultArr = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-pro-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);
