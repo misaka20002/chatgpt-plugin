@@ -2229,10 +2229,10 @@ export function supportGuoba() {
         {
           field: 'sandboxApiUrl',
           label: 'vercelSandbox API URL',
-          bottomHelpMessage: '远程沙箱的 HTTPS 地址，例如 https://your-project.vercel.app',
+          bottomHelpMessage: '远程沙箱的 HTTP/HTTPS 地址，例如 https://your-project.vercel.app 或 http://127.0.0.1:3000',
           component: 'Input',
           componentProps: {
-            placeholder: 'https://your-project.vercel.app'
+            placeholder: 'https://your-project.vercel.app 或 http://host:port'
           }
         },
         {

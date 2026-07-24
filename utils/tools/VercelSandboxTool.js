@@ -402,7 +402,7 @@ export function validatedApiUrl(value) {
   try {
     const url = new URL(String(value || '').trim())
     if (
-      url.protocol !== 'https:' ||
+      (url.protocol !== 'https:' && url.protocol !== 'http:') ||
       url.username ||
       url.password ||
       url.search ||
@@ -475,7 +475,7 @@ export class VercelSandboxTool extends AbstractTool {
     }
     const apiUrl = validatedApiUrl(Config.sandboxApiUrl)
     const token = String(Config.sandboxToken || '').trim()
-    if (!apiUrl) return await finish('vercelSandbox 尚未配置有效的 HTTPS API URL，请在锅巴中填写 sandboxApiUrl。')
+    if (!apiUrl) return await finish('vercelSandbox 尚未配置有效的 API URL，请在锅巴中填写 sandboxApiUrl。')
     if (!token) return await finish('vercelSandbox 尚未配置鉴权 Token，请在锅巴中填写 sandboxToken。')
 
     if (!command) return await finish('command is required')
