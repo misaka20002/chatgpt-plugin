@@ -2161,10 +2161,10 @@ export function supportGuoba() {
         {
           field: 'meme_baseUrl',
           label: 'MEME api',
-          bottomHelpMessage: '默认值：https://misaka20001-memegenerator.hf.space，也可以duplicate这个space然后填写自己的；或自行搭建meme服务器：https://github.com/misaka20002/meme-generator/blob/main/README.md；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
+          bottomHelpMessage: '默认值：https://qwqcc-meme.hf.space，也可以duplicate这个space然后填写自己的；或自行搭建meme服务器：https://github.com/misaka20002/meme-generator/blob/main/README.md；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
           component: 'Input',
           componentProps: {
-            placeholder: 'https://misaka20001-memegenerator.hf.space',
+            placeholder: 'https://qwqcc-meme.hf.space',
           },
         },
         {
