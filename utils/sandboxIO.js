@@ -1,48 +1,10 @@
-import { appendFile, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import os from 'node:os'
+import { appendFile, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import fetch from 'node-fetch'
-import { Config } from '../config.js'
-import { makeForwardMsg } from '../common.js'
-import { AbstractTool } from './AbstractTool.js'
 
 const MAX_REFERENCE_IMAGES = 6
 const MAX_INPUT_FILES = 16
-const RETRYABLE_STATUS = new Set([502, 503, 504])
 const BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/
-const MAX_CALL_FORWARD_CHARS = 6000
-
-function buildCallForwardBatches(command, result) {
-  const sourceMessage = `执行源码：\n${command || '(空)'}`
-  const resultMessage = `执行结果：\n${String(result ?? '')}`
-  if (sourceMessage.length + resultMessage.length <= MAX_CALL_FORWARD_CHARS) {
-    return [{ title: '远程沙箱调用', messages: [sourceMessage, resultMessage] }]
-  }
-  return [
-    { title: '远程沙箱调用 1/2（源码）', messages: [sourceMessage] },
-    { title: '远程沙箱调用 2/2（结果）', messages: [resultMessage] }
-  ]
-}
-
-async function sendCallForward(e, command, result) {
-  if (!Config.vercelSandboxSendCallForward || !e?.reply) return
-  try {
-    for (const batch of buildCallForwardBatches(command, result)) {
-      await e.reply(await makeForwardMsg(e, batch.messages, batch.title))
-    }
-  } catch (error) {
-    globalThis.logger?.warn?.(`[vercelSandbox] 发送源码与结果合并转发失败: ${error?.message || error}`)
-  }
-}
-
-function defaultSessionId(e) {
-  const scope = e?.group_id || e?.group?.group_id || 'private'
-  const user = e?.user_id || e?.sender?.user_id || e?.sender?.userId || 'owner'
-  return `chat-${scope}-${user}`
-    .replace(/[^A-Za-z0-9_.-]/g, '-')
-    .slice(0, 64)
-}
 
 function extensionFromSource(source, fallback) {
   try {
@@ -110,7 +72,7 @@ async function resolveMessageMedia(e, item) {
     if (typeof result === 'string') return result
     return result?.url || result?.data?.url || result?.file || result?.data?.file || ''
   } catch (error) {
-    globalThis.logger?.warn?.(`[vercelSandbox] 获取消息附件失败: ${error?.message || error}`)
+    globalThis.logger?.warn?.(`[sandboxIO] 获取消息附件失败: ${error?.message || error}`)
     return ''
   }
 }
@@ -128,7 +90,7 @@ async function getReplyMessage(e) {
       return (await e.friend.getChatHistory(e.source.time, 1)).pop()?.message || []
     }
   } catch (error) {
-    globalThis.logger?.warn?.(`[vercelSandbox] 获取引用消息失败: ${error?.message || error}`)
+    globalThis.logger?.warn?.(`[sandboxIO] 获取引用消息失败: ${error?.message || error}`)
   }
   return []
 }
@@ -231,7 +193,7 @@ export async function prepareInputs(e) {
       if (isImage) imagePaths.push(inputPath)
       else mediaPaths.push(inputPath)
     } catch (error) {
-      globalThis.logger?.warn?.(`[vercelSandbox] 跳过附件 ${inputPath}: ${error?.message || error}`)
+      globalThis.logger?.warn?.(`[sandboxIO] 跳过附件 ${inputPath}: ${error?.message || error}`)
     }
   }
 
@@ -391,7 +353,7 @@ export async function processOutputFiles(e, files, options = {}) {
     } catch (error) {
       const message = error?.message || String(error)
       sendErrors.push({ path: file.path, error: message })
-      globalThis.logger?.error?.(`[vercelSandbox] 发送输出文件失败: ${file.path} -> ${message}`)
+      globalThis.logger?.error?.(`[sandboxIO] 发送输出文件失败: ${file.path} -> ${message}`)
     }
   }
 
@@ -414,184 +376,3 @@ export function validatedApiUrl(value) {
   }
 }
 
-export class VercelSandboxTool extends AbstractTool {
-  name = 'vercelSandbox'
-
-  description =
-    '在用户配置的 Vercel 远程沙箱中执行联网 Shell、Python、Node.js、编译和文件处理命令。' +
-    '需要处理图片时，可通过 image_refs 指定图片；未指定时只提取当前消息或被回复消息中的图片，由沙盒写入 inputs/reference_N.img。' +
-    '当前消息或回复消息中的视频、音频也会写入 inputs/。输入路径分别写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
-    '请把生成或处理后的图片、视频或音频保存到 outputs/ 目录，工具会自动读取并直接发送给用户。' +
-    '需要给用户一个可下载文件时（例如生成的长文本/小说存为 .txt 或 .docx、接口返回或下载得到的 PDF、导出的 .xlsx/.zip 等），同样把文件写入 outputs/，工具会作为 QQ 文件自动发送；' +
-    '仅在确有文件交付需求时才产出文件，普通问答不要凭空生成文件，中间产物请写到会话目录或 /tmp 而非 outputs/。生成文档可直接用已预装的 python-docx(Word)、openpyxl(Excel)、reportlab(PDF, 支持内置 CJK 字体)、pypdf(读取/合并 PDF)。' +
-    '输出图片会注册到原有 visionService 并在 output_image_refs 中返回，可继续传给 GenerateImageGemini、SendImage 或其它图片工具。' +
-    '如果输出图片只作为后续工具的中间输入，可设置 send_output_media=false：不会发送给用户，但仍会返回 output_image_refs。' +
-    '即使命令执行 cd /tmp，/tmp/inputs 和 /tmp/outputs 也会自动映射回当前会话目录。' +
-    '输出媒体通过流式接口返回，合计默认不超过 64MB；图片优先使用 JPEG/WebP，音频优先使用 MP3，视频优先使用 H.264/AAC MP4。' +
-    '需要打开网页并截图时，优先填写 screenshot_url，不要自行安装 Puppeteer；沙盒已预装 Chromium、Puppeteer 和中文字体，截图会自动发送。' +
-    '处理图片/GIF 时可直接使用 /app/tools/media_edit.py；GIF 会先合成完整帧再翻转或倒放，避免残影。' +
-    '常用 Pillow、OpenCV、scikit-image、imageio、matplotlib、FFmpeg 和 ImageMagick 已预装。动态依赖和会话文件只在当前热实例存活期间复用。'
-
-  parameters = {
-    properties: {
-      command: {
-        type: 'string',
-        description: '要执行的完整 Shell 命令。输入位于 inputs/，需要回传的文件必须写入 outputs/。'
-      },
-      session_id: {
-        type: 'string',
-        description: '可选会话 ID；远端热实例存活时可复用文件和动态依赖。'
-      },
-      timeout_seconds: {
-        type: 'number',
-        description: '可选超时时间，默认 120 秒，范围 1-300 秒。'
-      },
-      python_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装到当前会话 Python 环境的包。'
-      },
-      node_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装到当前会话 Node.js 环境的包。'
-      },
-      use_message_images: {
-        type: 'boolean',
-        description: '是否上传当前消息或引用消息中的图片、视频和音频，默认 true。'
-      },
-      send_output_images: {
-        type: 'boolean',
-        description: '旧兼容参数。设为 false 时不自动发送 outputs/ 中的媒体。'
-      },
-      send_output_media: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的图片、视频和音频，默认 true。'
-      },
-      send_output_files: {
-        type: 'boolean',
-        description: '是否通过 segment.file 自动发送 outputs/ 中的普通附件，默认 true。'
-      }
-    },
-    required: ['command']
-  }
-
-  func = async function (args, e) {
-    const command = typeof args?.command === 'string' ? args.command.trim() : ''
-    const finish = async result => {
-      await sendCallForward(e, command, result)
-      return result
-    }
-    const apiUrl = validatedApiUrl(Config.sandboxApiUrl)
-    const token = String(Config.sandboxToken || '').trim()
-    if (!apiUrl) return await finish('vercelSandbox 尚未配置有效的 API URL，请在锅巴中填写 sandboxApiUrl。')
-    if (!token) return await finish('vercelSandbox 尚未配置鉴权 Token，请在锅巴中填写 sandboxToken。')
-
-    if (!command) return await finish('command is required')
-
-    const useMessageMedia = args.use_message_images !== false
-    const preparedInputs = useMessageMedia
-      ? await prepareInputs(e)
-      : { inputUrls: [], inputFiles: [], imagePaths: [], mediaPaths: [], inputPaths: [] }
-    const preparedCommand = `
-SANDBOX_SESSION_DIR="$PWD"
-export SANDBOX_SESSION_DIR
-export SANDBOX_INPUT_DIR="$SANDBOX_SESSION_DIR/inputs"
-export SANDBOX_OUTPUT_DIR="$SANDBOX_SESSION_DIR/outputs"
-mkdir -p "$SANDBOX_INPUT_DIR" "$SANDBOX_OUTPUT_DIR"
-rm -rf /tmp/inputs /tmp/outputs
-ln -s "$SANDBOX_INPUT_DIR" /tmp/inputs
-ln -s "$SANDBOX_OUTPUT_DIR" /tmp/outputs
-${command}
-`
-    const timeoutSeconds = Math.max(1, Math.min(300, Number(args.timeout_seconds) || 120))
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), (timeoutSeconds + 180) * 1000)
-    const requestBody = JSON.stringify({
-      command: preparedCommand,
-      session_id: typeof args.session_id === 'string' && args.session_id.trim()
-        ? args.session_id.trim()
-        : defaultSessionId(e),
-      timeout_seconds: timeoutSeconds,
-      python_packages: Array.isArray(args.python_packages) ? args.python_packages : [],
-      node_packages: Array.isArray(args.node_packages) ? args.node_packages : [],
-      input_urls: preparedInputs.inputUrls,
-      input_files: preparedInputs.inputFiles,
-      reset_paths: ['inputs', 'outputs'],
-      output_files: ['outputs/*', 'outputs/**/*'],
-      env: {
-        SANDBOX_INPUT_IMAGES: JSON.stringify(preparedInputs.imagePaths),
-        SANDBOX_INPUT_MEDIA: JSON.stringify(preparedInputs.mediaPaths),
-        SANDBOX_INPUT_FILES: JSON.stringify(preparedInputs.inputPaths),
-        SANDBOX_OUTPUT_DIR: 'outputs'
-      }
-    })
-
-    let temporaryDirectory
-    try {
-      let response
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        response = await fetch(`${apiUrl}/v1/exec-stream`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: requestBody,
-          signal: controller.signal
-        })
-        if (!RETRYABLE_STATUS.has(response.status) || attempt === 1) break
-        await response.arrayBuffer().catch(() => { })
-        await new Promise(resolve => setTimeout(resolve, 1500))
-      }
-
-      if (!response?.ok) {
-        const responseText = response ? await response.text() : 'no response'
-        return await finish(`沙箱请求失败，HTTP ${response?.status || 'unknown'}: ${responseText.slice(0, 1000)}`)
-      }
-
-      temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'vercel-sandbox-'))
-      const { result, files } = await readStreamResponse(response, temporaryDirectory)
-      const { sent, sendErrors } = await processOutputFiles(e, files, {
-        sendMedia: args.send_output_media !== false && args.send_output_images !== false,
-        sendFiles: args.send_output_files !== false
-      })
-      const totalSent = sent.images + sent.videos + sent.audios + sent.files
-
-      const toolResult = JSON.stringify({
-        success: result.exit_code === 0,
-        status: result.status,
-        exit_code: result.exit_code,
-        session_id: result.session_id,
-        stdout: result.stdout,
-        stderr: result.stderr,
-        input_images: preparedInputs.imagePaths,
-        input_media: preparedInputs.mediaPaths,
-        input_files: preparedInputs.inputPaths,
-        output_files: files.map(file => ({
-          path: file.path,
-          mime_type: file.mime_type,
-          size: file.size
-        })),
-        images_sent: sent.images,
-        videos_sent: sent.videos,
-        audios_sent: sent.audios,
-        files_sent: sent.files,
-        send_errors: sendErrors,
-        files_truncated: result.files_truncated,
-        message: totalSent > 0
-          ? `已直接发送 ${sent.images} 张图片、${sent.videos} 个视频、${sent.audios} 个音频和 ${sent.files} 个附件，无需再次调用发送工具`
-          : undefined
-      })
-      return await finish(toolResult)
-    } catch (error) {
-      if (error?.name === 'AbortError') return await finish('沙箱请求超时')
-      return await finish(`沙箱调用失败: ${error?.message || error}`)
-    } finally {
-      clearTimeout(timer)
-      if (temporaryDirectory) {
-        await rm(temporaryDirectory, { recursive: true, force: true }).catch(() => { })
-      }
-    }
-  }
-}

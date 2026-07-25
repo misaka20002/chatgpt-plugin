@@ -2257,35 +2257,35 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
-          field: 'agent_VercelSandboxSwitch',
+          field: 'agent_RemoteSandboxSwitch',
           label: '工具新增-远程沙箱',
-          bottomHelpMessage: '智能模式中新增 咪的天版 vercel 远程沙箱工具，支持联网执行 Shell、Python、Node.js，并自动发送 outputs/ 中的图片、音视频和普通附件；需要填写下方 API URL 与 Token；可以按需提高 智能模式-工具调用最大轮次到8次以上；部署地址 https://github.com/syfantasy/sandbox',
+          bottomHelpMessage: '智能模式中新增 呆毛版 remoteSandbox 工具，连接通过 Docker Compose 部署的长驻远程服务器；支持持久会话、联网 Shell/Python/Node.js/Chromium 和 outputs/ 文件发送。部署地址 https://github.com/misaka20002/sandbox',
           component: 'Switch'
         },
         {
-          field: 'vercelSandboxMasterOnly',
+          field: 'remoteSandboxMasterOnly',
           label: '远程沙箱仅主人可用',
-          bottomHelpMessage: '开启后只有主人（e.isMaster）会获得并能够调用 vercelSandbox 工具；建议保持开启',
+          bottomHelpMessage: '开启后只有主人会获得并能够调用 remoteSandbox 工具；远程服务允许执行任意命令，强烈建议保持开启；（同一用户在不同群、群聊和私聊之间采用不同会话，不会自动共享文件）',
           component: 'Switch'
         },
         {
-          field: 'vercelSandboxSendCallForward',
+          field: 'remoteSandboxSendCallForward',
           label: '发送沙箱执行过程',
           bottomHelpMessage: '每次调用远程沙箱后，以合并转发发送执行源码和结果',
           component: 'Switch'
         },
         {
-          field: 'sandboxApiUrl',
-          label: 'vercelSandbox API URL',
-          bottomHelpMessage: '远程沙箱的 HTTP/HTTPS 地址，例如 https://your-project.vercel.app 或 http://127.0.0.1:3000',
+          field: 'remoteSandboxApiUrl',
+          label: 'remoteSandbox API URL',
+          bottomHelpMessage: 'Docker Compose 远程沙箱的 HTTPS 或受控内网地址，例如 https://sandbox.example.com',
           component: 'Input',
           componentProps: {
-            placeholder: 'https://your-project.vercel.app 或 http://host:port'
+            placeholder: 'https://sandbox.example.com 或 http://内网地址:7860'
           }
         },
         {
-          field: 'sandboxToken',
-          label: 'vercelSandbox Token',
+          field: 'remoteSandboxToken',
+          label: 'remoteSandbox Token',
           bottomHelpMessage: '远程沙箱的 Bearer Token',
           component: 'InputPassword',
           componentProps: {

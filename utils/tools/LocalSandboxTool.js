@@ -9,7 +9,7 @@ import {
   runLocalSandboxCommand,
   validateLocalSandboxPackages
 } from '../localSandbox.js'
-import { prepareInputs, processOutputFiles } from './VercelSandboxTool.js'
+import { prepareInputs, processOutputFiles } from '../sandboxIO.js'
 import { AbstractTool } from './AbstractTool.js'
 
 const MAX_CALL_FORWARD_CHARS = 6000
