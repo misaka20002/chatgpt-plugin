@@ -1,5 +1,6 @@
 import { Config } from '../config.js'
 import { makeForwardMsg } from '../common.js'
+import { hidePrivacyInfo } from '../paimonFuction.js'
 import {
   collectLocalSandboxOutputs,
   localSandboxSessionManager,
@@ -16,7 +17,7 @@ const MAX_CALL_FORWARD_CHARS = 6000
 
 function buildCallForwardBatches(command, result) {
   const sourceMessage = `执行源码：\n${command || '(空)'}`
-  const resultMessage = `执行结果：\n${String(result ?? '')}`
+  const resultMessage = `执行结果：\n${hidePrivacyInfo(String(result ?? ''))}`
   if (sourceMessage.length + resultMessage.length <= MAX_CALL_FORWARD_CHARS) {
     return [{ title: '本地沙箱调用', messages: [sourceMessage, resultMessage] }]
   }
