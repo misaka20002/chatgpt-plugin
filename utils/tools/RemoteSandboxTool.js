@@ -120,8 +120,11 @@ export class RemoteSandboxTool extends AbstractTool {
     '输入附件位于 inputs/，对应路径写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
     'inputs/、outputs/ 每次调用都会清空；需要持续编辑的源文件必须保存在会话根目录或子目录，需要交付时再复制到 outputs/。' +
     'outputs/ 中的图片、视频、音频、HTML、PDF、压缩包等会自动发送给用户。' +
-    '网页截图可将源 HTML 保存在会话根目录，再复制到 outputs/，并使用 "$SANDBOX_CHROMIUM" --headless=new ' +
-    '--no-sandbox --disable-dev-shm-usage --screenshot=outputs/page.png --window-size=1440,1000 "file://$PWD/page.html"。' +
+    '当用户要求网页截图、页面预览或渲染结果时，必须使用 $SANDBOX_CHROMIUM 打开实际 HTML 并截图；' +
+    '禁止使用 Pillow、Canvas、SVG、Matplotlib 或其他方式重新绘制、模拟网页截图，除非用户明确要求制作模拟图。' +
+    '请将源 HTML 保存在会话根目录，再复制到 outputs/，并执行 "$SANDBOX_CHROMIUM" --headless=new ' +
+    '--no-sandbox --disable-dev-shm-usage --hide-scrollbars --screenshot=outputs/page.png ' +
+    '--window-size=1440,1000 "file://$PWD/page.html"。Chromium 执行失败时必须返回真实错误，不得伪造截图。' +
     '动态 Python/Node 依赖、浏览器资料和其他工作文件会保留到服务器端闲置过期。'
 
   parameters = {
