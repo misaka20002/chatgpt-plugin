@@ -75,6 +75,7 @@ import { SendGroupPokeTool } from '../utils/tools/SendGroupPoke.js'
 import { SandboxJSTool } from '../utils/tools/Sandbox_JS.js'
 import { LocalSandboxTool } from '../utils/tools/LocalSandboxTool.js'
 import { RemoteSandboxTool } from '../utils/tools/RemoteSandboxTool.js'
+import { VercelSandboxTool } from '../utils/tools/VercelSandboxTool.js'
 import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
 import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
@@ -1208,6 +1209,7 @@ async function collectTools(e) {
     { condition: Config.agent_SandboxSwitch, ToolClass: SandboxJSTool },
     { condition: Config.agent_LocalSandboxSwitch && (!Config.localSandboxMasterOnly || e.isMaster), ToolClass: LocalSandboxTool },
     { condition: Config.agent_RemoteSandboxSwitch && (!Config.remoteSandboxMasterOnly || e.isMaster), ToolClass: RemoteSandboxTool },
+    { condition: Config.agent_VercelSandboxSwitch && (!Config.vercelSandboxMasterOnly || e.isMaster), ToolClass: VercelSandboxTool },
     { condition: Config.getPixivTool, ToolClass: GetPixivApiLoliconTool },
     { condition: Config.switch_EmojiTool, ToolClass: EmojiTool },
     { condition: Config.enableMemory, ToolClass: MemoryTool },

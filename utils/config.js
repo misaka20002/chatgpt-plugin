@@ -331,6 +331,11 @@ const defaultConfig = {
   remoteSandboxSendCallForward: true,
   remoteSandboxApiUrl: '',
   remoteSandboxToken: '',
+  agent_VercelSandboxSwitch: false,
+  vercelSandboxMasterOnly: true,
+  vercelSandboxSendCallForward: true,
+  sandboxApiUrl: '',
+  sandboxToken: '',
   // Prompt Gallery 画图记录
   enablePromptGallery: false, // 是否启用画图记录（含 tag 标注，推送到 GitHub 仓库）
   promptGalleryRepo: '', // GitHub 仓库地址，如 'user/repo'（建议使用私有仓库）
