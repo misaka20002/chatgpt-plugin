@@ -419,9 +419,18 @@ export class VercelSandboxTool extends AbstractTool {
 
   description =
     '在用户配置的 Vercel 远程沙箱中执行联网 Shell、Python、Node.js、编译和文件处理命令。' +
-    '当前消息或引用消息中的媒体会写入 inputs/，路径列表可从 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES 环境变量读取。' +
-    '请根据用户要求在一次 command 中生成相应数量和类型的结果；所有需要发送给用户的文件都应分别保存到 outputs/，插件会按实际产物逐个自动发送。' +
-    '标准输出和错误输出适合记录执行过程或返回简短文本；/tmp/inputs 和 /tmp/outputs 始终映射到当前会话目录。'
+    '需要处理图片时，可通过 image_refs 指定图片；未指定时只提取当前消息或被回复消息中的图片，由沙盒写入 inputs/reference_N.img。' +
+    '当前消息或回复消息中的视频、音频也会写入 inputs/。输入路径分别写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
+    '请把生成或处理后的图片、视频或音频保存到 outputs/ 目录，工具会自动读取并直接发送给用户。' +
+    '需要给用户一个可下载文件时（例如生成的长文本/小说存为 .txt 或 .docx、接口返回或下载得到的 PDF、导出的 .xlsx/.zip 等），同样把文件写入 outputs/，工具会作为 QQ 文件自动发送；' +
+    '仅在确有文件交付需求时才产出文件，普通问答不要凭空生成文件，中间产物请写到会话目录或 /tmp 而非 outputs/。生成文档可直接用已预装的 python-docx(Word)、openpyxl(Excel)、reportlab(PDF, 支持内置 CJK 字体)、pypdf(读取/合并 PDF)。' +
+    '输出图片会注册到原有 visionService 并在 output_image_refs 中返回，可继续传给 GenerateImageGemini、SendImage 或其它图片工具。' +
+    '如果输出图片只作为后续工具的中间输入，可设置 send_output_media=false：不会发送给用户，但仍会返回 output_image_refs。' +
+    '即使命令执行 cd /tmp，/tmp/inputs 和 /tmp/outputs 也会自动映射回当前会话目录。' +
+    '输出媒体通过流式接口返回，合计默认不超过 64MB；图片优先使用 JPEG/WebP，音频优先使用 MP3，视频优先使用 H.264/AAC MP4。' +
+    '需要打开网页并截图时，优先填写 screenshot_url，不要自行安装 Puppeteer；沙盒已预装 Chromium、Puppeteer 和中文字体，截图会自动发送。' +
+    '处理图片/GIF 时可直接使用 /app/tools/media_edit.py；GIF 会先合成完整帧再翻转或倒放，避免残影。' +
+    '常用 Pillow、OpenCV、scikit-image、imageio、matplotlib、FFmpeg 和 ImageMagick 已预装。动态依赖和会话文件只在当前热实例存活期间复用。'
 
   parameters = {
     properties: {
@@ -532,7 +541,7 @@ ${command}
           signal: controller.signal
         })
         if (!RETRYABLE_STATUS.has(response.status) || attempt === 1) break
-        await response.arrayBuffer().catch(() => {})
+        await response.arrayBuffer().catch(() => { })
         await new Promise(resolve => setTimeout(resolve, 1500))
       }
 
@@ -581,7 +590,7 @@ ${command}
     } finally {
       clearTimeout(timer)
       if (temporaryDirectory) {
-        await rm(temporaryDirectory, { recursive: true, force: true }).catch(() => {})
+        await rm(temporaryDirectory, { recursive: true, force: true }).catch(() => { })
       }
     }
   }
