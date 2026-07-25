@@ -1644,8 +1644,8 @@ export function supportGuoba() {
         },
         {
           field: 'agent_SandboxSwitch',
-          label: '工具新增-沙箱',
-          bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',
+          label: '工具新增-JS轻量沙箱',
+          bottomHelpMessage: '新增 execute_javascript 工具，仅支持无文件、无网络的 JavaScript 数学计算、数据处理和逻辑运算',
           component: 'Switch'
         },
         {
@@ -2203,6 +2203,54 @@ export function supportGuoba() {
           bottomHelpMessage: '用户输入的图片，最大支持的文件大小；重启生效',
           helpMessage: '单位：MB',
           component: 'InputNumber'
+        },
+        {
+          label: '本地系统沙箱',
+          component: 'Divider'
+        },
+        {
+          field: 'agent_LocalSandboxSwitch',
+          label: '工具新增-本地系统沙箱',
+          bottomHelpMessage: '智能模式中新增 localSandbox 工具，在 Linux/WSL2 上通过 bubblewrap 隔离执行 Shell、Python、Node.js 和 Chromium。需要本地安装 bwrap、prlimit 和 bash 。Ubuntu下安装指令： apt install bubblewrap util-linux bash python3 python3-pip', // 和云崽一般都有的 nodejs npm chromium
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxMasterOnly',
+          label: '本地沙箱仅主人可用',
+          bottomHelpMessage: '开启后只有主人权限会获得并能够调用 localSandbox 工具；任意本地命令会消耗 CPU、内存和磁盘，强烈建议保持开启',
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxSendCallForward',
+          label: '发送本地沙箱执行过程',
+          bottomHelpMessage: '每次调用本地沙箱后，以合并转发发送执行源码和结果',
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxNetworkEnabled',
+          label: '允许本地沙箱联网',
+          bottomHelpMessage: '默认关闭。开启后沙箱命令可访问外网、宿主网络和局域网，也允许动态安装 Python/Node.js 依赖，请仅在理解风险后开启',
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxRetentionMinutes',
+          label: '本地沙箱闲置保留时间',
+          helpMessage: '单位：分钟',
+          bottomHelpMessage: '默认 30 分钟，范围 1-1440；最后一次调用完成后重新计时',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 1440
+          }
+        },
+        {
+          field: 'localSandboxChromePath',
+          label: '本地沙箱 Chromium 路径',
+          bottomHelpMessage: '可选。为空时依次使用现有 chromePath 和系统 PATH 中的 chromium、chromium-browser 或 google-chrome',
+          component: 'Input',
+          componentProps: {
+            placeholder: '/usr/bin/chromium'
+          }
         },
         {
           label: '远程沙箱',
