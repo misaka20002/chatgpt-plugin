@@ -1650,8 +1650,8 @@ export function supportGuoba() {
         },
         {
           field: 'agent_SandboxSwitch',
-          label: '工具新增-沙箱',
-          bottomHelpMessage: '新增工具提供给AI在本地安全沙箱中执行代码，可用于科学计算、数据处理、逻辑运算等场景',
+          label: '工具新增-JS轻量沙箱',
+          bottomHelpMessage: '新增 execute_javascript 工具，仅支持无文件、无网络的 JavaScript 数学计算、数据处理和逻辑运算',
           component: 'Switch'
         },
         {
@@ -2299,10 +2299,10 @@ export function supportGuoba() {
         {
           field: 'meme_baseUrl',
           label: 'MEME api',
-          bottomHelpMessage: '默认值：https://misaka20001-memegenerator.hf.space，也可以duplicate这个space然后填写自己的；或自行搭建meme服务器：https://github.com/misaka20002/meme-generator/blob/main/README.md；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
+          bottomHelpMessage: '默认值：https://qwqcc-meme.hf.space，也可以duplicate这个space然后填写自己的；或自行搭建meme服务器：https://github.com/misaka20002/meme-generator/blob/main/README.md；关于meme的详情请阅读https://github.com/misaka20002/yunzai-meme；重启生效；可用指令：#meme帮助',
           component: 'Input',
           componentProps: {
-            placeholder: 'https://misaka20001-memegenerator.hf.space',
+            placeholder: 'https://qwqcc-meme.hf.space',
           },
         },
         {
@@ -2343,34 +2343,122 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
+          label: '本地系统沙箱',
+          component: 'Divider'
+        },
+        {
+          field: 'agent_LocalSandboxSwitch',
+          label: '工具新增-本地系统沙箱',
+          bottomHelpMessage: '智能模式中新增 localSandbox 工具，在 Linux/WSL2 上通过 bubblewrap 隔离执行 Shell、Python、Node.js 和 Chromium。需要本地安装 bwrap、prlimit 和 bash 。Ubuntu下安装指令： apt install bubblewrap util-linux bash python3 python3-pip', // 和云崽一般都有的 nodejs npm chromium
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxMasterOnly',
+          label: '本地沙箱仅主人可用',
+          bottomHelpMessage: '开启后只有主人权限会获得并能够调用 localSandbox 工具；任意本地命令会消耗 CPU、内存和磁盘，强烈建议保持开启',
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxSendCallForward',
+          label: '发送本地沙箱执行过程',
+          bottomHelpMessage: '每次调用本地沙箱后，以合并转发发送执行源码和结果',
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxNetworkEnabled',
+          label: '允许本地沙箱联网',
+          bottomHelpMessage: '默认关闭。开启后沙箱命令可访问外网、宿主网络和局域网，也允许动态安装 Python/Node.js 依赖，请仅在理解风险后开启',
+          component: 'Switch'
+        },
+        {
+          field: 'localSandboxRetentionMinutes',
+          label: '本地沙箱闲置保留时间',
+          helpMessage: '单位：分钟',
+          bottomHelpMessage: '默认 30 分钟，范围 1-1440；最后一次调用完成后重新计时',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 1440
+          }
+        },
+        {
+          field: 'localSandboxChromePath',
+          label: '本地沙箱 Chromium 路径',
+          bottomHelpMessage: '可选。为空时依次使用现有 chromePath 和系统 PATH 中的 chromium、chromium-browser 或 google-chrome',
+          component: 'Input',
+          componentProps: {
+            placeholder: '/usr/bin/chromium'
+          }
+        },
+        {
           label: '远程沙箱',
           component: 'Divider'
         },
         {
-          field: 'agent_VercelSandboxSwitch',
+          field: 'agent_RemoteSandboxSwitch',
           label: '工具新增-远程沙箱',
-          bottomHelpMessage: '智能模式中新增 咪的天版 vercel 远程沙箱工具，支持联网执行 Shell、Python、Node.js，并自动发送 outputs/ 中的图片、音视频和普通附件；需要填写下方 API URL 与 Token；可以按需提高 智能模式-工具调用最大轮次到8次以上；部署地址 https://github.com/syfantasy/sandbox',
+          bottomHelpMessage: '智能模式中新增 呆毛版 remoteSandbox 工具，连接通过 Docker Compose 部署的长驻远程服务器；支持持久会话、联网 Shell/Python/Node.js/Chromium 和 outputs/ 文件发送。部署地址 https://github.com/misaka20002/sandbox',
           component: 'Switch'
         },
         {
-          field: 'vercelSandboxMasterOnly',
+          field: 'remoteSandboxMasterOnly',
           label: '远程沙箱仅主人可用',
-          bottomHelpMessage: '开启后只有主人（e.isMaster）会获得并能够调用 vercelSandbox 工具；建议保持开启',
+          bottomHelpMessage: '开启后只有主人会获得并能够调用 remoteSandbox 工具；远程服务允许执行任意命令，强烈建议保持开启；（同一用户在不同群、群聊和私聊之间采用不同会话，不会自动共享文件）',
           component: 'Switch'
         },
         {
-          field: 'vercelSandboxSendCallForward',
+          field: 'remoteSandboxSendCallForward',
           label: '发送沙箱执行过程',
           bottomHelpMessage: '每次调用远程沙箱后，以合并转发发送执行源码和结果',
           component: 'Switch'
         },
         {
-          field: 'sandboxApiUrl',
-          label: 'vercelSandbox API URL',
-          bottomHelpMessage: '远程沙箱的 HTTPS 地址，例如 https://your-project.vercel.app',
+          field: 'remoteSandboxApiUrl',
+          label: 'remoteSandbox API URL',
+          bottomHelpMessage: 'Docker Compose 远程沙箱的 HTTPS 或受控内网地址，例如 https://sandbox.example.com',
           component: 'Input',
           componentProps: {
-            placeholder: 'https://your-project.vercel.app'
+            placeholder: 'https://sandbox.example.com 或 http://内网地址:7860'
+          }
+        },
+        {
+          field: 'remoteSandboxToken',
+          label: 'remoteSandbox Token',
+          bottomHelpMessage: '远程沙箱的 Bearer Token',
+          component: 'InputPassword',
+          componentProps: {
+            placeholder: '请输入远程沙箱 Token'
+          }
+        },
+        {
+          label: 'Vercel 远程沙箱',
+          component: 'Divider'
+        },
+        {
+          field: 'agent_VercelSandboxSwitch',
+          label: '工具新增-Vercel 远程沙箱',
+          bottomHelpMessage: '智能模式中新增 咪的天版 vercel 远程沙箱工具，支持联网执行 Shell、Python、Node.js，并自动发送 outputs/ 中的图片、音视频和普通附件；需要填写下方 API URL 与 Token；可以按需提高 智能模式-工具调用最大轮次到8次以上；部署地址 https://github.com/syfantasy/sandbox',
+          component: 'Switch'
+        },
+        {
+          field: 'vercelSandboxMasterOnly',
+          label: 'Vercel 沙箱仅主人可用',
+          bottomHelpMessage: '开启后只有主人（e.isMaster）会获得并能够调用 vercelSandbox 工具；建议保持开启',
+          component: 'Switch'
+        },
+        {
+          field: 'vercelSandboxSendCallForward',
+          label: '发送 Vercel 沙箱执行过程',
+          bottomHelpMessage: '每次调用 vercelSandbox 后，以合并转发发送执行源码和结果',
+          component: 'Switch'
+        },
+        {
+          field: 'sandboxApiUrl',
+          label: 'vercelSandbox API URL',
+          bottomHelpMessage: '远程沙箱的 HTTP/HTTPS 地址，例如 https://your-project.vercel.app 或 http://127.0.0.1:3000',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://your-project.vercel.app 或 http://host:port'
           }
         },
         {

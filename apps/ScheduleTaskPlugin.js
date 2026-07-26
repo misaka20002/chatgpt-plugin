@@ -3,6 +3,7 @@ import { Config } from '../utils/config.js'
 import { chatgpt } from './chat.js';
 import { getUserData } from '../utils/common.js';
 import { matchCron } from '../utils/cronMatcher.js';
+import { cleanupExpiredLocalSandboxSessions } from '../utils/localSandbox.js';
 
 export class ScheduleTaskPlugin extends plugin {
     constructor(e) {
@@ -17,8 +18,8 @@ export class ScheduleTaskPlugin extends plugin {
         // 配置定时任务
         this.task = [
             {
-                cron: Config.ScheduleTask_Tool ? '0 * * * * *' : "0 0 1 1 * *",
-                name: 'Check_LLM_Scheduled_Tasks',
+                cron: '0 * * * * *',
+                name: 'ChatGPT_Minute_Maintenance',
                 fnc: this.checkAndExecuteTasks.bind(this),
                 log: false
             }
@@ -26,6 +27,17 @@ export class ScheduleTaskPlugin extends plugin {
     }
 
     async checkAndExecuteTasks() {
+        try {
+            const cleanup = await cleanupExpiredLocalSandboxSessions();
+            if (cleanup.removed > 0) {
+                logger.info(`[ChatGPT-本地沙箱] 自动清理了 ${cleanup.removed} 个过期会话`);
+            }
+        } catch (err) {
+            logger.error(`[ChatGPT-本地沙箱] 清理过期会话失败: ${err}`);
+        }
+
+        if (!Config.ScheduleTask_Tool) return;
+
         try {
             await this.checkScheduledTasks();
             await this.checkCronTasks();
