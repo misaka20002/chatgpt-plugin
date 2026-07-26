@@ -111,6 +111,33 @@ function emptyPreparedInputs() {
   }
 }
 
+/** Chromium headless 在无 D-Bus 环境中的常见无害噪音行。 */
+const CHROMIUM_NOISE_LINE = /(?:^|\s)(?:\[[\d.:\/]+(?:ERROR|WARNING):)?(?:dbus\/(?:bus|object_proxy)\.cc|\bFailed to connect to the bus\b|\bCould not parse server address\b|\bFailed to call method: org\.freedesktop\.DBus\b|\bFailed to connect to socket \/run\/dbus\/)/i
+
+/**
+ * 清洗沙箱 stderr/stdout 中已知的 Chromium D-Bus 噪音，保留真实错误与业务输出。
+ * 同时作用于返回给 AI 的 tool result 与 QQ 合并转发内容。
+ */
+function sanitizeSandboxOutput(text) {
+  if (text == null) return text
+  const raw = String(text)
+  if (!raw) return raw
+
+  const kept = raw
+    .split(/\r?\n/)
+    .filter(line => {
+      const trimmed = line.trim()
+      if (!trimmed) return true
+      return !CHROMIUM_NOISE_LINE.test(trimmed)
+    })
+
+  // 去掉因过滤产生的首尾空行，中间连续空行压缩为单个
+  return kept
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\n+|\n+$/g, '')
+}
+
 function wrapSandboxCommand(command) {
   return `
 SANDBOX_SESSION_DIR="$PWD"
@@ -299,8 +326,8 @@ export class VercelSandboxTool extends AbstractTool {
           status: result.status,
           exit_code: result.exit_code,
           session_id: result.session_id,
-          stdout: result.stdout,
-          stderr: result.stderr,
+          stdout: sanitizeSandboxOutput(result.stdout),
+          stderr: sanitizeSandboxOutput(result.stderr),
           input_images: preparedInputs.imagePaths,
           input_media: preparedInputs.mediaPaths,
           input_files: preparedInputs.inputPaths,
