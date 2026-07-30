@@ -21,7 +21,7 @@ globalThis.__vercelSandboxSessionLocks = vercelSandboxSessionLocks
 
 async function withSessionLock(sessionId, task) {
   const previous = vercelSandboxSessionLocks.get(sessionId) || Promise.resolve()
-  const current = previous.catch(() => {}).then(task)
+  const current = previous.catch(() => { }).then(task)
   vercelSandboxSessionLocks.set(sessionId, current)
   try {
     return await current
@@ -161,18 +161,20 @@ export class VercelSandboxTool extends AbstractTool {
   name = 'vercelSandbox'
 
   description =
-    '在用户配置的 Vercel 远程沙箱中执行联网 Shell、Python、Node.js、编译和文件处理命令。' +
-    '当前消息或引用消息中的图片、视频、音频会写入 inputs/；输入路径分别写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
-    '请把生成或处理后的图片、视频、音频和需要交付的文件保存到 outputs/，工具会自动读取并直接发送给用户。' +
-    '仅在确有文件交付需求时才产出文件，普通问答不要凭空生成文件，中间产物请写到会话目录或 /tmp 而非 outputs/。' +
-    '生成文档可直接用已预装的 python-docx(Word)、openpyxl(Excel)、reportlab(PDF, 支持内置 CJK 字体)、pypdf(读取/合并 PDF)。' +
-    '如果输出只作为中间结果、暂不发给用户，可设置 send_output_media=false 或 send_output_files=false。' +
-    '即使命令执行 cd /tmp，/tmp/inputs 和 /tmp/outputs 也会自动映射回当前会话目录。' +
-    '输出媒体通过流式接口返回，合计默认不超过 64MB；图片优先使用 JPEG/WebP，音频优先使用 MP3，视频优先使用 H.264/AAC MP4。' +
-    '需要打开网页并截图时，优先填写 screenshot_url，不要自行安装 Puppeteer；沙盒已预装 Chromium、Puppeteer 和中文字体，截图会自动发送。' +
-    'command 与 screenshot_url 至少填写一个；两者同时填写时会先截图再执行 command。' +
-    '处理图片/GIF 时可直接使用 /app/tools/media_edit.py；GIF 会先合成完整帧再翻转或倒放，避免残影。' +
-    '常用 Pillow、OpenCV、scikit-image、imageio、matplotlib、FFmpeg 和 ImageMagick 已预装。动态依赖和会话文件只在当前热实例存活期间复用。'
+    '在 Vercel 远程沙箱中执行联网 Shell、Python、Node.js 及文件处理任务。\n' +
+    '\n【输入与输出规范】\n' +
+    '1. 输入：用户提供的图片、视频等文件会自动放入 `inputs/`。路径可通过环境变量 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA、SANDBOX_INPUT_FILES 获取。\n' +
+    '2. 输出：最终需发送给用户的文件【必须】存入 `outputs/`。系统会自动读取该目录并直接发送给用户。\n' +
+    '3. 临时文件：中间产物请保存到当前会话目录或 `/tmp`，绝对不要放入 `outputs/`。\n' +
+    '4. 限制：输出媒体合计默认不超过 64MB。建议格式：JPEG/WebP(图)、MP3(音频)、H.264/AAC MP4(视频)。\n' +
+    '\n【内置能力与环境】\n' +
+    '1. 网页截图：直接填写 `screenshot_url` 参数即可，系统会自动调用内置 Chromium 截图并发送，【无需】自行编写 Puppeteer 代码。\n' +
+    '2. 预装工具：已内置 FFmpeg, ImageMagick。\n' +
+    '3. 预装 Python 库：Pillow, OpenCV, scikit-image, imageio, matplotlib, python-docx (Word), openpyxl (Excel), reportlab (PDF), pypdf。\n' +
+    '\n【调用注意事项】\n' +
+    '1. `command` 与 `screenshot_url` 至少填写一项（若同时填写，先截图后执行命令）。\n' +
+    '2. 仅在确有必要交付文件时才产出文件；若输出仅作中间步骤暂不发送，可设置 `send_output_media=false` 或 `send_output_files=false`。\n' +
+    '3. 动态依赖和文件仅在当前热实例存活期间保留，不保证持久化。'
 
   parameters = {
     properties: {
