@@ -304,7 +304,8 @@ export function supportGuoba() {
           component: 'Select',
           componentProps: {
             options: [
-              { label: 'OpenAI API', value: 'api' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
               { label: '智谱清言', value: 'chatglm4' },
               { label: 'Claude', value: 'claude' },
               { label: '星火', value: 'xh' },
@@ -333,7 +334,7 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          label: '以下为OpenAI API方式的配置',
+          label: '以下为OpenAI Chat API方式的配置',
           component: 'Divider'
         },
         {
@@ -403,6 +404,84 @@ export function supportGuoba() {
             step: 0.1,
             max: 2
           }
+        },
+        {
+          label: '以下为OpenAI Responses API方式的配置',
+          component: 'Divider'
+        },
+        {
+          field: 'responsesApiKey',
+          label: 'Responses API Key',
+          bottomHelpMessage: '仅用于 OpenAI Responses API，与 OpenAI Chat API 的 Key 独立。',
+          component: 'InputPassword'
+        },
+        {
+          field: 'responsesApiBaseUrl',
+          label: 'Responses API/反代地址',
+          bottomHelpMessage: 'Responses API 服务器地址，通常以 /v1 结尾；默认值为 https://api.deepseek.com/v1。请求会发送至该地址的 /responses 端点。',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://api.deepseek.com/v1'
+          }
+        },
+        {
+          field: 'responsesModel',
+          label: 'Responses 模型',
+          bottomHelpMessage: '填写支持 /responses 端点的模型名称。',
+          component: 'Input'
+        },
+        {
+          field: 'responsesSystemPrompt',
+          label: '设定',
+          bottomHelpMessage: 'Responses API 的系统提示词，会作为 instructions 在每一轮请求中发送。',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'responsesReasoningEffort',
+          label: 'Responses 思考程度',
+          bottomHelpMessage: '控制 Responses 推理模型的思考深度；不修改（默认）为使用模型默认值。',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '不修改（默认）', value: '' },
+              { label: 'none（无思考）', value: 'none' },
+              { label: 'minimal（极低）', value: 'minimal' },
+              { label: 'low（低）', value: 'low' },
+              { label: 'medium（中）', value: 'medium' },
+              { label: 'high（高）', value: 'high' },
+              { label: 'xhigh（极高-OpenAI）', value: 'xhigh' },
+              { label: 'max（最高-DeepSeek）', value: 'max' }
+            ]
+          }
+        },
+        {
+          field: 'responsesTemperature',
+          label: 'Responses temperature',
+          bottomHelpMessage: '用于控制 Responses 回复内容的多样性。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 0.1,
+            max: 2
+          }
+        },
+        {
+          field: 'responsesApiMaxToken',
+          label: 'Responses 回复内容最大Token数',
+          bottomHelpMessage: 'Responses API 单次回复的 Token 上限。',
+          component: 'InputNumber'
+        },
+        {
+          field: 'responsesMaxModelTokens',
+          label: 'Responses 模型总上下文Token数',
+          bottomHelpMessage: '用于 Responses API 的上下文长度配置与提示。',
+          component: 'InputNumber'
+        },
+        {
+          field: 'responsesStore',
+          label: '官网保存并续聊',
+          bottomHelpMessage: 'Responses API 独有的能力，默认开启。开启后聊天记录储存在官网，使用 previous_response_id 延续当前会话，可降低网络往返开销。关闭时使用 store: false 参数，不保存聊天记录在官网。此开关不影响 token 的消耗',
+          component: 'Switch'
         },
         // {
         //   label: '以下为必应方式的配置',
@@ -2533,7 +2612,7 @@ export function supportGuoba() {
             options: [
               { label: 'Gemini（推荐）', value: 'gemini' },
               { label: '通义千问', value: 'qwen' },
-              { label: 'OpenAI API', value: 'api' },
+              { label: 'OpenAI Chat API', value: 'api' },
               { label: '星火', value: 'xh' },
               { label: 'Claude', value: 'claude' }
             ]

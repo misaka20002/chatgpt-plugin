@@ -261,7 +261,7 @@ export class chatgpt extends plugin {
    */
   async getConversations(e) {
     // todo 根据use返回不同的对话列表
-    let keys = await redis.keys('CHATGPT:CONVERSATIONS:*')
+    let keys = await redis.keys('CHATGPT:CONVERSATIONS*')
     if (!keys || keys.length === 0) {
       await this.reply('当前没有人正在与机器人对话', true)
     } else {
@@ -367,6 +367,8 @@ export class chatgpt extends plugin {
     switch (use) {
       case 'api':
         return `CHATGPT:CONVERSATIONS:${scope}`
+      case 'responses':
+        return `CHATGPT:CONVERSATIONS_RESPONSES:${scope}`
       case 'chatglm':
         return `CHATGPT:CONVERSATIONS_CHATGLM:${scope}`
       case 'xh':
@@ -1246,6 +1248,10 @@ export class chatgpt extends plugin {
           key = `CHATGPT:CONVERSATIONS:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
           break
         }
+        case 'responses': {
+          key = `CHATGPT:CONVERSATIONS_RESPONSES:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
+          break
+        }
         case 'bing': {
           key = `CHATGPT:CONVERSATIONS_BING:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
           break
@@ -1302,6 +1308,7 @@ export class chatgpt extends plugin {
       conversation = {
         messages: previousConversation.messages,
         conversationId: previousConversation.conversation?.conversationId,
+        previousResponseId: previousConversation.previousResponseId,
         parentMessageId: previousConversation.parentMessageId,
         clientId: previousConversation.clientId,
         invocationId: previousConversation.invocationId,
@@ -1374,13 +1381,22 @@ export class chatgpt extends plugin {
         })
       }
       // chatglm4图片，调整至sendMessage中处理
-      if (use === 'api' && !chatMessage) {
+      if ((use === 'api' || use === 'responses') && !chatMessage) {
         // 字数超限直接返回
         return false
       }
       if (use !== 'api3') {
-        previousConversation.conversation = {
-          conversationId: chatMessage.conversationId
+        if (use === 'responses') {
+          // 无状态模式不保存 response.id，避免下一轮误把它发往官网。
+          if (Config.responsesStore && chatMessage.id) {
+            previousConversation.previousResponseId = chatMessage.id
+          } else {
+            delete previousConversation.previousResponseId
+          }
+        } else {
+          previousConversation.conversation = {
+            conversationId: chatMessage.conversationId
+          }
         }
         if (use === 'bing' && !chatMessage.error) {
           previousConversation.clientId = chatMessage.clientId
@@ -1388,7 +1404,7 @@ export class chatgpt extends plugin {
           previousConversation.parentMessageId = chatMessage.parentMessageId
           previousConversation.conversationSignature = chatMessage.conversationSignature
           previousConversation.bingToken = ''
-        } else if (chatMessage.id) {
+        } else if (use !== 'responses' && chatMessage.id) {
           previousConversation.parentMessageId = chatMessage.id
         } else if (chatMessage.message) {
           if (previousConversation.messages.length > 10) {
@@ -2254,8 +2270,11 @@ export class chatgpt extends plugin {
       let at = ats[0]
       let qq = at.qq
       let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@')
-      let target = await redis.get('CHATGPT:CONVERSATIONS:' + qq)
-      await redis.set('CHATGPT:CONVERSATIONS:' + e.sender.user_id, target)
+      const conversationKey = use === 'responses'
+        ? 'CHATGPT:CONVERSATIONS_RESPONSES:'
+        : 'CHATGPT:CONVERSATIONS:'
+      let target = await redis.get(conversationKey + qq)
+      await redis.set(conversationKey + e.sender.user_id, target)
       await this.reply(`加入${atUser}的对话成功`)
     }
   }

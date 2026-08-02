@@ -30,6 +30,15 @@ const defaultConfig = {
   apiStream: false,
   model: '',
   temperature: 0.8,
+  responsesApiKey: '',
+  responsesApiBaseUrl: 'https://api.deepseek.com/v1',
+  responsesModel: '',
+  responsesSystemPrompt: 'Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
+  responsesReasoningEffort: '',
+  responsesTemperature: 0.8,
+  responsesApiMaxToken: 4096,
+  responsesMaxModelTokens: 32000,
+  responsesStore: false,
   /**
    * @type {'Precise' | 'Balanced' | 'Creative'}
    */
