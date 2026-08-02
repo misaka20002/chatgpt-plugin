@@ -2284,13 +2284,35 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
+          label: '系统沙箱子代理',
+          component: 'Divider'
+        },
+        {
+          field: 'sandboxSubAgentProvider',
+          label: '沙箱子代理 LLM',
+          bottomHelpMessage: '本地、Docker 远程和 Vercel 沙箱共用。子代理负责把任务转换为沙箱执行方案；选择“当前对话模型”时跟随用户当前对话模型。',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '当前对话模型', value: 'current' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
+              { label: 'Gemini', value: 'gemini' },
+              { label: 'Claude', value: 'claude' },
+              { label: '通义千问', value: 'qwen' },
+              { label: '星火', value: 'xh' },
+              { label: '智谱清言', value: 'chatglm4' }
+            ]
+          }
+        },
+        {
           label: '本地系统沙箱',
           component: 'Divider'
         },
         {
           field: 'agent_LocalSandboxSwitch',
           label: '工具新增-本地系统沙箱',
-          bottomHelpMessage: '智能模式中新增 localSandbox 工具，在 Linux/WSL2 上通过 bubblewrap 隔离执行 Shell、Python、Node.js 和 Chromium。需要本地安装 bwrap、prlimit 和 bash 。Ubuntu下安装指令： apt install bubblewrap util-linux bash python3 python3-pip', // 和云崽一般都有的 nodejs npm chromium
+          bottomHelpMessage: '智能模式中新增 localSandbox 工具，主模型描述任务后由子代理在 Linux/WSL2 上通过 bubblewrap 执行。需要本地安装 bwrap、prlimit 和 bash。Ubuntu下安装指令：apt install bubblewrap util-linux bash python3 python3-pip',
           component: 'Switch'
         },
         {
@@ -2338,7 +2360,7 @@ export function supportGuoba() {
         {
           field: 'agent_RemoteSandboxSwitch',
           label: '工具新增-远程沙箱',
-          bottomHelpMessage: '智能模式中新增 呆毛版 remoteSandbox 工具，连接通过 Docker Compose 部署的长驻远程服务器；支持持久会话、联网 Shell/Python/Node.js/Chromium 和 outputs/ 文件发送。部署地址 https://github.com/misaka20002/sandbox',
+          bottomHelpMessage: '智能模式中新增呆毛版 remoteSandbox 工具，由子代理连接 Docker Compose 长驻远程服务器；支持持久会话、联网执行和文件发送。部署地址 https://github.com/misaka20002/sandbox',
           component: 'Switch'
         },
         {
@@ -2378,7 +2400,7 @@ export function supportGuoba() {
         {
           field: 'agent_VercelSandboxSwitch',
           label: '工具新增-Vercel 远程沙箱',
-          bottomHelpMessage: '智能模式中新增 咪的天版 vercel 远程沙箱工具，支持联网执行 Shell、Python、Node.js，并自动发送 outputs/ 中的图片、音视频和普通附件；需要填写下方 API URL 与 Token；可以按需提高 智能模式-工具调用最大轮次到8次以上；部署地址 https://github.com/syfantasy/sandbox',
+          bottomHelpMessage: '智能模式中新增咪的天版 vercel 远程沙箱工具，由子代理执行联网任务和网页截图，并自动发送交付文件；需要填写下方 API URL 与 Token。部署地址 https://github.com/syfantasy/sandbox',
           component: 'Switch'
         },
         {
@@ -2546,11 +2568,12 @@ export function supportGuoba() {
         {
           field: 'translateSource',
           label: '翻译来源',
-          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]',
+          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]',
           component: 'Select',
           componentProps: {
             options: [
               { label: 'OpenAI', value: 'openai' },
+              { label: 'OpenAI Responses API', value: 'responses' },
               { label: 'Gemini', value: 'gemini' },
               { label: '星火', value: 'xh' },
               { label: '通义千问', value: 'qwen' },

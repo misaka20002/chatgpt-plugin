@@ -18,6 +18,7 @@ import {
   resolveRemoteSandboxSelection,
   setCurrentRemoteSandboxSession
 } from '../remoteSandboxSession.js'
+import { buildSandboxSubAgentPlan } from '../sandboxSubAgent.js'
 import { AbstractTool } from './AbstractTool.js'
 
 const MAX_CALL_FORWARD_CHARS = 6000
@@ -113,66 +114,27 @@ async function executeRemoteRequest(apiUrl, token, payload, signal) {
 export class RemoteSandboxTool extends AbstractTool {
   name = 'remoteSandbox'
 
-  description =
-    '在管理员部署的持久化远程 Docker 沙箱中执行联网 Shell、Python、Node.js、编译、文件处理和 Chromium 命令。' +
-    '开始全新任务时设置 new_session=true；这会永久删除当前远程会话并创建新的会话。' +
-    '继续指定任务时使用工具返回的 session_id；两者都不传时自动继续该用户当前会话。' +
-    '输入附件位于 inputs/，对应路径写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
-    'inputs/、outputs/ 每次调用都会清空；需要持续编辑的源文件必须保存在会话根目录或子目录，需要交付时再复制到 outputs/。' +
-    'outputs/ 中的图片、视频、音频、HTML、PDF、压缩包等会自动发送给用户。' +
-    '当用户要求网页截图、页面预览或渲染结果时，必须使用 $SANDBOX_CHROMIUM 打开实际 HTML 并截图；' +
-    '禁止使用 Pillow、Canvas、SVG、Matplotlib 或其他方式重新绘制、模拟网页截图，除非用户明确要求制作模拟图。' +
-    '请将源 HTML 保存在会话根目录，再复制到 outputs/，并执行 "$SANDBOX_CHROMIUM" --headless=new ' +
-    '--no-sandbox --disable-dev-shm-usage --hide-scrollbars --screenshot=outputs/page.png ' +
-    '--window-size=1440,1000 "file://$PWD/page.html"。Chromium 执行失败时必须返回真实错误，不得伪造截图。' +
-    '动态 Python/Node 依赖、浏览器资料和其他工作文件会保留到服务器端闲置过期。'
+  description = '将任务交给持久化 Docker 远程沙箱完成，适合联网执行、持续文件工作、编译和真实网页渲染。说明目标与期望交付物即可。'
 
   parameters = {
     properties: {
-      command: {
+      task: {
         type: 'string',
-        description: '要执行的完整 Shell 命令。持续编辑文件保存在会话目录，需回传的副本写入 outputs/。'
-      },
-      new_session: {
-        type: 'boolean',
-        description: '开始全新任务时设为 true；会永久删除当前会话，不能和 session_id 同时使用。'
-      },
-      session_id: {
-        type: 'string',
-        description: '继续指定的未过期远程会话；省略时继续当前用户最近使用的会话。'
-      },
-      timeout_seconds: {
-        type: 'number',
-        description: '可选超时时间，默认 120 秒，范围 1-300 秒。'
-      },
-      python_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装并保留在当前会话 Python 环境中的包。'
-      },
-      node_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装并保留在当前会话 node_modules 中的包。'
-      },
-      use_message_images: {
-        type: 'boolean',
-        description: '是否读取当前消息或引用消息中的图片、视频和音频，默认 true。'
-      },
-      send_output_media: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的图片、视频和音频，默认 true。'
-      },
-      send_output_files: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的普通附件，默认 true。'
+        description: '要完成的自然语言任务，以及需要回复或交付给用户的结果。'
       }
     },
-    required: ['command']
+    required: ['task']
   }
 
   func = async function (args, e) {
-    const command = typeof args?.command === 'string' ? args.command.trim() : ''
+    let planned
+    try {
+      planned = await buildSandboxSubAgentPlan('remote', args?.task, e)
+      args = planned.plan
+    } catch (error) {
+      return `远程沙箱子代理规划失败: ${error?.message || error}`
+    }
+    const command = args.command
     const finish = async result => {
       await sendCallForward(e, command, result)
       return result

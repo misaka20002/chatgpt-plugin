@@ -329,6 +329,8 @@ const defaultConfig = {
   poke_userIDs: true,
   agent_MarkmapToolSwitch: false,
   agent_SandboxSwitch: false,
+  // 三种系统沙箱共用的执行规划子模型；current 表示跟随当前对话模型
+  sandboxSubAgentProvider: 'current',
   agent_LocalSandboxSwitch: false,
   localSandboxMasterOnly: true,
   localSandboxSendCallForward: true,

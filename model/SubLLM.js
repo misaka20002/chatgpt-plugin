@@ -6,16 +6,17 @@ import { QwenApi } from '../utils/alibaba/qwen-api.js'
 import XinghuoClient from '../utils/xinghuo/xinghuo.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
 import { newFetch } from '../utils/proxy.js'
+import { ResponsesAPI } from '../utils/openai/responses-api.js'
 import { AbstractTool } from '../utils/tools/AbstractTool.js'
 import { v4 as uuid } from 'uuid'
 
-const SUPPORTED_PROVIDERS = ['openai', 'gemini', 'claude', 'qwen', 'xh', 'chatglm4']
+const SUPPORTED_PROVIDERS = ['openai', 'responses', 'gemini', 'claude', 'qwen', 'xh', 'chatglm4']
 
 /**
  * 将 chat.js 中的 use 值映射为 SubLLM 支持的 provider
- * SubLLM 支持: openai, gemini, claude, qwen, xh, chatglm4
+ * SubLLM 支持: openai, responses, gemini, claude, qwen, xh, chatglm4
  *
- * @param {string} use  chat.js 中的 use 值 (api/api3/bing/azure/claude/claude2/gemini/qwen/xh/chatglm/chatglm4)
+ * @param {string} use  chat.js 中的 use 值 (api/api3/bing/azure/responses/claude/claude2/gemini/qwen/xh/chatglm/chatglm4)
  * @returns {string} SubLLM 支持的 provider
  */
 export function useToProvider(use) {
@@ -24,6 +25,7 @@ export function useToProvider(use) {
     api3: 'openai',
     bing: 'openai',
     azure: 'openai',
+    responses: 'responses',
     claude: 'claude',
     claude2: 'claude',
     gemini: 'gemini',
@@ -52,7 +54,7 @@ export function useToProvider(use) {
 export class SubLLM {
   /**
    * @param {object} options
-   * @param {'openai'|'gemini'|'claude'|'qwen'|'xh'|'chatglm4'|'api'|'api3'|'bing'|'azure'|'claude2'|'chatglm'} options.provider  LLM来源，也支持传入 use 值自动映射，默认 openai
+   * @param {'openai'|'responses'|'gemini'|'claude'|'qwen'|'xh'|'chatglm4'|'api'|'api3'|'bing'|'azure'|'claude2'|'chatglm'} options.provider  LLM来源，也支持传入 use 值自动映射，默认 openai
    * @param {string}  [options.model]           模型名，留空则用各provider的默认值
    * @param {string}  [options.systemPrompt]    系统提示词
    * @param {string}  [options.apiKey]          API Key，留空则用全局Config
@@ -102,6 +104,8 @@ export class SubLLM {
     switch (this.provider) {
       case 'openai':
         return await this._chatOpenAI(prompt, systemPrompt, conversation)
+      case 'responses':
+        return await this._chatResponses(prompt, systemPrompt)
       case 'gemini':
         return await this._chatGemini(prompt, systemPrompt, conversation)
       case 'claude':
@@ -154,6 +158,34 @@ export class SubLLM {
       id: result.id,
       conversationId: result.conversationId,
       parentMessageId: result.parentMessageId,
+    }
+  }
+
+  async _chatResponses(prompt, systemPrompt) {
+    const completionParams = {}
+    if (this.model || Config.responsesModel) completionParams.model = this.model || Config.responsesModel
+    if (this.temperature !== undefined) completionParams.temperature = this.temperature
+    else if (typeof Config.responsesTemperature === 'number') completionParams.temperature = Config.responsesTemperature
+    if (Config.responsesReasoningEffort) completionParams.reasoning_effort = Config.responsesReasoningEffort
+
+    const client = new ResponsesAPI({
+      apiKey: this.apiKey || Config.responsesApiKey,
+      apiBaseUrl: this.apiBaseUrl || Config.responsesApiBaseUrl,
+      debug: this.debug,
+      fetch: newFetch,
+      maxResponseTokens: this.maxTokens || Config.responsesApiMaxToken,
+      maxModelTokens: Config.responsesMaxModelTokens
+    })
+    // 子模型请求永远不附带 tools/tool_choice，避免不兼容模型被强制工具调用。
+    const result = await client.sendMessage(prompt, {
+      instructions: systemPrompt || undefined,
+      completionParams,
+      store: false,
+      timeoutMs: this.timeoutMs
+    })
+    return {
+      text: result.text,
+      id: result.id
     }
   }
 
@@ -323,7 +355,7 @@ export class SubLLM {
 export class SubLLMTool extends AbstractTool {
   /**
    * @param {object} [options]
-   * @param {'openai'|'gemini'|'claude'|'qwen'|'xh'|'chatglm4'|'api'|'api3'|'bing'|'azure'|'claude2'|'chatglm'} [options.provider]
+   * @param {'openai'|'responses'|'gemini'|'claude'|'qwen'|'xh'|'chatglm4'|'api'|'api3'|'bing'|'azure'|'claude2'|'chatglm'} [options.provider]
    * @param {string}  [options.model]
    * @param {string}  [options.systemPrompt]
    * @param {string}  [options.apiKey]

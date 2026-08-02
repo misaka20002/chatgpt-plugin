@@ -167,6 +167,7 @@
   "extraUrl": "",
   "smartMode": false,
   "forwardToolCallResult": false,
+  "sandboxSubAgentProvider": "current",
   "agent_LocalSandboxSwitch": false,
   "localSandboxMasterOnly": true,
   "localSandboxSendCallForward": true,
