@@ -36,8 +36,8 @@ const defaultConfig = {
   responsesSystemPrompt: 'Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   responsesReasoningEffort: '',
   responsesTemperature: 0.8,
-  responsesApiMaxToken: 4096,
-  responsesMaxModelTokens: 32000,
+  responsesApiMaxToken: 65536,
+  responsesMaxModelTokens: 128000,
   responsesStore: false,
   /**
    * @type {'Precise' | 'Balanced' | 'Creative'}
@@ -309,8 +309,8 @@ const defaultConfig = {
   // bingAiOid: '',
   // _2captchaKey: '',
   // bingReasoning: false, // 是否深度思考
-  apiMaxToken: 4096,
-  maxModelTokens: 32000,
+  apiMaxToken: 65536,
+  maxModelTokens: 128000,
   enableToolPrivateSend: false, // 是否允许智能模式下私聊骚扰其他群友。主人不受影响。
   enableForceToolKeywords: true,
   geminiForceToolKeywords: [],

@@ -163,8 +163,6 @@ export async function buildSandboxSubAgentPlan (kind, task, e) {
   const subLLM = new SubLLM({
     provider,
     systemPrompt,
-    temperature: 0.1,
-    maxTokens: 2048,
     timeoutMs: 120000
   })
   const response = await subLLM.chat(`主代理请求执行以下任务：\n${normalizedTask}`)

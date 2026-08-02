@@ -1214,7 +1214,7 @@ export class chatgpt extends plugin {
     // // 呆毛版 全局破限
     // prompt += Config.paimon_globalLimitBreak || ''
 
-    logger.info(`chatgpt prompt: ${prompt}`)
+    logger.info(`[Chatgpt][Input]: ${prompt}`)
     let previousConversation
     let conversation = {}
     let key

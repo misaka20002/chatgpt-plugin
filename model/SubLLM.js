@@ -127,6 +127,7 @@ export class SubLLM {
     const completionParams = {}
     if (this.model) completionParams.model = this.model
     if (this.temperature !== undefined) completionParams.temperature = this.temperature
+    else if (typeof Config.temperature === 'number') completionParams.temperature = Config.temperature
 
     const opts = {
       apiKey: this.apiKey || Config.apiKey,
