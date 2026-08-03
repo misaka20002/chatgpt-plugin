@@ -1699,8 +1699,8 @@ export function supportGuoba() {
         },
         {
           field: 'enableDefaultMessageTriggerTool',
-          label: '工具新增-默认指令触发',
-          bottomHelpMessage: '允许LLM触发当前群或全局的云崽 #添加 生成指令（LLM只能理解触发词，无法获取触发内容）',
+          label: '工具新增-云崽消息触发',
+          bottomHelpMessage: '允许LLM触发当前群或全局的云崽 #添加 生成指令（LLM只能理解触发词，无法获取触发内容）；可用指令：#[全局][添加|删除|消息]',
           component: 'Switch'
         },
         {
