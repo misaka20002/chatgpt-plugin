@@ -336,6 +336,7 @@ export class ChatGPTButtonHandler extends plugin {
         {
           buttons: [
             createButtonBase('设置OPENAI翻译源', '#chatgpt设置翻译来源openai'),
+            createButtonBase('设置Responses翻译源', '#chatgpt设置翻译来源responses'),
             createButtonBase('设置gemini翻译源', '#chatgpt设置翻译来源gemini'),
             createButtonBase('设置星火翻译源', '#chatgpt设置翻译来源xh'),
             createButtonBase('设置通义千问翻译源', '#chatgpt设置翻译来源qwen')

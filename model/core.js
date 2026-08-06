@@ -52,6 +52,7 @@ import { HandleMessageMsgTool } from '../utils/tools/HandleMessageMsgTool.js'
 import { ProcessPictureTool } from '../utils/tools/ProcessPictureTool.js'
 import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
+import { ResponsesAPI } from '../utils/openai/responses-api.js'
 import { newFetch } from '../utils/proxy.js'
 import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
 import { QwenApi } from '../utils/alibaba/qwen-api.js'
@@ -205,6 +206,7 @@ class Core {
     enableSmart: Config.smartMode,
     system: {
       api: Config.promptPrefixOverride,
+      responses: Config.responsesSystemPrompt,
       qwen: Config.promptPrefixOverride,
       bing: Config.sydney,
       claude: Config.claudeSystemPrompt,
@@ -780,6 +782,145 @@ class Core {
         this.reply(segment.image(resp.image), true)
       }
       return resp
+    } else if (use === 'responses') { // OpenAI Responses API ##############################
+      const completionParams = {}
+      if (Config.responsesModel) completionParams.model = Config.responsesModel
+      if (Config.responsesReasoningEffort) completionParams.reasoning_effort = Config.responsesReasoningEffort
+      if (typeof Config.responsesTemperature === 'number') completionParams.temperature = Config.responsesTemperature
+
+      let extraSystemMessage = ''
+      const buildResponsesInstructions = async (groupContextLength = Config.groupContextLength) => {
+        let instructions = await handleSystem(e, opt.system.responses || Config.responsesSystemPrompt, {
+          ...opt.settings,
+          groupContextLength
+        })
+        instructions = mergeSystemPrompt(instructions, e, { replyTimestamps: conversation.replyTimestamps })
+        if (extraSystemMessage) instructions += extraSystemMessage
+        return instructions
+      }
+
+      const client = new ResponsesAPI({
+        apiBaseUrl: Config.responsesApiBaseUrl,
+        apiKey: Config.responsesApiKey,
+        debug: false,
+        fetch: newFetch,
+        maxResponseTokens: Config.responsesApiMaxToken,
+        maxModelTokens: Config.responsesMaxModelTokens
+      })
+      let instructions = await buildResponsesInstructions()
+
+      let imageDataUrl = null
+      const imageUrl = e.img ? e.img[0] : undefined
+      if (imageUrl && Config.mediaRecognitionSource === 'Orignal') {
+        try {
+          const base64String = await getImageBase64(imageUrl)
+          if (base64String) imageDataUrl = `data:image/jpeg;base64,${base64String}`
+        } catch (err) {
+          logger.error('Responses API 获取图片失败', err)
+        }
+      }
+
+      let isAdmin
+      let sender
+      let fullFuncMap = {}
+      if (opt.enableSmart) {
+        isAdmin = ['admin', 'owner'].includes(e.sender.role)
+        sender = e.sender.user_id
+        const { funcMap, fullFuncMap: collectedFullFuncMap, promptAddition, systemAddition } = await collectTools(e)
+        fullFuncMap = collectedFullFuncMap
+        promptAddition && (prompt += promptAddition)
+        extraSystemMessage = systemAddition || ''
+        instructions = await buildResponsesInstructions()
+        completionParams.tools = Object.values(funcMap).map(({ function: definition }) => ({
+          type: 'function',
+          name: definition.name,
+          description: definition.description,
+          parameters: definition.parameters,
+          // 现有工具 schema 并不全部满足 strict 模式约束，保留 Chat API 的最佳努力行为。
+          strict: false
+        }))
+        if (Config.enableForceToolKeywords !== false && Array.isArray(Config.geminiForceToolKeywords)) {
+          const inputText = prompt || e.msg || ''
+          if (Config.geminiForceToolKeywords.some(keyword => inputText.includes(keyword))) {
+            completionParams.tool_choice = 'required'
+          }
+        }
+      }
+
+      const initialInput = imageDataUrl
+        ? [{
+            role: 'user',
+            content: [
+              { type: 'input_text', text: prompt || '请描述这张图片' },
+              { type: 'input_image', image_url: imageDataUrl }
+            ]
+          }]
+        : prompt
+      const statelessToolInput = Array.isArray(initialInput)
+        ? [...initialInput]
+        : [{ role: 'user', content: initialInput }]
+
+      const sendResponsesWithContextFallback = async (input, sendOptions) => {
+        const retryLengths = opt.settings.enableGroupContext
+          ? getRetryGroupContextLengths(Config.groupContextLength)
+          : []
+        for (let i = 0; i <= retryLengths.length; i++) {
+          try {
+            return await client.sendMessage(input, sendOptions)
+          } catch (err) {
+            const isContextExceeded = err.message?.includes('context_length_exceeded')
+            if (!isContextExceeded || i >= retryLengths.length) throw err
+            const nextGroupContextLength = retryLengths[i]
+            logger.warn(`[chatgpt][Responses] 上下文超限，压缩群聊记录后重试，groupContextLength=${nextGroupContextLength}`)
+            sendOptions.instructions = await buildResponsesInstructions(nextGroupContextLength)
+          }
+        }
+      }
+
+      const sendOptions = {
+        timeoutMs: 600000,
+        instructions,
+        completionParams,
+        store: Config.responsesStore === true,
+        previousResponseId: Config.responsesStore ? conversation.previousResponseId : undefined
+      }
+
+      try {
+        let msg = await sendResponsesWithContextFallback(initialInput, sendOptions)
+        let toolRoundCount = 0
+        const maxToolRounds = Config.llm_maxToolRounds
+
+        while (msg.toolCalls?.length > 0 && toolRoundCount < maxToolRounds) {
+          toolRoundCount++
+          if (msg.text) await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
+
+          const toolResults = await executeResponsesToolCalls(this, e, msg.toolCalls, fullFuncMap, isAdmin, sender, toolRoundCount)
+          if (completionParams.tool_choice === 'required') delete completionParams.tool_choice
+
+          if (Config.responsesStore) {
+            sendOptions.previousResponseId = msg.id
+            msg = await sendResponsesWithContextFallback(toolResults, sendOptions)
+          } else {
+            statelessToolInput.push(...msg.responseOutput, ...toolResults)
+            msg = await sendResponsesWithContextFallback(statelessToolInput, sendOptions)
+          }
+        }
+
+        if (msg.toolCalls?.length > 0 && toolRoundCount >= maxToolRounds) {
+          logger.warn(`Responses API 工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制终止工具循环`)
+          msg.toolCalls = undefined
+          msg.functionCall = undefined
+        }
+        return msg
+      } catch (err) {
+        if (err.message?.includes('context_length_exceeded')) {
+          logger.warn(err)
+          await this.reply('字数超限啦，将为您自动结束本次对话。')
+          return null
+        }
+        logger.error(err)
+        throw err
+      }
     } else { // 使用接口 ##############################
       // openai api
       let completionParams = {}
@@ -1111,6 +1252,60 @@ class Core {
       }
     }
   }
+}
+
+/** 执行 Responses API 请求的本地工具，并转换成 function_call_output items。 */
+async function executeResponsesToolCalls (core, e, toolCalls, fullFuncMap, isAdmin, sender, round) {
+  const toolForwardRecords = []
+  const toolResults = []
+
+  for (const toolCall of toolCalls) {
+    const name = toolCall.function?.name || ''
+    let args
+    try {
+      args = JSON.parse(toolCall.function?.arguments || '{}')
+    } catch {
+      args = {}
+    }
+
+    const toolArgsForForward = { ...args }
+    if (!args.groupId) args.groupId = e.group_id + '' || e.sender.user_id + ''
+    try {
+      parseInt(args.groupId)
+    } catch {
+      args.groupId = e.group_id + '' || e.sender.user_id + ''
+    }
+
+    let functionResult = ''
+    try {
+      if (fullFuncMap[name.trim()]) {
+        functionResult = await fullFuncMap[name.trim()].exec.bind(core)(Object.assign({ isAdmin, sender }, args), e)
+        logger.info(`[Chatgpt][Responses] function ${name} execution result: ${JSON.stringify(functionResult)}`)
+      } else {
+        functionResult = `Function ${name} not found.`
+        logger.warn(functionResult)
+      }
+    } catch (err) {
+      functionResult = `Error executing function ${name}: ${err.message}`
+      logger.error(functionResult)
+    }
+
+    toolForwardRecords.push({
+      platform: 'OpenAI Responses API',
+      round,
+      name,
+      args: toolArgsForForward,
+      result: functionResult
+    })
+    toolResults.push({
+      type: 'function_call_output',
+      call_id: toolCall.callId || toolCall.id,
+      output: String(functionResult)
+    })
+  }
+
+  sendToolCallForwardMsg(e, toolForwardRecords, 'OpenAI Responses API工具调用与返回')
+  return toolResults
 }
 
 /**

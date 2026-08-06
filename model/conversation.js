@@ -3,8 +3,8 @@ import { Config } from '../utils/config.js'
 import { KeyvFile } from 'keyv-file'
 import _ from 'lodash'
 
-export const originalValues = ['星火', '通义千问', '克劳德', '克劳德2', '必应', 'api', 'API', 'api3', 'API3', 'glm', '双子星', '双子座', '智谱']
-export const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', 'api', 'api3', 'api3', 'chatglm', 'gemini', 'gemini', 'chatglm4']
+export const originalValues = ['星火', '通义千问', '克劳德', '克劳德2', '必应', 'api', 'API', 'responses', 'Responses', 'api3', 'API3', 'glm', '双子星', '双子座', '智谱']
+export const correspondingValues = ['xh', 'qwen', 'claude', 'claude2', 'bing', 'api', 'api', 'responses', 'responses', 'api3', 'api3', 'chatglm', 'gemini', 'gemini', 'chatglm4']
 
 const REDIS_SCAN_COUNT = 3000
 const REDIS_DELETE_BATCH_SIZE = 1000
@@ -89,6 +89,10 @@ function getCurrentModeCleanupTargets(use) {
       return {
         conversationPatterns: ['CHATGPT:CONVERSATIONS:*'],
         historyPatterns: ['CHATGPT:MESSAGE:*']
+      }
+    case 'responses':
+      return {
+        conversationPatterns: ['CHATGPT:CONVERSATIONS_RESPONSES:*']
       }
     case 'api3':
       return {
@@ -218,6 +222,15 @@ export class ConversationManager {
           await redis.del(`CHATGPT:CONVERSATIONS:${e.sender.user_id}`)
           await this.reply('已结束当前对话，请@我进行聊天以开启新的对话', true)
         }
+      } else if (use === 'responses') {
+        const scope = (e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id
+        let c = await redis.get(`CHATGPT:CONVERSATIONS_RESPONSES:${scope}`)
+        if (!c) {
+          await this.reply('当前没有开启对话', true)
+        } else {
+          await redis.del(`CHATGPT:CONVERSATIONS_RESPONSES:${scope}`)
+          await this.reply('已结束当前对话，请@我进行聊天以开启新的对话', true)
+        }
       } else if (use === 'qwen') {
         let c = await redis.get(`CHATGPT:CONVERSATIONS_QWEN:${e.sender.user_id}`)
         if (!c) {
@@ -303,6 +316,14 @@ export class ConversationManager {
           await redis.del(`CHATGPT:CONVERSATIONS:${qq}`)
           await this.reply(`已结束${atUser}的对话，TA仍可以@我进行聊天以开启新的对话`, true)
         }
+      } else if (use === 'responses') {
+        let c = await redis.get(`CHATGPT:CONVERSATIONS_RESPONSES:${qq}`)
+        if (!c) {
+          await this.reply(`当前${atUser}没有开启对话`, true)
+        } else {
+          await redis.del(`CHATGPT:CONVERSATIONS_RESPONSES:${qq}`)
+          await this.reply(`已结束${atUser}的对话，TA仍可以@我进行聊天以开启新的对话`, true)
+        }
       } else if (use === 'qwen') {
         let c = await redis.get(`CHATGPT:CONVERSATIONS_QWEN:${qq}`)
         if (!c) {
@@ -353,6 +374,7 @@ export class ConversationManager {
     if (match?.[3]) {
       const conversationPatterns = [
         'CHATGPT:CONVERSATIONS:*',
+        'CHATGPT:CONVERSATIONS_RESPONSES:*',
         'CHATGPT:QQ_CONVERSATION:*',
         'CHATGPT:CONVERSATIONS_BING:*',
         'CHATGPT:CONVERSATIONS_CHATGLM:*',
