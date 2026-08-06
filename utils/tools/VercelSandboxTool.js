@@ -5,6 +5,7 @@ import fetch from 'node-fetch'
 import { Config } from '../config.js'
 import { makeForwardMsg } from '../common.js'
 import { hidePrivacyInfo } from '../paimonFuction.js'
+import { buildSandboxSubAgentPlan } from '../sandboxSubAgent.js'
 import {
   prepareInputs,
   processOutputFiles,
@@ -21,7 +22,7 @@ globalThis.__vercelSandboxSessionLocks = vercelSandboxSessionLocks
 
 async function withSessionLock(sessionId, task) {
   const previous = vercelSandboxSessionLocks.get(sessionId) || Promise.resolve()
-  const current = previous.catch(() => {}).then(task)
+  const current = previous.catch(() => { }).then(task)
   vercelSandboxSessionLocks.set(sessionId, current)
   try {
     return await current
@@ -160,88 +161,27 @@ ${command}
 export class VercelSandboxTool extends AbstractTool {
   name = 'vercelSandbox'
 
-  description =
-    '在用户配置的 Vercel 远程沙箱中执行联网 Shell、Python、Node.js、编译和文件处理命令。' +
-    '当前消息或引用消息中的图片、视频、音频会写入 inputs/；输入路径分别写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
-    '请把生成或处理后的图片、视频、音频和需要交付的文件保存到 outputs/，工具会自动读取并直接发送给用户。' +
-    '仅在确有文件交付需求时才产出文件，普通问答不要凭空生成文件，中间产物请写到会话目录或 /tmp 而非 outputs/。' +
-    '生成文档可直接用已预装的 python-docx(Word)、openpyxl(Excel)、reportlab(PDF, 支持内置 CJK 字体)、pypdf(读取/合并 PDF)。' +
-    '如果输出只作为中间结果、暂不发给用户，可设置 send_output_media=false 或 send_output_files=false。' +
-    '即使命令执行 cd /tmp，/tmp/inputs 和 /tmp/outputs 也会自动映射回当前会话目录。' +
-    '输出媒体通过流式接口返回，合计默认不超过 64MB；图片优先使用 JPEG/WebP，音频优先使用 MP3，视频优先使用 H.264/AAC MP4。' +
-    '需要打开网页并截图时，优先填写 screenshot_url，不要自行安装 Puppeteer；沙盒已预装 Chromium、Puppeteer 和中文字体，截图会自动发送。' +
-    'command 与 screenshot_url 至少填写一个；两者同时填写时会先截图再执行 command。' +
-    '处理图片/GIF 时可直接使用 /app/tools/media_edit.py；GIF 会先合成完整帧再翻转或倒放，避免残影。' +
-    '常用 Pillow、OpenCV、scikit-image、imageio、matplotlib、FFmpeg 和 ImageMagick 已预装。动态依赖和会话文件只在当前热实例存活期间复用。'
+  description = '将任务交给 Vercel 远程沙箱完成，适合联网执行、临时文件处理和外部网页截图。说明目标与期望交付物即可。'
 
   parameters = {
     properties: {
-      command: {
+      task: {
         type: 'string',
-        description:
-          '可选。要执行的完整 Shell 命令。与 screenshot_url 至少填写一个。输入位于 inputs/，需要回传的文件必须写入 outputs/；cd /tmp 后使用 inputs/outputs/ 仍然有效。'
-      },
-      screenshot_url: {
-        type: 'string',
-        description: '可选。要打开并截图的 http/https 网页地址。填写后由沙盒内置 Chromium 截图并自动发送，无需在 command 中编写 Puppeteer。'
-      },
-      screenshot_full_page: {
-        type: 'boolean',
-        description: '网页截图是否截取完整页面，默认 true。'
-      },
-      screenshot_width: {
-        type: 'number',
-        description: '网页截图视口宽度，默认 1440，范围 320-3840。'
-      },
-      screenshot_height: {
-        type: 'number',
-        description: '网页截图视口高度，默认 900，范围 240-2160。'
-      },
-      screenshot_wait_ms: {
-        type: 'number',
-        description: '页面基本加载完成后额外等待的毫秒数，默认 2000，最大 30000，可设为 0。'
-      },
-      session_id: {
-        type: 'string',
-        description:
-          '可选会话 ID。Vercel 热实例未缩容时可复用文件和动态依赖，但不保证持久化。不填写时会按机器人、群和用户自动隔离。'
-      },
-      timeout_seconds: {
-        type: 'number',
-        description: '可选超时时间，默认 120 秒，范围 1-300 秒。'
-      },
-      python_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装到当前会话 Python 环境的包。'
-      },
-      node_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装到当前会话 Node.js 环境的包。'
-      },
-      use_message_images: {
-        type: 'boolean',
-        description: '是否上传当前消息或引用消息中的图片、视频和音频，默认 true。'
-      },
-      send_output_images: {
-        type: 'boolean',
-        description: '旧兼容参数。设为 false 时不自动发送 outputs/ 中的媒体。'
-      },
-      send_output_media: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的图片、视频和音频，默认 true。'
-      },
-      send_output_files: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的普通附件，默认 true。'
+        description: '要完成的自然语言任务，以及需要回复或交付给用户的结果。'
       }
     },
-    required: []
+    required: ['task']
   }
 
   func = async function (args, e) {
-    let command = typeof args?.command === 'string' ? args.command.trim() : ''
+    let planned
+    try {
+      planned = await buildSandboxSubAgentPlan('vercel', args?.task, e)
+      args = planned.plan
+    } catch (error) {
+      return `Vercel 沙箱子代理规划失败: ${error?.message || error}`
+    }
+    let command = args.command || ''
     const finish = async result => {
       await sendCallForward(e, command, result)
       return result

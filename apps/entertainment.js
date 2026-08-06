@@ -65,7 +65,7 @@ export class Entertainment extends plugin {
           fnc: 'translate'
         },
         {
-          reg: '^#(chatgpt|gpt|GPT)?(设置|修改)翻译来源(openai|gemini|星火|通义千问|xh|qwen|baidu|百度翻译)$',
+          reg: '^#(chatgpt|gpt|GPT)?(设置|修改)翻译来源(openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译)$',
           fnc: 'translateSource'
         },
         {
@@ -137,7 +137,7 @@ ${translateLangLabels}
 2. #gpt翻日 你好
 3. #gpt翻中 你好
 4. #gpt翻译 hello
-5. #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]`)
+5. #chatgpt设置翻译来源[openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]`)
       return true
     }
 
@@ -233,6 +233,8 @@ ${translateLangLabels}
     let command = e.msg
     if (command.includes('openai')) {
       Config.translateSource = 'openai'
+    } else if (command.includes('responses')) {
+      Config.translateSource = 'responses'
     } else if (command.includes('gemini')) {
       Config.translateSource = 'gemini'
     } else if (command.includes('星火')) {

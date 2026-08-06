@@ -30,6 +30,15 @@ const defaultConfig = {
   apiStream: false,
   model: '',
   temperature: 0.8,
+  responsesApiKey: '',
+  responsesApiBaseUrl: 'https://api.deepseek.com/v1',
+  responsesModel: '',
+  responsesSystemPrompt: 'Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
+  responsesReasoningEffort: '',
+  responsesTemperature: 0.8,
+  responsesApiMaxToken: 65536,
+  responsesMaxModelTokens: 128000,
+  responsesStore: false,
   /**
    * @type {'Precise' | 'Balanced' | 'Creative'}
    */
@@ -413,8 +422,8 @@ const defaultConfig = {
   // bingAiOid: '',
   // _2captchaKey: '',
   // bingReasoning: false, // 是否深度思考
-  apiMaxToken: 4096,
-  maxModelTokens: 32000,
+  apiMaxToken: 65536,
+  maxModelTokens: 128000,
   enableToolPrivateSend: false, // 是否允许智能模式下私聊骚扰其他群友。主人不受影响。
   enableForceToolKeywords: true,
   geminiForceToolKeywords: [],
@@ -433,6 +442,8 @@ const defaultConfig = {
   poke_userIDs: true,
   agent_MarkmapToolSwitch: false,
   agent_SandboxSwitch: false,
+  // 三种系统沙箱共用的执行规划子模型；current 表示跟随当前对话模型
+  sandboxSubAgentProvider: 'current',
   agent_LocalSandboxSwitch: false,
   localSandboxMasterOnly: true,
   localSandboxSendCallForward: true,

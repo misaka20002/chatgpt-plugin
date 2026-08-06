@@ -5,6 +5,7 @@ import { newFetch } from './proxy.js'
 import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
 import XinghuoClient from './xinghuo/xinghuo.js'
 import { QwenApi } from './alibaba/qwen-api.js'
+import { ResponsesAPI } from './openai/responses-api.js'
 
 // 代码参考：https://github.com/yeyang52/yenai-plugin/blob/b50b11338adfa5a4ef93912eefd2f1f704e8b990/model/api/funApi.js#L25
 export const translateLangSupports = [
@@ -121,7 +122,7 @@ export async function translateOld (msg, to = 'auto') {
  * @param msg 要翻译的
  * @param from 语种
  * @param to 语种
- * @param ai ai来源，支持openai, gemini, xh, qwen, baidu
+ * @param ai ai来源，支持openai, responses, gemini, xh, qwen, baidu
  * @returns {Promise<*|string>}
  */
 export async function translate (msg, to = 'auto', from = 'auto', ai = Config.translateSource) {
@@ -132,7 +133,7 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
     }
     if (!lang) return `未找到翻译的语种，支持的语言为：\n${translateLangSupports.map(item => item.abbr).join('，')}\n`
     // if ai is not in the list, throw error
-    if (!['openai', 'gemini', 'xh', 'qwen', 'baidu'].includes(ai)) throw new Error('ai来源错误')
+    if (!['openai', 'responses', 'gemini', 'xh', 'qwen', 'baidu'].includes(ai)) throw new Error('ai来源错误')
     if (ai === 'baidu') return await translateOld(msg, to)
     let system = `You will be provided with a sentence in the language with language code [${from}], and your task is to translate it into [${lang}]. Just print the result without any other words.`
     if (Array.isArray(msg)) {
@@ -156,6 +157,26 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
           completionParams: {
             model: Config.model
           }
+        })
+        return res.text
+      }
+      case 'responses': {
+        const completionParams = {}
+        if (Config.responsesModel) completionParams.model = Config.responsesModel
+        if (typeof Config.responsesTemperature === 'number') completionParams.temperature = Config.responsesTemperature
+        if (Config.responsesReasoningEffort) completionParams.reasoning_effort = Config.responsesReasoningEffort
+        const api = new ResponsesAPI({
+          apiBaseUrl: Config.responsesApiBaseUrl,
+          apiKey: Config.responsesApiKey,
+          fetch: newFetch,
+          maxResponseTokens: Config.responsesApiMaxToken,
+          maxModelTokens: Config.responsesMaxModelTokens
+        })
+        const res = await api.sendMessage(msg, {
+          instructions: system,
+          completionParams,
+          store: false,
+          timeoutMs: 600000
         })
         return res.text
       }

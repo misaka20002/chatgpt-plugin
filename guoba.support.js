@@ -304,7 +304,8 @@ export function supportGuoba() {
           component: 'Select',
           componentProps: {
             options: [
-              { label: 'OpenAI API', value: 'api' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
               { label: '智谱清言', value: 'chatglm4' },
               { label: 'Claude', value: 'claude' },
               { label: '星火', value: 'xh' },
@@ -333,7 +334,7 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          label: '以下为OpenAI API方式的配置',
+          label: '以下为OpenAI Chat API方式的配置',
           component: 'Divider'
         },
         {
@@ -384,13 +385,13 @@ export function supportGuoba() {
         {
           field: 'apiMaxToken',
           label: '回复内容最大Token数',
-          bottomHelpMessage: '模型单次回复的Token上限，默认4096（要预留至少 10000 个输入Token，否则回复报错，推荐“回复内容最大Token数”+10000≤“模型总上下文Token数”）。补充说明：这个值越大，可用于历史/群聊上下文的空间就越小；当输入Token + 回复内容最大Token数接近或超过“模型总上下文Token数”时，插件可能会压缩历史，严重时会触发上下文超限重试。',
+          bottomHelpMessage: '模型单次回复的Token上限，默认65536（通常设置为 总上下文的一半以内）',
           component: 'InputNumber'
         },
         {
           field: 'maxModelTokens',
           label: '模型总上下文Token数',
-          bottomHelpMessage: '模型支持的输入+回复总Token上限，默认32000（参考：gpt-4o-mini为128000）。补充说明：这个值如果配置得明显小于模型实际支持的上下文，插件会更早压缩历史或群聊记录；通常应按模型真实能力填写。',
+          bottomHelpMessage: '模型支持的输入+回复总Token上限，可查询于模型官网，例如 100万 上下文。说明：仅用于插件自动压缩历史或群聊记录',
           component: 'InputNumber'
         },
         {
@@ -403,6 +404,84 @@ export function supportGuoba() {
             step: 0.1,
             max: 2
           }
+        },
+        {
+          label: '以下为OpenAI Responses API方式的配置',
+          component: 'Divider'
+        },
+        {
+          field: 'responsesApiKey',
+          label: 'Responses API Key',
+          bottomHelpMessage: '仅用于 OpenAI Responses API，与 OpenAI Chat API 的 Key 独立。',
+          component: 'InputPassword'
+        },
+        {
+          field: 'responsesApiBaseUrl',
+          label: 'Responses API/反代地址',
+          bottomHelpMessage: 'Responses API 服务器地址，通常以 /v1 结尾；默认值为 https://api.deepseek.com/v1。请求会发送至该地址的 /responses 端点。',
+          component: 'Input',
+          componentProps: {
+            placeholder: 'https://api.deepseek.com/v1'
+          }
+        },
+        {
+          field: 'responsesModel',
+          label: 'Responses 模型',
+          bottomHelpMessage: '填写支持 /responses 端点的模型名称。',
+          component: 'Input'
+        },
+        {
+          field: 'responsesSystemPrompt',
+          label: '设定',
+          bottomHelpMessage: 'Responses API 的系统提示词，会作为 instructions 在每一轮请求中发送。',
+          component: 'InputTextArea'
+        },
+        {
+          field: 'responsesReasoningEffort',
+          label: 'Responses 思考程度',
+          bottomHelpMessage: '控制 Responses 推理模型的思考深度；不修改（默认）为使用模型默认值。',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '不修改（默认）', value: '' },
+              { label: 'none（无思考）', value: 'none' },
+              { label: 'minimal（极低）', value: 'minimal' },
+              { label: 'low（低）', value: 'low' },
+              { label: 'medium（中）', value: 'medium' },
+              { label: 'high（高）', value: 'high' },
+              { label: 'xhigh（极高-OpenAI）', value: 'xhigh' },
+              { label: 'max（最高-DeepSeek）', value: 'max' }
+            ]
+          }
+        },
+        {
+          field: 'responsesTemperature',
+          label: 'Responses temperature',
+          bottomHelpMessage: '用于控制 Responses 回复内容的多样性。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            step: 0.1,
+            max: 2
+          }
+        },
+        {
+          field: 'responsesApiMaxToken',
+          label: 'Responses 回复内容最大Token数',
+          bottomHelpMessage: 'Responses API 单次回复的 Token 上限（通常设置为 总上下文的一半以内）',
+          component: 'InputNumber'
+        },
+        {
+          field: 'responsesMaxModelTokens',
+          label: 'Responses 模型总上下文Token数',
+          bottomHelpMessage: '模型支持的输入+回复总Token上限，可查询模型官网，例如 100万 上下文。说明：仅用于插件自动压缩历史或群聊记录',
+          component: 'InputNumber'
+        },
+        {
+          field: 'responsesStore',
+          label: '官网保存并续聊',
+          bottomHelpMessage: 'Responses API 独有的能力，默认开启。开启后聊天记录储存在官网，使用 previous_response_id 延续当前会话，可降低网络往返开销。关闭时使用 store: false 参数，不保存聊天记录在官网。此开关不影响 token 的消耗',
+          component: 'Switch'
         },
         // {
         //   label: '以下为必应方式的配置',
@@ -1626,8 +1705,8 @@ export function supportGuoba() {
         },
         {
           field: 'enableDefaultMessageTriggerTool',
-          label: '工具新增-默认指令触发',
-          bottomHelpMessage: '允许LLM触发当前群或全局的云崽 #添加 生成指令（LLM只能理解触发词，无法获取触发内容）',
+          label: '工具新增-云崽消息触发',
+          bottomHelpMessage: '允许LLM触发当前群或全局的云崽 #添加 生成指令（LLM只能理解触发词，无法获取触发内容）；可用指令：#[全局][添加|删除|消息]',
           component: 'Switch'
         },
         {
@@ -2343,13 +2422,35 @@ export function supportGuoba() {
           component: 'InputNumber'
         },
         {
+          label: '系统沙箱子代理',
+          component: 'Divider'
+        },
+        {
+          field: 'sandboxSubAgentProvider',
+          label: '沙箱子代理 LLM',
+          bottomHelpMessage: '本地、Docker 远程和 Vercel 沙箱共用。子代理负责把任务转换为沙箱执行方案；选择“当前对话模型”时跟随用户当前对话模型。',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '当前对话模型', value: 'current' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
+              { label: 'Gemini', value: 'gemini' },
+              { label: 'Claude', value: 'claude' },
+              { label: '通义千问', value: 'qwen' },
+              { label: '星火', value: 'xh' },
+              { label: '智谱清言', value: 'chatglm4' }
+            ]
+          }
+        },
+        {
           label: '本地系统沙箱',
           component: 'Divider'
         },
         {
           field: 'agent_LocalSandboxSwitch',
           label: '工具新增-本地系统沙箱',
-          bottomHelpMessage: '智能模式中新增 localSandbox 工具，在 Linux/WSL2 上通过 bubblewrap 隔离执行 Shell、Python、Node.js 和 Chromium。需要本地安装 bwrap、prlimit 和 bash 。Ubuntu下安装指令： apt install bubblewrap util-linux bash python3 python3-pip', // 和云崽一般都有的 nodejs npm chromium
+          bottomHelpMessage: '智能模式中新增 localSandbox 工具，主模型描述任务后由子代理在 Linux/WSL2 上通过 bubblewrap 执行。需要本地安装 bwrap、prlimit 和 bash。Ubuntu下安装指令：apt install bubblewrap util-linux bash python3 python3-pip',
           component: 'Switch'
         },
         {
@@ -2397,7 +2498,7 @@ export function supportGuoba() {
         {
           field: 'agent_RemoteSandboxSwitch',
           label: '工具新增-远程沙箱',
-          bottomHelpMessage: '智能模式中新增 呆毛版 remoteSandbox 工具，连接通过 Docker Compose 部署的长驻远程服务器；支持持久会话、联网 Shell/Python/Node.js/Chromium 和 outputs/ 文件发送。部署地址 https://github.com/misaka20002/sandbox',
+          bottomHelpMessage: '智能模式中新增呆毛版 remoteSandbox 工具，由子代理连接 Docker Compose 长驻远程服务器；支持持久会话、联网执行和文件发送。部署地址 https://github.com/misaka20002/sandbox',
           component: 'Switch'
         },
         {
@@ -2437,7 +2538,7 @@ export function supportGuoba() {
         {
           field: 'agent_VercelSandboxSwitch',
           label: '工具新增-Vercel 远程沙箱',
-          bottomHelpMessage: '智能模式中新增 咪的天版 vercel 远程沙箱工具，支持联网执行 Shell、Python、Node.js，并自动发送 outputs/ 中的图片、音视频和普通附件；需要填写下方 API URL 与 Token；可以按需提高 智能模式-工具调用最大轮次到8次以上；部署地址 https://github.com/syfantasy/sandbox',
+          bottomHelpMessage: '智能模式中新增咪的天版 vercel 远程沙箱工具，由子代理执行联网任务和网页截图，并自动发送交付文件；需要填写下方 API URL 与 Token。部署地址 https://github.com/syfantasy/sandbox',
           component: 'Switch'
         },
         {
@@ -2605,11 +2706,12 @@ export function supportGuoba() {
         {
           field: 'translateSource',
           label: '翻译来源',
-          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]',
+          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]',
           component: 'Select',
           componentProps: {
             options: [
               { label: 'OpenAI', value: 'openai' },
+              { label: 'OpenAI Responses API', value: 'responses' },
               { label: 'Gemini', value: 'gemini' },
               { label: '星火', value: 'xh' },
               { label: '通义千问', value: 'qwen' },
@@ -2671,7 +2773,7 @@ export function supportGuoba() {
             options: [
               { label: 'Gemini（推荐）', value: 'gemini' },
               { label: '通义千问', value: 'qwen' },
-              { label: 'OpenAI API', value: 'api' },
+              { label: 'OpenAI Chat API', value: 'api' },
               { label: '星火', value: 'xh' },
               { label: 'Claude', value: 'claude' }
             ]

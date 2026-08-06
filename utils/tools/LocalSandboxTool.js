@@ -1,6 +1,7 @@
 import { Config } from '../config.js'
 import { makeForwardMsg } from '../common.js'
 import { hidePrivacyInfo } from '../paimonFuction.js'
+import { buildSandboxSubAgentPlan } from '../sandboxSubAgent.js'
 import {
   collectLocalSandboxOutputs,
   localSandboxSessionManager,
@@ -51,62 +52,27 @@ function emptyPreparedInputs() {
 export class LocalSandboxTool extends AbstractTool {
   name = 'localSandbox'
 
-  description =
-    '在 Linux/WSL2 本地系统沙箱中执行 Shell、Python、Node.js、编译、文件处理和 Chromium 命令。' +
-    '开始独立的新任务时必须设置 new_session=true；继续旧任务时使用返回的 session_id；两者都不传时继续当前任务。' +
-    '输入附件位于 inputs/，路径同时写入 SANDBOX_INPUT_IMAGES、SANDBOX_INPUT_MEDIA 和 SANDBOX_INPUT_FILES。' +
-    '需要发送给用户的图片、视频、音频、HTML、PDF、压缩包等必须写入 outputs/，工具会自动发送。' +
-    '网页截图请先把 HTML 写入 outputs/，再用 "$SANDBOX_CHROMIUM" --headless=new --no-sandbox --disable-dev-shm-usage ' +
-    '--screenshot=outputs/page.png --window-size=1440,1000 "file://$PWD/outputs/page.html" 生成截图；HTML 和 PNG 都会发送。' +
-    '普通中间文件应写在当前会话目录，不要写入 outputs/。inputs/ 和 outputs/ 每次调用会清空，其他文件在锅巴配置的闲置保留期内复用。' +
-    '默认禁止联网；仅当管理员在锅巴开启后才能联网或动态安装依赖。'
+  description = '将任务交给本地 Linux/WSL2 隔离沙箱完成，适合本机文件处理、离线计算、编译和本地网页渲染。说明目标与期望交付物即可。'
 
   parameters = {
     properties: {
-      command: {
+      task: {
         type: 'string',
-        description: '要执行的完整 Shell 命令。输入位于 inputs/，需要回传的文件必须写入 outputs/。'
-      },
-      new_session: {
-        type: 'boolean',
-        description: '开始全新独立任务时设为 true。不能和 session_id 同时使用。'
-      },
-      session_id: {
-        type: 'string',
-        description: '继续指定的旧沙箱任务；省略时继续当前用户最近使用的任务。'
-      },
-      timeout_seconds: {
-        type: 'number',
-        description: '可选超时时间，默认 120 秒，范围 1-300 秒。'
-      },
-      python_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装到当前会话 Python 环境的包；仅在管理员允许联网时可用。'
-      },
-      node_packages: {
-        type: 'array',
-        items: { type: 'string' },
-        description: '可选，需要安装到当前会话 Node.js 环境的包；仅在管理员允许联网时可用。'
-      },
-      use_message_images: {
-        type: 'boolean',
-        description: '是否读取当前消息或引用消息中的图片、视频和音频，默认 true。'
-      },
-      send_output_media: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的图片、视频和音频，默认 true。'
-      },
-      send_output_files: {
-        type: 'boolean',
-        description: '是否自动发送 outputs/ 中的普通附件，默认 true。'
+        description: '要完成的自然语言任务，以及需要回复或交付给用户的结果。'
       }
     },
-    required: ['command']
+    required: ['task']
   }
 
   func = async function (args, e) {
-    const command = typeof args?.command === 'string' ? args.command.trim() : ''
+    let planned
+    try {
+      planned = await buildSandboxSubAgentPlan('local', args?.task, e)
+      args = planned.plan
+    } catch (error) {
+      return `本地沙箱子代理规划失败: ${error?.message || error}`
+    }
+    const command = args.command
     const finish = async result => {
       await sendCallForward(e, command, result)
       return result
