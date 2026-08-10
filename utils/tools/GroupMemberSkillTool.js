@@ -67,12 +67,14 @@ async function resolveGroupMember(e, targetId) {
 async function callJsonWithRetry(subLLM, prompt, label) {
   let lastError
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const startedAt = Date.now()
     try {
       const result = await subLLM.chat(prompt)
-      return parseJsonResponse(result?.text)
+      const parsed = parseJsonResponse(result?.text)
+      return parsed
     } catch (err) {
       lastError = err
-      globalThis.logger?.warn?.(`[GroupMemberSkillTool] ${label} 第 ${attempt}/2 次失败: ${err.message || err}`)
+      globalThis.logger?.warn?.(`[GroupMemberSkillTool] ${label}：第 ${attempt}/2 次失败，耗时 ${Date.now() - startedAt}ms: ${err.message || err}`)
     }
   }
   throw lastError || new Error(`${label} 失败`)
@@ -181,7 +183,7 @@ export class GroupMemberSkillTool extends AbstractTool {
     required: ['target_id']
   }
 
-  description = 'Generate a portable Nuwa-style Agent Skill from a group member\'s past chat messages. Only call when the Bot master explicitly asks to distill a member in the current group. The tool sends a ZIP attachment and may take several minutes.'
+  description = 'Generate a portable Nuwa-style Agent Skill from a group member\'s past chat messages. Only call when the Bot master explicitly asks to distill a member in the current group. The tool sends a ZIP attachment, returns the generated SKILL.md for your review, and may take several minutes.'
 
   func = async function (opts, e) {
     const accessError = validateGroupMemberSkillAccess(e)
@@ -207,6 +209,8 @@ export class GroupMemberSkillTool extends AbstractTool {
     }
 
     try {
+      const jobStartedAt = Date.now()
+      globalThis.logger?.info?.(`[GroupMemberSkillTool] 开始生成群友 Skill（目标消息上限 ${requestedCount}，群扫描上限 ${GROUP_MEMBER_SKILL_LIMITS.maxScannedMessages}）`)
       const member = await resolveGroupMember(e, targetId)
       if (!member) return 'Error: the target user is not a member of the current group.'
       const displayName = sanitizeDisplayName(redactDirectIdentifiers(
@@ -214,17 +218,20 @@ export class GroupMemberSkillTool extends AbstractTool {
         [targetId, e.group_id, e.user_id]
       ))
 
+      const historyStartedAt = Date.now()
       const history = await msgHistoryMgr.getUserMessageRecords(e, targetId, {
         maxTargetMessages: requestedCount,
         maxScannedMessages: GROUP_MEMBER_SKILL_LIMITS.maxScannedMessages
       })
       const evidenceRecords = prepareEvidenceRecords(history.records, [targetId, e.group_id, e.user_id])
+      globalThis.logger?.info?.(`[GroupMemberSkillTool] 历史消息拉取完成，耗时 ${Date.now() - historyStartedAt}ms；扫描群消息 ${history.scanned_messages} 条，收集目标文本 ${history.records.length} 条，脱敏后分析样本 ${evidenceRecords.length} 条`)
       if (evidenceRecords.length < GROUP_MEMBER_SKILL_LIMITS.minMessages) {
         return `数据不足：仅找到 ${evidenceRecords.length} 条有效脱敏文本，至少需要 ${GROUP_MEMBER_SKILL_LIMITS.minMessages} 条，未生成 Skill。`
       }
 
       const chunks = chunkEvidenceRecords(evidenceRecords)
       const use = await resolveCurrentUse(e)
+      globalThis.logger?.info?.(`[GroupMemberSkillTool] 开始子LLM蒸馏：${chunks.length} 个分块，最多并发 2 个，provider=${use}`)
       const mapLLM = new SubLLM({
         provider: use,
         systemPrompt: MAP_SYSTEM_PROMPT,
@@ -240,6 +247,7 @@ export class GroupMemberSkillTool extends AbstractTool {
         timeoutMs: 180000
       })
 
+      const mapStartedAt = Date.now()
       const mapped = await mapWithConcurrency(chunks, 2, (chunk, index) => {
         return callJsonWithRetry(mapLLM, createMapPrompt(chunk, index, chunks.length), `Map ${index + 1}`)
       })
@@ -312,8 +320,9 @@ export class GroupMemberSkillTool extends AbstractTool {
         targetId
       })
       const attachment = await sendPackageAttachment(e, artifact)
+      globalThis.logger?.info?.(`[GroupMemberSkillTool] 生成完成：总耗时 ${Date.now() - jobStartedAt}ms，Map ${Date.now() - mapStartedAt}ms（成功 ${mapped.results.length}/${chunks.length}），模型 ${synthesis.mental_models.length}，附件=${attachment.sent ? attachment.type : '失败'}`)
 
-      return JSON.stringify({
+      const resultSummary = {
         success: true,
         sample_count: evidenceRecords.length,
         confidence,
@@ -323,7 +332,14 @@ export class GroupMemberSkillTool extends AbstractTool {
         attachment_type: attachment.type,
         attachment_error: attachment.error || undefined,
         artifact_path: artifact.runRoot
-      })
+      }
+
+      return `${JSON.stringify(resultSummary)}
+
+<generated_skill_md>
+${skillMarkdown}</generated_skill_md>
+
+请基于你当前的人设，简短评价这份 SKILL.md：说出它最有意思的特征、一个可能的局限；不要复述完整内容，也不要泄露证据之外的聊天信息。`
     } catch (err) {
       globalThis.logger?.error?.(`[GroupMemberSkillTool] 生成失败: ${err.stack || err.message || err}`)
       return `Error: Failed to generate group member skill: ${err.message || String(err)}`

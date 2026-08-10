@@ -4,8 +4,8 @@ import JSZip from 'jszip'
 export const GROUP_MEMBER_SKILL_LIMITS = Object.freeze({
   minMessages: 30,
   fullConfidenceMessages: 100,
-  maxMessages: 500,
-  maxScannedMessages: 10000,
+  maxMessages: 500, // 获取目标用户历史消息上限
+  maxScannedMessages: 20000, // 群扫描历史消息上限（napcat适配器下，每10000条消息耗时约2分钟）
   maxInputChars: 60000,
   chunkChars: 12000,
   maxMessageChars: 2000
