@@ -90,6 +90,7 @@ import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
+import { GroupMemberSkillTool } from '../utils/tools/GroupMemberSkillTool.js'
 import { GenerateMathRenderTool } from '../utils/tools/GenerateMathRenderTool.js'
 import { GenerateGraphCalculatorTool } from '../utils/tools/GenerateGraphCalculatorTool.js'
 import { DefaultMessageTriggerTool } from '../utils/tools/DefaultMessageTriggerTool.js'
@@ -1413,6 +1414,7 @@ async function collectTools(e) {
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableUserProfileTool, ToolClass: UserProfileTool },
+    { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },
     { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },
     { condition: Config.generateGraphCalculator_ToolSwitch, ToolClass: GenerateGraphCalculatorTool },
     { condition: Config.anythingllm_enable, ToolClass: AnythingLLMQueryTool },

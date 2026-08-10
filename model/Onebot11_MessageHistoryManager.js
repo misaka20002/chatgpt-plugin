@@ -36,6 +36,28 @@ class MessageHistoryManager {
   }
 
   /**
+   * 从 OneBot 消息中提取纯文本。
+   * @param {Object} msg
+   * @returns {String}
+   */
+  _extractText(msg) {
+    if (typeof msg?.message === 'string') {
+      return msg.message.trim();
+    }
+    if (Array.isArray(msg?.message)) {
+      return msg.message
+        .filter(segment => segment?.type === 'text')
+        .map(segment => segment?.data?.text || segment?.text || '')
+        .join('')
+        .trim();
+    }
+    if (typeof msg?.raw_message === 'string') {
+      return msg.raw_message.trim();
+    }
+    return '';
+  }
+
+  /**
    * 收集并提取群消息中的纯文本，存入缓存
    */
   _collectMessages(groupId, messages) {
@@ -52,16 +74,7 @@ class MessageHistoryManager {
         groupCache.set(senderId, []);
       }
 
-      let text = '';
-      if (typeof msg.message === 'string') {
-        text = msg.message;
-      } else if (Array.isArray(msg.message)) {
-        text = msg.message
-          .filter(m => m.type === 'text')
-          .map(m => m.data?.text || m.text || '')
-          .join('')
-          .trim();
-      }
+      const text = this._extractText(msg);
 
       if (text) {
         groupCache.get(senderId).push(text);
@@ -288,6 +301,117 @@ class MessageHistoryManager {
       texts: texts.slice(0, max_msg_count),
       scanned_messages: rounds * count,
       from_cache: cached !== null
+    };
+  }
+
+  /**
+   * 为需要可追溯证据的分析任务获取指定群员的结构化历史文本。
+   * 本方法每次都从当前消息向前独立扫描，不复用 getUserTexts 的群级游标。
+   *
+   * @param {Object} e 云崽群消息事件
+   * @param {String|Number} target_id 目标群员 QQ
+   * @param {Object} options
+   * @param {Number} options.maxTargetMessages 最多返回的目标消息数
+   * @param {Number} options.maxScannedMessages 最多扫描的群消息数
+   * @returns {Promise<{records: Array, scanned_messages: Number, filtered: Object}>}
+   */
+  async getUserMessageRecords(e, target_id, options = {}) {
+    if (!e?.group || !e?.group_id) {
+      throw new Error('getUserMessageRecords 只能在群聊中使用');
+    }
+
+    const maxTargetMessages = Math.min(Math.max(Number(options.maxTargetMessages) || 500, 1), 500);
+    const maxScannedMessages = Math.min(Math.max(Number(options.maxScannedMessages) || 10000, 1), 10000);
+    const targetId = String(target_id);
+    const records = [];
+    const seenMessageIds = new Set();
+    const seenTexts = new Set();
+    const filtered = { empty: 0, command: 0, duplicate: 0, non_target: 0 };
+
+    let currentSeq = e.seq || e.message_id || 0;
+    let scannedMessages = 0;
+    let finished = false;
+
+    while (!finished && scannedMessages < maxScannedMessages && records.length < maxTargetMessages) {
+      const batchSize = Math.min(this.cfg.per_query_count, 200, maxScannedMessages - scannedMessages);
+      let messages = null;
+
+      for (let retry = 1; retry <= 3; retry++) {
+        try {
+          messages = await e.group.getChatHistory(currentSeq, batchSize, true);
+          break;
+        } catch (err) {
+          logger.warn(`[结构化历史消息] 拉取失败，正在重试 (${retry}/3): ${err.message || err}`);
+          if (retry < 3) await this._sleep(750 * retry);
+        }
+      }
+
+      if (!Array.isArray(messages) || messages.length === 0) break;
+
+      const newMessages = messages.filter(msg => {
+        const id = msg?.message_id ?? msg?.seq;
+        const dedupeKey = id === undefined || id === null
+          ? `${msg?.time || 0}:${msg?.sender?.user_id || msg?.user_id || ''}:${this._extractText(msg)}`
+          : String(id);
+        if (seenMessageIds.has(dedupeKey)) return false;
+        seenMessageIds.add(dedupeKey);
+        return true;
+      });
+
+      if (newMessages.length === 0) break;
+      scannedMessages += newMessages.length;
+
+      for (const msg of newMessages) {
+        const senderId = String(msg?.sender?.user_id || msg?.user_id || '');
+        if (senderId !== targetId) {
+          filtered.non_target += 1;
+          continue;
+        }
+
+        const text = this._extractText(msg).replace(/\s+/g, ' ').trim();
+        if (!text) {
+          filtered.empty += 1;
+          continue;
+        }
+        if (/^#[^\s]+(?:\s+.*)?$/u.test(text)) {
+          filtered.command += 1;
+          continue;
+        }
+        if (seenTexts.has(text)) {
+          filtered.duplicate += 1;
+          continue;
+        }
+        seenTexts.add(text);
+
+        records.push({
+          message_id: msg?.message_id ?? msg?.seq ?? null,
+          time: Number(msg?.time) || 0,
+          text
+        });
+      }
+
+      const firstMessage = messages[0];
+      const nextSeq = firstMessage?.message_id ?? firstMessage?.seq;
+      if (nextSeq === undefined || nextSeq === null || (String(nextSeq) === String(currentSeq) && currentSeq !== 0)) {
+        finished = true;
+      } else {
+        currentSeq = nextSeq;
+      }
+
+      if (!finished && scannedMessages < maxScannedMessages && records.length < maxTargetMessages) {
+        await this._sleep(500 + Math.random() * 500);
+      }
+    }
+
+    records.sort((a, b) => a.time - b.time);
+    const limitedRecords = records.length > maxTargetMessages
+      ? records.slice(records.length - maxTargetMessages)
+      : records;
+
+    return {
+      records: limitedRecords,
+      scanned_messages: scannedMessages,
+      filtered
     };
   }
 }

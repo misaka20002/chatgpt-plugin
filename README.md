@@ -34,7 +34,7 @@
 - 2026年5月1日，智能模式中增加 `QQ音乐搜索` `百度AI搜索`；增加指令 `#gpt偷图` 智能为 `根据情绪发送表情` 工具添加图片
 - 2026年5月20日，新增 `通用 MCP 协议支持` 以适配各种 MCP 服务（如 [独立人格记忆 `nocturne_memory`](https://github.com/Dataojitori/nocturne_memory)），支持 stdio 本地进程和 SSE 远程连接[^2]
 - 2026年6月1日，智能模式中增加 `必应图片搜索工具` `思维导图工具` `用户画像工具` `Prompt Gallery`[^2] `公式及流程图` `数学函数图形计算器` ；新增指令 `#gpt发语音`
-- 2026年8月1日，智能模式中增加 `云崽消息触发` `远程沙箱工具`
+- 2026年8月1日，智能模式中增加 `云崽消息触发` `远程沙箱工具` `群友Nuwa Skill`
 
 [^1]: 由 [@127Wzc](https://github.com/127Wzc) 贡献添加
 [^2]: 由 [@eggacheb](https://github.com/eggacheb) 贡献添加

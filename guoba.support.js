@@ -1698,6 +1698,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableGroupMemberSkillTool',
+          label: '工具新增-群友Nuwa Skill',
+          bottomHelpMessage: '仅Bot主人可用。读取当前群指定群友的历史文本，脱敏后提交当前子LLM分阶段蒸馏，并生成符合Agent Skills规范的ZIP附件；默认关闭。',
+          component: 'Switch'
+        },
+        {
           field: 'enableDefaultMessageTriggerTool',
           label: '工具新增-云崽消息触发',
           bottomHelpMessage: '允许LLM触发当前群或全局的云崽 #添加 生成指令（LLM只能理解触发词，无法获取触发内容）；可用指令：#[全局][添加|删除|消息]',

@@ -366,6 +366,7 @@ const defaultConfig = {
   generateMathRender_ToolSwitch: false,
   generateGraphCalculator_ToolSwitch: false,
   enableUserProfileTool: false,
+  enableGroupMemberSkillTool: false,
   enableDefaultMessageTriggerTool: false,
   mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
