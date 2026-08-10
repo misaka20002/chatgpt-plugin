@@ -238,7 +238,6 @@ export class GroupMemberSkillTool extends AbstractTool {
 
       const chunks = chunkEvidenceRecords(evidenceRecords)
       const use = await resolveCurrentUse(e)
-      globalThis.logger?.info?.(`[GroupMemberSkillTool] 开始子LLM蒸馏：${chunks.length} 个分块，最多并发 2 个，provider=${use}`)
       const mapLLM = new SubLLM({
         provider: use,
         systemPrompt: MAP_SYSTEM_PROMPT,
@@ -253,6 +252,7 @@ export class GroupMemberSkillTool extends AbstractTool {
         temperature: 0.2,
         timeoutMs: 180000
       })
+      globalThis.logger?.info?.(`[GroupMemberSkillTool] 开始子LLM蒸馏：${chunks.length} 个分块，最多并发 2 个，provider=${mapLLM.provider}，model=${mapLLM.model || 'provider-default'}`)
 
       const mapStartedAt = Date.now()
       const mapped = await mapWithConcurrency(chunks, 2, (chunk, index) => {

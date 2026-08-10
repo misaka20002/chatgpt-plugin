@@ -37,6 +37,17 @@ export function useToProvider(use) {
   return mapping[use] || 'openai'
 }
 
+function getConfiguredModel(provider) {
+  const models = {
+    openai: Config.model,
+    responses: Config.responsesModel,
+    gemini: Config.geminiModel,
+    claude: Config.claudeApiModel,
+    qwen: Config.qwenModel,
+  }
+  return models[provider] || ''
+}
+
 /**
  * 子LLM调用器 —— 主LLM可以通过它调用另一个LLM完成子任务
  *
@@ -74,7 +85,9 @@ export class SubLLM {
     if (!SUPPORTED_PROVIDERS.includes(this.provider)) {
       throw new Error(`SubLLM: 不支持的provider "${this.provider}"，当前支持: ${SUPPORTED_PROVIDERS.join(', ')}`)
     }
-    this.model = options.model || ''
+    // Prefer the model configured for this provider.  Previously, OpenAI
+    // subcalls left this empty and ChatGPTAPI fell back to gpt-4o-mini.
+    this.model = options.model || getConfiguredModel(this.provider)
     this.systemPrompt = options.systemPrompt || ''
     this.apiKey = options.apiKey || ''
     this.apiBaseUrl = options.apiBaseUrl || ''
