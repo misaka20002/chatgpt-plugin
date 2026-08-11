@@ -198,6 +198,9 @@ export function createMediaBehaviorProfile(mediaRecords, targetMessageRecords, t
   const textOnlyMessages = messages.filter(record => record.has_text && !record.has_media).length
   const byType = {}
   for (const record of media) byType[record.type] = (byType[record.type] || 0) + 1
+  const targetActiveDates = new Set(messages.map(record => formatRecordDate(record.time)).filter(date => date !== '未知日期'))
+  const mediaActiveDates = new Set(messages.filter(record => record.has_media).map(record => formatRecordDate(record.time)).filter(date => date !== '未知日期'))
+  const mixedActiveDates = new Set(messages.filter(record => record.has_text && record.has_media).map(record => formatRecordDate(record.time)).filter(date => date !== '未知日期'))
 
   const burstRuns = []
   let run = []
@@ -211,6 +214,7 @@ export function createMediaBehaviorProfile(mediaRecords, targetMessageRecords, t
     }
   }
   if (run.length >= 3) burstRuns.push(run)
+  const burstActiveDates = new Set(burstRuns.map(records => formatRecordDate(records[0]?.time)).filter(date => date !== '未知日期'))
 
   const statistics = {
     target_message_count: total,
@@ -225,49 +229,95 @@ export function createMediaBehaviorProfile(mediaRecords, targetMessageRecords, t
     media_by_type: byType,
     media_burst_count: burstRuns.length,
     longest_media_burst: burstRuns.reduce((max, records) => Math.max(max, records.length), 0),
+    target_active_date_count: targetActiveDates.size,
+    media_active_date_count: mediaActiveDates.size,
+    mixed_active_date_count: mixedActiveDates.size,
+    burst_active_date_count: burstActiveDates.size,
     time_range: {
       start: formatRecordDate(messages[0]?.time),
       end: formatRecordDate(messages.at(-1)?.time)
     }
   }
   const patterns = []
-  const addPattern = (title, observation) => patterns.push({
+  const addPattern = (title, observation) => {
+    const pattern = {
     evidence_id: `MP${String(patterns.length + 1).padStart(4, '0')}`,
     dimension: '多媒体表达习惯',
     title,
     observation
-  })
+    }
+    patterns.push(pattern)
+    return pattern
+  }
+  const coverage = `目标消息 ${total} 条，覆盖 ${targetActiveDates.size} 个活跃日期；含多媒体消息 ${mediaMessages} 条，覆盖 ${mediaActiveDates.size} 个日期。`
+  let wordDominantPattern = null
+  let stableMediaPattern = null
+  let mixedPattern = null
 
   if (total >= 10 && mediaMessages === 0) {
-    addPattern('纯文字表达为主', `扫描窗口内 ${total} 条目标消息均未包含可识别多媒体段，${textMessages} 条包含文本。`)
+    wordDominantPattern = addPattern('纯文字表达为主', `扫描窗口内 ${total} 条目标消息均未包含可识别多媒体段，${textMessages} 条包含文本。${coverage}`)
   } else if (total >= 10 && statistics.text_message_ratio >= 0.75 && statistics.media_message_ratio <= 0.25) {
-    addPattern('文字表达为主', `扫描窗口内 ${textMessages}/${total} 条目标消息包含文本，${mediaMessages}/${total} 条包含多媒体。`)
-  } else if (total >= 10 && statistics.media_message_ratio >= 0.5) {
-    addPattern('多媒体参与度较高', `扫描窗口内 ${mediaMessages}/${total} 条目标消息包含多媒体，其中 ${mixedMessages} 条为图文混合。`)
+    wordDominantPattern = addPattern('文字表达为主', `扫描窗口内 ${textMessages}/${total} 条目标消息包含文本，${mediaMessages}/${total} 条包含多媒体。${coverage}`)
+  }
+  if (total >= 10 && mediaMessages >= 10 && statistics.media_message_ratio >= 0.35) {
+    stableMediaPattern = addPattern('多媒体参与度较高', `扫描窗口内 ${mediaMessages}/${total} 条目标消息包含多媒体，其中 ${mixedMessages} 条为图文混合。${coverage}`)
   }
   if (total >= 10 && mixedMessages >= Math.max(3, Math.ceil(total * 0.2))) {
-    addPattern('常见图文混发', `扫描窗口内有 ${mixedMessages}/${total} 条目标消息同时包含文本与多媒体。`)
+    mixedPattern = addPattern('常见图文混发', `扫描窗口内有 ${mixedMessages}/${total} 条目标消息同时包含文本与多媒体，覆盖 ${mixedActiveDates.size} 个日期。${coverage}`)
   }
   if (burstRuns.length >= 1) {
-    addPattern('出现短时连续媒体发送', `扫描窗口内识别到 ${burstRuns.length} 段至少 3 条的连续媒体消息，最长 ${statistics.longest_media_burst} 条；相邻消息间隔不超过 2 分钟。`)
+    addPattern('出现短时连续媒体发送', `扫描窗口内识别到 ${burstRuns.length} 段至少 3 条的连续媒体消息，最长 ${statistics.longest_media_burst} 条；相邻消息间隔不超过 2 分钟，覆盖 ${burstActiveDates.size} 个日期。${coverage}`)
   }
   const topType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0]
   if (topType && media.length >= 5 && topType[1] / media.length >= 0.6) {
-    addPattern(`${topType[0]}占主要媒体类型`, `扫描窗口内识别到 ${media.length} 个媒体段，其中 ${topType[1]} 个类型为 ${topType[0]}。`)
+    addPattern(`${topType[0]}占主要媒体类型`, `扫描窗口内识别到 ${media.length} 个媒体段，其中 ${topType[1]} 个类型为 ${topType[0]}。${coverage}`)
   }
 
-  return { statistics, patterns, media_index: media }
+  const eligibleSkillGuidance = []
+  const stableSample = total >= 30 && targetActiveDates.size >= 2
+  if (stableSample && wordDominantPattern) {
+    eligibleSkillGuidance.push({
+      evidence_id: wordDominantPattern.evidence_id,
+      dimension: '文字优先（弱信号）',
+      rule: '默认用完整文字承载观点；不因模仿该视角而强行加入图片、表情或其他媒体。'
+    })
+  } else if (
+    stableSample && mixedPattern && mixedMessages >= 10 && mixedActiveDates.size >= 2
+  ) {
+    eligibleSkillGuidance.push({
+      evidence_id: mixedPattern.evidence_id,
+      dimension: '非文字补充（弱信号）',
+      rule: '仅在轻松、低信息密度且运行环境原生支持时，可用单个视觉或表情元素补充简短文字；严肃分析、事实判断和信息不足时优先文字，且不得为模仿而连续发送或凭空选择媒体。'
+    })
+  } else if (
+    stableSample && stableMediaPattern && mediaActiveDates.size >= 2
+  ) {
+    eligibleSkillGuidance.push({
+      evidence_id: stableMediaPattern.evidence_id,
+      dimension: '非文字补充（弱信号）',
+      rule: '仅在轻松、低信息密度且运行环境原生支持时，可用单个视觉或表情元素补充简短文字；严肃分析、事实判断和信息不足时优先文字，且不得为模仿而连续发送或凭空选择媒体。'
+    })
+  }
+
+  return { statistics, patterns, eligible_skill_guidance: eligibleSkillGuidance, media_index: media }
 }
 
 export function formatMediaProfileForPrompt(profile, includeEvidenceIds = false) {
-  const normalized = profile || { statistics: {}, patterns: [] }
+  const normalized = profile || { statistics: {}, patterns: [], eligible_skill_guidance: [] }
   return JSON.stringify({
     scope: '仅为本次群聊扫描窗口中的程序化统计；未提供任何媒体原文件、URL、标题或内容。',
     statistics: normalized.statistics,
-    observed_patterns: asArray(normalized.patterns).map(pattern => ({
-      ...(includeEvidenceIds ? { evidence_id: pattern.evidence_id } : {}),
-      observation: pattern.observation
-    }))
+    ...(includeEvidenceIds
+      ? {
+          eligible_skill_guidance: asArray(normalized.eligible_skill_guidance).map(item => ({
+            evidence_id: item.evidence_id,
+            dimension: item.dimension,
+            rule: item.rule
+          }))
+        }
+      : {
+          observed_patterns: asArray(normalized.patterns).map(pattern => ({ observation: pattern.observation }))
+        })
   })
 }
 
@@ -287,13 +337,19 @@ export function renderMediaPatternsMarkdown(profile) {
     `- 媒体段数：${statistics.media_event_count || 0}`,
     `- 媒体类型：${Object.entries(statistics.media_by_type || {}).map(([type, count]) => `${type}=${count}`).join('，') || '无'}`,
     `- 连续媒体发送：${statistics.media_burst_count || 0} 段，最长 ${statistics.longest_media_burst || 0} 条（相邻间隔不超过 2 分钟）`,
+    `- 活跃日期：目标 ${statistics.target_active_date_count || 0} 个，含多媒体 ${statistics.media_active_date_count || 0} 个，图文混发 ${statistics.mixed_active_date_count || 0} 个`,
+    `- 时间范围：${statistics.time_range?.start || '未知'} 至 ${statistics.time_range?.end || '未知'}`,
     '',
     '## 模式证据',
     ''
   ]
   const patterns = asArray(profile?.patterns)
-  if (patterns.length === 0) lines.push('没有达到输出阈值的多媒体表达模式。', '')
-  for (const pattern of patterns) lines.push(`### ${pattern.evidence_id}`, '', `- 观察：${markdownText(pattern.observation)}`, '')
+  if (patterns.length === 0) lines.push('没有可记录的多媒体表达观察。', '')
+  for (const pattern of patterns) lines.push(`### ${pattern.evidence_id}`, '', `- 类型：${markdownText(pattern.title)}`, `- 观察：${markdownText(pattern.observation)}`, '')
+  lines.push('## 可进入 Skill 的弱表达规则', '')
+  const guidance = asArray(profile?.eligible_skill_guidance)
+  if (guidance.length === 0) lines.push('没有模式同时满足样本量、跨日期复现和可执行性门槛。', '')
+  for (const item of guidance) lines.push(`### ${item.evidence_id}`, '', `- 规则：${markdownText(item.rule)}`, '')
   return lines.join('\n').trim() + '\n'
 }
 
@@ -349,7 +405,7 @@ export function createSynthesisPrompt(mapResults, styleStats, confidenceHint, me
 Nuwa 三重验证：心智模型必须跨至少两个不同话题复现、能够推断新问题、具有区别度；否则只能作为启发式。保留矛盾，不要强行调和。允许分析敏感属性，但必须保留 explicit/signal/inference 和证据置信度。
 
 确定性统计：${JSON.stringify(styleStats)}
-多媒体表达画像（仅含程序化统计；MP 证据只能用于 expression_dna，且必须原样保持对应观察的行为边界，不得推断人格、偏好、能力或动机）：${formatMediaProfileForPrompt(mediaProfile, true)}
+多媒体表达候选（仅含通过样本量、跨日期复现和可执行性门槛的弱规则；MP 证据只能用于 expression_dna，最多选择一条，并且必须原样使用 rule；不得推断人格、偏好、能力或动机）：${formatMediaProfileForPrompt(mediaProfile, true)}
 整体置信度提示：${confidenceHint}
 
 只输出合法 JSON，结构如下：
@@ -365,7 +421,7 @@ Nuwa 三重验证：心智模型必须跨至少两个不同话题复现、能够
   "honest_boundaries":["具体局限"]
 }
 
-不得创造新的证据 ID；MP 证据只能出现在 expression_dna；不得把推断改写成明确事实，不要使用 Markdown。
+不得创造新的证据 ID；MP 证据只能出现在 expression_dna，且最多一条；不得把推断改写成明确事实，不要使用 Markdown。
 
 分批分析结果：
 ${JSON.stringify(mapResults)}`
@@ -395,7 +451,7 @@ function normalizeEvidenceItems(items, knownIds, fields) {
 
 export function validateSynthesis(raw, mapResults, evidenceRecords, mediaProfile = null) {
   const knownIds = new Set(evidenceRecords.map(record => record.evidence_id))
-  const mediaPatterns = new Map(asArray(mediaProfile?.patterns).map(pattern => [pattern.evidence_id, pattern]))
+  const eligibleMediaGuidance = new Map(asArray(mediaProfile?.eligible_skill_guidance).map(item => [item.evidence_id, item]))
   const evidenceTopics = new Map()
 
   for (const mapResult of mapResults) {
@@ -465,16 +521,13 @@ export function validateSynthesis(raw, mapResults, evidenceRecords, mediaProfile
   const textExpressionDna = normalizeEvidenceItems(raw?.expression_dna, knownIds, ['dimension', 'rule'])
   const modelSelectedMediaPatternIds = new Set(
     asArray(raw?.expression_dna).flatMap(item => asArray(item?.evidence_ids).map(String))
-      .filter(id => mediaPatterns.has(id))
+      .filter(id => eligibleMediaGuidance.has(id))
   )
-  const selectedMediaPatternIds = modelSelectedMediaPatternIds.size > 0
-    ? modelSelectedMediaPatternIds
-    : new Set(mediaPatterns.keys())
-  const mediaExpressionDna = [...selectedMediaPatternIds].slice(0, 2).map(id => {
-    const pattern = mediaPatterns.get(id)
+  const mediaExpressionDna = [...modelSelectedMediaPatternIds].slice(0, 1).map(id => {
+    const guidance = eligibleMediaGuidance.get(id)
     return {
-      dimension: oneLine(`多媒体表达：${pattern.title}`, 60),
-      rule: oneLine(pattern.observation, 65),
+      dimension: oneLine(guidance.dimension, 60),
+      rule: oneLine(guidance.rule, 180),
       evidence_ids: [id]
     }
   })

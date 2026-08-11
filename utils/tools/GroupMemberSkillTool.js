@@ -303,6 +303,7 @@ export class GroupMemberSkillTool extends AbstractTool {
         multimedia: {
           statistics: mediaProfile.statistics,
           pattern_evidence_ids: mediaProfile.patterns.map(pattern => pattern.evidence_id),
+          eligible_skill_guidance_evidence_ids: mediaProfile.eligible_skill_guidance.map(item => item.evidence_id),
           raw_media_sent_to_sub_llm: false
         },
         chunks: {
