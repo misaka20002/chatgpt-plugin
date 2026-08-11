@@ -9,6 +9,7 @@ import {
   buildSkillZipBuffer,
   calculateStyleStats,
   chunkEvidenceRecords,
+  createMediaBehaviorProfile,
   createDefaultSkillName,
   createMapPrompt,
   createSynthesisPrompt,
@@ -18,6 +19,7 @@ import {
   prepareEvidenceRecords,
   redactDirectIdentifiers,
   renderEvidenceMarkdown,
+  renderMediaPatternsMarkdown,
   renderSkillMarkdown,
   sanitizeDisplayName,
   validateGroupMemberSkillAccess,
@@ -104,7 +106,7 @@ function makeRunTimestamp(date = new Date()) {
   return date.toISOString().replace(/[-:]/g, '').replace('T', '-').replace('Z', '').replace('.', '-')
 }
 
-async function writeSkillPackage({ skillName, skillMarkdown, evidenceMarkdown, report, groupId, targetId }) {
+async function writeSkillPackage({ skillName, skillMarkdown, evidenceMarkdown, mediaProfile, report, groupId, targetId }) {
   const groupHash = hashIdentifier(groupId)
   const userHash = hashIdentifier(`${groupId}:${targetId}`)
   const runRoot = path.join(
@@ -119,16 +121,20 @@ async function writeSkillPackage({ skillName, skillMarkdown, evidenceMarkdown, r
   const stagingDir = path.join(runRoot, `.${skillName}.tmp`)
   const skillDir = path.join(runRoot, skillName)
   const referenceDir = path.join(stagingDir, 'references')
+  const mediaIndex = mediaProfile?.media_index || []
+  const mediaPatternsMarkdown = renderMediaPatternsMarkdown(mediaProfile)
   await mkdir(referenceDir, { recursive: true })
 
   await Promise.all([
     writeFile(path.join(stagingDir, 'SKILL.md'), skillMarkdown, 'utf8'),
     writeFile(path.join(referenceDir, 'evidence.md'), evidenceMarkdown, 'utf8'),
-    writeFile(path.join(referenceDir, 'generation-report.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
+    writeFile(path.join(referenceDir, 'generation-report.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8'),
+    writeFile(path.join(referenceDir, 'media-index.json'), `${JSON.stringify(mediaIndex, null, 2)}\n`, 'utf8'),
+    writeFile(path.join(referenceDir, 'media-patterns.md'), mediaPatternsMarkdown, 'utf8')
   ])
   await rename(stagingDir, skillDir)
 
-  const zipBuffer = await buildSkillZipBuffer(skillName, skillMarkdown, evidenceMarkdown, report)
+  const zipBuffer = await buildSkillZipBuffer(skillName, skillMarkdown, evidenceMarkdown, report, mediaIndex, mediaPatternsMarkdown)
   const zipPath = path.join(runRoot, `${skillName}.zip`)
   await writeFile(zipPath, zipBuffer)
 
@@ -224,7 +230,8 @@ export class GroupMemberSkillTool extends AbstractTool {
         maxScannedMessages: GROUP_MEMBER_SKILL_LIMITS.maxScannedMessages
       })
       const evidenceRecords = prepareEvidenceRecords(history.records, [targetId, e.group_id, e.user_id])
-      globalThis.logger?.info?.(`[GroupMemberSkillTool] 历史消息拉取完成，耗时 ${Date.now() - historyStartedAt}ms；扫描群消息 ${history.scanned_messages} 条，收集目标文本 ${history.records.length} 条，脱敏后分析样本 ${evidenceRecords.length} 条`)
+      const mediaProfile = createMediaBehaviorProfile(history.media_records, history.target_message_records)
+      globalThis.logger?.info?.(`[GroupMemberSkillTool] 历史消息拉取完成，耗时 ${Date.now() - historyStartedAt}ms；扫描群消息 ${history.scanned_messages} 条，收集目标文本 ${history.records.length} 条、媒体事件 ${mediaProfile.statistics.media_event_count} 条，脱敏后分析样本 ${evidenceRecords.length} 条`)
       if (evidenceRecords.length < GROUP_MEMBER_SKILL_LIMITS.minMessages) {
         return `数据不足：仅找到 ${evidenceRecords.length} 条有效脱敏文本，至少需要 ${GROUP_MEMBER_SKILL_LIMITS.minMessages} 条，未生成 Skill。`
       }
@@ -249,7 +256,12 @@ export class GroupMemberSkillTool extends AbstractTool {
 
       const mapStartedAt = Date.now()
       const mapped = await mapWithConcurrency(chunks, 2, (chunk, index) => {
-        return callJsonWithRetry(mapLLM, createMapPrompt(chunk, index, chunks.length), `Map ${index + 1}`)
+        const chunkMediaProfile = createMediaBehaviorProfile(
+          history.media_records,
+          history.target_message_records,
+          { start: chunk[0]?.time || 0, end: chunk.at(-1)?.time || Number.MAX_SAFE_INTEGER }
+        )
+        return callJsonWithRetry(mapLLM, createMapPrompt(chunk, index, chunks.length, chunkMediaProfile), `Map ${index + 1}`)
       })
       const minimumSuccessfulChunks = Math.ceil(chunks.length / 2)
       if (mapped.results.length < minimumSuccessfulChunks) {
@@ -262,10 +274,10 @@ export class GroupMemberSkillTool extends AbstractTool {
       const styleStats = calculateStyleStats(evidenceRecords)
       const rawSynthesis = await callJsonWithRetry(
         synthesisLLM,
-        createSynthesisPrompt(mapped.results, styleStats, confidence),
+        createSynthesisPrompt(mapped.results, styleStats, confidence, mediaProfile),
         'Synthesis'
       )
-      const synthesis = validateSynthesis(rawSynthesis, mapped.results, evidenceRecords)
+      const synthesis = validateSynthesis(rawSynthesis, mapped.results, evidenceRecords, mediaProfile)
       const timeRange = getTimeRange(evidenceRecords)
       const generatedAt = new Date().toISOString()
       const skillMarkdown = renderSkillMarkdown({
@@ -288,6 +300,11 @@ export class GroupMemberSkillTool extends AbstractTool {
         scanned_group_message_count: history.scanned_messages,
         time_range: timeRange,
         filtering: history.filtered,
+        multimedia: {
+          statistics: mediaProfile.statistics,
+          pattern_evidence_ids: mediaProfile.patterns.map(pattern => pattern.evidence_id),
+          raw_media_sent_to_sub_llm: false
+        },
         chunks: {
           total: chunks.length,
           successful: mapped.results.length,
@@ -315,6 +332,7 @@ export class GroupMemberSkillTool extends AbstractTool {
         skillName,
         skillMarkdown,
         evidenceMarkdown,
+        mediaProfile,
         report,
         groupId: e.group_id,
         targetId

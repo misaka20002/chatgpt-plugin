@@ -42,7 +42,7 @@ class MessageHistoryManager {
    */
   _extractText(msg) {
     if (typeof msg?.message === 'string') {
-      return msg.message.trim();
+      return msg.message.replace(/\[CQ:[^\]]+\]/gi, '').trim();
     }
     if (Array.isArray(msg?.message)) {
       return msg.message
@@ -52,9 +52,45 @@ class MessageHistoryManager {
         .trim();
     }
     if (typeof msg?.raw_message === 'string') {
-      return msg.raw_message.trim();
+      return msg.raw_message.replace(/\[CQ:[^\]]+\]/gi, '').trim();
     }
     return '';
+  }
+
+  /**
+   * 提取可用于表达习惯统计的媒体段。只返回类型，不返回 URL、file、QQ 或其他原始 data。
+   * CQ 码字符串和 OneBot 数组段均会被识别；@、回复等结构段不视作媒体。
+   * @param {Object} msg
+   * @returns {Array<{type: String}>}
+   */
+  _extractMediaSegments(msg) {
+    const structuralTypes = new Set(['text', 'at', 'reply', 'forward', 'node'])
+    const mediaType = type => {
+      const normalized = String(type || '').toLowerCase()
+      if (structuralTypes.has(normalized)) return null
+      if (['face', 'mface', 'marketface', 'emoji', 'sticker'].includes(normalized)) return 'sticker'
+      if (['image', 'flash'].includes(normalized)) return 'image'
+      if (['video', 'shortvideo'].includes(normalized)) return 'video'
+      if (['record', 'audio', 'voice'].includes(normalized)) return 'audio'
+      if (normalized === 'file') return 'file'
+      return normalized ? 'other' : null
+    }
+
+    if (Array.isArray(msg?.message)) {
+      return msg.message.map(segment => mediaType(segment?.type)).filter(Boolean).map(type => ({ type }))
+    }
+
+    const raw = typeof msg?.message === 'string'
+      ? msg.message
+      : typeof msg?.raw_message === 'string' ? msg.raw_message : ''
+    const segments = []
+    const cqPattern = /\[CQ:([^,\]]+)(?:,[^\]]*)?\]/gi
+    let match
+    while ((match = cqPattern.exec(raw))) {
+      const type = mediaType(match[1])
+      if (type) segments.push({ type })
+    }
+    return segments
   }
 
   /**
@@ -313,7 +349,7 @@ class MessageHistoryManager {
    * @param {Object} options
    * @param {Number} options.maxTargetMessages 最多返回的目标消息数
    * @param {Number} options.maxScannedMessages 最多扫描的群消息数
-   * @returns {Promise<{records: Array, scanned_messages: Number, filtered: Object}>}
+   * @returns {Promise<{records: Array, media_records: Array, target_message_records: Array, scanned_messages: Number, filtered: Object}>}
    */
   async getUserMessageRecords(e, target_id, options = {}) {
     if (!e?.group || !e?.group_id) {
@@ -324,9 +360,12 @@ class MessageHistoryManager {
     const maxScannedMessages = Math.min(Math.max(Number(options.maxScannedMessages) || 10000, 1), 10000);
     const targetId = String(target_id);
     const records = [];
+    const mediaRecords = [];
+    const targetMessageRecords = [];
     const seenMessageIds = new Set();
     const seenTexts = new Set();
-    const filtered = { empty: 0, command: 0, duplicate: 0, non_target: 0 };
+    const filtered = { empty: 0, command: 0, duplicate: 0, non_target: 0, media_only: 0 };
+    let mediaEventIndex = 0;
 
     let currentSeq = e.seq || e.message_id || 0;
     let scannedMessages = 0;
@@ -369,8 +408,26 @@ class MessageHistoryManager {
         }
 
         const text = this._extractText(msg).replace(/\s+/g, ' ').trim();
+        const mediaSegments = this._extractMediaSegments(msg);
+        const hasText = Boolean(text);
+        const hasMedia = mediaSegments.length > 0;
+        targetMessageRecords.push({
+          time: Number(msg?.time) || 0,
+          has_text: hasText,
+          has_media: hasMedia
+        });
+        for (const segment of mediaSegments) {
+          mediaEventIndex += 1;
+          mediaRecords.push({
+            media_id: `MM${String(mediaEventIndex).padStart(5, '0')}`,
+            time: Number(msg?.time) || 0,
+            type: segment.type,
+            is_mixed: hasText
+          });
+        }
         if (!text) {
-          filtered.empty += 1;
+          if (hasMedia) filtered.media_only += 1;
+          else filtered.empty += 1;
           continue;
         }
         if (/^#[^\s]+(?:\s+.*)?$/u.test(text)) {
@@ -408,8 +465,16 @@ class MessageHistoryManager {
       ? records.slice(records.length - maxTargetMessages)
       : records;
 
+    const orderedMediaRecords = mediaRecords.sort((a, b) => a.time - b.time)
+      .map((record, index) => ({
+        ...record,
+        media_id: `MM${String(index + 1).padStart(5, '0')}`
+      }))
+
     return {
       records: limitedRecords,
+      media_records: orderedMediaRecords,
+      target_message_records: targetMessageRecords.sort((a, b) => a.time - b.time),
       scanned_messages: scannedMessages,
       filtered
     };
