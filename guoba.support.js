@@ -19,7 +19,7 @@ export function supportGuoba() {
       link: 'https://github.com/misaka20002/chatgpt-plugin',
       isV3: true,
       isV2: false,
-      description: '基于OpenAI最新推出的chatgpt和微软的 New bing通过api进行聊天的插件，需自备openai账号或有New bing访问权限的必应账号',
+      description: '基于 OpenAI API 进行聊天的插件，需自备可用的 API 配置。',
       // 显示图标，此为个性化配置
       // 图标可在 https://icon-sets.iconify.design 这里进行搜索
       icon: 'simple-icons:openai',
@@ -71,7 +71,7 @@ export function supportGuoba() {
         {
           field: 'allowOtherMode',
           label: '允许其他模式',
-          bottomHelpMessage: '开启后，则允许用户使用#chat1/#chat3/#chatglm/#bing等命令无视全局模式进行聊天',
+          bottomHelpMessage: '开启后，则允许用户使用#chat1/#chat3/#chatglm等命令无视全局模式进行聊天',
           component: 'Switch'
         },
         {
@@ -306,11 +306,7 @@ export function supportGuoba() {
             options: [
               { label: 'OpenAI Chat API', value: 'api' },
               { label: 'OpenAI Responses API', value: 'responses' },
-              { label: '智谱清言', value: 'chatglm4' },
               { label: 'Claude', value: 'claude' },
-              { label: '星火', value: 'xh' },
-              { label: '通义千问', value: 'qwen' },
-              { label: 'Azure', value: 'azure' },
               { label: 'Gemini', value: 'gemini' }
             ]
           }
@@ -483,108 +479,6 @@ export function supportGuoba() {
           bottomHelpMessage: 'Responses API 独有的能力，默认开启。开启后聊天记录储存在官网，使用 previous_response_id 延续当前会话，可降低网络往返开销。关闭时使用 store: false 参数，不保存聊天记录在官网。此开关不影响 token 的消耗',
           component: 'Switch'
         },
-        // {
-        //   label: '以下为必应方式的配置',
-        //   component: 'Divider'
-        // },
-        // {
-        //   field: 'bingReasoning',
-        //   label: 'Bing开启思考',
-        //   bottomHelpMessage: 'Copilot的思考功能。开启后无法搜索',
-        //   component: 'Switch'
-        // },
-        // {
-        //   field: 'enforceMaster',
-        //   label: '加强主人认知',
-        //   bottomHelpMessage: '加强主人认知。希望机器人认清主人，避免NTR可开启。开启后可能会与自设定的内容有部分冲突。sydney模式可以放心开启',
-        //   component: 'Switch'
-        // },
-        // {
-        //   field: 'sydney',
-        //   label: 'Custom的设定',
-        //   bottomHelpMessage: '你可以自己改写设定，让Copilot变成你希望的样子。可能存在不稳定的情况',
-        //   component: 'InputTextArea'
-        // },
-        // {
-        //   field: 'sydneyReverseProxy',
-        //   label: '必应反代',
-        //   bottomHelpMessage: '用于创建对话（默认不用于正式对话）。目前国内ip和部分境外IDC IP由于微软限制创建对话，如果有bing.com的反代可以填在此处，或者使用proxy。默认为https://666102.201666.xyz',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'bingAiToken',
-        //   label: '必应AccessToken',
-        //   bottomHelpMessage: 'Copilot的AccessToken，scope需为ChatAI.ReadWrite。可以发送`#Copilot配置方法`查看浏览器获取配置的方法。',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'bingAiClientId',
-        //   label: '必应ClientId',
-        //   bottomHelpMessage: '配合RefreshToken刷新AccessToken',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'bingAiScope',
-        //   label: '必应Auth Scope',
-        //   bottomHelpMessage: '配合RefreshToken刷新AccessToken',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'bingAiRefreshToken',
-        //   label: '必应RefreshToken',
-        //   bottomHelpMessage: '配合RefreshToken刷新AccessToken',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'bingAiOid',
-        //   label: '必应Oid',
-        //   bottomHelpMessage: '（homeAccountId）配合RefreshToken刷新AccessToken',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: '_2captchaKey',
-        //   label: '2captcha API密钥',
-        //   bottomHelpMessage: '用于解除Copilot的验证码',
-        //   component: 'Input'
-        // },
-        // {
-        //   label: '以下为API3方式的配置',
-        //   component: 'Divider'
-        // },
-        // {
-        //   field: 'api',
-        //   label: 'ChatGPT API反代服务器地址',
-        //   bottomHelpMessage: 'ChatGPT的API反代服务器，用于绕过Cloudflare访问ChatGPT API',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'apiBaseUrl',
-        //   label: 'apiBaseUrl地址',
-        //   bottomHelpMessage: 'apiBaseUrl地址',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'apiForceUseReverse',
-        //   label: '强制使用ChatGPT反代',
-        //   bottomHelpMessage: '即使配置了proxy，依然使用ChatGPT反代',
-        //   component: 'Switch'
-        // },
-        // {
-        //   field: 'useGPT4',
-        //   label: '使用GPT-4',
-        //   bottomHelpMessage: '使用GPT-4，注意试用配额较低，如果用不了就关掉',
-        //   component: 'Switch'
-        // },
-        {
-          label: '以下为智谱清言（ChatGLM）方式的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'chatglmRefreshToken',
-          label: 'refresh token',
-          bottomHelpMessage: 'chatglm_refresh_token 6个月有效期；可用指令： #chatgpt切换智谱',
-          component: 'Input'
-        },
         {
           label: '以下为Claude API方式的配置',
           component: 'Divider'
@@ -627,203 +521,6 @@ export function supportGuoba() {
           field: 'claudeSystemPrompt',
           label: 'claude 设定',
           component: 'InputTextArea'
-        },
-        // {
-        //   label: '以下为Claude2方式的配置',
-        //   component: 'Divider'
-        // },
-        // {
-        //   field: 'claudeAIOrganizationId',
-        //   label: 'claude2 OrganizationId',
-        //   bottomHelpMessage: 'claude.ai的OrganizationId',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'claudeAISessionKey',
-        //   label: 'claude2 SessionKey',
-        //   bottomHelpMessage: 'claude.ai Cookie中的SessionKey',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'claudeAIReverseProxy',
-        //   label: 'claude2 反代',
-        //   bottomHelpMessage: 'claude.ai 的反代。或许可以参考https://github.com/ikechan8370/sydney-ws-proxy/tree/claude.ai搭建',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'claudeAIJA3',
-        //   label: 'claude2浏览器指纹',
-        //   bottomHelpMessage: 'claude.ai使用的浏览器TLS指纹，去https://scrapfly.io/web-scraping-tools/ja3-fingerprint或https://ja3.zone/check查看。如果用了反代就不用管',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'claudeAIUA',
-        //   label: 'claude2浏览器UA',
-        //   bottomHelpMessage: 'claude.ai使用的浏览器UA，https://scrapfly.io/web-scraping-tools/http2-fingerprint或https://ja3.zone/check查看。如果用了反代就不用管',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'claudeAITimeout',
-        //   label: 'claude2超时时间',
-        //   bottomHelpMessage: '等待响应的超时时间，单位为秒，默认为120。如果不使用反代而是使用代理可以适当调低。',
-        //   component: 'InputNumber'
-        // },
-        {
-          label: '以下为星火API方式的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'xhmode',
-          label: '星火模式',
-          bottomHelpMessage: '设置星火使用的对话模式；可用指令： #chatgpt切换星火 #chatgpt设置星火token',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: '体验版', value: 'web' },
-              { label: '讯飞星火认知大模型V1.5', value: 'api' },
-              { label: '讯飞星火认知大模型V2.0', value: 'apiv2' },
-              { label: '讯飞星火认知大模型V3.0', value: 'apiv3' },
-              { label: '讯飞星火认知大模型V3.5', value: 'apiv3.5' },
-              { label: '讯飞星火认知大模型V4.0', value: 'apiv4.0' },
-              { label: '讯飞星火助手', value: 'assistants' }
-            ]
-          }
-        },
-        {
-          field: 'xinghuoToken',
-          label: '星火Cookie',
-          bottomHelpMessage: '获取对话页面的ssoSessionId cookie。不要带等号和分号',
-          component: 'InputPassword'
-        },
-        {
-          field: 'xhAppId',
-          label: 'AppId',
-          bottomHelpMessage: '应用页面获取',
-          component: 'Input'
-        },
-        {
-          field: 'xhAPISecret',
-          label: 'APISecret',
-          bottomHelpMessage: '应用页面获取',
-          component: 'InputPassword'
-        },
-        {
-          field: 'xhAPIKey',
-          label: '星火APIKey',
-          bottomHelpMessage: '应用页面获取',
-          component: 'InputPassword'
-        },
-        {
-          field: 'xhAssistants',
-          label: '助手接口',
-          bottomHelpMessage: '助手页面获取',
-          component: 'Input'
-        },
-        {
-          field: 'xhTemperature',
-          label: '核采样阈值',
-          bottomHelpMessage: '核采样阈值。用于决定结果随机性，取值越高随机性越强即相同的问题得到的不同答案的可能性越高',
-          component: 'InputNumber'
-        },
-        {
-          field: 'xhMaxTokens',
-          label: '最大Token',
-          bottomHelpMessage: '模型回答的tokens的最大长度',
-          component: 'InputNumber'
-        },
-        {
-          field: 'xhPromptSerialize',
-          label: '序列化设定',
-          bottomHelpMessage: '是否将设定内容进行json序列化',
-          component: 'Switch'
-        },
-        {
-          field: 'xhPrompt',
-          label: '设定',
-          bottomHelpMessage: '若开启序列化，请传入json数据，例如[{ \"role\": \"user\", \"content\": \"现在是10点\" },{ \"role\": \"assistant\", \"content\": \"了解，现在10点了\" }]',
-          component: 'InputTextArea'
-        },
-        {
-          field: 'xhRetRegExp',
-          label: '回复替换正则',
-          bottomHelpMessage: '要替换文本的正则',
-          component: 'Input'
-        },
-        {
-          field: 'xhRetReplace',
-          label: '回复内容替换',
-          bottomHelpMessage: '替换回复内容中的文本',
-          component: 'Input'
-        },
-        {
-          label: '以下为通义千问API方式的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'qwenApiKey',
-          label: '通义千问API Key',
-          bottomHelpMessage: '通义千问的ai人格使用“API方式”中的设置，请自行设置；可用指令： #chatgpt切换千问',
-          component: 'InputPassword'
-        },
-        {
-          field: 'qwenModel',
-          label: '通义千问模型',
-          bottomHelpMessage: '指明需要调用的模型，目前可选 qwen-turbo 和 qwen-plus',
-          component: 'Input'
-        },
-        {
-          field: 'qwenTopP',
-          label: '通义千问topP',
-          bottomHelpMessage: '生成时，核采样方法的概率阈值。例如，取值为0.8时，仅保留累计概率之和大于等于0.8的概率分布中的token，作为随机采样的候选集。取值范围为（0,1.0)，取值越大，生成的随机性越高；取值越低，生成的随机性越低。默认值 0.5。注意，取值不要大于等于1',
-          component: 'InputNumber'
-        },
-        {
-          field: 'qwenTopK',
-          label: '通义千问topK',
-          bottomHelpMessage: '生成时，采样候选集的大小。例如，取值为50时，仅将单次生成中得分最高的50个token组成随机采样的候选集。取值越大，生成的随机性越高；取值越小，生成的确定性越高。注意：如果top_k的值大于100，top_k将采用默认值0，表示不启用top_k策略，此时仅有top_p策略生效。',
-          component: 'InputNumber'
-        },
-        {
-          field: 'qwenSeed',
-          label: '通义千问Seed',
-          bottomHelpMessage: '生成时，随机数的种子，用于控制模型生成的随机性。如果使用相同的种子，每次运行生成的结果都将相同；当需要复现模型的生成结果时，可以使用相同的种子。seed参数支持无符号64位整数类型。默认值 0, 表示每次随机生成',
-          component: 'InputNumber'
-        },
-        {
-          field: 'qwenTemperature',
-          label: '通义千问温度',
-          bottomHelpMessage: '用于控制随机性和多样性的程度。具体来说，temperature值控制了生成文本时对每个候选词的概率分布进行平滑的程度。较高的temperature值会降低概率分布的峰值，使得更多的低概率词被选择，生成结果更加多样化；而较低的temperature值则会增强概率分布的峰值，使得高概率词更容易被选择，生成结果更加确定。\n' +
-            '\n' +
-            '取值范围： (0, 2),系统默认值1.0',
-          component: 'InputNumber'
-        },
-        {
-          field: 'qwenEnableSearch',
-          label: '通义千问允许搜索',
-          bottomHelpMessage: '生成时，是否参考夸克搜索的结果。注意：打开搜索并不意味着一定会使用搜索结果；如果打开搜索，模型会将搜索结果作为prompt，进而“自行判断”是否生成结合搜索结果的文本，默认为false',
-          component: 'Switch'
-        },
-        {
-          label: '以下为Azure chatGPT的配置',
-          component: 'Divider'
-        },
-        {
-          field: 'azApiKey',
-          label: 'Azure API Key',
-          bottomHelpMessage: '管理密钥，用于访问Azure的API接口；可用指令： #chatgpt切换azure',
-          component: 'InputPassword'
-        },
-        {
-          field: 'azureUrl',
-          label: '端点地址',
-          bottomHelpMessage: 'https://xxxx.openai.azure.com/',
-          component: 'Input'
-        },
-        {
-          field: 'azureDeploymentName',
-          label: '部署名称',
-          bottomHelpMessage: '创建部署时输入的名称',
-          component: 'Input'
         },
         {
           label: '以下为Gemini方式的配置',
@@ -2305,9 +2002,6 @@ export function supportGuoba() {
               { label: 'OpenAI Responses API', value: 'responses' },
               { label: 'Gemini', value: 'gemini' },
               { label: 'Claude', value: 'claude' },
-              { label: '通义千问', value: 'qwen' },
-              { label: '星火', value: 'xh' },
-              { label: '智谱清言', value: 'chatglm4' }
             ]
           }
         },
@@ -2574,15 +2268,13 @@ export function supportGuoba() {
         {
           field: 'translateSource',
           label: '翻译来源',
-          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]',
+          bottomHelpMessage: '设置 #gpt翻译 使用的翻译来源；可用指令：#gpt翻译帮助 #chatgpt设置翻译来源[openai|responses|gemini|baidu|百度翻译]',
           component: 'Select',
           componentProps: {
             options: [
               { label: 'OpenAI', value: 'openai' },
               { label: 'OpenAI Responses API', value: 'responses' },
               { label: 'Gemini', value: 'gemini' },
-              { label: '星火', value: 'xh' },
-              { label: '通义千问', value: 'qwen' },
               { label: '百度翻译', value: 'baidu' }
             ]
           }
@@ -2640,9 +2332,7 @@ export function supportGuoba() {
           componentProps: {
             options: [
               { label: 'Gemini（推荐）', value: 'gemini' },
-              { label: '通义千问', value: 'qwen' },
               { label: 'OpenAI Chat API', value: 'api' },
-              { label: '星火', value: 'xh' },
               { label: 'Claude', value: 'claude' }
             ]
           }

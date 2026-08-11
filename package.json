@@ -4,7 +4,6 @@
   "type": "module",
   "author": "ikechan8370,misaka20002,eggcheb",
   "dependencies": {
-    "@azure/openai": "^1.0.0-beta.1",
     "@fastify/cookie": "^8.3.0",
     "@fastify/cors": "^8.2.0",
     "@fastify/static": "^6.9.0",

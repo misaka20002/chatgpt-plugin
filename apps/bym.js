@@ -73,12 +73,8 @@ export class bym extends plugin {
         enableSmart: Config.smartMode,
         system: {
           api: system,
-          qwen: system,
-          bing: system,
           claude: system,
-          claude2: system,
-          gemini: system,
-          xh: system
+          gemini: system
         },
         settings: {
           replyPureTextCallback: msg => {

@@ -2,37 +2,28 @@ import { Config } from '../utils/config.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
 import { ClaudeAPIClient } from '../client/ClaudeAPIClient.js'
-import { QwenApi } from '../utils/alibaba/qwen-api.js'
-import XinghuoClient from '../utils/xinghuo/xinghuo.js'
-import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
 import { newFetch } from '../utils/proxy.js'
 import { ResponsesAPI } from '../utils/openai/responses-api.js'
 import { AbstractTool } from '../utils/tools/AbstractTool.js'
 import { v4 as uuid } from 'uuid'
 
-const SUPPORTED_PROVIDERS = ['openai', 'responses', 'gemini', 'claude', 'qwen', 'xh', 'chatglm4']
+const SUPPORTED_PROVIDERS = ['openai', 'responses', 'gemini', 'claude']
 
 /**
  * 将 chat.js 中的 use 值映射为 SubLLM 支持的 provider
- * SubLLM 支持: openai, responses, gemini, claude, qwen, xh, chatglm4
+ * SubLLM 支持: openai, responses, gemini, claude
  *
- * @param {string} use  chat.js 中的 use 值 (api/api3/bing/azure/responses/claude/claude2/gemini/qwen/xh/chatglm/chatglm4)
+ * @param {string} use  chat.js 中的 use 值
  * @returns {string} SubLLM 支持的 provider
  */
 export function useToProvider(use) {
   const mapping = {
     api: 'openai',
-    api3: 'openai',
-    bing: 'openai',
     azure: 'openai',
     responses: 'responses',
     claude: 'claude',
-    claude2: 'claude',
     gemini: 'gemini',
-    qwen: 'qwen',
-    xh: 'xh',
-    chatglm: 'chatglm4',
-    chatglm4: 'chatglm4',
+    chatglm: 'openai',
   }
   return mapping[use] || 'openai'
 }
@@ -43,7 +34,6 @@ function getConfiguredModel(provider) {
     responses: Config.responsesModel,
     gemini: Config.geminiModel,
     claude: Config.claudeApiModel,
-    qwen: Config.qwenModel,
   }
   return models[provider] || ''
 }
@@ -65,7 +55,7 @@ function getConfiguredModel(provider) {
 export class SubLLM {
   /**
    * @param {object} options
-   * @param {'openai'|'responses'|'gemini'|'claude'|'qwen'|'xh'|'chatglm4'|'api'|'api3'|'bing'|'azure'|'claude2'|'chatglm'} options.provider  LLM来源，也支持传入 use 值自动映射，默认 openai
+   * @param {'openai'|'responses'|'gemini'|'claude'|'api'|'azure'|'chatglm'} options.provider  LLM来源，也支持传入 use 值自动映射，默认 openai
    * @param {string}  [options.model]           模型名，留空则用各provider的默认值
    * @param {string}  [options.systemPrompt]    系统提示词
    * @param {string}  [options.apiKey]          API Key，留空则用全局Config
@@ -76,7 +66,7 @@ export class SubLLM {
    * @param {boolean} [options.debug]           调试模式
    */
   constructor(options = {}) {
-    // 支持直接传入 use 值（如 api/claude2/gemini 等），自动映射为 provider
+    // 支持直接传入 use 值（如 api/gemini 等），自动映射为 provider
     let provider = options.provider || 'openai'
     if (!SUPPORTED_PROVIDERS.includes(provider)) {
       provider = useToProvider(provider)
@@ -85,8 +75,6 @@ export class SubLLM {
     if (!SUPPORTED_PROVIDERS.includes(this.provider)) {
       throw new Error(`SubLLM: 不支持的provider "${this.provider}"，当前支持: ${SUPPORTED_PROVIDERS.join(', ')}`)
     }
-    // Prefer the model configured for this provider.  Previously, OpenAI
-    // subcalls left this empty and ChatGPTAPI fell back to gpt-4o-mini.
     this.model = options.model || getConfiguredModel(this.provider)
     this.systemPrompt = options.systemPrompt || ''
     this.apiKey = options.apiKey || ''
@@ -103,7 +91,7 @@ export class SubLLM {
    * @param {string} prompt  用户消息
    * @param {object} [opts]  额外选项
    * @param {string} [opts.systemPrompt]  本次调用临时覆盖的systemPrompt
-   * @param {object} [opts.conversation]  对话上下文（parentMessageId / conversationId），openai/qwen/claude/gemini 可用
+   * @param {object} [opts.conversation]  对话上下文（parentMessageId / conversationId），openai/claude/gemini 可用
    * @returns {Promise<{text: string, id?: string, conversationId?: string, parentMessageId?: string}>}
    */
   async chat(prompt, opts = {}) {
@@ -123,12 +111,6 @@ export class SubLLM {
         return await this._chatGemini(prompt, systemPrompt, conversation)
       case 'claude':
         return await this._chatClaude(prompt, systemPrompt, conversation)
-      case 'qwen':
-        return await this._chatQwen(prompt, systemPrompt, conversation)
-      case 'xh':
-        return await this._chatXH(prompt, systemPrompt, conversation)
-      case 'chatglm4':
-        return await this._chatChatGLM4(prompt, systemPrompt, conversation)
       default:
         throw new Error(`SubLLM: 未实现的provider "${this.provider}"`)
     }
@@ -262,88 +244,6 @@ export class SubLLM {
     }
   }
 
-  async _chatQwen(prompt, systemPrompt, conversation) {
-    const completionParams = {
-      parameters: {
-        top_p: Config.qwenTopP || 0.5,
-        top_k: Config.qwenTopK || 50,
-        seed: Config.qwenSeed > 0 ? Config.qwenSeed : Math.floor(Math.random() * 114514),
-        temperature: this.temperature !== undefined ? this.temperature : (Config.qwenTemperature || 1),
-        enable_search: !!Config.qwenEnableSearch,
-        result_format: 'message',
-      }
-    }
-    if (this.model) completionParams.model = this.model
-    else if (Config.qwenModel) completionParams.model = Config.qwenModel
-
-    const opts = {
-      apiKey: this.apiKey || Config.qwenApiKey,
-      debug: this.debug,
-      systemMessage: systemPrompt || undefined,
-      completionParams,
-      assistantLabel: 'SubLLM',
-      fetch: newFetch,
-    }
-
-    const option = {
-      timeoutMs: this.timeoutMs,
-      completionParams,
-    }
-    if (conversation.conversationId) {
-      option.conversationId = conversation.conversationId
-    } else {
-      option.conversationId = uuid()
-    }
-    if (conversation.parentMessageId) {
-      option.parentMessageId = conversation.parentMessageId
-    }
-
-    const client = new QwenApi(opts)
-    const result = await client.sendMessage(prompt, option)
-    return {
-      text: result.text,
-      id: result.id,
-      conversationId: result.conversationId,
-      parentMessageId: result.parentMessageId,
-    }
-  }
-
-  async _chatXH(prompt, systemPrompt, conversation) {
-    const ssoSessionId = this.apiKey || Config.xinghuoToken
-    if (!ssoSessionId) {
-      throw new Error('SubLLM: xh provider 未配置星火Token')
-    }
-
-    const client = new XinghuoClient({ ssoSessionId })
-    const result = await client.sendMessage(prompt, {
-      chatId: conversation?.conversationId,
-      system: systemPrompt || undefined,
-    })
-    return {
-      text: result.text,
-      id: result.id,
-      conversationId: result.conversationId,
-      parentMessageId: result.parentMessageId,
-    }
-  }
-
-  async _chatChatGLM4(prompt, systemPrompt, conversation) {
-    const client = new ChatGLM4Client({
-      refreshToken: this.apiKey || Config.chatglmRefreshToken,
-    })
-    const option = {}
-    if (systemPrompt) option.system = systemPrompt
-    if (conversation.conversationId) option.conversationId = conversation.conversationId
-    if (conversation.parentMessageId) option.parentMessageId = conversation.parentMessageId
-
-    const result = await client.sendMessage(prompt, option)
-    return {
-      text: result.text,
-      id: result.id,
-      conversationId: result.conversationId,
-      parentMessageId: result.parentMessageId,
-    }
-  }
 }
 
 /**
@@ -369,7 +269,7 @@ export class SubLLM {
 export class SubLLMTool extends AbstractTool {
   /**
    * @param {object} [options]
-   * @param {'openai'|'responses'|'gemini'|'claude'|'qwen'|'xh'|'chatglm4'|'api'|'api3'|'bing'|'azure'|'claude2'|'chatglm'} [options.provider]
+   * @param {'openai'|'responses'|'gemini'|'claude'|'api'|'azure'|'chatglm'} [options.provider]
    * @param {string}  [options.model]
    * @param {string}  [options.systemPrompt]
    * @param {string}  [options.apiKey]

@@ -5,7 +5,7 @@ export const GROUP_MEMBER_SKILL_LIMITS = Object.freeze({
   minMessages: 30,
   fullConfidenceMessages: 100,
   maxMessages: 500, // 获取目标用户历史文字消息上限
-  maxScannedMessages: 10000, // 群扫描历史消息上限
+  maxScannedMessages: 20000, // 群扫描历史消息上限
   maxInputChars: 60000,
   chunkChars: 12000,
   maxMessageChars: 2000

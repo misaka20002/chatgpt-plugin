@@ -8,12 +8,7 @@ const FUNCTION_CHAT = 'chatgpt'
 const FUNCTION_CHAT_for_firstperson_call = 'chatgpt_for_firstperson_call'
 const FUNCTION_CHAT3 = 'chatgpt3'
 const FUNCTION_CHAT1 = 'chatgpt1'
-const FUNCTION_BING = 'bing'
 const FUNCTION_GEMINI = 'gemini'
-const FUNCTION_XH = 'xh'
-const FUNCTION_QWEN = 'qwen'
-const FUNCTION_GLM4 = 'glm4'
-const FUNCTION_CLAUDE2 = 'claude2'
 const FUNCTION_CLAUDE = 'claude'
 
 const FUNCTION_END = 'destroyConversations'
@@ -72,13 +67,8 @@ export class ChatGPTButtonHandler extends plugin {
       case `[${PLUGIN_CHAT}][${FUNCTION_CHAT3}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_CHAT1}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_CHAT_for_firstperson_call}]`:
-      case `[${PLUGIN_CHAT}][${FUNCTION_BING}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_GEMINI}]`:
-      case `[${PLUGIN_CHAT}][${FUNCTION_XH}]`:
-      case `[${PLUGIN_CHAT}][${FUNCTION_QWEN}]`:
-      case `[${PLUGIN_CHAT}][${FUNCTION_CLAUDE2}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_CLAUDE}]`:
-      case `[${PLUGIN_CHAT}][${FUNCTION_GLM4}]`:
       case `[${PLUGIN_CHAT}][${FUNCTION_CHAT}]`: {
         return this.makeButtonChat(options?.btnData)
       }
@@ -129,32 +119,8 @@ export class ChatGPTButtonHandler extends plugin {
         endCommand = '#api结束对话'
         break
       }
-      case 'api3': {
-        endCommand = '#api3结束对话'
-        break
-      }
-      case 'bing': {
-        endCommand = '#必应结束对话'
-        break
-      }
-      case 'claude2': {
-        endCommand = '#克劳德结束对话'
-        break
-      }
       case 'gemini': {
         endCommand = '#双子星结束对话'
-        break
-      }
-      case 'xh': {
-        endCommand = '#星火结束对话'
-        break
-      }
-      case 'qwen': {
-        endCommand = '#通义千问结束对话'
-        break
-      }
-      case 'chatglm4': {
-        endCommand = '#智谱结束对话'
         break
       }
     }
@@ -171,23 +137,14 @@ export class ChatGPTButtonHandler extends plugin {
     if (Config.apiKey) {
       buttons[0].push(createButtonBase('OpenAI', '#chat1', false))
     }
-    if (await redis.get('CHATGPT:TOKEN')) {
-      buttons[0].push(createButtonBase('ChatGPT', '#chat3', false))
-    }
-    if (await redis.get('CHATGPT:BING_TOKENS')) {
-      buttons[0].push(createButtonBase('Copilot', '#bing', false))
-    }
+    // if (await redis.get('CHATGPT:TOKEN')) {
+    //   buttons[0].push(createButtonBase('ChatGPT', '#chat3', false))
+    // }
+    // if (await redis.get('CHATGPT:BING_TOKENS')) {
+    //   buttons[0].push(createButtonBase('Copilot', '#bing', false))
+    // }
     if (Config.geminiKey.length) {
       buttons[0].push(createButtonBase('Gemini', '#gemini', false))
-    }
-    if (Config.xhAPIKey) {
-      buttons[buttons[0].length >= 4 ? 1 : 0].push(createButtonBase('讯飞星火', '#xh', false))
-    }
-    if (Config.qwenApiKey) {
-      buttons[buttons[0].length >= 4 ? 1 : 0].push(createButtonBase('通义千问', '#qwen', false))
-    }
-    if (Config.chatglmRefreshToken) {
-      buttons[buttons[0].length >= 4 ? 1 : 0].push(createButtonBase('ChatGLM4', '#glm4', false))
     }
     // 两个claude只显示一个 优先API
     if (Config.claudeApiKey) {
@@ -306,8 +263,7 @@ export class ChatGPTButtonHandler extends plugin {
         {
           buttons: [
             createButtonBase('切换到API', '#chatgpt切换API'),
-            createButtonBase('切换到Gemini', '#chatgpt切换gemini'),
-            createButtonBase('切换到星火', '#chatgpt切换xh')
+            createButtonBase('切换到Gemini', '#chatgpt切换gemini')
           ]
         }
       ]
@@ -337,9 +293,7 @@ export class ChatGPTButtonHandler extends plugin {
           buttons: [
             createButtonBase('设置OPENAI翻译源', '#chatgpt设置翻译来源openai'),
             createButtonBase('设置Responses翻译源', '#chatgpt设置翻译来源responses'),
-            createButtonBase('设置gemini翻译源', '#chatgpt设置翻译来源gemini'),
-            createButtonBase('设置星火翻译源', '#chatgpt设置翻译来源xh'),
-            createButtonBase('设置通义千问翻译源', '#chatgpt设置翻译来源qwen')
+            createButtonBase('设置gemini翻译源', '#chatgpt设置翻译来源gemini')
           ]
         }
       ]
