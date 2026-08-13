@@ -617,7 +617,6 @@ export class voicechangehelp extends plugin {
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
 Azure语音角色: ${userSetting.ttsRoleAzure}
-VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
 ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
@@ -1029,7 +1028,6 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
 Azure语音角色: ${userSetting.ttsRoleAzure}
-VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
 ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
 

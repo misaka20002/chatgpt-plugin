@@ -1,7 +1,6 @@
 import { Config } from './utils/config.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
-import { supportConfigurations as voxRoleList } from './utils/tts/voicevox.js'
 import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/mcpServersGuoba.js'
 import lodash from "lodash";
 
@@ -741,7 +740,7 @@ export function supportGuoba() {
         {
           field: 'cloudMode',
           label: '云转码API发送数据模式',
-          bottomHelpMessage: 'vits选链接，本地vits服务/voicevox/azure选文件（呆毛注：目前没有云转码服务了，选“关闭云转码”，不过 NapCat 适配器已内置转码，音质很棒）',
+          bottomHelpMessage: 'vits选链接，本地vits服务/azure选文件（呆毛注：目前没有云转码服务了，选“关闭云转码”，不过 NapCat 适配器已内置转码，音质很棒）',
           component: 'Select',
           componentProps: {
             options: [
@@ -788,41 +787,8 @@ export function supportGuoba() {
               {
                 label: '微软Azure语音',
                 value: 'azure'
-              },
-              {
-                label: 'VoiceVox',
-                value: 'voicevox'
-              },
+              }
             ]
-          }
-        },
-        {
-          label: 'voicevox语音',
-          component: 'Divider'
-        },
-        {
-          field: 'voicevoxSpace',
-          label: 'voicevox语音转换API地址',
-          bottomHelpMessage: '可使用https://2ndelement-voicevox.hf.space, 也可github搜索voicevox-engine自建',
-          component: 'Input'
-        },
-        {
-          field: 'voicevoxTTSSpeaker',
-          label: 'VoiceVox默认角色',
-          bottomHelpMessage: 'VoiceVox语音模式下，未指定角色时使用的角色。若留空，将使用随机角色回复。若用户通过指令指定了角色，将忽略本设定',
-          component: 'Select',
-          componentProps: {
-            options: [{
-              label: '随机',
-              value: '随机'
-            },
-            ...voxRoleList.flatMap(item => [
-              ...item.styles.map(style => `${item.name}-${style.name}`),
-              item.name
-            ]).map(s => ({
-              label: s,
-              value: s
-            }))]
           }
         },
         {
@@ -1331,7 +1297,7 @@ export function supportGuoba() {
         {
           field: 'azSerpKey',
           label: 'Azure search key',
-          bottomHelpMessage: '用于 Azure search；https://www.microsoft.com/en-us/bing/apis/bing-web-search-api 访问 https://portal.azure.com 创建新的 "Bing Search" 资源；当您首次创建 Azure 账户时，微软会提供 ​​200 美元的免费信用额度​​，有效期 30 天。',
+          bottomHelpMessage: '用于 Azure search；https://www.microsoft.com/en-us/bing/apis/bing-web-search-api 访问 https://portal.azure.com 创建新的 "Bing Search" 资源；当您首次创建 Azure 账户时，微软会提供 200 美元的免费信用额度, 有效期 30 天。',
           component: 'InputPassword'
         },
         {

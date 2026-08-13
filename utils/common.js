@@ -8,7 +8,6 @@ import puppeteer from '../../../lib/puppeteer/puppeteer.js'
 import common from '../../../lib/common/common.js'
 import { Config } from './config.js'
 import { convertSpeaker, generateVitsAudio, speakers as vitsRoleList } from './tts.js'
-import VoiceVoxTTS, { supportConfigurations as voxRoleList } from './tts/voicevox.js'
 import AzureTTS, { supportConfigurations as azureRoleList } from './tts/microsoft-azure.js'
 import { translate } from './translate.js'
 import { removeCQCode } from './paimonFuction.js'
@@ -387,8 +386,7 @@ export function getDefaultReplySetting() {
     usePicture: Config.defaultUsePicture,
     useTTS: Config.defaultUseTTS,
     ttsRole: Config.defaultTTSRole,
-    ttsRoleAzure: Config.azureTTSSpeaker,
-    ttsRoleVoiceVox: Config.voicevoxTTSSpeaker
+    ttsRoleAzure: Config.azureTTSSpeaker
   }
 }
 
@@ -688,10 +686,6 @@ export function normalizeChatMode(mode) {
   return removedChatModes.has(mode) ? 'api' : mode
 }
 
-export function getVoicevoxRoleList() {
-  return voxRoleList.map(item => item.name).join(',')
-}
-
 export function getAzureRoleList() {
   return azureRoleList.map(item => item.roleInfo + (item?.emotion ? '-> 支持：' + Object.keys(item.emotion).join('，') + ' 情绪。' : '')).join('\n\n')
 }
@@ -943,7 +937,7 @@ export function getUin(e) {
  * @returns {Promise<{file: string, type: string}|undefined|boolean>}
  */
 export async function generateAudio(e, pendingText, speakingEmotion, emotionDegree = 1, options = {}) {
-  if (!Config.ttsSpace && !Config.azureTTSKey && !Config.voicevoxSpace) return false
+  if (!Config.ttsSpace && !Config.azureTTSKey) return false
   const { noTranslate = false } = options || {}
   pendingText = removeCQCode(pendingText)
   let wav
@@ -962,11 +956,6 @@ export async function generateAudio(e, pendingText, speakingEmotion, emotionDegr
       wav = await generateVitsAudio(pendingText, speaker, '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', undefined, undefined, undefined, { noTranslate })
     } else if (Config.ttsMode === 'azure' && Config.azureTTSKey) {
       return await generateAzureAudio(pendingText, speaker, speakingEmotion, emotionDegree, ignoreEncode, { noTranslate })
-    } else if (Config.ttsMode === 'voicevox' && Config.voicevoxSpace) {
-      if (!noTranslate) pendingText = (await translate(pendingText, '日')).replace('\n', '')
-      wav = await VoiceVoxTTS.generateAudio(pendingText, {
-        speaker
-      })
     }
   } catch (err) {
     logger.error(err)
@@ -1070,8 +1059,6 @@ export function getUserSpeaker(userSetting) {
     return convertSpeaker(userSetting.ttsRole || Config.defaultTTSRole)
   } else if (Config.ttsMode === 'azure') {
     return userSetting.ttsRoleAzure || Config.azureTTSSpeaker
-  } else if (Config.ttsMode === 'voicevox') {
-    return userSetting.ttsRoleVoiceVox || Config.voicevoxTTSSpeaker
   }
 }
 

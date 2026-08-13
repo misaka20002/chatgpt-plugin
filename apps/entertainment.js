@@ -9,7 +9,6 @@ import uploadRecord from '../utils/uploadRecord.js'
 import { makeWordcloud } from '../utils/wordcloud/wordcloud.js'
 import { translate, translateLangSupports } from '../utils/translate.js'
 import AzureTTS from '../utils/tts/microsoft-azure.js'
-import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import { URL } from 'node:url'
 import { getBots } from '../utils/bot.js'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
@@ -458,11 +457,10 @@ ${translateLangLabels}
             logger.info(`打招呼给群聊${groupId}：` + message)
             if (Config.defaultUseTTS) {
               let audio
-              const [defaultVitsTTSRole, defaultAzureTTSRole, defaultVoxTTSRole] = [Config.defaultTTSRole, Config.azureTTSSpeaker, Config.voicevoxTTSSpeaker]
+              const [defaultVitsTTSRole, defaultAzureTTSRole] = [Config.defaultTTSRole, Config.azureTTSSpeaker]
               let ttsSupportKinds = []
               if (Config.azureTTSKey) ttsSupportKinds.push(1)
               if (Config.ttsSpace) ttsSupportKinds.push(2)
-              if (Config.voicevoxSpace) ttsSupportKinds.push(3)
               if (!ttsSupportKinds.length) {
                 logger.warn('没有配置任何语音服务！')
                 return false
@@ -489,17 +487,6 @@ ${translateLangLabels}
                   }
                   try {
                     audio = await generateVitsAudio(message, defaultVitsTTSRole, '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）')
-                  } catch (err) {
-                    logger.error(err)
-                  }
-                  break
-                }
-                case 3: {
-                  message = (await translate(message, '日')).replace('\n', '')
-                  try {
-                    audio = await VoiceVoxTTS.generateAudio(message, {
-                      speaker: defaultVoxTTSRole
-                    })
                   } catch (err) {
                     logger.error(err)
                   }

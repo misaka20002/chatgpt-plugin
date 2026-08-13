@@ -289,7 +289,7 @@
                 "type": "select",
                 "label": "语音模式源",
                 "data": "ttsMode",
-                "items": [ {   "label": "Vits",   "value": "vits-uma-genshin-honkai" }, {   "label": "微软Azure",   "value": "azure" }, {   "label": "VoiceVox",   "value": "VoiceVox" }
+                "items": [ {   "label": "Vits",   "value": "vits-uma-genshin-honkai" }, {   "label": "微软Azure",   "value": "azure" }
                 ]
               },
               {
@@ -377,19 +377,6 @@
                 "label": "Azure默认角色",
                 "data": "azureTTSSpeaker",
                 "items": [ { "value": "zh-CN-liaoning-XiaobeiNeural", "label": "晓北-东北官话，简体-女" }, { "value": "zh-CN-henan-YundengNeural", "label": "云登-中原官话河南，简体-男" }, { "value": "zh-CN-shaanxi-XiaoniNeural", "label": "晓妮-中原官话陕西，简体-女" }, { "value": "zh-CN-henan-YundengNeural", "label": "云翔-冀鲁官话，简体-男" }, { "value": "zh-CN-XiaoxiaoNeural", "label": "晓晓-普通话，简体-女" }, { "value": "zh-CN-YunxiNeural", "label": "云希-普通话，简体-男" }, { "value": "zh-CN-YunyangNeural", "label": "云扬-普通话，简体-男" }, { "value": "zh-CN-YunyeNeural", "label": "云野-普通话，简体-男" }, { "value": "zh-CN-XiaoshuangNeural", "label": "晓双-普通话，简体-女" }, { "value": "zh-CN-XiaoyouNeural", "label": "晓悠-普通话，简体-女" }, { "value": "zh-CN-XiaoqiuNeural", "label": "晓秋-普通话，简体-女" }, { "value": "zh-CN-XiaochenNeural", "label": "晓辰-普通话，简体-女" }, { "value": "zh-CN-XiaoyanNeural", "label": "晓颜-普通话，简体-女" }, { "value": "zh-CN-XiaomoNeural", "label": "晓墨-普通话，简体-女" }, { "value": "zh-CN-XiaoxuanNeural", "label": "晓萱-普通话，简体-女" }, { "value": "zh-CN-XiaohanNeural", "label": "晓涵-普通话，简体-女" }, { "value": "zh-CN-XiaoruiNeural", "label": "晓睿-普通话，简体-女" }, { "value": "zh-CN-XiaomengNeural", "label": "晓梦-普通话，简体-女" }, { "value": "zh-CN-XiaoyiNeural", "label": "晓伊-普通话，简体-女" }, { "value": "zh-CN-XiaozhenNeural", "label": "晓甄-普通话，简体-女" }, { "value": "zh-CN-YunfengNeural", "label": "云枫-普通话，简体-男" }, { "value": "zh-CN-YunhaoNeural", "label": "云皓-普通话，简体-男" }, { "value": "zh-CN-YunjianNeural", "label": "云健-普通话，简体-男" }, { "value": "zh-CN-YunxiaNeural", "label": "云夏-普通话，简体-男" }, { "value": "zh-CN-YunzeNeural", "label": "云泽-普通话，简体-男" }, { "value": "zh-HK-HiuGaaiNeural", "label": "曉佳-粤语，繁体-女" }, { "value": "zh-HK-HiuMaanNeural", "label": "曉曼-粤语，繁体-女" }, { "value": "zh-HK-WanLungNeural", "label": "雲龍-粤语，繁体-男" }]
-              }
-            ]
-          },
-          {
-            "title": "语音模式[Voicevox]",
-            "icon": "mdi-microphone",
-            "tab": "voicevox",
-            "view": [
-              {
-                "type": "url",
-                "label": "语音转换API地址",
-                "placeholder": "voicevox语音转换API地址",
-                "data": "voicevoxSpace"
               }
             ]
           },

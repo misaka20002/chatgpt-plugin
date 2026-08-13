@@ -3,7 +3,6 @@ import common from '../../../lib/common/common.js'
 import _ from 'lodash'
 import { Config } from '../utils/config.js'
 import AzureTTS from '../utils/tts/microsoft-azure.js'
-import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import {
   completeJSON,
   formatDate,
@@ -582,12 +581,6 @@ export class chatgpt extends plugin {
           return
         }
         break
-      case 'voicevox':
-        if (!Config.voicevoxSpace) {
-          await this.reply('您没有配置VoiceVox API，请前往锅巴面板进行配置')
-          return
-        }
-        break
     }
     let userSetting = await getUserReplySetting(this.e)
     userSetting.useTTS = true
@@ -607,12 +600,8 @@ export class chatgpt extends plugin {
         Config.ttsMode = 'azure'
         break
       }
-      case '3': {
-        Config.ttsMode = 'voicevox'
-        break
-      }
       default: {
-        await this.reply('请使用#chatgpt语音换源+数字进行换源。1为vits-uma-genshin-honkai，2为微软Azure，3为voicevox')
+        await this.reply('请使用#chatgpt语音换源+数字进行换源。1为vits-uma-genshin-honkai，2为微软Azure')
         return
       }
     }
@@ -626,10 +615,6 @@ export class chatgpt extends plugin {
     }
     if (Config.ttsMode === 'azure' && !Config.azureTTSKey) {
       await this.reply('您没有配置azure 密钥，请前往后台管理或锅巴面板进行配置')
-      return
-    }
-    if (Config.ttsMode === 'voicevox' && !Config.voicevoxSpace) {
-      await this.reply('您没有配置voicevox API，请前往后台管理或锅巴面板进行配置')
       return
     }
     const regex = /^#chatgpt设置(语音角色|角色语音|角色)/
@@ -666,35 +651,6 @@ export class chatgpt extends plugin {
           const supportEmotion = AzureTTS.supportConfigurations.find(config => config.name === speaker)?.emotion
           await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 ${speaker}-${chosen[0].gender}-${chosen[0].languageDetail} ${supportEmotion && Config.azureTTSEmotion ? '，此角色支持多情绪配置，建议重新使用设定并结束对话以获得最佳体验！' : ''}`)
         }
-        break
-      }
-      case 'voicevox': {
-        let regex = /^(.*?)-(.*)$/
-        let match = regex.exec(speaker)
-        let style = null
-        if (match) {
-          speaker = match[1]
-          style = match[2]
-        }
-        let userSetting = await getUserReplySetting(e)
-        if (speaker === '随机') {
-          userSetting.ttsRoleVoiceVox = '随机'
-          await redis.set(`CHATGPT:USER:${e.sender.user_id}`, JSON.stringify(userSetting))
-          await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 "随机" `)
-          break
-        }
-        let chosen = VoiceVoxTTS.supportConfigurations.filter(s => s.name === speaker)
-        if (chosen.length === 0) {
-          await this.reply(`抱歉，没有"${speaker}"这个角色，目前voicevox模式下支持的角色有${VoiceVoxTTS.supportConfigurations.map(item => item.name).join('、')}`)
-          break
-        }
-        if (style && !chosen[0].styles.find(item => item.name === style)) {
-          await this.reply(`抱歉，"${speaker}"这个角色没有"${style}"这个风格，目前支持的风格有${chosen[0].styles.map(item => item.name).join('、')}`)
-          break
-        }
-        userSetting.ttsRoleVoiceVox = chosen[0].name + (style ? `-${style}` : '')
-        await redis.set(`CHATGPT:USER:${e.sender.user_id}`, JSON.stringify(userSetting))
-        await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 "${userSetting.ttsRoleVoiceVox}" `)
         break
       }
     }

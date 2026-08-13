@@ -214,8 +214,6 @@ const defaultConfig = {
   azureTTSKey: '',
   azureTTSRegion: '',
   azureTTSSpeaker: 'zh-CN-XiaochenNeural',
-  voicevoxSpace: '',
-  voicevoxTTSSpeaker: '护士机器子T',
   azureTTSEmotion: false,
   enhanceAzureTTSEmotion: false,
   autoJapanese: false,
