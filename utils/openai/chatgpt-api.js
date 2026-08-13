@@ -486,7 +486,40 @@ export class ChatGPTAPI {
             const apiPromptTokens = usage.prompt_tokens;
             const outTokens = usage.completion_tokens || 0;
             const totalTokenCount = usage.total_tokens || (apiPromptTokens + outTokens);
-            console.info(`[Chatgpt][API] 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 输出Token(${outTokens}) | 累计Token(${totalTokenCount})`);
+            const usageDetails = usage;
+            const reportedCacheReadTokens = usageDetails.cache_read_input_tokens
+                ?? usageDetails.prompt_tokens_details?.cached_tokens
+                ?? usageDetails.input_tokens_details?.cached_tokens;
+            const cacheReadTokens = reportedCacheReadTokens ?? 0;
+            const reportedCacheWriteTokens = usageDetails.cache_creation_input_tokens
+                ?? usageDetails.prompt_tokens_details?.cache_write_tokens
+                ?? usageDetails.input_tokens_details?.cache_write_tokens;
+            const cacheWriteTokens = reportedCacheWriteTokens ?? 0;
+            const reportedReasoningTokens = usageDetails.completion_tokens_details?.reasoning_tokens
+                ?? usageDetails.output_tokens_details?.reasoning_tokens
+                ?? usageDetails.reasoning_tokens;
+            const reasoningTokens = reportedReasoningTokens ?? 0;
+            const answerTokens = outTokens >= reasoningTokens
+                ? outTokens - reasoningTokens
+                : outTokens;
+            const cachedInputTokens = cacheReadTokens + cacheWriteTokens;
+            const freshInputTokens = apiPromptTokens >= cachedInputTokens
+                ? apiPromptTokens - cachedInputTokens
+                : apiPromptTokens;
+            const cacheableInputTokens = freshInputTokens + cachedInputTokens;
+            const cacheHitRate = cacheableInputTokens > 0
+                ? (cacheReadTokens / cacheableInputTokens) * 100
+                : 0;
+            const cacheWriteInfo = reportedCacheWriteTokens == null
+                ? ''
+                : ` | 缓存写入(${cacheWriteTokens})`;
+            const reasoningInfo = reportedReasoningTokens == null
+                ? ''
+                : ` | 推理Token(${reasoningTokens})`;
+            const cacheReadInfo = reportedCacheReadTokens == null
+                ? ''
+                : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
+            console.info(`[Chatgpt][API] 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`);
             if (apiPromptTokens + maxTokens > this._maxModelTokens) {
                 console.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${apiPromptTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`);
             }
