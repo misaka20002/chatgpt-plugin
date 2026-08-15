@@ -3,7 +3,6 @@ import common from '../../../lib/common/common.js'
 import _ from 'lodash'
 import { Config } from '../utils/config.js'
 import AzureTTS from '../utils/tts/microsoft-azure.js'
-import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import {
   completeJSON,
   formatDate,
@@ -17,6 +16,7 @@ import {
   getUserReplySetting,
   isImage,
   makeForwardMsg,
+  normalizeChatMode,
   randomString,
   render,
   renderUrl
@@ -28,7 +28,6 @@ import { deleteConversation, getConversations, getLatestMessageIdByConversationI
 import { convertSpeaker, speakers } from '../utils/tts.js'
 import { convertFacesAndCQCode } from '../utils/face.js'
 import { ConversationManager, originalValues } from '../model/conversation.js'
-import XinghuoClient from '../utils/xinghuo/xinghuo.js'
 import { getProxy } from '../utils/proxy.js'
 import { generateSuggestedResponse } from '../utils/chat.js'
 import Core from '../model/core.js'
@@ -89,12 +88,6 @@ export class chatgpt extends plugin {
       rule: [
         {
           /** 命令正则匹配 */
-          reg: '^#(图片)?chat3[sS]*',
-          /** 执行方法 */
-          fnc: 'chatgpt3'
-        },
-        {
-          /** 命令正则匹配 */
           reg: '^#(图片)?chat1[sS]*',
           /** 执行方法 */
           fnc: 'chatgpt1'
@@ -107,47 +100,9 @@ export class chatgpt extends plugin {
         },
         {
           /** 命令正则匹配 */
-          reg: '^#(图片)?bing[sS]*',
-          /** 执行方法 */
-          fnc: 'bing'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#(图片)?claude(2|3|.ai)[sS]*',
-          /** 执行方法 */
-          fnc: 'claude2'
-        },
-        {
-          /** 命令正则匹配 */
           reg: '^#(图片)?claude[sS]*',
           /** 执行方法 */
           fnc: 'claude'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#(图片)?xh[sS]*',
-          /** 执行方法 */
-          fnc: 'xh'
-        },
-        {
-          reg: '^#星火助手',
-          fnc: 'newxhBotConversation'
-        },
-        {
-          reg: '^#星火(搜索|查找)助手',
-          fnc: 'searchxhBot'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#(图片)?glm4[sS]*',
-          /** 执行方法 */
-          fnc: 'glm4'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#(图片)?qwen[sS]*',
-          /** 执行方法 */
-          fnc: 'qwen'
         },
         {
           /** 命令正则匹配 */
@@ -217,18 +172,9 @@ export class chatgpt extends plugin {
           permission: 'master'
         },
         {
-          reg: '^#chatgpt切换对话',
-          fnc: 'attachConversation'
-        },
-        {
           reg: '^#(chatgpt)?加入对话',
           fnc: 'joinConversation'
         },
-        {
-          reg: '^#chatgpt删除对话',
-          fnc: 'deleteConversation',
-          permission: 'master'
-        }
       ]
     })
     this.toggleMode = toggleMode
@@ -292,73 +238,12 @@ export class chatgpt extends plugin {
     await manager.endAllConversations.bind(this)(e)
   }
 
-  async deleteConversation(e) {
-    let ats = e.message.filter(m => m.type === 'at')
-    let use = await redis.get('CHATGPT:USE') || 'api'
-    if (use !== 'api3') {
-      await this.reply('本功能当前仅支持API3模式', true)
-      return false
-    }
-    if (ats.length === 0 || (ats.length === 1 && (e.atme || e.atBot))) {
-      let conversationId = _.trimStart(e.msg, '#chatgpt删除对话').trim()
-      if (!conversationId) {
-        await this.reply('指令格式错误，请同时加上对话id或@某人以删除他当前进行的对话', true)
-        return false
-      } else {
-        let deleteResponse = await deleteConversation(conversationId, newFetch)
-        logger.mark(deleteResponse)
-        let deleted = 0
-        let qcs = await redis.keys('CHATGPT:QQ_CONVERSATION:*')
-        for (let i = 0; i < qcs.length; i++) {
-          if (await redis.get(qcs[i]) === conversationId) {
-            await redis.del(qcs[i])
-            if (Config.debug) {
-              logger.info('delete conversation bind: ' + qcs[i])
-            }
-            deleted++
-          }
-        }
-        await this.reply(`对话删除成功，同时清理了${deleted}个同一对话中用户的对话。`, true)
-      }
-    } else {
-      for (let u = 0; u < ats.length; u++) {
-        let at = ats[u]
-        let qq = at.qq
-        let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@');
-        let conversationId = await redis.get('CHATGPT:QQ_CONVERSATION:' + qq)
-        if (conversationId) {
-          let deleteResponse = await deleteConversation(conversationId)
-          if (Config.debug) {
-            logger.mark(deleteResponse)
-          }
-          let deleted = 0
-          let qcs = await redis.keys('CHATGPT:QQ_CONVERSATION:*')
-          for (let i = 0; i < qcs.length; i++) {
-            if (await redis.get(qcs[i]) === conversationId) {
-              await redis.del(qcs[i])
-              if (Config.debug) {
-                logger.info('delete conversation bind: ' + qcs[i])
-              }
-              deleted++
-            }
-          }
-          await this.reply(`${atUser}的对话${conversationId}删除成功，同时清理了${deleted}个同一对话中用户的对话。`)
-        } else {
-          await this.reply(`${atUser}当前已没有进行对话`)
-        }
-      }
-    }
-  }
-
   async getClearContextMode(e) {
     const userData = await getUserData(e.user_id)
-    return (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+    return normalizeChatMode((userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api')
   }
 
   getClearContextScope(e, use) {
-    if (use === 'azure') {
-      return e.sender.user_id
-    }
     return (e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id
   }
 
@@ -371,12 +256,6 @@ export class chatgpt extends plugin {
         return `CHATGPT:CONVERSATIONS_RESPONSES:${scope}`
       case 'chatglm':
         return `CHATGPT:CONVERSATIONS_CHATGLM:${scope}`
-      case 'xh':
-        return `CHATGPT:CONVERSATIONS_XH:${scope}`
-      case 'azure':
-        return `CHATGPT:CONVERSATIONS_AZURE:${scope}`
-      case 'qwen':
-        return `CHATGPT:CONVERSATIONS_QWEN:${scope}`
       case 'gemini':
         return `CHATGPT:CONVERSATIONS_GEMINI:${scope}`
       case 'claude':
@@ -388,8 +267,6 @@ export class chatgpt extends plugin {
 
   getClearContextMessageSuffix(use) {
     switch (use) {
-      case 'qwen':
-        return 'QWEN'
       case 'gemini':
         return 'Gemini'
       case 'claude':
@@ -550,52 +427,6 @@ export class chatgpt extends plugin {
     return deletedCount
   }
 
-  async clearAzureContextByCount(key, count) {
-    const previousConversation = this.parseClearContextConversation(await redis.get(key))
-    if (!previousConversation?.messages?.length) {
-      return { success: true, deletedCount: 0 }
-    }
-
-    const deletedCount = this.trimMessageArrayByCount(previousConversation.messages, count)
-    if (deletedCount === 0) {
-      return { success: true, deletedCount: 0 }
-    }
-
-    this.applyClearContextMeta(previousConversation, deletedCount)
-    await this.saveClearContextConversation(key, previousConversation)
-    return { success: true, deletedCount }
-  }
-
-  async clearXhContextByCount(key, count) {
-    const supportedXhModes = ['api', 'apiv2', 'apiv3', 'apiv3.5', 'apiv4.0']
-    if (!supportedXhModes.includes(Config.xhmode)) {
-      return { success: false, unsupported: true }
-    }
-
-    const previousConversation = this.parseClearContextConversation(await redis.get(key))
-    const conversationId = previousConversation?.conversation?.conversationId
-    if (!conversationId || typeof conversationId === 'object') {
-      return { success: true, deletedCount: 0 }
-    }
-
-    const conversationsCache = await this.getKeyvCache('xh')
-    const historyKey = `ChatXH_${conversationId}`
-    const conversation = await conversationsCache.get(historyKey)
-    if (!conversation?.messages?.length) {
-      return { success: true, deletedCount: 0 }
-    }
-
-    const deletedCount = this.trimMessageArrayByCount(conversation.messages, count)
-    if (deletedCount === 0) {
-      return { success: true, deletedCount: 0 }
-    }
-
-    await conversationsCache.set(historyKey, conversation)
-    this.applyClearContextMeta(previousConversation, deletedCount)
-    await this.saveClearContextConversation(key, previousConversation)
-    return { success: true, deletedCount }
-  }
-
   async clearChatglmContextByCount(e, key, count) {
     const previousConversation = this.parseClearContextConversation(await redis.get(key))
     if (!previousConversation?.parentMessageId) {
@@ -670,7 +501,7 @@ export class chatgpt extends plugin {
 
     const count = Math.max(1, parseInt(match[4]) || 1)
     const use = await this.getClearContextMode(e)
-    const unsupportedModes = ['bing', 'api3', 'claude2', 'chatglm4', 'browser']
+    const unsupportedModes = []
 
     let result
     try {
@@ -680,16 +511,9 @@ export class chatgpt extends plugin {
         const conversationKey = this.getClearContextConversationKey(e, use)
         switch (use) {
           case 'api':
-          case 'qwen':
           case 'gemini':
           case 'claude':
             result = await this.clearParentChainContext(conversationKey, this.getClearContextMessageSuffix(use), count)
-            break
-          case 'azure':
-            result = await this.clearAzureContextByCount(conversationKey, count)
-            break
-          case 'xh':
-            result = await this.clearXhContextByCount(conversationKey, count)
             break
           case 'chatglm':
             result = await this.clearChatglmContextByCount(e, conversationKey, count)
@@ -757,12 +581,6 @@ export class chatgpt extends plugin {
           return
         }
         break
-      case 'voicevox':
-        if (!Config.voicevoxSpace) {
-          await this.reply('您没有配置VoiceVox API，请前往锅巴面板进行配置')
-          return
-        }
-        break
     }
     let userSetting = await getUserReplySetting(this.e)
     userSetting.useTTS = true
@@ -782,12 +600,8 @@ export class chatgpt extends plugin {
         Config.ttsMode = 'azure'
         break
       }
-      case '3': {
-        Config.ttsMode = 'voicevox'
-        break
-      }
       default: {
-        await this.reply('请使用#chatgpt语音换源+数字进行换源。1为vits-uma-genshin-honkai，2为微软Azure，3为voicevox')
+        await this.reply('请使用#chatgpt语音换源+数字进行换源。1为vits-uma-genshin-honkai，2为微软Azure')
         return
       }
     }
@@ -801,10 +615,6 @@ export class chatgpt extends plugin {
     }
     if (Config.ttsMode === 'azure' && !Config.azureTTSKey) {
       await this.reply('您没有配置azure 密钥，请前往后台管理或锅巴面板进行配置')
-      return
-    }
-    if (Config.ttsMode === 'voicevox' && !Config.voicevoxSpace) {
-      await this.reply('您没有配置voicevox API，请前往后台管理或锅巴面板进行配置')
       return
     }
     const regex = /^#chatgpt设置(语音角色|角色语音|角色)/
@@ -841,35 +651,6 @@ export class chatgpt extends plugin {
           const supportEmotion = AzureTTS.supportConfigurations.find(config => config.name === speaker)?.emotion
           await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 ${speaker}-${chosen[0].gender}-${chosen[0].languageDetail} ${supportEmotion && Config.azureTTSEmotion ? '，此角色支持多情绪配置，建议重新使用设定并结束对话以获得最佳体验！' : ''}`)
         }
-        break
-      }
-      case 'voicevox': {
-        let regex = /^(.*?)-(.*)$/
-        let match = regex.exec(speaker)
-        let style = null
-        if (match) {
-          speaker = match[1]
-          style = match[2]
-        }
-        let userSetting = await getUserReplySetting(e)
-        if (speaker === '随机') {
-          userSetting.ttsRoleVoiceVox = '随机'
-          await redis.set(`CHATGPT:USER:${e.sender.user_id}`, JSON.stringify(userSetting))
-          await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 "随机" `)
-          break
-        }
-        let chosen = VoiceVoxTTS.supportConfigurations.filter(s => s.name === speaker)
-        if (chosen.length === 0) {
-          await this.reply(`抱歉，没有"${speaker}"这个角色，目前voicevox模式下支持的角色有${VoiceVoxTTS.supportConfigurations.map(item => item.name).join('、')}`)
-          break
-        }
-        if (style && !chosen[0].styles.find(item => item.name === style)) {
-          await this.reply(`抱歉，"${speaker}"这个角色没有"${style}"这个风格，目前支持的风格有${chosen[0].styles.map(item => item.name).join('、')}`)
-          break
-        }
-        userSetting.ttsRoleVoiceVox = chosen[0].name + (style ? `-${style}` : '')
-        await redis.set(`CHATGPT:USER:${e.sender.user_id}`, JSON.stringify(userSetting))
-        await this.reply(`当前语音模式为${Config.ttsMode},您的默认语音角色已被设置为 "${userSetting.ttsRoleVoiceVox}" `)
         break
       }
     }
@@ -947,7 +728,7 @@ export class chatgpt extends plugin {
     }
     // 获取用户配置
     const userData = await getUserData(e.user_id)
-    const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+    const use = normalizeChatMode((userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api')
 
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
@@ -990,7 +771,7 @@ export class chatgpt extends plugin {
     }
     // 获取用户配置
     const userData = await getUserData(e.user_id)
-    const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+    const use = normalizeChatMode((userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api')
 
     // 关闭私聊通道后不回复
     if (!e.isMaster && e.isPrivate && !Config.enablePrivateChat) {
@@ -1218,105 +999,57 @@ export class chatgpt extends plugin {
     let previousConversation
     let conversation = {}
     let key
-    if (use === 'api3') {
-      // api3 支持对话穿插，因此不按照qq号来进行判断了
-      let conversationId = await redis.get(`CHATGPT:QQ_CONVERSATION:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`)
-      if (conversationId) {
-        let lastMessageId = await redis.get(`CHATGPT:CONVERSATION_LAST_MESSAGE_ID:${conversationId}`)
-        if (!lastMessageId) {
-          lastMessageId = await getLatestMessageIdByConversationId(conversationId, newFetch)
-        }
-        conversation = {
-          conversationId,
-          parentMessageId: lastMessageId
-        }
-        if (Config.debug) {
-          logger.mark({ previousConversation })
-        }
-      } else {
-        let ctime = new Date()
-        previousConversation = {
-          sender: e.sender,
-          ctime,
-          utime: ctime,
-          num: 0
-        }
+
+    switch (use) {
+      case 'api': {
+        key = `CHATGPT:CONVERSATIONS:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
+        break
       }
-    } else {
-      switch (use) {
-        case 'api': {
-          key = `CHATGPT:CONVERSATIONS:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'responses': {
-          key = `CHATGPT:CONVERSATIONS_RESPONSES:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'bing': {
-          key = `CHATGPT:CONVERSATIONS_BING:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'chatglm': {
-          key = `CHATGPT:CONVERSATIONS_CHATGLM:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'claude2': {
-          key = `CHATGPT:CLAUDE2_CONVERSATION:${e.sender.user_id}`
-          break
-        }
-        case 'xh': {
-          key = `CHATGPT:CONVERSATIONS_XH:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'azure': {
-          key = `CHATGPT:CONVERSATIONS_AZURE:${e.sender.user_id}`
-          break
-        }
-        case 'qwen': {
-          key = `CHATGPT:CONVERSATIONS_QWEN:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'gemini': {
-          key = `CHATGPT:CONVERSATIONS_GEMINI:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'claude': {
-          key = `CHATGPT:CONVERSATIONS_CLAUDE:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
-        case 'chatglm4': {
-          key = `CHATGPT:CONVERSATIONS_CHATGLM4:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
-          break
-        }
+      case 'responses': {
+        key = `CHATGPT:CONVERSATIONS_RESPONSES:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
+        break
       }
-      let ctime = new Date()
-      previousConversation = (key ? await redis.get(key) : null) || JSON.stringify({
-        sender: e.sender,
-        ctime,
-        utime: ctime,
-        num: 0,
-        messages: [{
-          role: 'system',
-          content: 'You are an AI assistant that helps people find information.'
-        }],
-        conversation: {}
-      })
-      previousConversation = JSON.parse(previousConversation)
-      if (Config.debug) {
-        logger.info({ previousConversation })
+      case 'chatglm': {
+        key = `CHATGPT:CONVERSATIONS_CHATGLM:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
+        break
       }
-      conversation = {
-        messages: previousConversation.messages,
-        conversationId: previousConversation.conversation?.conversationId,
-        previousResponseId: previousConversation.previousResponseId,
-        parentMessageId: previousConversation.parentMessageId,
-        clientId: previousConversation.clientId,
-        invocationId: previousConversation.invocationId,
-        conversationSignature: previousConversation.conversationSignature,
-        bingToken: previousConversation.bingToken,
-        replyTimestamps: previousConversation.replyTimestamps || []
+      case 'gemini': {
+        key = `CHATGPT:CONVERSATIONS_GEMINI:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
+        break
+      }
+      case 'claude': {
+        key = `CHATGPT:CONVERSATIONS_CLAUDE:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`
+        break
       }
     }
+    let ctime = new Date()
+    previousConversation = (key ? await redis.get(key) : null) || JSON.stringify({
+      sender: e.sender,
+      ctime,
+      utime: ctime,
+      num: 0,
+      messages: [{
+        role: 'system',
+        content: 'You are an AI assistant that helps people find information.'
+      }],
+      conversation: {}
+    })
+    previousConversation = JSON.parse(previousConversation)
+    if (Config.debug) {
+      logger.info({ previousConversation })
+    }
+    conversation = {
+      messages: previousConversation.messages,
+      conversationId: previousConversation.conversation?.conversationId,
+      previousResponseId: previousConversation.previousResponseId,
+      parentMessageId: previousConversation.parentMessageId,
+      clientId: previousConversation.clientId,
+      invocationId: previousConversation.invocationId,
+      conversationSignature: previousConversation.conversationSignature,
+      bingToken: previousConversation.bingToken,
+      replyTimestamps: previousConversation.replyTimestamps || []
+    }
+
     let handler = this.e.runtime?.handler || {
       has: (arg1) => false
     }
@@ -1374,58 +1107,49 @@ export class chatgpt extends plugin {
       if (chatMessage?.noMsg) {
         return false
       }
-      // 处理星火图片
-      if (use === 'xh' && chatMessage?.images) {
-        chatMessage.images.forEach(element => {
-          this.reply([element.tag, segment.image(element.url)])
-        })
-      }
-      // chatglm4图片，调整至sendMessage中处理
       if ((use === 'api' || use === 'responses') && !chatMessage) {
         // 字数超限直接返回
         return false
       }
-      if (use !== 'api3') {
-        if (use === 'responses') {
-          // 无状态模式不保存 response.id，避免下一轮误把它发往官网。
-          if (Config.responsesStore && chatMessage.id) {
-            previousConversation.previousResponseId = chatMessage.id
-          } else {
-            delete previousConversation.previousResponseId
-          }
+      if (use === 'responses') {
+        // 无状态模式不保存 response.id，避免下一轮误把它发往官网。
+        if (Config.responsesStore && chatMessage.id) {
+          previousConversation.previousResponseId = chatMessage.id
         } else {
-          previousConversation.conversation = {
-            conversationId: chatMessage.conversationId
-          }
+          delete previousConversation.previousResponseId
         }
-        if (use === 'bing' && !chatMessage.error) {
-          previousConversation.clientId = chatMessage.clientId
-          previousConversation.invocationId = chatMessage.invocationId
-          previousConversation.parentMessageId = chatMessage.parentMessageId
-          previousConversation.conversationSignature = chatMessage.conversationSignature
-          previousConversation.bingToken = ''
-        } else if (use !== 'responses' && chatMessage.id) {
-          previousConversation.parentMessageId = chatMessage.id
-        } else if (chatMessage.message) {
-          if (previousConversation.messages.length > 10) {
-            previousConversation.messages.shift()
-          }
-          previousConversation.messages.push(chatMessage.message)
+      } else {
+        previousConversation.conversation = {
+          conversationId: chatMessage.conversationId
         }
-        if (Config.debug) {
-          logger.info(chatMessage)
+      }
+      if (use === 'bing' && !chatMessage.error) {
+        previousConversation.clientId = chatMessage.clientId
+        previousConversation.invocationId = chatMessage.invocationId
+        previousConversation.parentMessageId = chatMessage.parentMessageId
+        previousConversation.conversationSignature = chatMessage.conversationSignature
+        previousConversation.bingToken = ''
+      } else if (use !== 'responses' && chatMessage.id) {
+        previousConversation.parentMessageId = chatMessage.id
+      } else if (chatMessage.message) {
+        if (previousConversation.messages.length > 10) {
+          previousConversation.messages.shift()
         }
-        if (!chatMessage.error) {
-          // 没错误的时候再更新，不然易出错就对话没了
-          previousConversation.num = previousConversation.num + 1
-          // 添加当前时间戳
-          if (!previousConversation.replyTimestamps) previousConversation.replyTimestamps = []
-          previousConversation.replyTimestamps.push(Date.now())
-          if (previousConversation.replyTimestamps.length > 10)
-            previousConversation.replyTimestamps = previousConversation.replyTimestamps.slice(-10)
-          // 写入 redis
-          await redis.set(key, JSON.stringify(previousConversation), Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {})
-        }
+        previousConversation.messages.push(chatMessage.message)
+      }
+      if (Config.debug) {
+        logger.info(chatMessage)
+      }
+      if (!chatMessage.error) {
+        // 没错误的时候再更新，不然易出错就对话没了
+        previousConversation.num = previousConversation.num + 1
+        // 添加当前时间戳
+        if (!previousConversation.replyTimestamps) previousConversation.replyTimestamps = []
+        previousConversation.replyTimestamps.push(Date.now())
+        if (previousConversation.replyTimestamps.length > 10)
+          previousConversation.replyTimestamps = previousConversation.replyTimestamps.slice(-10)
+        // 写入 redis
+        await redis.set(key, JSON.stringify(previousConversation), Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {})
       }
       let response = typeof chatMessage?.text === 'string' ? chatMessage.text.replace('\n\n\n', '\n') : ''
       let postProcessors = await collectProcessors('post')
@@ -1994,10 +1718,6 @@ export class chatgpt extends plugin {
       }
     } catch (err) {
       logger.error(err)
-      if (use === 'api3') {
-        // 异常了也要腾地方（todo 大概率后面的也会异常，要不要一口气全杀了）
-        await redis.lPop('CHATGPT:CHAT_QUEUE', 0)
-      }
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)
         await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: !Config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
@@ -2022,40 +1742,16 @@ export class chatgpt extends plugin {
     return await this.otherMode(e, 'api', /#(图片)?chat1/)
   }
 
-  async chatgpt3(e) {
-    return await this.otherMode(e, 'api3', /#(图片)?chat3/)
-  }
-
   async chatglm(e) {
     return await this.otherMode(e, 'chatglm')
-  }
-
-  async bing(e) {
-    return await this.otherMode(e, 'bing', /#(图片)?bing/)
-  }
-
-  async claude2(e) {
-    return await this.otherMode(e, 'claude2', /^#(图片)?claude(2|3|.ai)/)
   }
 
   async claude(e) {
     return await this.otherMode(e, 'claude', /#(图片)?claude/)
   }
 
-  async qwen(e) {
-    return await this.otherMode(e, 'qwen', /#(图片)?qwen/)
-  }
-
-  async glm4(e) {
-    return await this.otherMode(e, 'chatglm4', /#(图片)?glm4/)
-  }
-
   async gemini(e) {
     return await this.otherMode(e, 'gemini', /#(图片)?gemini/)
-  }
-
-  async xh(e) {
-    return await this.otherMode(e, 'xh', /#(图片)?xh/)
   }
 
   async cacheContent(e, use, content, prompt, quote = [], mood = '', suggest = '', imgUrls = []) {
@@ -2122,150 +1818,17 @@ export class chatgpt extends plugin {
     }
   }
 
-  async newxhBotConversation(e) {
-    let botId = e.msg.replace(/^#星火助手/, '').trim()
-    if (Config.xhmode != 'web') {
-      await this.reply('星火助手仅支持体验版使用', true)
-      return true
-    }
-    if (!botId) {
-      await this.reply('无效助手id', true)
-    } else {
-      const ssoSessionId = Config.xinghuoToken
-      if (!ssoSessionId) {
-        await this.reply('未绑定星火token，请使用#chatgpt设置星火token命令绑定token', true)
-        return true
-      }
-      let client = new XinghuoClient({
-        ssoSessionId,
-        cache: null
-      })
-      try {
-        let chatId = await client.createChatList(botId)
-        let botInfoRes = await fetch(`https://xinghuo.xfyun.cn/iflygpt/bot/getBotInfo?chatId=${chatId.chatListId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Cookie: 'ssoSessionId=' + ssoSessionId + ';',
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/113.0.5672.69 Mobile/15E148 Safari/604.1'
-          }
-        })
-        if (botInfoRes.ok) {
-          let botInfo = await botInfoRes.json()
-          if (botInfo.flag) {
-            let ctime = new Date()
-            await redis.set(
-              `CHATGPT:CONVERSATIONS_XH:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`,
-              JSON.stringify({
-                sender: e.sender,
-                ctime,
-                utime: ctime,
-                num: 0,
-                conversation: {
-                  conversationId: {
-                    chatid: chatId.chatListId,
-                    botid: botId
-                  }
-                }
-              }),
-              Config.conversationPreserveTime > 0 ? { EX: Config.conversationPreserveTime } : {}
-            )
-            await this.reply(`成功创建助手对话\n助手名称：${botInfo.data.bot_name}\n助手描述：${botInfo.data.bot_desc}`, true)
-          } else {
-            await this.reply(`创建助手对话失败,${botInfo.desc}`, true)
-          }
-        } else {
-          await this.reply('创建助手对话失败,服务器异常', true)
-        }
-      } catch (error) {
-        await this.reply(`创建助手对话失败 ${error}`, true)
-      }
-    }
-    return true
-  }
-
-  async searchxhBot(e) {
-    let searchBot = e.msg.replace(/^#星火(搜索|查找)助手/, '').trim()
-    const ssoSessionId = Config.xinghuoToken
-    if (!ssoSessionId) {
-      await this.reply('未绑定星火token，请使用#chatgpt设置星火token命令绑定token', true)
-      return true
-    }
-    const cacheresOption = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: 'ssoSessionId=' + ssoSessionId + ';',
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/113.0.5672.69 Mobile/15E148 Safari/604.1'
-      },
-      body: JSON.stringify({
-        botType: '',
-        pageIndex: 1,
-        pageSize: 45,
-        searchValue: searchBot
-      })
-    }
-    const searchBots = await fetch('https://xinghuo.xfyun.cn/iflygpt/bot/page', cacheresOption)
-    const bots = await searchBots.json()
-    if (Config.debug) {
-      logger.info(bots)
-    }
-    if (bots.code === 0) {
-      if (bots.data.pageList.length > 0) {
-        this.reply(await makeForwardMsg(this.e, bots.data.pageList.map(msg => `${msg.e.bot.botId} - ${msg.e.bot.botName}`)))
-      } else {
-        await this.reply('未查到相关助手', true)
-      }
-    } else {
-      await this.reply('搜索助手失败', true)
-    }
-  }
-
   async getAllConversations(e) {
     const use = await redis.get('CHATGPT:USE')
-    if (use === 'api3') {
-      let conversations = await getConversations(e.sender.user_id, newFetch)
-      if (Config.debug) {
-        logger.mark('all conversations: ', conversations)
-      }
-      //    let conversationsFirst10 = conversations.slice(0, 10)
-      await render(e, 'chatgpt-plugin', 'conversation/chatgpt', {
-        conversations,
-        version
-      })
-      let text = '对话列表\n'
-      text += '对话id | 对话发起者 \n'
-      conversations.forEach(c => {
-        text += c.id + '|' + (c.creater || '未知') + '\n'
-      })
-      text += '您可以通过使用命令#chatgpt切换对话+对话id来切换到指定对话，也可以通过命令#chatgpt加入对话+@某人来加入指定人当前进行的对话中。'
-      this.reply(await makeForwardMsg(e, [text], '对话列表'))
-    } else {
-      return await this.getConversations(e)
-    }
+    return await this.getConversations(e)
   }
 
   async joinConversation(e) {
     let ats = e.message.filter(m => m.type === 'at')
     let use = await redis.get('CHATGPT:USE') || 'api'
-    // if (use !== 'api3') {
-    //   await this.reply('本功能当前仅支持API3模式', true)
-    //   return false
-    // }
     if (ats.length === 0) {
       await this.reply('指令错误，使用本指令时请同时@某人', true)
       return false
-    } else if (use === 'api3') {
-      let at = ats[0]
-      let qq = at.qq
-      let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@')
-      let conversationId = await redis.get('CHATGPT:QQ_CONVERSATION:' + qq)
-      if (!conversationId) {
-        await this.reply(`${atUser}当前未开启对话，无法加入`, true)
-        return false
-      }
-      await redis.set(`CHATGPT:QQ_CONVERSATION:${e.sender.user_id}`, conversationId)
-      await this.reply(`加入${atUser}的对话成功，当前对话id为` + conversationId)
     } else {
       let at = ats[0]
       let qq = at.qq
@@ -2276,23 +1839,6 @@ export class chatgpt extends plugin {
       let target = await redis.get(conversationKey + qq)
       await redis.set(conversationKey + e.sender.user_id, target)
       await this.reply(`加入${atUser}的对话成功`)
-    }
-  }
-
-  async attachConversation(e) {
-    const use = await redis.get('CHATGPT:USE')
-    if (use !== 'api3') {
-      await this.reply('该功能目前仅支持API3模式')
-    } else {
-      let conversationId = _.trimStart(e.msg.trimStart(), '#chatgpt切换对话').trim()
-      if (!conversationId) {
-        await this.reply('无效对话id，请在#chatgpt切换对话后面加上对话id')
-        return false
-      }
-      // todo 验证这个对话是否存在且有效
-      //      await getLatestMessageIdByConversationId(conversationId)
-      await redis.set(`CHATGPT:QQ_CONVERSATION:${e.sender.user_id}`, conversationId)
-      await this.reply('切换成功')
     }
   }
 

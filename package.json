@@ -4,7 +4,6 @@
   "type": "module",
   "author": "ikechan8370,misaka20002,eggcheb",
   "dependencies": {
-    "@azure/openai": "^1.0.0-beta.1",
     "@fastify/cookie": "^8.3.0",
     "@fastify/cors": "^8.2.0",
     "@fastify/static": "^6.9.0",
@@ -21,6 +20,7 @@
     "form-data": "^4.0.0",
     "https-proxy-agent": "7.0.1",
     "js-tiktoken": "^1.0.5",
+    "jszip": "^3.10.1",
     "keyv": "^4.5.3",
     "keyv-file": "^0.2.0",
     "lodash": "^4.17.21",

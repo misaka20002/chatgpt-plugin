@@ -628,7 +628,7 @@ export class voicechangehelp extends plugin {
             ` #chatgpt必应(开启|关闭)搜索\n` +
             ` #chatgpt对话中图片识别(帮助|开启|关闭)\n` +
             ` #chatgpt设置geminikey\n` +
-            ` #chatgpt设置翻译来源(openai|gemini|星火|通义千问|xh|qwen)\n` +
+            ` #chatgpt设置翻译来源(openai|responses|gemini|baidu|百度翻译)\n` +
             ` #chatgpt工具箱\n` +
             ` #chatgpt[开启|关闭]工具箱\n` +
             ''
@@ -645,7 +645,6 @@ export class voicechangehelp extends plugin {
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
 Azure语音角色: ${userSetting.ttsRoleAzure}
-VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
 ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
         let msgx
@@ -1057,7 +1056,6 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
 语音模式: ${userSetting.useTTS === true ? '开启' : '关闭'}
 Vits语音角色: ${userSetting.ttsRole}
 Azure语音角色: ${userSetting.ttsRoleAzure}
-VoiceVox语音角色: ${userSetting.ttsRoleVoiceVox}
 ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         msg4_1 = msg4_1.replace(/\n\s*$/, '')
 

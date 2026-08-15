@@ -7,33 +7,6 @@
             "list": []
         },
         {
-            "icon": "fas fa-comments",
-            "title": "指定模式聊天",
-            "text": "分别使用**API**/**API3**/**ChatGLM**/**Bing**模式进行聊天，无视主人设定的全局模式",
-            "list": [
-                "#chat1",
-                "#chat3",
-                "#chatglm",
-                "#bing"
-            ]
-        },
-        {
-            "icon": "fas fa-comment",
-            "title": "ChatGPT切换对话",
-            "text": "切换到指定对话当中<span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">仅API3可用</span>",
-            "list": [
-                "#chatgpt切换对话+对话id"
-            ]
-        },
-        {
-            "icon": "fas fa-comment",
-            "title": "ChatGPT加入对话",
-            "text": "加入到某人当前进行对话当中<span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">仅API3可用</span>",
-            "list": [
-                "#chatgpt加入对话+@某人"
-            ]
-        },
-        {
             "icon": "fas fa-trash ",
             "title": "删除对话",
             "text": "删除指定对话，并清空与用户的关联信息。@用户时支持多个用户",
@@ -175,15 +148,6 @@
     ],
     "插件管理": [
         {
-            "icon": "fas fa-list",
-            "title": "对话列表",
-            "text": "查询当前哪些人正在与机器人聊天.目前<span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">API3模式</span>下支持切换对话",
-            "list": [
-                "#chatgpt对话列表"
-            ],
-            "tip": "管理员功能"
-        },
-        {
             "icon": "fas fa-microphone-slash",
             "title": "闭嘴",
             "text": "让机器人在某群闭嘴，不指定群时认为全局闭嘴",
@@ -200,16 +164,6 @@
             "tip": "管理员功能"
         },
         {
-            "icon": "fas fa-list",
-            "title": "Chat队列",
-            "text": "移出或清空当前对话等待队列，若前方对话卡死可使用本命令。仅<span class=\"text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-blueGray-600 bg-blueGray-200\">API3模式</span>下可用",
-            "list": [
-                "#清空chat队列",
-                "#移出chat队列首位"
-            ],
-            "tip": "管理员功能"
-        },
-        {
             "icon": "fas fa-check",
             "title": "问题确认",
             "text": "开启或关闭机器人收到消息后的确认回复消息",
@@ -218,57 +172,9 @@
                 "#chatgpt关闭问题确认"
             ],
             "tip": "管理员功能"
-        },
-        {
-            "icon": "fas fa-cube",
-            "title": "切换模式",
-            "text": "切换使用的后端会话模式",
-            "list": [
-                "#chatgpt切换浏览器",
-                "#chatgpt切换API",
-                "#chatgpt切换API3",
-                "#chatgpt切换Bing",
-                "#chatgpt切换ChatGLM"
-            ],
-            "tip": "管理员功能"
-        },
-        {
-            "icon": "fas fa-coffee",
-            "title": "必应风格",
-            "text": "切换Bing风格",
-            "list": [
-                "#chatgpt必应切换精准",
-                "#chatgpt必应切换均衡",
-                "#chatgpt必应切换创意",
-                "#chatgpt必应切换悉尼",
-                "#chatgpt必应切换自设定"
-            ],
-            "tip": "管理员功能"
-        },
-        {
-            "icon": "fas fa-comments",
-            "title": "必应建议",
-            "text": "开关Bing模式下的建议回复",
-            "list": [
-                "#chatgpt必应开启建议回复",
-                "#chatgpt必应关闭建议回复"
-            ],
-            "tip": "管理员功能"
         }
     ],
     "系统设置": [
-        {
-            "icon": "fas fa-key",
-            "title": "Token与APIKey",
-            "text": "设置必应和open的Token和ApiKey",
-            "list": [
-                "#chatgpt设置必应token",
-                "#chatgpt删除必应token",
-                "#chatgpt查看必应token",
-                "#chatgpt迁移必应token",
-                "#chatgpt设置APIKey"
-            ]
-        },
         {
             "icon": "fas fa-credit-card",
             "title": "试用额度",
@@ -284,9 +190,7 @@
             "text": "设置和查看AI的默认风格设定",
             "list": [
                 "#chatgpt设置API设定",
-                "#chatgpt设置Sydney设定",
-                "#chatgpt查看API设定",
-                "#chatgpt查看Sydney设定"
+                "#chatgpt查看API设定"
             ],
             "tip": "管理员功能"
         },

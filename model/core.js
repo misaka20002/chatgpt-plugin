@@ -10,17 +10,14 @@ import {
   getMasterQQ,
   getUin,
   getUserData,
+  normalizeChatMode,
   // isCN
 } from '../utils/common.js'
 import { KeyvFile } from 'keyv-file'
-import SydneyAIClient from '../utils/SydneyAIClient.js'
 // import { getChatHistoryGroup } from '../utils/chat.js'
 import { msgHistoryMgr } from '../model/Onebot11_MessageHistoryManager.js'
 import { APTool } from '../utils/tools/APTool.js'
-import { OfficialChatGPTClient } from '../utils/message.js'
 import { ClaudeAPIClient } from '../client/ClaudeAPIClient.js'
-import { ClaudeAIClient } from '../utils/claude.ai/index.js'
-import XinghuoClient from '../utils/xinghuo/xinghuo.js'
 import { getMessageById, upsertMessage } from '../utils/history.js'
 import { v4 as uuid } from 'uuid'
 import fetch from 'node-fetch'
@@ -53,10 +50,8 @@ import { ProcessPictureTool } from '../utils/tools/ProcessPictureTool.js'
 import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { ResponsesAPI } from '../utils/openai/responses-api.js'
+import { getEnabledHostedBuiltinTools } from '../utils/hostedTools.js'
 import { newFetch } from '../utils/proxy.js'
-import { ChatGLM4Client } from '../client/ChatGLM4Client.js'
-import { QwenApi } from '../utils/alibaba/qwen-api.js'
-import { BingAIClient } from '../client/CopilotAIClient.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
 import { getImageBase64 } from '../utils/paimonFuction.js'
@@ -90,6 +85,7 @@ import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
+import { GroupMemberSkillTool } from '../utils/tools/GroupMemberSkillTool.js'
 import { GenerateMathRenderTool } from '../utils/tools/GenerateMathRenderTool.js'
 import { GenerateGraphCalculatorTool } from '../utils/tools/GenerateGraphCalculatorTool.js'
 import { DefaultMessageTriggerTool } from '../utils/tools/DefaultMessageTriggerTool.js'
@@ -207,12 +203,8 @@ class Core {
     system: {
       api: Config.promptPrefixOverride,
       responses: Config.responsesSystemPrompt,
-      qwen: Config.promptPrefixOverride,
-      bing: Config.sydney,
       claude: Config.claudeSystemPrompt,
-      claude2: Config.claudeSystemPrompt,
-      gemini: Config.geminiPrompt,
-      xh: Config.xhPrompt
+      gemini: Config.geminiPrompt
     },
     settings: {
       replyPureTextCallback: undefined,
@@ -220,6 +212,7 @@ class Core {
       forceTool: false
     }
   }) {
+    use = normalizeChatMode(use)
     if (!conversation) {
       conversation = {
         timeoutMs: Config.defaultTimeoutMs
@@ -230,108 +223,6 @@ class Core {
     }
     const userData = await getUserData(e.user_id)
     const useCast = userData.cast || {}
-    // if (use === 'bing') { // 使用接口 ##############################
-    //   const cacheOptions = {
-    //     namespace: Config.toneStyle,
-    //     store: new KeyvFile({ filename: 'cache.json' })
-    //   }
-    //   const conversationsCache = new Keyv(cacheOptions)
-    //   let client = new BingAIClient(Config.bingAiToken, Config.sydneyReverseProxy, Config.debug, Config._2captchaKey, Config.bingAiClientId, Config.bingAiScope, Config.bingAiRefreshToken, Config.bingAiOid, Config.bingReasoning)
-    //   const conversationKey = `SydneyUser_${e.sender.user_id}`
-    //   const conversations = (await conversationsCache.get(conversationKey)) || {
-    //     messages: [],
-    //     createdAt: Date.now()
-    //   }
-    //   if (Config.debug) {
-    //     logger.debug(JSON.stringify(conversations))
-    //   }
-    //   const previousCachedMessages = SydneyAIClient.getMessagesForConversation(conversations.messages, conversation.parentMessageId)
-    //     .map((message) => {
-    //       return {
-    //         text: message.message,
-    //         author: message.role === 'User' ? 'user' : 'bot'
-    //       }
-    //     })
-    //   let system = opt.system.bing
-
-    //   system = mergeSystemPrompt(system, e)
-
-    //   if (opt.settings.enableGroupContext && e.isGroup) {
-    //     let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
-    //     const namePlaceholder = '[name]'
-    //     const defaultBotName = 'Copilot'
-    //     const groupContextTip = Config.groupContextTip
-    //     let botName = e.isGroup ? (e.group.pickMember(getUin(e)).card || e.group.pickMember(getUin(e)).nickname) : e.bot.nickname
-    //     system = system.replaceAll(namePlaceholder, botName || defaultBotName) +
-    //       ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
-    //     system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
-    //     system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
-    //     system += `Your nickname is ${botName} in the group,`
-    //     if (chats) {
-    //       system += 'There is the conversation history in the group, you must chat according to the conversation history context"'
-    //       system += chats
-    //         .map(chat => {
-    //           let sender = chat.sender || {}
-    //           return `【${sender.card || sender.nickname}】(qq：${sender.user_id}, ${roleMap[sender.role] || 'normal user'}，${sender.area ? 'from ' + sender.area + ', ' : ''} ${sender.age} years old, 群头衔：${sender.title}, gender: ${sender.sex}, time：${formatDate(new Date(chat.time * 1000))}, messageId: ${chat.message_id}) 说：${chat.raw_message}`
-    //         })
-    //         .join('\n')
-    //     }
-    //   }
-    //   const msg = `System:\n${system}\n\nPrevious Messages:\n${JSON.stringify(previousCachedMessages)}\n\nUser: ${prompt}`
-    //   const response = await client.sendMessage(msg)
-    //   logger.info({ response })
-    //   const userMessage = {
-    //     id: crypto.randomUUID(),
-    //     parentMessageId: conversation.parentMessageId,
-    //     role: 'User',
-    //     message: prompt
-    //   }
-    //   conversations.messages.push(userMessage)
-    //   const replyMessage = {
-    //     id: crypto.randomUUID(),
-    //     parentMessageId: userMessage.id,
-    //     role: 'Bing',
-    //     message: response
-    //   }
-    //   conversations.messages.push(replyMessage)
-    //   await conversationsCache.set(conversationKey, conversations)
-    //   return {
-    //     text: response,
-    //     parentMessageId: replyMessage.id
-
-    //   }
-    // } else if (use === 'api3') { // 使用接口 ##############################
-    //   // official without cloudflare
-    //   let accessToken = await redis.get('CHATGPT:TOKEN')
-    //   // if (!accessToken) {
-    //   //   throw new Error('未绑定ChatGPT AccessToken，请使用#chatgpt设置token命令绑定token')
-    //   // }
-    //   this.chatGPTApi = new OfficialChatGPTClient({
-    //     accessToken,
-    //     apiReverseUrl: Config.api,
-    //     timeoutMs: 120000
-    //   })
-    //   let sendMessageResult = await this.chatGPTApi.sendMessage(prompt, conversation)
-    //   // 更新最后一条prompt
-    //   await redis.set(`CHATGPT:CONVERSATION_LAST_MESSAGE_PROMPT:${sendMessageResult.conversationId}`, prompt)
-    //   // 更新最后一条messageId
-    //   await redis.set(`CHATGPT:CONVERSATION_LAST_MESSAGE_ID:${sendMessageResult.conversationId}`, sendMessageResult.id)
-    //   await redis.set(`CHATGPT:QQ_CONVERSATION:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`, sendMessageResult.conversationId)
-    //   if (!conversation.conversationId) {
-    //     // 如果是对话的创建者
-    //     await redis.set(`CHATGPT:CONVERSATION_CREATER_ID:${sendMessageResult.conversationId}`, e.sender.user_id)
-    //     await redis.set(`CHATGPT:CONVERSATION_CREATER_NICK_NAME:${sendMessageResult.conversationId}`, e.sender.card)
-    //   }
-    //   (async () => {
-    //     let audio = await this.chatGPTApi.synthesis(sendMessageResult)
-    //     if (audio) {
-    //       await e.reply(segment.record(audio))
-    //     }
-    //   })().catch(err => {
-    //     logger.warn('发送语音失败', err)
-    //   })
-    //   return sendMessageResult
-    // } else
     if (use === 'claude') { // 使用接口 ##############################
       // slack已经不可用，移除
       let keys = Config.claudeApiKey?.split(/[,;]/).map(key => key.trim()).filter(key => key)
@@ -358,20 +249,31 @@ class Core {
           max_tokens: Config.claudeApiMaxToken,
           temperature: Config.claudeApiTemperature
         }
+        let claudeTools = []
         if (opt.enableSmart) {
           const {
             funcMap,
             promptAddition,
             systemAddition
           } = await collectTools(e)
-          let tools = Object.keys(funcMap).map(k => funcMap[k].tool)
-          client.addTools(tools)
+          claudeTools = Object.keys(funcMap).map(k => funcMap[k].tool)
           promptAddition && (promptForClaude += promptAddition)
           systemAddition && (system += systemAddition)
 
           const forceToolByKeyword = Config.enableForceToolKeywords !== false &&
             Config.geminiForceToolKeywords?.find(k => promptForClaude?.includes(k) || e.msg?.includes(k))
           option.toolMode = (opt.settings.forceTool || forceToolByKeyword) ? 'ANY' : 'AUTO'
+        }
+
+        // 托管内置工具（服务商云端执行），不依赖智能模式
+        const hostedClaudeTools = getEnabledHostedBuiltinTools('claude')
+        if (hostedClaudeTools.length > 0) {
+          // 避免与本地搜索工具重名（如 misaka_WebSearchTool 的 name 也是 web_search）
+          claudeTools = claudeTools.filter(tool => tool.name !== 'web_search')
+          claudeTools.push(...hostedClaudeTools.map(tool => tool.requestTool))
+        }
+        if (claudeTools.length > 0) {
+          client.addTools(claudeTools)
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
           let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
@@ -436,255 +338,6 @@ class Core {
         choiceIndex = Math.floor(Math.random() * keys.length)
         key = keys[choiceIndex]
         logger.info(`使用API Key：${key}`)
-      }
-      // } else if (use === 'claude2') { // 使用接口 ##############################
-      //   let { conversationId } = conversation
-      //   let client = new ClaudeAIClient({
-      //     organizationId: Config.claudeAIOrganizationId,
-      //     sessionKey: Config.claudeAISessionKey,
-      //     debug: Config.debug,
-      //     proxy: Config.proxy
-      //   })
-      //   let toSummaryFileContent
-      //   try {
-      //     if (e.source) {
-      //       let msgs = e.isGroup ? await e.group.getChatHistory(e.source.seq, 1) : await e.friend.getChatHistory(e.source.time, 1)
-      //       let sourceMsg = msgs[0]
-      //       let fileMsgElem = sourceMsg.message.find(msg => msg.type === 'file')
-      //       if (fileMsgElem) {
-      //         toSummaryFileContent = await extractContentFromFile(fileMsgElem, e)
-      //       }
-      //     }
-      //   } catch (err) {
-      //     logger.warn('读取文件内容出错， 忽略文件内容', err)
-      //   }
-
-      //   let attachments = []
-      //   if (toSummaryFileContent?.content) {
-      //     attachments.push({
-      //       extracted_content: toSummaryFileContent.content,
-      //       file_name: toSummaryFileContent.name,
-      //       file_type: 'pdf',
-      //       file_size: 200312,
-      //       totalPages: 20
-      //     })
-      //     logger.info(toSummaryFileContent.content)
-      //   }
-      //   if (conversationId) {
-      //     return await client.sendMessage(prompt, conversationId, attachments)
-      //   } else {
-      //     let conv = await client.createConversation()
-      //     return await client.sendMessage(prompt, conv.uuid, attachments)
-      //   }
-    } else if (use === 'xh') { // 使用接口 ##############################
-      const cacheOptions = {
-        namespace: 'xh',
-        store: new KeyvFile({ filename: 'cache.json' })
-      }
-      const ssoSessionId = Config.xinghuoToken
-      if (!ssoSessionId) {
-        // throw new Error('未绑定星火token，请使用#chatgpt设置星火token命令绑定token。（获取对话页面的ssoSessionId cookie值）')
-        logger.warn('未绑定星火token，请使用#chatgpt设置星火token命令绑定token。（获取对话页面的ssoSessionId cookie值）')
-      }
-      let client = new XinghuoClient({
-        ssoSessionId,
-        cache: cacheOptions
-      })
-      // 获取图片资源
-      // const image = await parseSourceImg(e)
-      let response = await client.sendMessage(prompt, {
-        e,
-        chatId: conversation?.conversationId,
-        image: e.img ? e.img[0] : undefined,
-        system: mergeSystemPrompt(opt.system.xh, e, { replyTimestamps: conversation.replyTimestamps })
-      })
-      return response
-    } else if (use === 'azure') { // 使用接口 ##############################
-      let azureModel
-      try {
-        azureModel = await import('@azure/openai')
-      } catch (error) {
-        throw new Error('未安装@azure/openai包，请执行pnpm install @azure/openai安装')
-      }
-      let OpenAIClient = azureModel.OpenAIClient
-      let AzureKeyCredential = azureModel.AzureKeyCredential
-      let msg = conversation.messages
-      let content = {
-        role: 'user',
-        content: prompt
-      }
-      msg.push(content)
-      const client = new OpenAIClient(Config.azureUrl, new AzureKeyCredential(Config.azApiKey))
-      const deploymentName = Config.azureDeploymentName
-      const { choices } = await client.getChatCompletions(deploymentName, msg)
-      let completion = choices[0].message
-      return {
-        text: completion.content,
-        message: completion
-      }
-    } else if (use === 'qwen') { // 使用接口 ##############################
-      let completionParams = {
-        parameters: {
-          top_p: Config.qwenTopP || 0.5,
-          top_k: Config.qwenTopK || 50,
-          seed: Config.qwenSeed > 0 ? Config.qwenSeed : Math.floor(Math.random() * 114514),
-          temperature: Config.qwenTemperature || 1,
-          enable_search: !!Config.qwenEnableSearch,
-          result_format: 'message'
-        }
-      }
-      if (Config.qwenModel) {
-        completionParams.model = Config.qwenModel
-      }
-      const currentDate = new Date().toISOString().split('T')[0]
-
-      async function um(message) {
-        return await upsertMessage(message, 'QWEN')
-      }
-
-      async function gm(id) {
-        return await getMessageById(id, 'QWEN')
-      }
-
-      let opts = {
-        apiKey: Config.qwenApiKey,
-        debug: Config.debug,
-        upsertMessage: um,
-        getMessageById: gm,
-        systemMessage: `You are ${Config.assistantLabel} ${useCast?.api || opt.system.qwen || defaultPropmtPrefix}
-        Current date: ${currentDate}`,
-        completionParams,
-        assistantLabel: Config.assistantLabel,
-        fetch: newFetch
-      }
-
-      let option = {
-        timeoutMs: 600000,
-        completionParams
-      }
-      if (conversation) {
-        if (!conversation.conversationId) {
-          conversation.conversationId = uuid()
-        }
-        option = Object.assign(option, conversation)
-      }
-
-      opts.systemMessage = mergeSystemPrompt(opts.systemMessage, e, { replyTimestamps: conversation.replyTimestamps })
-
-      if (opt.enableSmart) {
-        let isAdmin = ['admin', 'owner'].includes(e.sender.role)
-        let sender = e.sender.user_id
-        const {
-          funcMap,
-          fullFuncMap,
-          promptAddition,
-          systemAddition
-        } = await collectTools(e)
-        if (!option.completionParams) {
-          option.completionParams = {}
-        }
-        promptAddition && (prompt += promptAddition)
-        option.systemMessage = await handleSystem(e, opts.systemMessage, opt.settings)
-        systemAddition && (option.systemMessage += systemAddition)
-        opts.completionParams.tools = Object.keys(funcMap).map(k => ({
-          type: 'function',
-          function: funcMap[k].function
-        }))
-        let msg
-        try {
-          this.qwenApi = new QwenApi(opts)
-          msg = await this.qwenApi.sendMessage(prompt, option)
-          if (Config.debug)
-            logger.info(JSON.stringify(msg, null, 2))
-          let toolRoundCount = 0
-          const maxToolRounds = Config.llm_maxToolRounds || 3
-          while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount < maxToolRounds) {
-            toolRoundCount++
-            if (msg.text) {
-              await e.reply(msg.text.replace('\n\n\n', '\n'))
-            }
-
-            let name, args;
-
-            if (msg.functionCall) {
-              // 处理旧的 functionCall 格式
-              name = msg.functionCall.name;
-              args = JSON.parse(msg.functionCall.arguments);
-            } else if (msg.toolCalls && msg.toolCalls.length > 0) {
-              // 处理新的 toolCalls 格式
-              const toolCall = msg.toolCalls[0];
-              name = toolCall.function.name;
-              args = JSON.parse(toolCall.function.arguments);
-            } else {
-              // 如果没有工具调用，跳出循环
-              break;
-            }
-
-            logger.info(`[Chatgpt][Qwen] execution function: ${JSON.stringify({ name, args })}`)
-            const toolArgsForForward = { ...args }
-
-            // 感觉换成targetGroupIdOrUserQQNumber这种表意比较清楚的变量名，效果会好一丢丢
-            if (!args.groupId) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
-            }
-            try {
-              parseInt(args.groupId)
-            } catch (err) {
-              args.groupId = e.group_id + '' || e.sender.user_id + ''
-            }
-            let functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
-              isAdmin,
-              sender
-            }, args), e)
-            logger.mark(`function ${name} execution result: ${functionResult}`)
-            logger.info(`[Chatgpt][Qwen] function ${name} execution result: ${JSON.stringify(functionResult)}`)
-            sendToolCallForwardMsg(e, [{
-              platform: '千问',
-              round: toolRoundCount,
-              name,
-              args: toolArgsForForward,
-              result: functionResult
-            }], '千问工具调用与返回')
-            option.parentMessageId = msg.id
-            option.name = name
-            // 不然普通用户可能会被openai限速
-            await common.sleep(300)
-            msg = await this.qwenApi.sendMessage(functionResult, option, 'tool')
-            if (Config.debug)
-              logger.info(JSON.stringify(msg, null, 2))
-
-            // 如果是函数返回结果，则跳出循环
-            if (msg.conversation && msg.conversation.length > 0) {
-              const lastMessage = msg.conversation[msg.conversation.length - 1]
-              if (lastMessage.role === 'function' && lastMessage.name === name) {
-                // 清除工具调用相关字段，避免循环
-                msg.functionCall = undefined
-                msg.toolCalls = undefined
-                break
-              }
-            }
-          }
-          if ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount >= maxToolRounds) {
-            logger.warn(`千问工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制终止工具循环`)
-            msg.functionCall = undefined
-            msg.toolCalls = undefined
-            um(msg).catch(err => logger.warn('[Chatgpt][Qwen] 清理存储中的工具调用记录失败', err))
-          }
-        } catch (err) {
-          logger.error(err)
-          throw new Error(err)
-        }
-        return msg
-      } else {
-        let msg
-        try {
-          this.qwenApi = new QwenApi(opts)
-          msg = await this.qwenApi.sendMessage(prompt, option)
-        } catch (err) {
-          logger.error(err)
-          throw new Error(err)
-        }
-        return msg
       }
     } else if (use === 'gemini') { // 使用接口 ##############################
       let client = new CustomGoogleGeminiClient({
@@ -773,15 +426,6 @@ class Core {
       option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
       return await client.sendMessage(prompt, option)
-    } else if (use === 'chatglm4') { // 使用接口 ##############################
-      const client = new ChatGLM4Client({
-        refreshToken: Config.chatglmRefreshToken
-      })
-      let resp = await client.sendMessage(prompt, conversation)
-      if (resp.image) {
-        this.reply(segment.image(resp.image), true)
-      }
-      return resp
     } else if (use === 'responses') { // OpenAI Responses API ##############################
       const completionParams = {}
       if (Config.responsesModel) completionParams.model = Config.responsesModel
@@ -847,14 +491,23 @@ class Core {
         }
       }
 
+      // 托管内置工具（服务商云端执行），不依赖智能模式
+      const hostedResponsesTools = getEnabledHostedBuiltinTools('responses')
+      if (hostedResponsesTools.length > 0) {
+        completionParams.tools = [
+          ...(Array.isArray(completionParams.tools) ? completionParams.tools : []),
+          ...hostedResponsesTools.map(tool => tool.requestTool)
+        ]
+      }
+
       const initialInput = imageDataUrl
         ? [{
-            role: 'user',
-            content: [
-              { type: 'input_text', text: prompt || '请描述这张图片' },
-              { type: 'input_image', image_url: imageDataUrl }
-            ]
-          }]
+          role: 'user',
+          content: [
+            { type: 'input_text', text: prompt || '请描述这张图片' },
+            { type: 'input_image', image_url: imageDataUrl }
+          ]
+        }]
         : prompt
       const statelessToolInput = Array.isArray(initialInput)
         ? [...initialInput]
@@ -1255,7 +908,7 @@ class Core {
 }
 
 /** 执行 Responses API 请求的本地工具，并转换成 function_call_output items。 */
-async function executeResponsesToolCalls (core, e, toolCalls, fullFuncMap, isAdmin, sender, round) {
+async function executeResponsesToolCalls(core, e, toolCalls, fullFuncMap, isAdmin, sender, round) {
   const toolForwardRecords = []
   const toolResults = []
 
@@ -1413,6 +1066,7 @@ async function collectTools(e) {
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableUserProfileTool, ToolClass: UserProfileTool },
+    { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },
     { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },
     { condition: Config.generateGraphCalculator_ToolSwitch, ToolClass: GenerateGraphCalculatorTool },
     { condition: Config.anythingllm_enable, ToolClass: AnythingLLMQueryTool },
