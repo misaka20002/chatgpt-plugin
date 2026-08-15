@@ -100,6 +100,14 @@ export class ClaudeAPIClient extends BaseClient {
   }
 
   _toClaudeTool (tool) {
+    // 托管内置工具直接透传 Anthropic server tool 定义，不走 AbstractTool
+    if (tool.hosted) {
+      return {
+        type: tool.type,
+        name: tool.name,
+        ...(Number.isInteger(tool.max_uses) ? { max_uses: tool.max_uses } : {})
+      }
+    }
     const fn = tool.function()
     return {
       name: fn.name,

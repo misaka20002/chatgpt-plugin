@@ -50,6 +50,7 @@ import { ProcessPictureTool } from '../utils/tools/ProcessPictureTool.js'
 import { ImageCaptionTool } from '../utils/tools/ImageCaptionTool.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { ResponsesAPI } from '../utils/openai/responses-api.js'
+import { getEnabledHostedBuiltinTools } from '../utils/hostedTools.js'
 import { newFetch } from '../utils/proxy.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
@@ -248,20 +249,31 @@ class Core {
           max_tokens: Config.claudeApiMaxToken,
           temperature: Config.claudeApiTemperature
         }
+        let claudeTools = []
         if (opt.enableSmart) {
           const {
             funcMap,
             promptAddition,
             systemAddition
           } = await collectTools(e)
-          let tools = Object.keys(funcMap).map(k => funcMap[k].tool)
-          client.addTools(tools)
+          claudeTools = Object.keys(funcMap).map(k => funcMap[k].tool)
           promptAddition && (promptForClaude += promptAddition)
           systemAddition && (system += systemAddition)
 
           const forceToolByKeyword = Config.enableForceToolKeywords !== false &&
             Config.geminiForceToolKeywords?.find(k => promptForClaude?.includes(k) || e.msg?.includes(k))
           option.toolMode = (opt.settings.forceTool || forceToolByKeyword) ? 'ANY' : 'AUTO'
+        }
+
+        // 托管内置工具（服务商云端执行），不依赖智能模式
+        const hostedClaudeTools = getEnabledHostedBuiltinTools('claude')
+        if (hostedClaudeTools.length > 0) {
+          // 避免与本地搜索工具重名（如 misaka_WebSearchTool 的 name 也是 web_search）
+          claudeTools = claudeTools.filter(tool => tool.name !== 'web_search')
+          claudeTools.push(...hostedClaudeTools.map(tool => tool.requestTool))
+        }
+        if (claudeTools.length > 0) {
+          client.addTools(claudeTools)
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
           let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
@@ -477,6 +489,15 @@ class Core {
             completionParams.tool_choice = 'required'
           }
         }
+      }
+
+      // 托管内置工具（服务商云端执行），不依赖智能模式
+      const hostedResponsesTools = getEnabledHostedBuiltinTools('responses')
+      if (hostedResponsesTools.length > 0) {
+        completionParams.tools = [
+          ...(Array.isArray(completionParams.tools) ? completionParams.tools : []),
+          ...hostedResponsesTools.map(tool => tool.requestTool)
+        ]
       }
 
       const initialInput = imageDataUrl

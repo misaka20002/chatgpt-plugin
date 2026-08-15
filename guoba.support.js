@@ -1249,6 +1249,43 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
+          field: 'enableHostedBuiltinTools',
+          label: '开启托管内置工具',
+          bottomHelpMessage: '开启托管内置工具后，OpenAI Responses API 会随请求携带由服务商托管执行的内置工具（web_search 联网搜索、file_search 文件搜索、code_interpreter 代码执行、image_generation 图像生成）；Claude API 会携带托管工具（web_search 联网搜索、web_fetch 网页抓取）。工具由服务商在云端执行，不依赖智能模式，也不会进入本地工具循环。可用指令：#chatgpt查看托管内置工具',
+          component: 'Switch'
+        },
+        // { // 暂时不启动这个，guoba 太乱了
+        //   field: 'responsesFileSearchVectorStoreIds',
+        //   label: 'Responses 文件搜索向量库ID',
+        //   bottomHelpMessage: '用于 OpenAI Responses file_search 托管工具；在 OpenAI 后台创建 Vector Store 并上传文件后，把 vs_xxx 填到这里。多个用英文逗号分隔',
+        //   component: 'GTags',
+        //   componentProps: {
+        //     placeholder: '请输入 vector store id，例如 vs_xxxx',
+        //     allowAdd: true,
+        //     allowDel: true,
+        //     showPrompt: true,
+        //     promptProps: {
+        //       content: '添加新的 vector store id',
+        //       okText: '添加',
+        //       rules: [
+        //         { required: true, message: 'vector store id 不能为空' }
+        //       ]
+        //     },
+        //     valueParser: (value) => value.split(',') || []
+        //   }
+        // },
+        // {
+        //   field: 'responsesFileSearchMaxNumResults',
+        //   label: 'Responses 文件搜索最大结果数',
+        //   bottomHelpMessage: 'OpenAI Responses file_search 托管工具单次返回的最大结果数，默认10，范围1-50',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 1,
+        //     max: 50,
+        //     step: 1
+        //   }
+        // },
+        {
           field: 'serpSourceArr',
           label: '搜索/网络来源',
           component: 'Select',

@@ -35,6 +35,7 @@
 - 2026年5月20日，新增 `通用 MCP 协议支持` 以适配各种 MCP 服务（如 [独立人格记忆 `nocturne_memory`](https://github.com/Dataojitori/nocturne_memory)），支持 stdio 本地进程和 SSE 远程连接[^2]
 - 2026年6月1日，智能模式中增加 `必应图片搜索工具` `思维导图工具` `用户画像工具` `Prompt Gallery`[^2] `公式及流程图` `数学函数图形计算器` ；新增指令 `#gpt发语音`
 - 2026年8月1日，智能模式中增加 `云崽消息触发` `远程沙箱工具` `群友Nuwa Skill`
+- 2026年8月16日，智能模式中增加 `Responses/Claude API 托管内置工具`(包含web_search 联网搜索等工具) ；新增指令 `#chatgpt查看托管内置工具`
 
 [^1]: 由 [@127Wzc](https://github.com/127Wzc) 贡献添加
 [^2]: 由 [@eggacheb](https://github.com/eggacheb) 贡献添加
