@@ -10,7 +10,7 @@ import websocketclient from 'ws'
 
 import { Config } from '../utils/config.js'
 import { UserInfo, GetUser, AddUser, ReplaceUsers } from './modules/user_data.js'
-import { getPublicIP, getUserData, getMasterQQ, randomString, getUin } from '../utils/common.js'
+import { getPublicIP, getUserData, getMasterQQ, normalizeChatMode, randomString, getUin } from '../utils/common.js'
 
 import webRoute from './modules/web_route.js'
 import webUser from './modules/user.js'
@@ -192,20 +192,8 @@ export async function createServer () {
       const ip = await getPublicIP()
       let botName = ''
       switch (body.model) {
-        case 'bing':
-          botName = 'Bing'
-          break
         case 'api':
           botName = 'ChatGPT'
-          break
-        case 'api3':
-          botName = 'ChatGPT'
-          break
-        case 'browser':
-          botName = 'ChatGPT'
-          break
-        case 'chatglm':
-          botName = 'ChatGLM'
           break
         case 'claude':
           botName = 'Claude'
@@ -586,7 +574,7 @@ export async function createServer () {
         await redis.set('CHATGPT:CONFIRM', redisConfig.turnConfirm ? 'on' : 'off')
       }
       if (redisConfig.useMode != null) {
-        await redis.set('CHATGPT:USE', redisConfig.useMode)
+        await redis.set('CHATGPT:USE', normalizeChatMode(redisConfig.useMode))
       }
       if (redisConfig.openAiPlatformAccessToken != null) {
         await redis.set('CHATGPT:TOKEN', redisConfig.openAiPlatformAccessToken)
@@ -610,7 +598,7 @@ export async function createServer () {
       if (body.userConfig) {
         let temp_userData = await getUserData(user.user)
         if (body.userConfig.mode) {
-          temp_userData.mode = body.userConfig.mode
+          temp_userData.mode = normalizeChatMode(body.userConfig.mode)
         }
         if (body.userConfig.cast) {
           temp_userData.cast = body.userConfig.cast

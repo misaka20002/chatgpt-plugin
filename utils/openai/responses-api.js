@@ -117,10 +117,45 @@ export class ResponsesAPI {
       const response = await res.json()
       if (this._debug) console.log('[Chatgpt][Responses] response:', JSON.stringify(response, null, 2))
 
-      const inputTokens = response.usage?.input_tokens ?? response.usage?.prompt_tokens
-      const outputTokens = response.usage?.output_tokens ?? response.usage?.completion_tokens
+      const usage = response.usage || {}
+      const inputTokens = usage.input_tokens ?? usage.prompt_tokens
+      const outputTokens = usage.output_tokens ?? usage.completion_tokens
+      const reportedCacheReadTokens = usage.cache_read_input_tokens
+        ?? usage.prompt_tokens_details?.cached_tokens
+        ?? usage.input_tokens_details?.cached_tokens
+      const cacheReadTokens = reportedCacheReadTokens ?? 0
+      const reportedCacheWriteTokens = usage.cache_creation_input_tokens
+        ?? usage.prompt_tokens_details?.cache_write_tokens
+        ?? usage.input_tokens_details?.cache_write_tokens
+      const cacheWriteTokens = reportedCacheWriteTokens ?? 0
+      const reportedReasoningTokens = usage.output_tokens_details?.reasoning_tokens
+        ?? usage.completion_tokens_details?.reasoning_tokens
+        ?? usage.reasoning_tokens
+      const reasoningTokens = reportedReasoningTokens ?? 0
+      const rawOutputTokens = outputTokens ?? 0
+      const answerTokens = rawOutputTokens >= reasoningTokens
+        ? rawOutputTokens - reasoningTokens
+        : rawOutputTokens
       if (typeof inputTokens === 'number') {
-        console.info(`[Chatgpt][Responses] 输入Token(${inputTokens})${maxOutputTokens ? ` | 回复上限(${maxOutputTokens})` : ''} | 输出Token(${outputTokens || 0})`)
+        const cachedInputTokens = cacheReadTokens + cacheWriteTokens
+        const freshInputTokens = inputTokens >= cachedInputTokens
+          ? inputTokens - cachedInputTokens
+          : inputTokens
+        const cacheableInputTokens = freshInputTokens + cachedInputTokens
+        const cacheHitRate = cacheableInputTokens > 0
+          ? (cacheReadTokens / cacheableInputTokens) * 100
+          : 0
+        const totalTokenCount = usage.total_tokens ?? inputTokens + (outputTokens ?? 0)
+        const cacheWriteInfo = reportedCacheWriteTokens == null
+          ? ''
+          : ` | 缓存写入(${cacheWriteTokens})`
+        const reasoningInfo = reportedReasoningTokens == null
+          ? ''
+          : ` | 推理Token(${reasoningTokens})`
+        const cacheReadInfo = reportedCacheReadTokens == null
+          ? ''
+          : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`
+        console.info(`[Chatgpt][Responses] 输入Token(${inputTokens})${maxOutputTokens ? ` | 回复上限(${maxOutputTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`)
         if (this._maxModelTokens && maxOutputTokens && inputTokens + maxOutputTokens > this._maxModelTokens) {
           console.warn(`[Chatgpt][Responses] 当前 token 配置边界过紧：输入Token(${inputTokens}) + 回复上限(${maxOutputTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的 Responses Token 配置。`)
         }

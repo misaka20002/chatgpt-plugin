@@ -403,7 +403,25 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         const numTokens = usage.promptTokenCount || 0;
         const outTokens = usage.candidatesTokenCount || 0;
         const maxTokens = opt.maxOutputTokens || 0;
-        logger.info(`[Chatgpt][Gemini] 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 输出Token(${outTokens}) | 累计Token(${usage.totalTokenCount})`);
+        const reportedCacheReadTokens = usage.cachedContentTokenCount;
+        const cacheReadTokens = reportedCacheReadTokens ?? 0;
+        const reportedReasoningTokens = usage.thoughtsTokenCount;
+        const reasoningTokens = reportedReasoningTokens ?? 0;
+        const freshInputTokens = numTokens >= cacheReadTokens
+          ? numTokens - cacheReadTokens
+          : numTokens;
+        const cacheableInputTokens = freshInputTokens + cacheReadTokens;
+        const cacheHitRate = cacheableInputTokens > 0
+          ? (cacheReadTokens / cacheableInputTokens) * 100
+          : 0;
+        const totalTokenCount = usage.totalTokenCount ?? (numTokens + outTokens + reasoningTokens);
+        const reasoningInfo = reportedReasoningTokens == null
+          ? ''
+          : ` | 推理Token(${reasoningTokens})`;
+        const cacheReadInfo = reportedCacheReadTokens == null
+          ? ''
+          : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
+        logger.info(`[Chatgpt][Gemini] 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
       }
     } catch (err) {
       logger.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);

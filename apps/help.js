@@ -13,23 +13,13 @@ let helpData = [
       },
       {
         icon: 'chat',
-        title: '#chat1/#chatglm/#claude/#xh/#gemini',
-        desc: '分别使用API/ChatGLM/Claude/星火/gemini模式与机器人聊天，无论主人设定了何种全局模式'
+        title: '#chat1/#chatglm/#claude/#gemini',
+        desc: '分别使用API/ChatGLM/Claude/Gemini模式与机器人聊天，无论主人设定了何种全局模式'
       },
       {
         icon: 'chat-private',
         title: '私聊与我对话',
         desc: '与机器人聊天'
-      },
-      {
-        icon: 'switch',
-        title: '#chatgpt切换对话+对话id',
-        desc: '目前仅API3模式下可用，切换到指定的对话中'
-      },
-      {
-        icon: 'switch',
-        title: '#chatgpt加入对话+@某人',
-        desc: '目前仅API3模式下可用，加入到某人当前进行的对话中'
       },
       {
         icon: 'destroy',
@@ -102,11 +92,6 @@ let helpData = [
         desc: '设置语音模式下回复的角色音色。优先级高于默认语音角色'
       },
       {
-        icon: 'list',
-        title: '#chatgpt对话列表',
-        desc: '查询当前哪些人正在与机器人聊天.目前API3模式下支持切换对话'
-      },
-      {
         icon: 'blue',
         title: '#chatgpt(本群)?(群xxx)?闭嘴(x秒/分钟/小时)',
         desc: '让机器人在本群/某群闭嘴。不指定群时认为全局闭嘴。'
@@ -120,16 +105,6 @@ let helpData = [
         icon: 'list',
         title: '#chatgpt查看闭嘴',
         desc: '查看当前闭嘴情况。'
-      },
-      {
-        icon: 'queue',
-        title: '#清空chat队列',
-        desc: '清空当前对话等待队列。仅建议前方卡死时使用。仅API3模式下可用'
-      },
-      {
-        icon: 'queue',
-        title: '#移出chat队列首位',
-        desc: '移出当前对话等待队列中的首位。若前方对话卡死可使用本命令。仅API3模式下可用'
       },
       {
         icon: 'confirm',
@@ -185,11 +160,6 @@ let helpData = [
         icon: 'key',
         title: '#chatgpt设置APIKey',
         desc: '设置APIKey'
-      },
-      {
-        icon: 'key',
-        title: '#chatgpt设置星火token',
-        desc: '设置星火ssoSessionId（对话页面的ssoSessionId cookie值）'
       },
       {
         icon: 'eat',
@@ -266,21 +236,6 @@ let helpData = [
         title: '#chatgpt导入设定',
         desc: '导入其他人分享的设定。注意：相同名字的设定，会覆盖本地已有的设定'
       },
-      // {
-      //   icon: 'confirm',
-      //   title: '#chatgpt开启/关闭洗脑',
-      //   desc: '开启或关闭洗脑'
-      // },
-      // {
-      //   icon: 'confirm',
-      //   title: '#chatgpt设置洗脑强度+【强度】',
-      //   desc: '设置洗脑强度'
-      // },
-      // {
-      //   icon: 'confirm',
-      //   title: '#chatgpt设置洗脑名称+【名称】',
-      //   desc: '设置洗脑名称'
-      // },
       {
         icon: 'help',
         title: '#chatgpt设定帮助',

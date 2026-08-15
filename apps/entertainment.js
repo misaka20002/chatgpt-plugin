@@ -9,7 +9,6 @@ import uploadRecord from '../utils/uploadRecord.js'
 import { makeWordcloud } from '../utils/wordcloud/wordcloud.js'
 import { translate, translateLangSupports } from '../utils/translate.js'
 import AzureTTS from '../utils/tts/microsoft-azure.js'
-import VoiceVoxTTS from '../utils/tts/voicevox.js'
 import { URL } from 'node:url'
 import { getBots } from '../utils/bot.js'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
@@ -65,7 +64,7 @@ export class Entertainment extends plugin {
           fnc: 'translate'
         },
         {
-          reg: '^#(chatgpt|gpt|GPT)?(设置|修改)翻译来源(openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译)$',
+          reg: '^#(chatgpt|gpt|GPT)?(设置|修改)翻译来源(openai|responses|gemini|baidu|百度翻译)$',
           fnc: 'translateSource'
         },
         {
@@ -137,7 +136,7 @@ ${translateLangLabels}
 2. #gpt翻日 你好
 3. #gpt翻中 你好
 4. #gpt翻译 hello
-5. #chatgpt设置翻译来源[openai|responses|gemini|星火|通义千问|xh|qwen|baidu|百度翻译]`)
+5. #chatgpt设置翻译来源[openai|responses|gemini|baidu|百度翻译]`)
       return true
     }
 
@@ -237,14 +236,6 @@ ${translateLangLabels}
       Config.translateSource = 'responses'
     } else if (command.includes('gemini')) {
       Config.translateSource = 'gemini'
-    } else if (command.includes('星火')) {
-      Config.translateSource = 'xh'
-    } else if (command.includes('通义千问')) {
-      Config.translateSource = 'qwen'
-    } else if (command.includes('xh')) {
-      Config.translateSource = 'xh'
-    } else if (command.includes('qwen')) {
-      Config.translateSource = 'qwen'
     } else if (command.includes('百度翻译') || command.includes('baidu')) {
       Config.translateSource = 'baidu'
     } else {
@@ -466,11 +457,10 @@ ${translateLangLabels}
             logger.info(`打招呼给群聊${groupId}：` + message)
             if (Config.defaultUseTTS) {
               let audio
-              const [defaultVitsTTSRole, defaultAzureTTSRole, defaultVoxTTSRole] = [Config.defaultTTSRole, Config.azureTTSSpeaker, Config.voicevoxTTSSpeaker]
+              const [defaultVitsTTSRole, defaultAzureTTSRole] = [Config.defaultTTSRole, Config.azureTTSSpeaker]
               let ttsSupportKinds = []
               if (Config.azureTTSKey) ttsSupportKinds.push(1)
               if (Config.ttsSpace) ttsSupportKinds.push(2)
-              if (Config.voicevoxSpace) ttsSupportKinds.push(3)
               if (!ttsSupportKinds.length) {
                 logger.warn('没有配置任何语音服务！')
                 return false
@@ -497,17 +487,6 @@ ${translateLangLabels}
                   }
                   try {
                     audio = await generateVitsAudio(message, defaultVitsTTSRole, '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）')
-                  } catch (err) {
-                    logger.error(err)
-                  }
-                  break
-                }
-                case 3: {
-                  message = (await translate(message, '日')).replace('\n', '')
-                  try {
-                    audio = await VoiceVoxTTS.generateAudio(message, {
-                      speaker: defaultVoxTTSRole
-                    })
                   } catch (err) {
                     logger.error(err)
                   }

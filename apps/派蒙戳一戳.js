@@ -36,6 +36,7 @@ redis.del(`Yz:PaimongChuoLocalPicIndex`);
 if (!fs.existsSync(paimonChuoYiChouPicturesDirectory)) fs.mkdirSync(paimonChuoYiChouPicturesDirectory, { recursive: true });
 if (!fs.existsSync(paimonChuoYiChouSavePicDirectory)) fs.mkdirSync(paimonChuoYiChouSavePicDirectory, { recursive: true });
 
+
 export class PaimonChuo extends plugin {
     constructor() {
         super({
@@ -529,21 +530,49 @@ export class PaimonChuo extends plugin {
         if (text.length <= 55) {
             return e.reply(text)
         }
-        if (!e.isGroup || !e.group?.makeForwardMsg) {
+        if (!e.isGroup) {
             return e.reply(text)
         }
         let info = e.member || await e.bot.getGroupMemberInfo?.(e.group_id, e.user_id) || await e.bot.pickMember?.(e.group_id, e.user_id)
         let name = info?.title || info?.card || info?.nickname || e.sender?.title || e.sender?.card || e.sender?.nickname || `用户${e.user_id}`
-        let replyView = text.substring(0, 15)
-        let nodes = [{ message: [text], nickname: `「${name}」,我喜欢你很久了`, user_id: Bot.uin }]
-        let forwardMsg = await e.group.makeForwardMsg(nodes)
+        name = String(name || '').replace(/\s+/g, '').trim()
+        const displayName = name.length > 6 ? `${name.slice(0, 6)}…` : name
+        const forwardTitle = `${displayName}，我喜欢你很久了`
+        const node = { message: [text], nickname: forwardTitle, user_id: Bot.uin }
+        // 优先走 NapCat/OneBotv11 的 send_group_forward_msg，并带上外显字段。
+        // 参考 FanSky_Qs 的思路：不改变正文，只改合并转发卡片外显标题/摘要。
+        // 注意：不能直接发 xml，NapCat 会报 retcode=1200。
         try {
-            forwardMsg.data = forwardMsg.data
-                .replace(/\n/g, '')
-                .replace(/<title color="#777777" size="26">(.+?)<\/title>/g, '___')
-                .replace(/___+/, `<title color="#777777" size="26">「${name}」你知道吗，${replyView}</title>`)
-        } catch (err) {}
-        return e.reply(forwardMsg)
+            const bot = e.bot || Bot[e.self_id || Bot.uin]
+            if (bot?.sendApi && e.group_id) {
+                return await bot.sendApi('send_group_forward_msg', {
+                    group_id: e.group_id,
+                    messages: [{
+                        type: 'node',
+                        data: {
+                            name: forwardTitle,
+                            uin: String(Number(e.self_id) || Number(Bot.uin) || 80000000),
+                            content: [{ type: 'text', data: { text } }]
+                        }
+                    }],
+                    // 只保留一条外显预览；source/summary/prompt 同时设置会在 NapCat 卡片上重复显示多行。
+                    news: [{ text: forwardTitle }]
+                })
+            }
+        } catch (err) {
+            logger.warn(`[派蒙戳一戳]自定义外显转发失败，尝试普通合并转发：${err.message}`)
+        }
+
+        const forwardMsg = {
+            type: 'node',
+            data: [node]
+        }
+        try {
+            return await e.reply(forwardMsg)
+        } catch (err) {
+            logger.error(`[派蒙戳一戳]合并转发发送失败，已降级普通文本：${err.message}`)
+            return e.reply(text)
+        }
     }
 
     /** 随机回复文案（带权重） */

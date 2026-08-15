@@ -136,9 +136,7 @@ export class help extends plugin {
       api: 'promptPrefixOverride',
       bing: 'sydney',
       claude: 'claudeSystemPrompt',
-      qwen: 'promptPrefixOverride',
-      gemini: 'geminiPrompt',
-      xh: 'xhPrompt'
+      gemini: 'geminiPrompt'
     }
 
     if (keyMap[use]) {
@@ -147,9 +145,6 @@ export class help extends plugin {
         logger.warn(Config[keyMap[use]])
       } else {
         Config[keyMap[use]] = prompt.content
-      }
-      if (use === 'xh') {
-        Config.xhPromptSerialize = false
       }
       if (use === 'bing') {
         /**
@@ -168,7 +163,7 @@ export class help extends plugin {
       await redis.set(`CHATGPT:PROMPT_USE_${use}`, promptName)
       await e.reply(`你当前正在使用${use}模式，已将该模式设定应用为"${promptName}"。更该设定后建议结束对话以使设定更好生效`, true)
     } else {
-      await e.reply(`你当前正在使用${use}模式，该模式不支持设定。支持设定的模式有：API、必应、Claude、通义千问、星火和Gemini`, true)
+      await e.reply(`你当前正在使用${use}模式，该模式不支持设定。支持设定的模式有：API、必应、Claude和Gemini`, true)
     }
   }
 

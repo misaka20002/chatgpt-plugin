@@ -100,6 +100,14 @@ export class ClaudeAPIClient extends BaseClient {
   }
 
   _toClaudeTool (tool) {
+    // 托管内置工具直接透传 Anthropic server tool 定义，不走 AbstractTool
+    if (tool.hosted) {
+      return {
+        type: tool.type,
+        name: tool.name,
+        ...(Number.isInteger(tool.max_uses) ? { max_uses: tool.max_uses } : {})
+      }
+    }
     const fn = tool.function()
     return {
       name: fn.name,
@@ -170,8 +178,22 @@ export class ClaudeAPIClient extends BaseClient {
     }
     const inputTokens = response.usage?.input_tokens || 0
     const outputTokens = response.usage?.output_tokens || 0
-    const totalTokens = inputTokens + outputTokens
-    console.info(`[Chatgpt][Claude] 输入Token(${inputTokens})${body.max_tokens ? ` | 回复上限(${body.max_tokens})` : ''} | 输出Token(${outputTokens}) | 累计Token(${totalTokens})`)
+    const reportedCacheReadTokens = response.usage?.cache_read_input_tokens
+    const cacheReadTokens = reportedCacheReadTokens ?? 0
+    const reportedCacheWriteTokens = response.usage?.cache_creation_input_tokens
+    const cacheWriteTokens = reportedCacheWriteTokens ?? 0
+    const totalInputTokens = inputTokens + cacheReadTokens + cacheWriteTokens
+    const totalTokens = totalInputTokens + outputTokens
+    const cacheHitRate = totalInputTokens > 0
+      ? (cacheReadTokens / totalInputTokens) * 100
+      : 0
+    const cacheWriteInfo = reportedCacheWriteTokens == null
+      ? ''
+      : ` | 缓存写入(${cacheWriteTokens})`
+    const cacheReadInfo = reportedCacheReadTokens == null
+      ? ''
+      : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`
+    console.info(`[Chatgpt][Claude] 输入Token(${totalInputTokens})${body.max_tokens ? ` | 回复上限(${body.max_tokens})` : ''} | 回答Token(${outputTokens}) | 累计Token(${totalTokens})${cacheWriteInfo}${cacheReadInfo}`)
     return response
   }
 

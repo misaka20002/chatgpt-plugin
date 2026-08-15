@@ -9,7 +9,7 @@ import crypto from 'crypto'
 import child_process from 'child_process'
 import { Config } from './config.js'
 import path from 'path'
-import { mkdirs, getUin } from './common.js'
+import { getUin } from './common.js'
 let module
 try {
   module = await import('oicq')
@@ -57,12 +57,8 @@ async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', igno
   }
   // 派蒙戳一戳强制使用url - END
   let recordType = 'url'
-  let tmpFile = ''
   if (ttsMode === 'azure') {
     recordType = 'file'
-  } else if (ttsMode === 'voicevox') {
-    recordType = 'buffer'
-    tmpFile = `data/chatgpt/tts/tmp/${crypto.randomUUID()}.wav`
   }
   if (ignoreEncode) {
     return segment.record(recordUrl)
@@ -83,13 +79,6 @@ async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', igno
     if (Config.cloudMode === 'off') return false;
     logger.info('[Chatgpt] 使用云转码silk进行高清语音生成:')
     try {
-      if (recordType === 'buffer') {
-        // save it as a file
-        mkdirs('data/chatgpt/tts/tmp')
-        fs.writeFileSync(tmpFile, recordUrl)
-        recordType = 'file'
-        recordUrl = tmpFile
-      }
       if ((recordType === 'file' || Config.cloudMode === 'file') && !fromPaimonChuo) {
         if (!recordUrl) {
           logger.error('云转码错误：recordUrl 异常')
@@ -223,13 +212,6 @@ async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', igno
     19: seconds,
     30: Buffer.from([8, 0, 40, 0, 56, 0])
   })
-  if (tmpFile) {
-    try {
-      fs.unlinkSync(tmpFile)
-    } catch (err) {
-      logger.warn('fail to delete temp audio file')
-    }
-  }
   return {
     type: 'record', file: 'protobuf://' + Buffer.from(b).toString('base64')
   }

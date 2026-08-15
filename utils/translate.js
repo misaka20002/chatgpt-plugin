@@ -3,8 +3,6 @@ import { Config } from './config.js'
 import { ChatGPTAPI } from './openai/chatgpt-api.js'
 import { newFetch } from './proxy.js'
 import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
-import XinghuoClient from './xinghuo/xinghuo.js'
-import { QwenApi } from './alibaba/qwen-api.js'
 import { ResponsesAPI } from './openai/responses-api.js'
 
 // 代码参考：https://github.com/yeyang52/yenai-plugin/blob/b50b11338adfa5a4ef93912eefd2f1f704e8b990/model/api/funApi.js#L25
@@ -122,7 +120,7 @@ export async function translateOld (msg, to = 'auto') {
  * @param msg 要翻译的
  * @param from 语种
  * @param to 语种
- * @param ai ai来源，支持openai, responses, gemini, xh, qwen, baidu
+ * @param ai ai来源，支持openai, responses, gemini, baidu
  * @returns {Promise<*|string>}
  */
 export async function translate (msg, to = 'auto', from = 'auto', ai = Config.translateSource) {
@@ -133,7 +131,7 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
     }
     if (!lang) return `未找到翻译的语种，支持的语言为：\n${translateLangSupports.map(item => item.abbr).join('，')}\n`
     // if ai is not in the list, throw error
-    if (!['openai', 'responses', 'gemini', 'xh', 'qwen', 'baidu'].includes(ai)) throw new Error('ai来源错误')
+    if (!['openai', 'responses', 'gemini', 'baidu'].includes(ai)) throw new Error('ai来源错误')
     if (ai === 'baidu') return await translateOld(msg, to)
     let system = `You will be provided with a sentence in the language with language code [${from}], and your task is to translate it into [${lang}]. Just print the result without any other words.`
     if (Array.isArray(msg)) {
@@ -198,47 +196,6 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
         }
         let res = await client.sendMessage(msg, option)
         return res.text
-      }
-      case 'xh': {
-        let client = new XinghuoClient({
-          ssoSessionId: Config.xinghuoToken
-        })
-        let response = await client.sendMessage(msg, { system })
-        return response.text
-      }
-      case 'qwen': {
-        let completionParams = {
-          parameters: {
-            top_p: Config.qwenTopP || 0.5,
-            top_k: Config.qwenTopK || 50,
-            seed: Config.qwenSeed > 0 ? Config.qwenSeed : Math.floor(Math.random() * 114514),
-            temperature: Config.qwenTemperature || 1,
-            enable_search: !!Config.qwenEnableSearch
-          }
-        }
-        if (Config.qwenModel) {
-          completionParams.model = Config.qwenModel
-        }
-        let opts = {
-          apiKey: Config.qwenApiKey,
-          debug: false,
-          systemMessage: system,
-          completionParams,
-          fetch: newFetch
-        }
-        let client = new QwenApi(opts)
-        let option = {
-          timeoutMs: 600000,
-          completionParams
-        }
-        let result
-        try {
-          result = await client.sendMessage(msg, option)
-        } catch (err) {
-          logger.error(err)
-          throw new Error(err)
-        }
-        return result.text
       }
     }
   } catch (e) {
