@@ -24,7 +24,8 @@ import fetch from 'node-fetch'
 import { newFetch } from '../utils/proxy.js'
 import { createServer, runServer, stopServer } from '../server/index.js'
 import { BingAIClient } from '../client/CopilotAIClient.js'
-import { getHostedBuiltinToolReport, getHostedToolProbeCandidates } from '../utils/hostedTools.js'
+import { getHostedBuiltinToolReport, getHostedToolProbeCandidates, setHostedToolProbeResults } from '../utils/hostedTools.js'
+import { hidePrivacyInfo } from '../utils/paimonFuction.js'
 
 export class ChatgptManagement extends plugin {
   constructor(e) {
@@ -1326,7 +1327,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   }
 
   async viewHostedBuiltinTools (e) {
-    const report = getHostedBuiltinToolReport()
     const use = normalizeChatMode(await redis.get('CHATGPT:USE'))
     const modeMap = {
       api: 'OpenAI Chat API',
@@ -1345,16 +1345,17 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       return true
     }
 
-    await this.reply('是否要通过 1 次 API 调用实际检测当前端点支持哪些托管内置工具？回复“确认”执行（会消耗少量 token），回复其他内容取消。', e.isGroup)
+    await this.reply('是否要通过 API 调用实际检测当前端点支持哪些托管内置工具？每个工具会用 1 次最小 API 调用（会消耗少量 token）。回复“确认”执行，回复其他内容取消。', e.isGroup)
     const eConfirm = await this.awaitContext()
     if (!eConfirm || !eConfirm.msg || eConfirm.msg.trim() !== '确认') {
       await this.reply('已取消，未发起 API 调用。', e.isGroup)
       return true
     }
 
-    const probeResult = await this.probeHostedBuiltinTools(provider)
-    await this.reply(probeResult, e.isGroup)
+    const probe = await this.probeHostedBuiltinTools(provider)
+    await this.reply(probe.message, e.isGroup)
 
+    const report = getHostedBuiltinToolReport()
     const lines = [
       `托管内置工具开关：${report.enabled ? '已开启' : '未开启'}${report.enabled ? '' : '（以下为开启后的可用情况）'}`,
       `当前对话模式：${modeMap[use] || use || '未知'}`
@@ -1365,11 +1366,11 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       lines.push('')
       lines.push(`【${item.providerLabel}】`)
       lines.push(`${item.name}（${item.toolType}）：${item.status.available ? (item.skipRequest ? '可用（不单独声明）' : '可用') : '不可用'}`)
-      lines.push(`- ${item.status.reason}`)
+      lines.push(`- ${hidePrivacyInfo(item.status.reason)}`)
     }
 
     lines.push('')
-    lines.push('说明：托管内置工具由服务商在云端执行（联网搜索/网页抓取/文件搜索/代码执行/图像生成），不依赖智能模式；开关开启且条件满足后才会随对应模式的请求发送。')
+    lines.push('说明：托管内置工具由服务商在云端执行（联网搜索/网页抓取/文件搜索/代码执行/图像生成），不依赖智能模式；开关开启且条件满足后才会随对应模式的请求发送。注意：探测通过仅代表端点接受了工具定义，实际是否可用仍要以真实调用为准（例如 image_generation 可能被接受但实际不可用）。')
     await this.reply(lines.join('\n'), e.isGroup)
     return true
   }
@@ -1377,83 +1378,110 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   async probeHostedBuiltinTools (provider) {
     const candidates = getHostedToolProbeCandidates(provider)
     if (candidates.length === 0) {
-      return '当前没有可探测的托管内置工具：请先配置 API Key / 模型，或为 file_search 配置向量库 ID。'
+      return {
+        message: '当前没有可探测的托管内置工具：请先配置 API Key / 模型，或为 file_search 配置向量库 ID。',
+        results: []
+      }
     }
+
+    const results = []
 
     if (provider === 'responses') {
       if (!Config.responsesApiKey) {
-        return '未配置 Responses API Key（responsesApiKey），无法执行探测。'
+        return { message: '未配置 Responses API Key（responsesApiKey），无法执行探测。', results }
       }
       if (!Config.responsesModel) {
-        return '未配置 Responses 模型（responsesModel），无法构造最小 Responses 请求进行探测。'
+        return { message: '未配置 Responses 模型（responsesModel），无法构造最小 Responses 请求进行探测。', results }
       }
       const base = (Config.responsesApiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '')
-      const tools = candidates.map(item => item.requestTool)
-      const body = {
-        model: Config.responsesModel,
-        input: 'ping',
-        instructions: 'Do not use any tools. Reply with ok.',
-        max_output_tokens: 1,
-        tools
-      }
-      try {
-        const res = await newFetch(`${base}/responses`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${Config.responsesApiKey}`
-          },
-          body: JSON.stringify(body)
-        })
-        const text = await res.text()
-        if (res.ok) {
-          return `检测成功（HTTP ${res.status}）。当前端点接受了本次携带的托管内置工具：${candidates.map(item => item.name).join('、')}。`
-        }
-        return `检测失败（HTTP ${res.status}）。\n${text}\n\n本次携带的工具：${candidates.map(item => item.name).join('、')}`
-      } catch (err) {
-        return `检测异常：${err.message}`
-      }
-    }
 
-    if (provider === 'claude') {
+      for (const item of candidates) {
+        const body = {
+          model: Config.responsesModel,
+          input: 'ping',
+          instructions: 'Do not use any tools. Reply with ok.',
+          max_output_tokens: 1,
+          tools: [item.requestTool]
+        }
+        try {
+          const res = await newFetch(`${base}/responses`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${Config.responsesApiKey}`
+            },
+            body: JSON.stringify(body)
+          })
+          const text = await res.text()
+          results.push({
+            name: item.name,
+            ok: res.ok,
+            status: res.status,
+            error: hidePrivacyInfo(text.slice(0, 500))
+          })
+        } catch (err) {
+          results.push({
+            name: item.name,
+            ok: false,
+            status: 0,
+            error: `请求异常：${err.message}`
+          })
+        }
+      }
+    } else if (provider === 'claude') {
       if (!Config.claudeApiKey) {
-        return '未配置 Claude API Key（claudeApiKey），无法执行探测。'
+        return { message: '未配置 Claude API Key（claudeApiKey），无法执行探测。', results }
       }
       const model = Config.claudeApiModel || 'claude-3-sonnet-20240229'
       const base = (Config.claudeApiBaseUrl || 'https://api.anthropic.com').replace(/\/+$/, '')
-      const tools = candidates.map(item => {
+
+      for (const item of candidates) {
         const tool = item.requestTool
         const wire = { type: tool.type, name: tool.name }
         if (Number.isInteger(tool.max_uses)) wire.max_uses = tool.max_uses
-        return wire
-      })
-      const body = {
-        model,
-        max_tokens: 1,
-        messages: [{ role: 'user', content: 'ping' }],
-        tools
-      }
-      try {
-        const res = await newFetch(`${base}/v1/messages`, {
-          method: 'POST',
-          headers: {
-            'anthropic-version': '2023-06-01',
-            'x-api-key': Config.claudeApiKey,
-            'content-type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        })
-        const text = await res.text()
-        if (res.ok) {
-          return `检测成功（HTTP ${res.status}）。当前端点接受了本次携带的托管内置工具：${candidates.map(item => item.name).join('、')}。`
+        const body = {
+          model,
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+          tools: [wire]
         }
-        return `检测失败（HTTP ${res.status}）。\n${text}\n\n本次携带的工具：${candidates.map(item => item.name).join('、')}`
-      } catch (err) {
-        return `检测异常：${err.message}`
+        try {
+          const res = await newFetch(`${base}/v1/messages`, {
+            method: 'POST',
+            headers: {
+              'anthropic-version': '2023-06-01',
+              'x-api-key': Config.claudeApiKey,
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          })
+          const text = await res.text()
+          results.push({
+            name: item.name,
+            ok: res.ok,
+            status: res.status,
+            error: hidePrivacyInfo(text.slice(0, 500))
+          })
+        } catch (err) {
+          results.push({
+            name: item.name,
+            ok: false,
+            status: 0,
+            error: `请求异常：${err.message}`
+          })
+        }
       }
+    } else {
+      return { message: '当前模式不支持托管内置工具探测。', results }
     }
 
-    return '当前模式不支持托管内置工具探测。'
+    setHostedToolProbeResults(provider, Config, results)
+
+    const message = `检测完成（共 ${results.length} 次 API 调用）：\n${results.map(result => {
+      return `- ${result.name}：${result.ok ? `支持（HTTP ${result.status}）` : `不支持（HTTP ${result.status}）：${result.error}`}`
+    }).join('\n')}`
+
+    return { message, results }
   }
 
   async viewAPIModel(e) {

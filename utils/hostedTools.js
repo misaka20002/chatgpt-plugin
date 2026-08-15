@@ -15,6 +15,30 @@ import { Config } from './config.js'
 const OPENAI_RESPONSES_HOST = 'api.openai.com'
 const ANTHROPIC_HOST = 'api.anthropic.com'
 
+// 运行期探测结果缓存：用户用 #chatgpt查看托管内置工具 实际探测过之后，
+// 后续请求发送托管工具时以探测结果为准（避免已知不支持的工具再发出去）。
+const probeResultCache = new Map()
+
+const probeCacheKey = (provider, config = Config) => {
+  return [
+    provider,
+    config.responsesApiBaseUrl || '',
+    config.responsesModel || '',
+    config.claudeApiBaseUrl || '',
+    config.claudeApiModel || ''
+  ].join('|')
+}
+
+export function setHostedToolProbeResults (provider, config = Config, results = []) {
+  if (!Array.isArray(results)) return
+  probeResultCache.set(probeCacheKey(provider, config), new Map(results.map(item => [item.name, item])))
+}
+
+export function getHostedToolProbeResult (provider, toolName, config = Config) {
+  const map = probeResultCache.get(probeCacheKey(provider, config))
+  return map?.get(toolName)
+}
+
 /** 是否为 OpenAI 官方 Responses API 端点（用于 OpenAI 官方专属托管能力判断） */
 export function isOfficialResponsesEndpoint (baseUrl = '') {
   try {
@@ -306,7 +330,12 @@ export const HOSTED_BUILTIN_TOOLS = [
 export function getEnabledHostedBuiltinTools (provider, config = Config) {
   if (config.enableHostedBuiltinTools !== true) return []
   return HOSTED_BUILTIN_TOOLS
-    .filter(tool => tool.provider === provider && tool.skipRequest !== true && tool.getStatus(config).available)
+    .filter(tool => {
+      if (tool.provider !== provider) return false
+      const cached = getHostedToolProbeResult(provider, tool.name, config)
+      if (cached) return cached.ok
+      return tool.skipRequest !== true && tool.getStatus(config).available
+    })
     .map(tool => ({
       ...tool,
       requestTool: tool.buildRequestTool ? tool.buildRequestTool(config) : tool.requestTool
@@ -335,14 +364,25 @@ export function getHostedToolProbeCandidates (provider, config = Config) {
 export function getHostedBuiltinToolReport (config = Config) {
   return {
     enabled: config.enableHostedBuiltinTools === true,
-    items: HOSTED_BUILTIN_TOOLS.map(tool => ({
-      id: tool.id,
-      provider: tool.provider,
-      providerLabel: tool.providerLabel,
-      name: tool.name,
-      toolType: tool.toolType,
-      skipRequest: tool.skipRequest === true,
-      status: tool.getStatus(config)
-    }))
+    items: HOSTED_BUILTIN_TOOLS.map(tool => {
+      const cached = getHostedToolProbeResult(tool.provider, tool.name, config)
+      const status = cached
+        ? {
+            available: cached.ok,
+            reason: cached.ok
+              ? `实际探测通过（HTTP ${cached.status}）：当前端点接受该工具`
+              : `实际探测失败（HTTP ${cached.status}）：${cached.error}`
+          }
+        : tool.getStatus(config)
+      return {
+        id: tool.id,
+        provider: tool.provider,
+        providerLabel: tool.providerLabel,
+        name: tool.name,
+        toolType: tool.toolType,
+        skipRequest: tool.skipRequest === true,
+        status
+      }
+    })
   }
 }
