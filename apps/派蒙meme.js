@@ -133,50 +133,69 @@ export class memes extends plugin {
     mkdirs('data/memes')
     keyMap = {}
     infos = {}
-    if (fs.existsSync('data/memes/infos.json')) {
-      infos = fs.readFileSync('data/memes/infos.json')
-      infos = JSON.parse(infos)
-    }
-    if (fs.existsSync('data/memes/keyMap.json')) {
-      keyMap = fs.readFileSync('data/memes/keyMap.json')
-      keyMap = JSON.parse(keyMap)
-    }
-    if (Object.keys(infos).length === 0) {
-      logger.mark('yunzai-meme infos资源本地不存在，正在远程拉取中')
-      let infosRes = await fetch(`${baseUrl}/memes/static/infos.json`)
-      if (infosRes.status === 200) {
-        infos = await infosRes.json()
-        fs.writeFileSync('data/memes/infos.json', JSON.stringify(infos))
-      }
-    }
-    if (Object.keys(keyMap).length === 0) {
-      logger.mark('yunzai-meme keyMap资源本地不存在，正在远程拉取中')
-      let keyMapRes = await fetch(`${baseUrl}/memes/static/keyMap.json`)
-      if (keyMapRes.status === 200) {
-        keyMap = await keyMapRes.json()
-        fs.writeFileSync('data/memes/keyMap.json', JSON.stringify(keyMap))
-      }
-    }
-    if (Object.keys(infos).length === 0 || Object.keys(keyMap).length === 0) {
-      // 只能本地生成了
-      let keysRes = await fetch(`${baseUrl}/memes/keys`)
-      let keys = await keysRes.json()
 
-      let keyMapTmp = {}
-      let infosTmp = {}
-      for (const key of keys) {
-        let keyInfoRes = await fetch(`${baseUrl}/memes/${key}/info`)
-        let info = await keyInfoRes.json()
-        info.keywords.forEach(keyword => {
-          keyMapTmp[keyword] = key
-        })
-        infosTmp[key] = info
+    // 本地缓存读取，文件损坏也不要炸
+    const readJsonFile = (file) => {
+      try {
+        if (fs.existsSync(file)) {
+          return JSON.parse(fs.readFileSync(file, 'utf-8'))
+        }
+      } catch (e) {
+        logger.warn(`[meme] 本地缓存 ${file} 读取/解析失败，将忽略:`, e.message)
+        try { fs.unlinkSync(file) } catch { }
       }
-      infos = infosTmp
-      keyMap = keyMapTmp
-      fs.writeFileSync('data/memes/keyMap.json', JSON.stringify(keyMap))
-      fs.writeFileSync('data/memes/infos.json', JSON.stringify(infos))
+      return {}
     }
+    infos = readJsonFile('data/memes/infos.json')
+    keyMap = readJsonFile('data/memes/keyMap.json')
+
+    // 远端拉取失败不应阻塞插件加载（HF Space 等已下线时这里会全失败）
+    try {
+      if (!baseUrl) {
+        throw new Error('meme_baseUrl 未配置')
+      }
+      if (Object.keys(infos).length === 0) {
+        logger.mark('yunzai-meme infos资源本地不存在，正在远程拉取中')
+        const data = await fetchJsonWithRetry(`${baseUrl}/memes/static/infos.json`)
+        if (data && Object.keys(data).length) {
+          infos = data
+          fs.writeFileSync('data/memes/infos.json', JSON.stringify(infos))
+        }
+      }
+      if (Object.keys(keyMap).length === 0) {
+        logger.mark('yunzai-meme keyMap资源本地不存在，正在远程拉取中')
+        const data = await fetchJsonWithRetry(`${baseUrl}/memes/static/keyMap.json`)
+        if (data && Object.keys(data).length) {
+          keyMap = data
+          fs.writeFileSync('data/memes/keyMap.json', JSON.stringify(keyMap))
+        }
+      }
+      if (Object.keys(infos).length === 0 || Object.keys(keyMap).length === 0) {
+        // 只能本地生成了
+        const keys = await fetchJsonWithRetry(`${baseUrl}/memes/keys`)
+        if (Array.isArray(keys) && keys.length) {
+          const keyMapTmp = {}
+          const infosTmp = {}
+          for (const key of keys) {
+            const keyInfoRes = await fetch(`${baseUrl}/memes/${key}/info`)
+            const info = await safeJson(keyInfoRes)
+            if (info && Array.isArray(info.keywords)) {
+              info.keywords.forEach(keyword => {
+                keyMapTmp[keyword] = key
+              })
+              infosTmp[key] = info
+            }
+          }
+          if (Object.keys(infosTmp).length) infos = infosTmp
+          if (Object.keys(keyMapTmp).length) keyMap = keyMapTmp
+          fs.writeFileSync('data/memes/keyMap.json', JSON.stringify(keyMap))
+          fs.writeFileSync('data/memes/infos.json', JSON.stringify(infos))
+        }
+      }
+    } catch (err) {
+      logger.warn('[meme] 远程拉取 meme 资源失败，插件仍可加载但功能将不可用:', err.message)
+    }
+
     let rules = []
     Object.keys(keyMap).forEach(key => {
       let reg = forceSharp ? `^#${key}` : `^#?${key}`
@@ -800,4 +819,44 @@ async function getAvatar(e, userId = e.sender.user_id) {
     return await e.getAvatarUrl(0)
   }
   return `https://q1.qlogo.cn/g?b=qq&s=0&nk=${userId}`
+}
+
+/**
+ * 安全解析 JSON 响应。
+ * - 非 200 / 非 JSON content-type / 解析失败一律返回 null，避免被 HTML 错误页炸到外层
+ * - 注意：response 只能消费一次，调用方拿到结果后不能再用该 response
+ */
+async function safeJson(response) {
+  if (!response || response.status !== 200) return null
+  const ct = response.headers.get('content-type') || ''
+  if (!ct.toLowerCase().includes('json')) return null
+  try {
+    return await response.json()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 带重试的 JSON 拉取。
+ * 远端（如 HF Space）偶发超时或响应截断，infos.json 已超过 300KB，单次失败概率不低。
+ * @param {string} url
+ * @param {number} retries 最大尝试次数
+ * @returns {Promise<any|null>} 失败返回 null，不抛错
+ */
+async function fetchJsonWithRetry(url, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url)
+      const data = await safeJson(res)
+      if (data) return data
+      logger.warn(`[meme] 拉取 ${url} 返回非预期内容 (第${i + 1}次)`)
+    } catch (e) {
+      logger.warn(`[meme] 拉取 ${url} 失败 (第${i + 1}次): ${e.message}`)
+    }
+    if (i < retries - 1) {
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)))
+    }
+  }
+  return null
 }
