@@ -54,7 +54,7 @@ let helpData = [
       {
         icon: 'list',
         title: '#我的记忆',
-        desc: '#群记忆 #记忆帮助'
+        desc: '#群记忆 #记忆帮助 #群记忆状态'
       },
       {
         icon: 'list',
