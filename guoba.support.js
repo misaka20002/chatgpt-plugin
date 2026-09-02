@@ -1450,12 +1450,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'enableUserProfileTool',
-          label: '工具新增-用户画像工具',
-          bottomHelpMessage: '根据用户在群聊中的历史消息，使用子LLM生成用户画像（兴趣偏好、交流风格、活跃特征、性格倾向）；仅限群聊使用；可在Bot人设中加入"你将总是使用 userProfile 工具分析用户"',
-          component: 'Switch'
-        },
-        {
           field: 'enableGroupMemberSkillTool',
           label: '工具新增-群友Nuwa Skill',
           bottomHelpMessage: '仅Bot主人可用。读取当前群指定群友的历史文本，脱敏后提交当前子LLM分阶段蒸馏，并生成符合Agent Skills规范的ZIP附件；默认关闭。',
@@ -1662,13 +1656,19 @@ export function supportGuoba() {
         {
           field: 'enableMemory',
           label: '启用记忆系统',
-          bottomHelpMessage: '允许AI主动保存和使用用户记忆（用户画像、情感、偏好等），用于提供更个性化的对话体验；需要在系统提示词中写入积极调用 Memory_Tool ；可用指令： #记忆帮助',
+          bottomHelpMessage: '智能模式 V2 记忆系统唯一总开关；开启后同时开放 Memory_Tool 与 userProfile 工具；群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助',
+          component: 'Switch'
+        },
+        {
+          field: 'enableUserProfileHistoryScan',
+          label: '画像扫描群历史',
+          bottomHelpMessage: '是否允许 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像（默认开启）；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实（无副作用）',
           component: 'Switch'
         },
         {
           field: 'maxMemoriesPerUser',
           label: '单用户最大记忆数量',
-          bottomHelpMessage: '每个用户最多保存的记忆条数，超过后会删除最早的记忆',
+          bottomHelpMessage: '每用户在每个作用域（跨群 user、每个群的 user_group）最多保存的原子事实数（默认 100），超过后按 重要性×时效 淘汰得分最低的一条',
           component: 'InputNumber',
           componentProps: {
             min: 10,
@@ -1678,22 +1678,105 @@ export function supportGuoba() {
         {
           field: 'memoryMinImportance',
           label: '记忆最低重要性',
-          bottomHelpMessage: '附加到对话的记忆最低重要性等级（1-10），低于此等级的记忆不会被加入对话上下文',
+          bottomHelpMessage: '注入对话的记忆最低重要性阈值（0-1），低于此值且与当前问题不相关的记忆不注入',
           component: 'InputNumber',
           componentProps: {
-            min: 1,
-            step: 1,
-            max: 10
+            min: 0.05,
+            step: 0.05,
+            max: 1
           }
         },
         {
           field: 'memoryContextLimit',
           label: '对话记忆数量限制',
-          bottomHelpMessage: '每次对话最多附加多少条记忆到上下文中，按重要性排序',
+          bottomHelpMessage: '每次对话最多注入多少条相关记忆，按 问题相关性+重要性+置信度 排序',
           component: 'InputNumber',
           componentProps: {
             min: 1,
             step: 1
+          }
+        },
+        {
+          field: 'memoryGroupCapture.cronTime',
+          label: '每日提炼时间',
+          bottomHelpMessage: '每日批量提炼的 Cron 表达式（EasyCron），默认 0 0 4 * * ? *（每天凌晨4点提炼已结束的北京时间自然日）；修改后重启生效',
+          component: 'EasyCron',
+          componentProps: {
+            placeholder: '请输入或选择Cron表达式',
+          },
+        },
+        {
+          field: 'memoryGroupCapture.groups',
+          label: '授权采集群',
+          bottomHelpMessage: '群聊采集必须由 Bot 主人在此显式授权或群内 #群记忆开启；仅采集授权群的非指令、非Bot纯文本，原文默认保留30天；⚠️ 关闭某群的"开启采集"开关仅停止后续采集，不会删除已采集的原文与记忆，如需来源级清理请在群内使用 #群记忆关闭 指令',
+          component: 'GSubForm',
+          componentProps: {
+            multiple: true,
+            schemas: [
+              {
+                field: 'groupId',
+                label: '群号',
+                component: 'Input',
+                required: true,
+              },
+              {
+                field: 'switchOn',
+                label: '开启采集',
+                component: 'Switch',
+                bottomHelpMessage: '需要群内使用 #群记忆开启 #群记忆关闭 指令来触发记忆清理功能',
+              },
+            ],
+          },
+        },
+        {
+          field: 'memoryGroupCapture.rawRetentionDays',
+          label: '原文保留天数',
+          bottomHelpMessage: '采集到的群消息原文保留天数，默认 30 天',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            step: 1
+          }
+        },
+        {
+          field: 'memoryGroupCapture.eventRetentionDays',
+          label: '事件保留天数',
+          bottomHelpMessage: '未指定期限的临时事件（episode）默认保留天数，默认 90 天',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            step: 1
+          }
+        },
+        {
+          field: 'memoryGroupCapture.inputTokenLimit',
+          label: '提取输入Token上限',
+          bottomHelpMessage: '每日提炼单次模型输入 Token 上限，默认 30000',
+          component: 'InputNumber',
+          componentProps: {
+            min: 256,
+            step: 1000
+          }
+        },
+        {
+          field: 'memoryGroupCapture.outputTokenLimit',
+          label: '提取输出Token上限',
+          bottomHelpMessage: '每日提炼模型输出 Token 上限，默认 4096',
+          component: 'InputNumber',
+          componentProps: {
+            min: 256,
+            step: 256
+          }
+        },
+        {
+          field: 'memoryGroupCapture.minConfidence',
+          label: '最低置信度',
+          bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.05,
+            step: 0.05,
+            max: 1
           }
         },
         {

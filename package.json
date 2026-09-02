@@ -53,5 +53,8 @@
     "patchedDependencies": {
       "@google/generative-ai@0.1.1": "patches/@google__generative-ai@0.1.1.patch"
     }
+  },
+  "scripts": {
+    "test:memory": "node --test test/memoryV2.test.js test/chain.test.mjs test/chain2.test.mjs test/chain3.test.mjs test/chain5.test.mjs"
   }
 }

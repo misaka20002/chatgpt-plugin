@@ -1064,19 +1064,19 @@ export class chatgpt extends plugin {
     if (Config.switch_ChatCooldown)
       await ChatCooldown.start(e.user_id, e.group_id)
 
-    // 加载用户记忆（如果启用）
+    // 加载相关记忆（V2：按当前问题相关性召回，非最新N条）
     if (Config.enableMemory) {
       try {
-        const { UserMemory } = await import('../utils/userMemory.js')
-        const memories = await UserMemory.getUserMemories(
-          e.user_id,
-          Config.memoryContextLimit,
-          Config.memoryMinImportance
-        )
-        if (memories && memories.length > 0) {
-          const memoryPrompt = UserMemory.formatMemoriesForPrompt(memories)
-          prompt += memoryPrompt
-          logger.info(`[Memory] 为用户 ${e.user_id} 加载了 ${memories.length} 条记忆`)
+        const { buildMemoryPrompt } = await import('../utils/memory/recall.js')
+        const memoryPrompt = await buildMemoryPrompt(e, prompt, {
+          config: {
+            memoryContextLimit: Config.memoryContextLimit,
+            memoryMinImportance: Config.memoryMinImportance,
+          }
+        })
+        if (memoryPrompt) {
+          prompt = memoryPrompt + '\n\n' + prompt
+          logger.info(`[Memory] 为用户 ${e.user_id} 召回了 ${memoryPrompt.split('\n').filter(l => l.startsWith('- [')).length} 条相关记忆`)
         }
       } catch (err) {
         logger.error('[Memory] 加载记忆失败:', err)
