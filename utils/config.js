@@ -351,7 +351,7 @@ const defaultConfig = {
 
   // 智能模式 V2 记忆系统配置（群聊采集须由 Bot 主人在锅巴或当前群显式授权）
   enableMemory: false, // 是否启用记忆系统（唯一总开关，同时开放 Memory_Tool 与 userProfile）
-  enableUserProfileHistoryScan: true, // userProfile 是否从当前群历史扫描目标用户最近文本消息（关闭后仅返回已存画像，无副作用）
+  enableUserProfileHistoryScan: false,
   maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）的 V2 记忆上限
   memoryMinImportance: 0.4, // 注入对话的最低重要性阈值（0-1）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数

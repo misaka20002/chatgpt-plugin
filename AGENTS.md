@@ -49,7 +49,7 @@
 `opt.enableSmart` 时调用 `collectTools(e)` 收集工具（条件注册，如 `{ condition: Config.enableMemory, ToolClass: MemoryTool }`）→ 工具 schema 注入 → 模型调用工具 → 执行 `func(opts, e)` → 结果回填。**工具注册统一由配置开关控制，勿新增无条件注册。**
 
 ### 记忆系统 V2（`utils/memory/`）
-1. **采集**：`apps/memoryGroupObserver.js`（priority **-1011**，TRSS 升序调度下最先执行）→ `capture.observe(e)`：仅授权群、非指令、非 Bot、纯文本 → `store.saveRawMessage`（原文 TTL=30 天）
+1. **采集**：`apps/memoryGroupObserver.js`（priority **-1011**，TRSS 升序调度下最先执行）→ `capture.observe(e)`：仅授权群、非指令、非 Bot；纯文本入库，富媒体段以占位符标记（`[图片]`/`[表情]`/`[语音]`/`[视频]`/`[文件]`，内容本身不入库）→ `store.saveRawMessage`（原文 TTL=30 天）
 2. **每日提炼**：`apps/memoryManage.js` 的 task（EasyCron `memoryGroupCapture.cronTime`，修改后重启生效）→ `dailyTask.runDaily`：北京时间自然日、断点游标、幂等、失败退避重试、needsReextract 重提炼
 3. **提取+校验**：`extractor.runExtraction` → 模型（`systemPrompt: EXTRACTOR_SYSTEM`）→ `parseCandidates` → 服务端校验（证据归属/作用域/置信度/敏感/长度）→ `store.applyCandidates`
 4. **存储**：`store.js` —— 作用域 `user`/`user_group`/`group`；add/reinforce(+0.04)/update(单值替换)/retract；证据集合；索引（idx/slot/grp）
