@@ -50,7 +50,7 @@
 
 ### 记忆系统 V2（`utils/memory/`）
 1. **采集**：`apps/memoryGroupObserver.js`（priority **-1011**，TRSS 升序调度下最先执行）→ `capture.observe(e)`：仅授权群、非指令、非 Bot；纯文本入库，富媒体段以占位符标记（`[图片]`/`[表情]`/`[语音]`/`[视频]`/`[文件]`，内容本身不入库）→ `store.saveRawMessage`（原文 TTL=30 天）
-2. **每日提炼**：`apps/memoryManage.js` 的 task（EasyCron `memoryGroupCapture.cronTime`，修改后重启生效）→ `dailyTask.runDaily`：北京时间自然日、断点游标、幂等、失败退避重试、needsReextract 重提炼
+2. **每日提炼**：`apps/memoryManage.js` 的 task（EasyCron `memoryGroupCapture.cronTime`，修改后重启生效）→ `dailyTask.runDaily`：北京时间自然日、断点游标、幂等、needsReextract 重提炼；**失败重试**：runDaily（`drainDueWindows`）对每个窗口**当日最多尝试 3 次**（节奏 0/5/10min：第 1 次立即、失败后固定等 5min 再试，`MAX_ATTEMPTS_PER_RUN=3` 额度耗尽留次日），总上限 `MAX_ATTEMPTS=20` 跨 runDaily 日累计、达即 failed；手动 `#立即提取`（`flushDueWindows`，`waitRetry:false`）**不等退避**、失败即返回并提示退避中窗口数；**错误分类**：网络/429/5xx 可重试，其他 4xx 短路直接 failed；手动重置 failed 任务 `attemptCount` 归零；**分片断点**：token 分片每成功一片即持久化到 task hash 的 `chunksDone`，重试经 `runExtraction` 的 `resumeChunks` 只补跑失败片（成功后清空）
 3. **提取+校验**：`extractor.runExtraction` → 模型（`systemPrompt: EXTRACTOR_SYSTEM`）→ `parseCandidates` → 服务端校验（证据归属/作用域/置信度/敏感/长度）→ `store.applyCandidates`
 4. **存储**：`store.js` —— 作用域 `user`/`user_group`/`group`；add/reinforce(+0.04)/update(单值替换)/retract；证据集合；索引（idx/slot/grp）
 5. **召回**：`recall.buildMemoryPrompt(e, prompt)` 注入对话（相关性 bigram 匹配 + 常驻画像 + @目标切换主体；输出标注"不可信数据"）
@@ -123,4 +123,5 @@
 - 历史补录消息可能为段数组 / `message` 字符串 / `raw_message` 三种形态，提取文本需全部兼容。
 - 锅巴 GSubForm 保存的是数组（如 `memoryGroupCapture.groups`），读取用 `Array.isArray` 防护。
 - **数字配置回退统一用 `||`**：除 `minConfidence` 外，`inputTokenLimit` / `outputTokenLimit` / `eventRetentionDays` / `maxMemoriesPerUser` 等读取处同理（`Number(...) || 默认`）。
+- **分片断点 `chunksDone` 的失效条件**：`runExtraction` 的断点续跑假设"同窗口 rows 不变 → 分区确定"，因此**原文变化的路径必须清断点**——`ensureTask` 的 needsReextract 分支重置 pending 时清 `chunksDone` 并把 `attemptCount` 归零；空窗/成功后也清空。`processWindow` 失败重试时不清断点（恰好用于续跑）。`chunksDone` 存于 task hash（字符串化 JSON，`store.setTask` 只写指定字段、其余保留），崩溃恢复（running>10min → pending）后断点依然有效。
 - **TRSS loader 的定时任务 `task.fnc` 必须传函数引用**（如 `this.runDaily.bind(this)`），不能传方法名字符串：`loader.collectTask` 只校验 `i.cron && i.fnc` 后原样入队，`startTask` 直接 `await i.fnc()`，字符串会被当作函数调用报 `TypeError: i.fnc is not a function`。注册方式参考 `apps/ScheduleTaskPlugin.js` 等：把 `task` 放在构造函数体内（`super()` 之后赋值 `this.task`，此时才能 `bind(this)`），而不是塞进 `super({...})` 配置。注意消息路由的 `rule[].fnc` 仍是字符串（loader 用 `plugin[v.fnc](e)` 按名解析），二者约定不同，勿混淆。
