@@ -1661,8 +1661,8 @@ export function supportGuoba() {
         },
         {
           field: 'enableUserProfileHistoryScan',
-          label: '画像扫描群历史',
-          bottomHelpMessage: '是否允许 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像（默认开启）；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实（无副作用）',
+          label: '画像工具扫描群历史',
+          bottomHelpMessage: '是否允许查看用户画像 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实；为提高ai回答速度，默认关闭',
           component: 'Switch'
         },
         {
