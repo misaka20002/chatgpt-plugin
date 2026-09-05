@@ -29,11 +29,6 @@ export class memoryManage extends plugin {
       event: 'message',
       // 数字越小优先级越高（TRSS 升序调度）：500 < chat.js(1144)
       priority: 500,
-      task: {
-        name: '记忆每日提炼',
-        cron: normalizeCron(Config.memoryGroupCapture?.cronTime),
-        fnc: 'runDaily'
-      },
       rule: [
         {
           reg: '^#我的记忆$',
@@ -104,6 +99,12 @@ export class memoryManage extends plugin {
         }
       ]
     })
+
+    this.task = {
+      name: '记忆每日提炼',
+      cron: normalizeCron(Config.memoryGroupCapture?.cronTime),
+      fnc: this.runDaily.bind(this)
+    }
   }
 
   /* ================= 群记忆管理指令（原 groupMemoryManage） ================= */

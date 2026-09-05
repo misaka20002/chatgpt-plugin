@@ -4,17 +4,28 @@
  * - 只处理已结束的北京时间自然日
  * - 断点游标：group policy 的 lastDailyEnd，逐日推进，漏跑自动补提炼
  * - 幂等：任务唯一（group+day），completed 且内容哈希一致则跳过
- * - 失败重试：指数退避 5min×2^(n-1)，上限 60min，最多 maxAttempts 次
+ * - 失败重试：runDaily（drainDueWindows）对每个窗口**当日最多尝试 3 次**，
+ *   节奏 0/5/10min（第 1 次立即，每次失败后固定等 backoffBaseMs=5min 再试；
+ *   第 3 次仍失败则当日额度耗尽，任务留 pending 等次日 runDaily 继续）
+ * - 总尝试上限 MAX_ATTEMPTS（默认 20，跨天累计）：达到即 failed 终态，不再自动重试；
+ *   手动重置 failed 任务时 attemptCount 归零（重新给完整预算）
+ * - 手动 #立即提取（waitRetry=false，flushDueWindows）不等退避，失败即返回
+ * - 错误分类：网络错误 / 429 / 5xx 可重试；其他 4xx（鉴权失败等确定性错误）短路直接 failed
+ * - 分片断点：窗口按 token 上限分片，每片成功即持久化（task.chunksDone），
+ *   失败重试时 resumeChunks 命中跳过已成功片，只重试失败片
  * - 崩溃恢复：running 超过 10 分钟重置为 pending
  */
 
 import { Config } from '../config.js'
 import { MemoryStore } from './store.js'
-import { runExtraction, toPromptRows } from './extractor.js'
+import { runExtraction, toPromptRows, isRetryableLLMError } from './extractor.js'
 import { contentHash } from './capture.js'
 
 const DEFAULT_CRON = '0 0 4 * * ? *'
-const MAX_ATTEMPTS = 3
+// 总尝试上限（跨 runDaily 日累计；配合每日 MAX_ATTEMPTS_PER_RUN 次额度）
+const MAX_ATTEMPTS = 20
+// 每次 runDaily 单窗口当日尝试额度（节奏 0/5/10min：2 次失败等待 × backoffBaseMs）
+const MAX_ATTEMPTS_PER_RUN = 3
 const MAX_WINDOWS_PER_SCAN = 2
 const CRASH_TIMEOUT_MS = 10 * 60 * 1000
 
@@ -65,6 +76,9 @@ export class DailyConsolidation {
   constructor(options = {}) {
     this.store = options.store || new MemoryStore()
     this.processing = false
+    // 可注入项供测试：失败重试固定等待间隔（生产默认 5min，实现 0/5/10min 节奏）、sleep 实现
+    this.backoffBaseMs = options.backoffBaseMs ?? 5 * 60 * 1000
+    this.sleepMs = options.sleepMs ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
   }
 
   cfg() {
@@ -108,7 +122,10 @@ export class DailyConsolidation {
    * 处理单个群的每日提炼
    * @param {string} groupId
    * @param {Object} cfg
-   * @param {Object} [options] { includeToday: boolean } 立即提取时允许处理今天
+   * @param {Object} [options] { includeToday: boolean, waitRetry: boolean }
+   *   includeToday: 立即提取时允许处理今天
+   *   waitRetry: 默认 true（后台 runDaily）失败按退避等待当天重试；
+   *              false（手动 #立即提取）只消化当前到期任务，失败即返回等下次自动重试
    */
   async processGroupDaily(groupId, cfg, options = {}) {
     const store = this.store
@@ -158,14 +175,74 @@ export class DailyConsolidation {
     // 3.5 消化悬空的 needsReextract 标记（游标范围外的 dirty 任务，如"立即提取后又有新消息"的今天）
     const requeuedDirty = await this.requeueDirtyTasks(gid)
 
-    // 4. 处理到期任务（分批串行，直到本轮全部消化，保证补提炼即时性）
+    // 4. 处理到期任务：后台 runDaily 按退避真实等待当天完成多次轮询；
+    //    手动 #立即提取（waitRetry=false）不等退避，失败即返回，重试留给下次 runDaily/手动
+    const processed = options.waitRetry === false
+      ? await this.flushDueWindows(gid, cfg)
+      : await this.drainDueWindows(gid, cfg)
+    return { queued, requeuedDirty, processed, lastDailyEnd: newCursor }
+  }
+
+  /**
+   * 只消化当前到期任务（不等待退避）：每窗口本轮至多尝试一次，
+   * 失败后任务回 pending 等下次 runDaily / #立即提取 到期再试。
+   * 用于手动 #立即提取群记忆，避免指令被退避 sleep 阻塞数十分钟。
+   */
+  async flushDueWindows(groupId, cfg) {
     const processed = []
     for (let round = 0; round < 10; round++) {
-      const batch = await this.processDueWindows(gid, cfg)
+      const batch = await this.processDueWindows(groupId, cfg)
       processed.push(...batch)
       if (batch.length === 0) break
     }
-    return { queued, requeuedDirty, processed, lastDailyEnd: newCursor }
+    return processed
+  }
+
+  /**
+   * 消化到期任务：对每个窗口**当日最多尝试 MAX_ATTEMPTS_PER_RUN 次**（节奏 0/5/10min）——
+   * 处理一批后，若存在"失败重试且当日额度未耗尽"（pending 且 nextAttemptAt 未到）的任务，
+   * sleep 等到最早到期点（固定 5min）继续；窗口第 3 次仍失败则当日额度耗尽，
+   * 不再等待它（任务留 pending 等次日 runDaily / 手动触发），直到无到期窗口、无有额度等待任务。
+   * sleep 用异步定时器，等待期间不阻塞事件循环（群消息/请求照常处理）。
+   */
+  async drainDueWindows(groupId, cfg) {
+    const processed = []
+    // day -> 本次运行内该窗口失败的次数（== 已执行的尝试数，成功路径不计）
+    const failCount = new Map()
+    const exhausted = (day) => (failCount.get(day) || 0) >= MAX_ATTEMPTS_PER_RUN
+    for (;;) {
+      const batch = await this.processDueWindows(groupId, cfg)
+      for (const r of batch) {
+        processed.push(r)
+        // 仅计数失败重试：失败一次 → retry 一次，达到当日额度即停止当天继续尝试
+        if (r.status === 'retry') failCount.set(r.day, (failCount.get(r.day) || 0) + 1)
+      }
+      // 本批仍有到期窗口被处理（每批最多 MAX_WINDOWS_PER_SCAN 个）→ 继续消化剩余到期窗口
+      if (batch.length > 0) continue
+      const waitMs = await this.nextRetryWaitMs(groupId, exhausted)
+      if (waitMs === null) break
+      if (waitMs > 0) await this.sleepMs(waitMs)
+    }
+    return processed
+  }
+
+  /** 距最近一个"pending、未到期且当日额度未耗尽"的重试任务的等待毫秒；无则 null */
+  async nextRetryWaitMs(groupId, exhausted) {
+    const tasks = await this.store.listTasks(groupId)
+    const now = Date.now()
+    let earliest = Infinity
+    for (const t of tasks) {
+      if (t.status === 'pending') {
+        if (exhausted && exhausted(t.day)) continue // 当日额度用完：留待下次 runDaily/手动
+        const at = Number(t.nextAttemptAt || 0)
+        if (at > now && at < earliest) earliest = at
+      }
+    }
+    if (!Number.isFinite(earliest)) return null
+    const waitMs = Math.max(0, earliest - now)
+    // 脏数据守卫：退避由 processWindow 保证 ≤ backoffBaseMs，超限说明任务数据异常，留待下次调度
+    if (waitMs > this.backoffBaseMs + 5000) return null
+    return waitMs
   }
 
   /**
@@ -205,6 +282,9 @@ export class DailyConsolidation {
       await store.setTask(groupId, day, {
         status: 'pending',
         needsReextract: '',
+        // 原文已变化：旧分片结果作废，且重提炼应重新计数尝试
+        chunksDone: '',
+        attemptCount: 0,
         nextAttemptAt: Date.now(),
         updatedAt: Date.now(),
       })
@@ -255,13 +335,20 @@ export class DailyConsolidation {
     // 完成后保留脏标记，由下一轮 runDaily 的 requeueDirtyTasks 重提炼
     await store.setTask(groupId, day, { status: 'running', attemptCount, needsReextract: '', nextAttemptAt: '', updatedAt: Date.now() })
 
+    // 断点续跑：上次失败时已成功的分片（chunksDone）本窗继续复用，只重试失败片
+    let resumeChunks = []
+    try {
+      const parsed = JSON.parse(task.chunksDone || '[]')
+      if (Array.isArray(parsed)) resumeChunks = parsed
+    } catch { /* 坏数据按无断点处理 */ }
+
     try {
       const dayStart = dayToTs(day)
       const raws = await store.getRawMessages(String(groupId), dayStart, dayStart + 86400 - 1)
       const rows = raws.filter(r => !r.isCommand && r.text)
       if (rows.length === 0) {
         const hash = contentHash('')
-        await store.setTask(groupId, day, { status: 'completed', contentHash: hash, resultJson: '{"candidates":0}', updatedAt: Date.now() })
+        await store.setTask(groupId, day, { status: 'completed', contentHash: hash, chunksDone: '', resultJson: '{"candidates":0}', updatedAt: Date.now() })
         return { status: 'completed', candidates: 0 }
       }
 
@@ -275,6 +362,11 @@ export class DailyConsolidation {
         ctx: { groupId: String(groupId), day, windowLabel: `${day} 全天` },
         evidenceMap,
         llm: cfg.llm, // 测试注入/自定义提取调用
+        resumeChunks,
+        // 每成功一片即持久化断点：窗口级重试/崩溃恢复后只补跑未完成片
+        onChunkProgress: async (done) => {
+          await store.setTask(groupId, day, { chunksDone: JSON.stringify(done) })
+        },
         cfg: {
           inputTokenLimit: cfg.inputTokenLimit,
           outputTokenLimit: cfg.outputTokenLimit,
@@ -296,6 +388,7 @@ export class DailyConsolidation {
       await store.setTask(groupId, day, {
         status: 'completed',
         contentHash: hash,
+        chunksDone: '', // 全部片成功，清除断点
         // 不写 needsReextract：运行期间若到达新消息已由 saveRawMessage 标记，保留给下一轮重提炼
         resultJson: JSON.stringify({ candidates: results.length, accepted, rejected: rejected.length }),
         updatedAt: Date.now(),
@@ -303,12 +396,15 @@ export class DailyConsolidation {
       return { status: 'completed', candidates: results.length, accepted, rejected: rejected.length }
     } catch (err) {
       const message = String(err?.message || err).slice(0, 500)
-      if (attemptCount >= maxAttempts) {
+      // 确定性错误（4xx 除 429：鉴权失败、模型不存在等）重试无意义 → 直接 failed；
+      // 网络/429/5xx 且未达次数上限 → 退避后重试
+      if (!isRetryableLLMError(err) || attemptCount >= maxAttempts) {
         await store.setTask(groupId, day, { status: 'failed', error: message, updatedAt: Date.now() })
         return { status: 'failed', error: message }
       }
-      const backoff = Math.min(60 * 60 * 1000, 5 * 60 * 1000 * 2 ** (attemptCount - 1))
-      const nextAt = Date.now() + backoff
+      // 保留 chunksDone：已成功片断点留在任务上，下次重试只补跑失败片。
+      // 节奏 0/5/10min：每次失败后固定等 backoffBaseMs（5min），当日尝试次数由 drain 额度（3）控制
+      const nextAt = Date.now() + this.backoffBaseMs
       await store.setTask(groupId, day, { status: 'pending', nextAttemptAt: nextAt, error: message.slice(0, 300), updatedAt: Date.now() })
       return { status: 'retry', nextAttemptAt: nextAt }
     }
@@ -317,6 +413,8 @@ export class DailyConsolidation {
   /**
    * 立即提取：入队最近未处理窗口（含今天）+ 重置 failed + 立即处理
    * 仅限已授权采集的群；与 runDaily 共享 processing 并发锁，避免重复调用模型
+   * 注意：waitRetry=false —— 不等退避（失败即返回，重试由下次 runDaily/手动到期触发），
+   * 避免手动指令被 5/10/20min 退避 sleep 阻塞数十分钟
    */
   async runImmediate(groupId, cfg = this.cfg()) {
     if (!Config.enableMemory) return { ok: false, message: '总开关未启用' }
@@ -327,20 +425,36 @@ export class DailyConsolidation {
     if (this.processing) return { ok: false, message: '每日提炼任务正在执行中，请稍后再试' }
     this.processing = true
     try {
-      // 重置 failed 任务为 pending（失败重试）
+      // 重置 failed 任务为 pending（失败重试）：attemptCount 归零，重新给满 maxAttempts 预算
       const tasks = await this.store.listTasks(gid)
       let retried = 0
       for (const t of tasks) {
         if (t.status === 'failed') {
-          await this.store.setTask(gid, t.day, { status: 'pending', nextAttemptAt: Date.now(), error: '', updatedAt: Date.now() })
+          await this.store.setTask(gid, t.day, { status: 'pending', attemptCount: 0, nextAttemptAt: Date.now(), error: '', updatedAt: Date.now() })
           retried++
         }
       }
 
       // 入队已结束日 + 今天（含补漏）；processGroupDaily 内部已消化到期任务与脏标记
-      const report = await this.processGroupDaily(gid, cfg, { includeToday: true })
+      const report = await this.processGroupDaily(gid, cfg, { includeToday: true, waitRetry: false })
       const processedCount = (report.processed || []).length
-      return { ok: true, message: `已触发提取：入队 ${report.queued} 个窗口，失败重试 ${retried} 个，脏标记重提炼 ${report.requeuedDirty || 0} 个，本轮处理 ${processedCount} 个窗口` }
+      let message = `已触发提取：入队 ${report.queued} 个窗口，失败重试 ${retried} 个，脏标记重提炼 ${report.requeuedDirty || 0} 个，本轮处理 ${processedCount} 个窗口`
+      // 退避等待中的窗口提示：手动 flush 不等退避，这些窗口会在到期后由后台自动重试
+      const now = Date.now()
+      const waiting = []
+      for (const t of await this.store.listTasks(gid)) {
+        if (t.status === 'pending') {
+          const at = Number(t.nextAttemptAt || 0)
+          if (at > now) waiting.push(at)
+        }
+      }
+      if (waiting.length > 0) {
+        waiting.sort((a, b) => a - b)
+        const eta = new Date(waiting[0])
+        const pad = (n) => String(n).padStart(2, '0')
+        message += `；另有 ${waiting.length} 个窗口处于失败退避等待（最早 ${pad(eta.getHours())}:${pad(eta.getMinutes())} 到期后自动重试）`
+      }
+      return { ok: true, message }
     } finally {
       this.processing = false
     }

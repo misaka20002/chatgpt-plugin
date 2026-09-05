@@ -21,7 +21,8 @@ export class memoryGroupObserver extends plugin {
       rule: [
         {
           reg: '^.*$',
-          fnc: 'observe'
+          fnc: 'observe',
+          log: false // 观察器全量匹配，命中日志降为 debug，避免刷屏（同 bym.js / 派蒙戳一戳.js 写法）
         }
       ]
     })

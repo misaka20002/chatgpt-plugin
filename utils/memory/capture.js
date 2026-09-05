@@ -1,5 +1,6 @@
 /**
  * 群消息观察器：仅采集授权群的非指令、非 Bot 纯文本
+ * 富媒体内容（图片/表情/语音/视频/文件）不入库，但保留对应占位符标记，供提炼时理解上下文
  * 记录说话人、角色、时间和消息 ID；原文默认保留 30 天
  */
 
@@ -10,6 +11,47 @@ import { createHash } from 'node:crypto'
 const DEFAULT_RETENTION_DAYS = 30
 const BACKFILL_HOURS = 24
 const BACKFILL_MAX_MESSAGES = 500
+
+/** 常见多媒体占位符：替代对应段 / CQ 码（媒体内容本身不入库） */
+const MEDIA_PLACEHOLDERS = {
+  image: '[图片]', // image / flash（闪照）
+  sticker: '[表情]', // face / mface / marketface / emoji / sticker
+  video: '[视频]', // video / shortvideo
+  audio: '[语音]', // record / audio / voice
+  file: '[文件]', // file
+}
+
+/** 结构性段：不算富媒体，不生成占位符（text 段由调用方直接取文本） */
+const STRUCTURAL_TYPES = new Set(['text', 'at', 'reply', 'forward', 'node'])
+
+/**
+ * 段类型 → 占位符文本（类型归一表与 Onebot11_MessageHistoryManager._extractMediaSegments.mediaType 一致；
+ * 注意仅类型映射一致，消费语义不同：本文件把占位符拼入提炼文本，manager 只作媒体统计旁路、不进提炼输入）
+ * 结构性类型与未知类型返回 ''（保持忽略，避免噪音）
+ */
+export function mediaPlaceholder(type) {
+  const normalized = String(type || '').toLowerCase()
+  if (!normalized || STRUCTURAL_TYPES.has(normalized)) return ''
+  if (['image', 'flash'].includes(normalized)) return MEDIA_PLACEHOLDERS.image
+  if (['face', 'mface', 'marketface', 'emoji', 'sticker'].includes(normalized)) return MEDIA_PLACEHOLDERS.sticker
+  if (['video', 'shortvideo'].includes(normalized)) return MEDIA_PLACEHOLDERS.video
+  if (['record', 'audio', 'voice'].includes(normalized)) return MEDIA_PLACEHOLDERS.audio
+  if (normalized === 'file') return MEDIA_PLACEHOLDERS.file
+  return ''
+}
+
+/** 匹配 OneBot CQ 码（字符串形态消息用） */
+const CQ_TAG_REGEX = /\[CQ:([A-Za-z]+)(?:,[^\]]*)?\]/g
+
+/** 字符串消息中富媒体 CQ 码替换为占位符；at/reply 等结构性码与未知码删除 */
+function replaceMediaCQ(text) {
+  return String(text).replace(CQ_TAG_REGEX, (match, type) => mediaPlaceholder(type))
+}
+
+/** 从字符串形态消息提取文本：富媒体 CQ 码转占位符，其余 CQ 码清除后压缩空白 */
+function extractTextFromString(text) {
+  return stripCQCode(replaceMediaCQ(text)).trim()
+}
 
 /** 获取 Bot 自身 QQ（避免依赖 common.js 的重依赖链） */
 export function getBotUin(e) {
@@ -24,32 +66,36 @@ export function isCommandText(text) {
   return /^[#/／]/.test(text.trimStart())
 }
 
-/** 从云崽事件提取纯文本 */
+/** 从云崽事件提取纯文本（富媒体段以占位符标记，at/reply 等结构段忽略） */
 export function extractTextFromEvent(e) {
-  if (e.msg && typeof e.msg === 'string') return e.msg.trim()
+  if (e.msg && typeof e.msg === 'string') return extractTextFromString(e.msg)
   if (Array.isArray(e.message)) {
     return e.message
-      .filter(s => s.type === 'text')
-      .map(s => s.text || s.data?.text || '')
+      .map(s => {
+        if (s.type === 'text') return s.text || s.data?.text || ''
+        return mediaPlaceholder(s.type)
+      })
       .join('')
       .trim()
   }
   return ''
 }
 
-/** 从历史消息提取纯文本：兼容 OneBot 段数组、message 字符串与 raw_message（清除 CQ 码） */
+/** 从历史消息提取纯文本：兼容 OneBot 段数组、message 字符串与 raw_message（富媒体转占位符，其余 CQ 码清除） */
 export function extractTextFromHistoryMsg(msg) {
   if (!msg) return ''
   // 部分适配器返回 message 为字符串
-  if (typeof msg.message === 'string') return stripCQCode(msg.message).trim()
+  if (typeof msg.message === 'string') return extractTextFromString(msg.message)
   const segments = Array.isArray(msg.message) ? msg.message : (msg.segments || [])
   const text = segments
-    .filter(s => s.type === 'text')
-    .map(s => s.text || s.data?.text || '')
+    .map(s => {
+      if (s.type === 'text') return s.text || s.data?.text || ''
+      return mediaPlaceholder(s.type)
+    })
     .join('')
   if (text.trim()) return text.trim()
-  // 兜底：raw_message（含 [CQ:image,...] 等码，此处清除）
-  if (typeof msg.raw_message === 'string') return stripCQCode(msg.raw_message).trim()
+  // 兜底：raw_message（含 [CQ:image,...] 等码，此处富媒体转占位符、其余清除）
+  if (typeof msg.raw_message === 'string') return extractTextFromString(msg.raw_message)
   return ''
 }
 
