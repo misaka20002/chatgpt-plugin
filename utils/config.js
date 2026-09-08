@@ -39,7 +39,7 @@ const defaultConfig = {
   responsesApiMaxToken: 65536,
   responsesMaxModelTokens: 128000,
   responsesStore: false,
-  enableHostedBuiltinTools: false,
+  enableHostedBuiltinTools: true,
   responsesFileSearchVectorStoreIds: [],
   responsesFileSearchMaxNumResults: 10,
   /**

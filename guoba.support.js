@@ -1251,7 +1251,7 @@ export function supportGuoba() {
         {
           field: 'enableHostedBuiltinTools',
           label: '开启托管内置工具',
-          bottomHelpMessage: '开启托管内置工具后，OpenAI Responses API / Claude API 会随请求携带由服务商托管执行的内置工具（如 web_search 联网搜索等工具），由服务商在云端执行，不依赖智能模式，也不会进入本地工具循环。可用指令：#chatgpt查看托管内置工具',
+          bottomHelpMessage: '开启托管内置工具后，OpenAI Responses API / Claude API 会随请求携带由服务商托管执行的内置工具（如 web_search 联网搜索等工具），由服务商在云端执行，不依赖智能模式，也不会进入本地工具循环，默认推荐开启。可用指令：#chatgpt查看托管内置工具',
           component: 'Switch'
         },
         // { // 暂时不启动这个，guoba 太乱了
