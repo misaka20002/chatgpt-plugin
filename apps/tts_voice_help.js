@@ -146,7 +146,7 @@ export class voicechangehelp extends plugin {
                     permission: 'master'
                 },
                 {
-                    reg: /^#偷(图|表情包?)$/i,
+                    reg: /^#gpt偷(图|表情包?)$/i,
                     fnc: 'save_EmojiImg',
                 },
                 {
