@@ -147,7 +147,7 @@ const defaultConfig = {
   fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
   tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
-  meme_baseUrl: "https://misaka20001-memegenerator.hf.space",
+  meme_baseUrl: "https://qwqcc-meme.hf.space",
   meme_reply: true,
   meme_forceSharp: true,
   meme_masterProtectDo: true,

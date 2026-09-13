@@ -55,6 +55,9 @@
     }
   },
   "scripts": {
-    "test:memory": "node --test test/memoryV2.test.js test/chain.test.mjs test/chain2.test.mjs test/chain3.test.mjs test/chain5.test.mjs"
+    "test:memory": "node --test test/memoryV2.test.js test/chain.test.mjs test/chain2.test.mjs test/chain3.test.mjs test/chain5.test.mjs",
+    "test:meme": "node test/meme/run.mjs",
+    "test:meme:fast": "node test/meme/run.mjs --skip-slow",
+    "test:meme:mutants": "node test/meme/run.mjs --all-mutants"
   }
 }
