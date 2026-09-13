@@ -6,6 +6,7 @@ import fetch, { File, FormData } from 'node-fetch'
 import fs from 'fs'
 import path from 'node:path'
 import _ from 'lodash'
+import loader from '../../../lib/plugins/loader.js'
 import { Config } from '../utils/config.js'
 import {
   hidePrivacyInfo,
@@ -50,6 +51,34 @@ let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_
  */
 const MEME_USAGE_REDIS_PREFIX = 'Yz:paimon_meme_usage:'
 
+/**
+ * 本插件在云崽插件加载器中的 key（file.name）后缀，用于定位已注册的插件条目
+ */
+const PLUGIN_FILE_NAME = '派蒙meme.js'
+
+/**
+ * 基础命令规则（不依赖 keyMap，插件加载后即生效）
+ */
+const baseRules = () => [
+  { /** 命令正则匹配 */ reg: /^(#)?(meme(s)?|表情包)列表$/, /** 执行方法 */ fnc: 'memesList' },
+  { reg: /^#?随机(meme(s)?|表情包)/, fnc: 'randomMemes' },
+  { reg: /^#?(meme(s)?|表情包)帮助/, fnc: 'memesHelp' },
+  { reg: /^#?(meme(s)?|表情包)搜索/, fnc: 'memesSearch' },
+  { reg: /^#?(meme(s)?|表情包)更新/, fnc: 'memesUpdate', permission: 'master' }
+]
+
+/**
+ * 依据当前 keyMap 生成 meme 关键词规则
+ * @returns {Array<{reg: RegExp, fnc: string}>}
+ */
+const memeKeyRules = () =>
+  Object.keys(keyMap).map(key => ({
+    /** 命令正则匹配 */
+    reg: new RegExp(forceSharp ? `^#${key}` : `^#?${key}`),
+    /** 执行方法 */
+    fnc: 'memes'
+  }))
+
 export class memes extends plugin {
   constructor() {
     let option = {
@@ -61,51 +90,9 @@ export class memes extends plugin {
       event: 'message',
       /** 优先级，数字越小等级越高 */
       priority: 5000,
-      rule: [
-        {
-          /** 命令正则匹配 */
-          reg: '^(#)?(meme(s)?|表情包)列表$',
-          /** 执行方法 */
-          fnc: 'memesList'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#?随机(meme(s)?|表情包)',
-          /** 执行方法 */
-          fnc: 'randomMemes'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#?(meme(s)?|表情包)帮助',
-          /** 执行方法 */
-          fnc: 'memesHelp'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#?(meme(s)?|表情包)搜索',
-          /** 执行方法 */
-          fnc: 'memesSearch'
-        },
-        {
-          /** 命令正则匹配 */
-          reg: '^#?(meme(s)?|表情包)更新',
-          /** 执行方法 */
-          fnc: 'memesUpdate',
-          permission: 'master'
-        }
-
-      ]
-
+      /** 基础规则 + 当前已加载到的 meme 关键词规则 */
+      rule: [...baseRules(), ...memeKeyRules()]
     }
-    Object.keys(keyMap).forEach(key => {
-      let reg = forceSharp ? `^#${key}` : `^#?${key}`
-      option.rule.push({
-        /** 命令正则匹配 */
-        reg,
-        /** 执行方法 */
-        fnc: 'memes'
-      })
-    })
 
     super(option)
 
@@ -125,12 +112,23 @@ export class memes extends plugin {
       // 每天的凌晨3点执行
       cron: generateCronExpression(),
       name: 'memes自动更新任务',
-      fnc: this.init.bind(this)
+      /** 传 true 表示忽略本地缓存，强制拉取远端（否则定时任务只会把本地缓存重新读一遍，等于空转） */
+      fnc: this.init.bind(this, true)
     }
   }
 
-  async init() {
+  /**
+   * 初始化 / 更新 meme 资源，并把最新规则同步到插件加载器
+   * @param {boolean} force true 时忽略本地缓存强制拉取远端，用于手动更新与定时任务
+   * @returns {Promise<{ refreshed: boolean, keys: number, fallback: boolean }>}
+   *          refreshed: 本次是否拿到可用的远端数据；keys: 最终生效的关键词数量；
+   *          fallback: 拉取失败后是否回退沿用了更新前的数据
+   */
+  async init(force = false) {
     mkdirs('data/memes')
+    /** 更新前的数据，强制刷新失败时用于回退 */
+    const oldKeyMap = keyMap
+    const oldInfos = infos
     keyMap = {}
     infos = {}
 
@@ -146,8 +144,14 @@ export class memes extends plugin {
       }
       return {}
     }
-    infos = readJsonFile('data/memes/infos.json')
-    keyMap = readJsonFile('data/memes/keyMap.json')
+    if (force) {
+      // 强制刷新：跳过本地缓存，让下面的远端拉取分支一定执行
+      logger.mark('yunzai-meme 强制更新：忽略本地缓存，直接拉取远端')
+    } else {
+      // 插件加载：优先用本地缓存，避免启动被远端拖慢
+      infos = readJsonFile('data/memes/infos.json')
+      keyMap = readJsonFile('data/memes/keyMap.json')
+    }
 
     // 远端拉取失败不应阻塞插件加载（HF Space 等已下线时这里会全失败）
     try {
@@ -196,34 +200,104 @@ export class memes extends plugin {
       logger.warn('[meme] 远程拉取 meme 资源失败，插件仍可加载但功能将不可用:', err.message)
     }
 
-    let rules = []
-    Object.keys(keyMap).forEach(key => {
-      let reg = forceSharp ? `^#${key}` : `^#?${key}`
-      rules.push({
-        /** 命令正则匹配 */
-        reg,
-        /** 执行方法 */
-        fnc: 'memes'
-      })
-    })
+    const refreshed = Object.keys(keyMap).length > 0 && Object.keys(infos).length > 0
+    let fallback = false
+    if (force && !refreshed && Object.keys(oldKeyMap).length > 0) {
+      // 强制刷新失败时沿用更新前的数据，别把正在用的 meme 全部弄没
+      keyMap = oldKeyMap
+      infos = oldInfos
+      fallback = true
+      logger.warn('[meme] 强制更新未取到新数据，继续沿用更新前的 meme 资源')
+    }
+    if (force && refreshed) {
+      // 数据变了，列表图（24h 缓存）也该重渲染
+      this.clearRenderListCache()
+      logger.mark(`[meme] 更新完成，共 ${Object.keys(keyMap).length} 个 meme 关键词`)
+    }
+
+    // 手动/自动更新都会走到这里：把最新规则同步回加载器，免重启生效
+    this.registerRules()
+
+    return { refreshed, keys: Object.keys(keyMap).length, fallback }
+  }
+
+  /** 清理 meme 列表图缓存（memesList 的 24h 缓存），下次查看时重新渲染 */
+  clearRenderListCache() {
+    const file = 'data/memes/render_list.jpg'
+    if (fs.existsSync(file)) {
+      try {
+        fs.unlinkSync(file)
+      } catch (err) {
+        logger.warn('[meme] 清理列表图缓存失败:', err.message)
+      }
+    }
+  }
+
+  /**
+   * 生成当前应生效的完整规则（基础规则 + keyMap 关键词规则）
+   * @returns {Array<{reg: RegExp, fnc: string, permission?: string}>}
+   */
+  getRules() {
+    return [...baseRules(), ...memeKeyRules()].map(rule => ({
+      ...rule,
+      reg: rule.reg instanceof RegExp ? rule.reg : new RegExp(rule.reg)
+    }))
+  }
+
+  /**
+   * 把最新规则注册/更新到云崽插件加载器
+   *
+   * `PluginsLoader.deal()` 匹配命令时读取的是 loader.priority 里**注册实例**的 rule，
+   * 每次消息执行时 new 出来的实例只是副本，改副本的 rule 不生效，
+   * 所以必须回写注册条目，才能在 init()（手动 #meme更新 / 定时任务自动更新）之后立即生效。
+   *
+   * 插件加载阶段调用 init() 时本插件尚未 push 进 priority，此时匹配不到条目属正常情况，
+   * 随后的注册实例会由构造函数按当时已就绪的 keyMap 生成规则。
+   * @returns {number} 被同步的注册条目数
+   */
+  registerRules() {
+    if (Object.keys(keyMap).length === 0) {
+      // 远端拉取失败时不要清空规则，保留旧规则继续可用
+      logger.warn('[meme] keyMap 为空，跳过规则同步，保留原有 meme 命令')
+      return 0
+    }
+
+    const rules = this.getRules()
     this.rule = rules
+
+    const entries = loader.priority.filter(
+      i => i.class === memes || (typeof i.key === 'string' && i.key.endsWith(PLUGIN_FILE_NAME))
+    )
+    for (const entry of entries) {
+      if (!entry.plugin) continue
+      entry.plugin.rule = rules
+    }
+
+    if (entries.length) {
+      logger.mark(`[meme] 已动态注册 ${Object.keys(keyMap).length} 个 meme 关键词规则`)
+    } else {
+      logger.debug('[meme] 插件尚未注册到加载器，规则将由注册时的构造函数生成')
+    }
+    return entries.length
   }
 
   async memesUpdate(e) {
     await e.reply('yunzai-memes更新中')
-    // 清除所有缓存文件
-    const cacheFiles = ['data/memes/infos.json', 'data/memes/keyMap.json', 'data/memes/render_list.jpg']
-    for (const file of cacheFiles) {
-      if (fs.existsSync(file)) {
-        fs.unlinkSync(file)
-      }
-    }
+    let result
     try {
-      await this.init()
+      // 强制刷新，不再依赖「先删缓存文件」来触发远端拉取
+      result = await this.init(true)
     } catch (err) {
       await e.reply('更新失败：' + hidePrivacyInfo(err.message))
+      return
     }
-    await e.reply('更新完成，重启云崽生效')
+    if (result.fallback) {
+      await e.reply(`更新失败：未拉取到新资源，继续沿用原有 ${result.keys} 个 meme 规则`)
+    } else if (!result.refreshed) {
+      await e.reply('更新失败：未拉取到 meme 资源，已保留原有规则')
+    } else {
+      await e.reply(`更新完成，已注册 ${result.keys} 个 meme 规则，无需重启`)
+    }
   }
 
   async memesHelp(e) {

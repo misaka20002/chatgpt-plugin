@@ -78,6 +78,18 @@
 - 缩进/分号风格文件间不一致——跟随所在文件。
 - 全局 `logger`/`redis` 直接可用；测试环境需提供 `globalThis.logger` stub 与 mock redis。
 
+## 派蒙meme（`apps/派蒙meme.js`）
+
+`meme` 系列命令是**运行期动态注册**的：规则来自远端 `keyMap`（关键词 → meme key），不是写死的 `rule` 数组。
+
+- 规则来源统一为 `getRules()` = `baseRules()`（列表/随机/帮助/搜索/更新）+ `memeKeyRules()`（按 keyMap 生成，`reg` 已是 `RegExp`）。构造函数与 `init()` 都走这一套，勿再手写第二份拼装逻辑。
+- `init(force = false)`：
+  - `force = true`：**跳过本地缓存**强制拉远端，手动 `#表情包更新` 与定时任务都用它；
+  - `force = false`：仅插件加载时用（优先本地缓存，避免启动被远端拖慢）；
+  - 返回 `{ refreshed, keys, fallback }`。强制刷新拿不到可用数据（`keyMap` 或 `infos` 为空）时**回退到更新前的 `keyMap`/`infos`** 并 `fallback: true`——否则 `memes()` 里 `infos[targetCode]` 取空直接报错，同时规则会被清空。
+- 更新成功后清 `data/memes/render_list.jpg`（`memesList` 的 24h 列表图缓存），下次查看时重渲染。
+- `init()` 末尾必须调用 `registerRules()` 把最新规则同步回 loader，否则新增关键词要重启才生效（见"常见坑"）。
+
 ## 开发与验证
 
 - 记忆系统测试：`npm run test:memory`（memoryV2 单元/回归 + chain/chain2/chain3/chain5 链路套件）。测试不依赖真实 Redis/模型/框架。
@@ -93,6 +105,7 @@
     < <(find . -path ./node_modules -prune -o -type f \( -name "*.js" -o -name "*.mjs" \) -print); [ $FAIL -eq 0 ] && echo "ALL OK"
   ```
 - 临时调试脚本纪律：调试用脚本统一放**系统临时目录**（`$TMP`/`/tmp`）或即建即删，**不要留在仓库内**；用 `rm` 删除后必须确认生效（heredoc/管道组合命令可能因展开错误中断导致 rm 未执行，留下语法错误的残留文件）。
+- 派蒙meme 的动态规则可**离线验证**（不需要真实 Yunzai/Redis/远端）：桩全局（`logger`/`redis`/`Bot`/`segment`）+ 本地 http 假 meme 服务端 + 真实 `lib/plugins/loader.js` 与插件模块，然后按 `PluginsLoader.deal()` 的匹配方式断言规则，并直接调用 `new memes().task.fnc`（等价 `loader.startTask`）验证定时任务是否真的请求远端。cwd 需具备 `config/default_config/`、`package.json`、`renderers/` 才能 import 主仓库的 loader/config。脚本按"临时调试脚本纪律"放仓库外（当前在 WorkBuddy 会话目录 `meme-rule-test-run/`，易失，可自建）。
 - 真实验证需重启 Yunzai 并在群内发指令；部分链路（真实模型提取、`awaitContext` 二次确认）无法在仓库内独立验证。
 
 ## Git 约定
@@ -124,4 +137,7 @@
 - 锅巴 GSubForm 保存的是数组（如 `memoryGroupCapture.groups`），读取用 `Array.isArray` 防护。
 - **数字配置回退统一用 `||`**：除 `minConfidence` 外，`inputTokenLimit` / `outputTokenLimit` / `eventRetentionDays` / `maxMemoriesPerUser` 等读取处同理（`Number(...) || 默认`）。
 - **分片断点 `chunksDone` 的失效条件**：`runExtraction` 的断点续跑假设"同窗口 rows 不变 → 分区确定"，因此**原文变化的路径必须清断点**——`ensureTask` 的 needsReextract 分支重置 pending 时清 `chunksDone` 并把 `attemptCount` 归零；空窗/成功后也清空。`processWindow` 失败重试时不清断点（恰好用于续跑）。`chunksDone` 存于 task hash（字符串化 JSON，`store.setTask` 只写指定字段、其余保留），崩溃恢复（running>10min → pending）后断点依然有效。
+- **TRSS loader 匹配命令读的是「注册实例」的 `rule`**：`deal()` 里是 `for (const v of i.plugin.rule)`，而每条消息都 `Object.assign(new i.class(e), { e })` 新建副本——所以在插件方法里改 `this.rule` **完全无效**（改的是副本；加载期改的是 init 实例）。运行期新增/刷新命令必须回写注册条目：`import loader from '../../../lib/plugins/loader.js'`，在 `loader.priority` 里按 `i.class === 本类 || i.key.endsWith('本文件名')` 定位后 `entry.plugin.rule = rules`。`reg` 必须是 `RegExp`（`deal()` 不做字符串转换，只有 `loadPlugin()` 转一次）。热更新（chokidar 带 `?时间戳` 重新 import）会换掉类身份，定位别只靠 `i.class`；参考 `apps/派蒙meme.js` 的 `registerRules()`。
+- **`loadPlugin()` 的顺序是 `new p()` → `await init.init()` → `new p()` 再 push 进 `priority`**：init() 执行期间本插件还没注册，此处的动态注册会「找不到条目」——不用补救，随后构造的注册实例会按当时的模块级状态生成 `rule`（这也是 `keyMap` 作为模块级变量在加载期可用的原因）。
+- **定时任务里"重读本地缓存"等于空转**：`init()` 开头会清空内存再读 `data/memes/*.json`，而缓存在进程存活期间一直存在 → 「数组为空才拉远端」的守卫永不成立，日更实际什么都没拉（旧代码 `this.init.bind(this)` 就是这个 bug）。任何"定时刷新远端资源"的路径都必须显式跳过本地缓存读（本项目用 `init(true)`）。
 - **TRSS loader 的定时任务 `task.fnc` 必须传函数引用**（如 `this.runDaily.bind(this)`），不能传方法名字符串：`loader.collectTask` 只校验 `i.cron && i.fnc` 后原样入队，`startTask` 直接 `await i.fnc()`，字符串会被当作函数调用报 `TypeError: i.fnc is not a function`。注册方式参考 `apps/ScheduleTaskPlugin.js` 等：把 `task` 放在构造函数体内（`super()` 之后赋值 `this.task`，此时才能 `bind(this)`），而不是塞进 `super({...})` 配置。注意消息路由的 `rule[].fnc` 仍是字符串（loader 用 `plugin[v.fnc](e)` 按名解析），二者约定不同，勿混淆。
