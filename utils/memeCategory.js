@@ -61,6 +61,12 @@ const IP_RULES = [
   },
 ]
 
+/**
+ * 认不出具体作品时的兜底 IP 名。
+ * 映射到它的 tag（如 `喜欢`）不是"作品身份"，扫 tag 时必须跳过（见 resolveOtherIp）。
+ */
+const GENERIC_IP = '综合'
+
 /** 其余作品的 tag / 前缀 → 二级 IP 名，用于「其他作品」组内细分 */
 const OTHER_IP_BY_TAG = {
   柚子社: '柚子社', 绫地宁宁: '柚子社', 魔女的夜宴: '柚子社',
@@ -89,7 +95,7 @@ const OTHER_IP_BY_TAG = {
   魔法少女的魔女审判: '魔法少女的魔女审判', 夏目安安: '魔法少女的魔女审判',
   我推的孩子: '我推的孩子', 洛天依: '洛天依', 鲨鲨: '鲨鲨', 猫羽雫: '猫羽雫',
   春原心奈: '春原心奈', 春原心菜: '春原心奈',
-  喜欢: '综合',
+  喜欢: GENERIC_IP,
 }
 
 const OTHER_IP_BY_PREFIX = [
@@ -278,19 +284,25 @@ function matchRule(meme, rule) {
 
 /**
  * 「其他作品」组内的二级 IP 名。
- * 先看 tag，再看 key 前缀；都认不出来时归到"综合"。
+ * 先看 tag，再看 key 前缀；都认不出来时归到「综合」。
+ *
+ * 关键：`OTHER_IP_BY_TAG` 里有若干 tag 映射到「综合」（如 `喜欢`），表示"认不出具体作品"。
+ * 远端 `tags` 是 `set[str]` 序列化来的、**顺序不保证**，所以扫到「综合」必须**继续往后扫**
+ * 而不是直接返回——否则 `['喜欢','猫和老鼠']` 会得到「综合」、`['猫和老鼠','喜欢']` 得到
+ * 「猫和老鼠」，同一张 meme 仅因 tag 顺序不同就换了一级分类（前者会掉进功能分组）。
  * @param {{key: string, tags?: string[]}} meme
  * @returns {string}
  */
 export function resolveOtherIp(meme) {
   for (const t of meme.tags || []) {
-    if (OTHER_IP_BY_TAG[t]) return OTHER_IP_BY_TAG[t]
+    const name = OTHER_IP_BY_TAG[t]
+    if (name && name !== GENERIC_IP) return name
   }
   const key = (meme.key || '').toLowerCase()
   for (const [prefix, name] of OTHER_IP_BY_PREFIX) {
     if (key.startsWith(prefix)) return name
   }
-  return '综合'
+  return GENERIC_IP
 }
 
 /**
@@ -327,13 +339,18 @@ export function buildMemeGroups(infos, options = {}) {
   let newCount = 0
 
   for (const [key, info] of Object.entries(infos)) {
-    if (!info || !Array.isArray(info.keywords)) continue
+    // 没有可用关键词的条目不进列表：归一化后 keywords 可能为空（见 apps/派蒙meme.js 的
+    // normalizeKeywords），而列表的存在意义就是展示触发词，没有触发词的条目只会变成噪音
+    if (!info || !Array.isArray(info.keywords) || info.keywords.length === 0) continue
 
     const keywords = info.keywords
     totalKeywords += keywords.length
 
     const createdTime = new Date(info.date_created || 0).getTime()
-    const isNew = Number.isFinite(createdTime) && createdTime > 0 && now - createdTime < newThresholdMs
+    // 时间必须落在 (0, now] 才算"新"：只判 `now - createdTime < 阈值` 的话，
+    // 上游给了未来时间（差值为负，当然小于阈值）也会被标成 new
+    const isNew =
+      Number.isFinite(createdTime) && createdTime > 0 && createdTime <= now && now - createdTime < newThresholdMs
     if (isNew) newCount++
 
     const meme = {
@@ -344,7 +361,7 @@ export function buildMemeGroups(infos, options = {}) {
       aliases: keywords.slice(1),
       keywords,
       tags: info.tags || [],
-      /** 参数需求，params 方案与列表图上的"需图/需文"标记都用它 */
+      /** 参数需求。params 分组方案、以及列表图上的「图」/「文」徽标都读它 */
       paramsType: info.params_type || {},
       isNew,
       usage: usageCounts[key] || 0,
@@ -394,19 +411,21 @@ export function buildMemeGroups(infos, options = {}) {
  */
 function pickGroupName(meme, scheme) {
   if (scheme === 'params') {
+    // 这一档回答的是"后端最少要求什么"，所以用 min_*（不是 max_*）。
+    // 都不强制时归到「只需图片」：那是"一张图就能出"的最常见情形，可配的文字属于附加项
     const p = meme.paramsType || {}
-    const hasImg = (p.max_images ?? 0) > 0
-    const hasText = (p.max_texts ?? 0) > 0
-    if (hasImg && hasText) return '图文都要'
-    if (hasImg) return '只需图片'
-    return '只需文字'
+    const needImg = (p.min_images ?? 0) > 0
+    const needText = (p.min_texts ?? 0) > 0
+    if (needImg && needText) return '图文都要'
+    if (needText) return '只需文字'
+    return '只需图片'
   }
 
   for (const rule of IP_RULES) {
     if (matchRule(meme, rule)) return rule.name
   }
   // 有其它可识别的作品 tag/前缀，说明是"某个作品"的梗，集中放一组
-  if (resolveOtherIp(meme) !== '综合') return '其他作品'
+  if (resolveOtherIp(meme) !== GENERIC_IP) return '其他作品'
 
   if (scheme === 'ip') return FALLBACK_NAME
 
@@ -471,11 +490,14 @@ export function buildMemeListData(infos, options = {}) {
     const badges = []
     if (meme.usage >= hotThreshold) badges.push({ text: '热', kind: 'hot' })
 
-    // 只标"需要额外输入文字"的情况：971 个表情里 609 个都必须给图，
-    // 给它们每个都挂「需图」等于纯噪音，而"要不要打字"才是用户真正会踩的坑
-    const { max_images: maxImages = 0, max_texts: maxTexts = 0 } = meme.paramsType
-    if (maxImages > 0 && maxTexts > 0) badges.push({ text: '图文', kind: 'both' })
-    else if (maxImages === 0 && maxTexts > 0) badges.push({ text: '需文', kind: 'text' })
+    // 只标"用户得主动做点什么"的两种情况，各一个字：
+    // - 「图」：min_images >= 2。一张发送者头像补不上缺口，必须自己发图或 @ 人（`#撅` = do 就是这种）
+    // - 「文」：min_texts > 0。不填会拿昵称补，所以文案不能写"必须"之类的字
+    // 刻意不用 min_images > 0：971 个里 762 个 min_images 就是 1，一张头像就够，全挂等于满屏徽标。
+    // 实测 min_images >= 2 有 55 个、min_texts > 0 有 177 个，两者不重叠，合计 232 个带标记。
+    const { min_images: minImages = 0, min_texts: minTexts = 0 } = meme.paramsType || {}
+    if (minImages >= 2) badges.push({ text: '图', kind: 'img' })
+    if (minTexts > 0) badges.push({ text: '文', kind: 'text' })
 
     return {
       key: meme.key,

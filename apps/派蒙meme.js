@@ -43,6 +43,17 @@ let keyMap = {}
 let infos = {}
 
 /**
+ * 刷新串行队列（互斥）。
+ *
+ * 必须是模块级：`keyMap`/`infos` 本身就是模块级全局，互斥只有和它们同作用域才成立。
+ * 没有它时两个 init() 会并发跑——后一次手里握的是**启动时的旧快照**，它一旦走回退分支
+ * 就把前一次刚提交的新数据覆盖回旧版本，还会把旧规则重新写回 loader。
+ * 手动 `#表情包更新` 撞上凌晨定时任务即可复现。
+ * @type {Promise<unknown>}
+ */
+let refreshChain = Promise.resolve()
+
+/**
  * 主人保护list 如['lash','do','beat_up','little_do']
  */
 let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_qi']
@@ -51,6 +62,45 @@ let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_
  * meme 使用计数 Redis key 前缀
  */
 const MEME_USAGE_REDIS_PREFIX = 'Yz:paimon_meme_usage:'
+
+/**
+ * meme 数据缓存文件。
+ *
+ * infos 与 keyMap **存在同一个文件里**：跨代缓存（infos 是新的、keyMap 是旧的）是这对数据最现实的
+ * 事故源——两个独立 `writeFileSync` 之间进程退出就会产生这种组合，而两份都非空又都自洽时会绕过
+ * 远端拉取、又在校验阶段被整批丢弃，插件只剩基础命令。合成一个文件后这种组合在结构上不可能出现。
+ */
+const MEME_CACHE_FILE = 'data/memes/dataset.json'
+
+/** 旧版双文件缓存。只用于一次性迁移，见 `migrateLegacyDataset()` */
+const LEGACY_INFOS_FILE = 'data/memes/infos.json'
+const LEGACY_KEYMAP_FILE = 'data/memes/keyMap.json'
+
+/** 缓存格式版本，将来改结构时用它判断旧文件能不能直接读 */
+const MEME_CACHE_VERSION = 1
+
+/**
+ * 列表图缓存文件名 —— 把 `meme_forceSharp` 编进身份。
+ *
+ * 图上写着"发送 #关键词"还是"直接发送关键词"，这个配置一变，图就必须换一张。
+ * 只靠「24h 缓存 + 更新成功时清缓存」是不够的：改配置重启后 dataset 走本地缓存
+ * （`refreshed=false`），不会触发清理，于是最长 24h 内列表图还在教用户发一个已经失效的格式。
+ * 把身份编进文件名后，配置一变自然就换文件，不需要依赖任何清理时机。
+ */
+const listCacheFile = () => `data/memes/render_list${Config.meme_forceSharp ? '_sharp' : '_plain'}.jpg`
+
+/** 清理列表图缓存时要一起删掉的候选（含旧版固定名，升级后会残留） */
+const LIST_CACHE_FILES = [
+  'data/memes/render_list_sharp.jpg',
+  'data/memes/render_list_plain.jpg',
+  'data/memes/render_list.jpg',
+]
+
+/** 逐项重建的并发 worker 数。串行 971 次请求按平均 150ms 要 ~146s，全量并发又会打爆后端 */
+const REBUILD_CONCURRENCY = 12
+
+/** 逐项重建里单个 `/info` 的额外重试次数（单条失败会让整批作废，值得重试） */
+const REBUILD_ITEM_RETRIES = 2
 
 /**
  * 列表图的渲染宽度（px）。
@@ -156,36 +206,43 @@ export class memes extends plugin {
   }
 
   /**
-   * 初始化 / 更新 meme 资源，并把最新规则同步到插件加载器
+   * 初始化 / 更新 meme 资源，并把最新规则同步到插件加载器。
    *
-   * 关键约束：`infos`/`keyMap` 是命令处理时直接读的全局状态。整次拉取都在**局部变量**里完成，
-   * 只有拿到一份完整且互相一致的数据才一次性替换（原子提交）。
-   * 旧实现一进来就清空全局再去 await 网络，而加载器里旧关键词规则仍然生效，
-   * 更新期间命中旧关键词就会拿到空 keyMap / undefined info 直接报错。
+   * **并发语义**：调用会排队串行执行。`keyMap`/`infos` 是模块级全局，两次刷新并发时后一次手里
+   * 握的是启动时的旧快照，一旦走回退分支就会把前一次刚提交的新数据覆盖回旧版本。
+   * 这里刻意用"排队"而不是"并发时复用同一次结果"——复用会把 force 语义吃掉，
+   * 手动 `#表情包更新` 会拿到一次"其实没拉远端"的结果而误报更新失败。
+   *
+   * **数据语义**：整次拉取在局部变量里完成，只有拿到一份完整且通过 `validateMemeDataset()`
+   * 的数据才一次性替换全局（原子提交）。旧实现一进来就清空全局再去 await 网络，
+   * 而加载器里旧关键词规则仍然生效，更新期间命中旧关键词就会拿到空 keyMap / undefined info 直接报错。
    *
    * @param {boolean} force true 时忽略本地缓存强制拉取远端，用于手动更新与定时任务
-   * @returns {Promise<{ refreshed: boolean, keys: number, fallback: boolean }>}
+   * @returns {Promise<{ refreshed: boolean, keys: number, fallback: boolean, persisted: boolean }>}
    *          refreshed: 本次是否拿到可用的远端数据；keys: 最终生效的关键词数量；
    *          fallback: 拉取失败后是否沿用了更新前的数据
    */
   async init(force = false) {
+    const run = refreshChain.then(
+      () => this.doRefresh(force),
+      // 上一次失败也要继续排队执行，否则链断在这里、后续刷新永远不跑
+      () => this.doRefresh(force)
+    )
+    // 队列上挂一个永不 reject 的版本，避免一次失败污染整条链
+    refreshChain = run.then(() => {}, () => {})
+    return await run
+  }
+
+  /**
+   * 真正执行一次刷新。只应由 `init()` 通过串行队列调用。
+   * @param {boolean} force
+   * @returns {Promise<{ refreshed: boolean, keys: number, fallback: boolean, persisted: boolean }>}
+   */
+  async doRefresh(force) {
     mkdirs('data/memes')
     /** 更新前的数据，拉取失败时用于回退 */
     const oldKeyMap = keyMap
     const oldInfos = infos
-
-    // 本地缓存读取，文件损坏也不要炸
-    const readJsonFile = (file) => {
-      try {
-        if (fs.existsSync(file)) {
-          return JSON.parse(fs.readFileSync(file, 'utf-8'))
-        }
-      } catch (e) {
-        logger.warn(`[meme] 本地缓存 ${file} 读取/解析失败，将忽略:`, e.message)
-        try { fs.unlinkSync(file) } catch { }
-      }
-      return {}
-    }
 
     /** 本次结果先落局部变量，校验通过才替换全局 */
     let nextInfos = {}
@@ -200,9 +257,13 @@ export class memes extends plugin {
       // 强制刷新：跳过本地缓存，让下面的远端拉取分支一定执行
       logger.mark('yunzai-meme 强制更新：忽略本地缓存，直接拉取远端')
     } else {
-      // 插件加载：优先用本地缓存，避免启动被远端拖慢
-      nextInfos = readJsonFile('data/memes/infos.json')
-      nextKeyMap = readJsonFile('data/memes/keyMap.json')
+      // 插件加载：优先用本地缓存，避免启动被远端拖慢。
+      // 缓存本身也要过校验：残缺/跨版本时返回 null，下面的拉取分支会补上（这就是自愈）
+      const cached = loadMemeDataset()
+      if (cached) {
+        nextInfos = cached.infos
+        nextKeyMap = cached.keyMap
+      }
     }
 
     // 远端拉取失败不应阻塞插件加载（HF Space 等已下线时这里会全失败）
@@ -217,52 +278,46 @@ export class memes extends plugin {
       if (Object.keys(nextInfos).length === 0) {
         logger.mark('yunzai-meme infos资源本地不存在，正在远程拉取中')
         const data = await fetchJsonWithRetry(`${baseUrl}/memes/static/infos.json`)
-        if (data && Object.keys(data).length) {
-          nextInfos = data
+        // 远端数据一律不信：先归一化再采纳（空关键词会变成劫持消息路由的规则）
+        const sanitized = sanitizeInfos(data)
+        if (Object.keys(sanitized).length) {
+          nextInfos = sanitized
           fetched = true
         }
       }
       if (Object.keys(nextKeyMap).length === 0) {
         logger.mark('yunzai-meme keyMap资源本地不存在，正在远程拉取中')
         const data = await fetchJsonWithRetry(`${baseUrl}/memes/static/keyMap.json`)
-        if (data && Object.keys(data).length) {
-          nextKeyMap = data
+        const sanitized = sanitizeKeyMap(data)
+        if (Object.keys(sanitized).length) {
+          nextKeyMap = sanitized
           fetched = true
+        }
+      }
+
+      // 两个都拿到了就**先校验**：pair 不合法等同于"没拉到"，必须一起丢掉去重建。
+      // 只按"空不空"决定要不要重建是不够的——两个文件都非空但彼此不一致时不会进重建分支，
+      // 一路走到最后才发现不合法，冷启动时没有旧数据兜底，整套 meme 直接空掉
+      if (Object.keys(nextInfos).length && Object.keys(nextKeyMap).length) {
+        const staticVerdict = validateMemeDataset(nextInfos, nextKeyMap)
+        if (!staticVerdict.ok) {
+          logger.warn(`[meme] 静态资源不可用（${staticVerdict.reason}），丢弃后转逐项重建`)
+          nextInfos = {}
+          nextKeyMap = {}
+          fetched = false
         }
       }
 
       if (Object.keys(nextInfos).length === 0 || Object.keys(nextKeyMap).length === 0) {
         // 两个静态资源拿不齐，才退回逐项重建
-        logger.warn('[meme] 静态资源拉取失败（判断为原生 meme 生成器），切换为逐项重建兜底：从 /memes/keys 取 key 列表，再逐个请求 /memes/<key>/info 重建 keyMap 与 infos')
+        logger.warn('[meme] 静态资源拉取失败（判断为原生 meme 生成器），切换为逐项重建兜底：从 /memes/keys 取 key 列表，再并发拉取 /memes/<key>/info 重建 keyMap 与 infos')
         const keys = await fetchJsonWithRetry(`${baseUrl}/memes/keys`)
         if (Array.isArray(keys) && keys.length) {
-          const keyMapTmp = {}
-          const infosTmp = {}
-          for (const key of keys) {
-            const keyInfoRes = await fetch(`${baseUrl}/memes/${key}/info`, {
-              signal: timeoutSignal(REQUEST_TIMEOUT)
-            })
-            const info = await safeJson(keyInfoRes)
-            if (info && Array.isArray(info.keywords)) {
-              info.keywords.forEach(keyword => {
-                keyMapTmp[keyword] = key
-              })
-              infosTmp[key] = info
-            }
-          }
-          // 逐项重建很容易只成功一部分：覆盖不全就整批丢弃。
-          // 否则会用"300 个里成功 2 个"的残缺数据顶掉原有完整数据，还对外报更新成功
-          if (Object.keys(infosTmp).length >= keys.length) {
-            nextInfos = infosTmp
-            nextKeyMap = keyMapTmp
+          const rebuilt = await rebuildFromKeys(keys)
+          if (rebuilt) {
+            nextInfos = rebuilt.infos
+            nextKeyMap = rebuilt.keyMap
             fetched = true
-          } else {
-            logger.warn(
-              `[meme] 逐项重建不完整（成功 ${Object.keys(infosTmp).length}/${keys.length}），丢弃本次结果`
-            )
-            nextInfos = {}
-            nextKeyMap = {}
-            fetched = false
           }
         }
       }
@@ -272,27 +327,25 @@ export class memes extends plugin {
       logger.warn('[meme] 远程拉取 meme 资源失败，插件仍可加载但功能将不可用:', hidePrivacyInfo(err.message))
     }
 
-    /** 数据必须成对且互相一致：keyMap 里每个 memeKey 都要能在 infos 里找到 */
-    const consistent = Object.values(nextKeyMap).every(key => nextInfos[key])
-    const usable = Object.keys(nextInfos).length > 0 && Object.keys(nextKeyMap).length > 0 && consistent
-    if (!usable && Object.keys(nextKeyMap).length > 0) {
-      logger.warn('[meme] infos 与 keyMap 不一致或残缺，放弃本次拉取结果')
+    const verdict = validateMemeDataset(nextInfos, nextKeyMap)
+    const usable = verdict.ok
+    if (!usable && (Object.keys(nextInfos).length > 0 || Object.keys(nextKeyMap).length > 0)) {
+      logger.warn(`[meme] 本次数据不可用（${verdict.reason}），放弃本次结果`)
     }
 
     const refreshed = usable && fetched
     let fallback = false
+    /**
+     * 本次"该落盘的东西"是否落盘成功。写盘失败不影响运行期数据（不回滚），
+     * 但重启后会恢复到旧数据，所以调用方要知道。没有需要落盘的数据时保持 true
+     */
+    let persisted = true
     if (usable) {
       // 原子替换：命令处理读到的要么是旧数据、要么是新数据，不会是半套
       infos = nextInfos
       keyMap = nextKeyMap
-      if (fetched) {
-        try {
-          fs.writeFileSync('data/memes/infos.json', JSON.stringify(infos))
-          fs.writeFileSync('data/memes/keyMap.json', JSON.stringify(keyMap))
-        } catch (err) {
-          logger.warn('[meme] 写入本地缓存失败:', err.message)
-        }
-      }
+      // 只有真的从远端拉到才落盘，避免把"刚读出来的缓存"原样再写回去
+      if (fetched) persisted = saveMemeDataset(infos, keyMap)
     } else if (Object.keys(oldKeyMap).length > 0) {
       // 没拿到可用数据时沿用更新前的数据，别把正在用的 meme 全部弄没
       infos = oldInfos
@@ -314,13 +367,14 @@ export class memes extends plugin {
     // 手动/自动更新都会走到这里：把最新规则同步回加载器，免重启生效
     this.registerRules()
 
-    return { refreshed, keys: Object.keys(keyMap).length, fallback }
+    return { refreshed, keys: Object.keys(keyMap).length, fallback, persisted }
   }
 
-  /** 清理 meme 列表图缓存（memesList 的 24h 缓存），下次查看时重新渲染 */
+  /** 清理 meme 列表图缓存（memesList 的 24h 缓存），下次查看时重新渲染。
+   *  三种文件名都删：列表图会把 `meme_forceSharp` 编进文件名，只删当前那一种会留下另一种身份的旧图 */
   clearRenderListCache() {
-    const file = 'data/memes/render_list.jpg'
-    if (fs.existsSync(file)) {
+    for (const file of LIST_CACHE_FILES) {
+      if (!fs.existsSync(file)) continue
       try {
         fs.unlinkSync(file)
       } catch (err) {
@@ -391,6 +445,9 @@ export class memes extends plugin {
       await e.reply(`更新失败：未拉取到新资源，继续沿用原有 ${result.keys} 个 meme 规则`)
     } else if (!result.refreshed) {
       await e.reply('更新失败：未拉取到 meme 资源，已保留原有规则')
+    } else if (result.persisted === false) {
+      // 运行期数据已经更新成功，但落盘失败——重启后会回到旧数据，必须说清楚
+      await e.reply(`已注册 ${result.keys} 个 meme 规则，但本地缓存写入失败；重启后可能恢复旧数据`)
     } else {
       await e.reply(`更新完成，已注册 ${result.keys} 个 meme 规则`)
     }
@@ -423,7 +480,7 @@ export class memes extends plugin {
   async memesList(e) {
     if (Config.meme_turnOff) return false
 
-    const resultFileLoc = 'data/memes/render_list.jpg'
+    const resultFileLoc = listCacheFile()
     const cacheMaxAge = 24 * 60 * 60 * 1000 // 24小时缓存
 
     // 检查缓存是否有效
@@ -523,19 +580,33 @@ export class memes extends plugin {
 
       const response = await fetch(`${baseUrl}/memes/render_list`, {
         method: 'POST',
+        // 这个接口回的是图片而不是 JSON，别声明 Accept: application/json
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'image/*'
         },
         body: JSON.stringify({
           meme_list: memeList,
           text_template: '{keywords}',
           add_category_icon: true
-        })
+        }),
+        signal: timeoutSignal(MEME_RENDER_TIMEOUT)
       })
 
       if (!response.ok) {
         logger.error('[meme] render_list 请求失败:', response.status)
+        return false
+      }
+
+      // 200 不代表是图片：反代 / WAF / 登录页会返回 HTML 错页，不校验的话会被正式写成
+      // render_list_*.jpg 并缓存 24h，之后每次看列表都是那张错页
+      const listType = response.headers.get('content-type') || ''
+      if (!listType.startsWith('image/')) {
+        const peek = await response.text()
+        logger.error(
+          `[meme] render_list 返回的不是图片(${listType || '空'})，放弃远端渲染:`,
+          hidePrivacyInfo(peek.slice(0, 300))
+        )
         return false
       }
 
@@ -558,8 +629,10 @@ export class memes extends plugin {
    * @returns {Promise<Array<{meme_key: string, disabled: boolean, labels: string[]}>>}
    */
   async buildMemeListWithLabels() {
-    const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000 // 30天
-    const HOT_THRESHOLD = 30 // 使用次数阈值
+    // 复用顶部常量，别在这里另写一份：数值目前一样，但改了 MEME_LIST_* 就会和本地列表图
+    // 出现两套 new/hot 判定（本地走 buildMemeGroups，远端兜底走这里）
+    const NEW_THRESHOLD_MS = MEME_LIST_NEW_DAYS * 24 * 60 * 60 * 1000
+    const HOT_THRESHOLD = MEME_LIST_HOT_THRESHOLD
     const now = Date.now()
 
     // 批量获取所有 meme 的使用计数
@@ -571,10 +644,13 @@ export class memes extends plugin {
         const createdTime = new Date(info.date_created).getTime()
         const labels = []
 
-        if ((now - createdTime) < NEW_THRESHOLD_MS) labels.push('new')
+        // 时间要落在 [0, now] 才算"新"：只判 `now - createdTime < 阈值` 的话，
+        // 上游给了未来时间（负差值当然小于阈值）也会被标成 new
+        const validTime = Number.isFinite(createdTime) && createdTime > 0 && createdTime <= now
+        if (validTime && (now - createdTime) < NEW_THRESHOLD_MS) labels.push('new')
         if ((usageCounts[key] || 0) >= HOT_THRESHOLD) labels.push('hot')
 
-        return { meme_key: key, disabled: false, labels, _sortKey: createdTime }
+        return { meme_key: key, disabled: false, labels, _sortKey: validTime ? createdTime : 0 }
       })
       .sort((a, b) => b._sortKey - a._sortKey)
       .map(({ meme_key, disabled, labels }) => ({ meme_key, disabled, labels }))
@@ -605,16 +681,19 @@ export class memes extends plugin {
   }
 
   /**
-   * 记录 meme 使用次数（3天过期，每次使用重置过期时间）
+   * 记录 meme 使用次数。
+   *
+   * INCR 与 EXPIRE 必须放进同一个 MULTI/EXEC：拆成两条命令时，若在两者之间断连，会留下一个
+   * **没有 TTL** 的计数 key，永久占位（AGENTS 里明确禁止 INCR+EXPIRE 两步写法）。
+   *
+   * 语义说明：这是"3 天不活跃才清零的连续累计值"，**不是滚动 3 天窗口**。某张 meme 只要每 2 天
+   * 被用一次，计数就会一直累加。所以「热」表达的是"最近活跃且长期高频"，不是"近 3 天用满 30 次"。
    * @param {string} memeKey - meme 的 key
    */
   async recordMemeUsage(memeKey) {
     const REDIS_KEY = `${MEME_USAGE_REDIS_PREFIX}${memeKey}`
     const EXPIRE_SECONDS = 3 * 24 * 60 * 60 // 3天
-
-    // INCR + EXPIRE 保证计数增加并重置过期时间
-    await redis.incr(REDIS_KEY)
-    await redis.expire(REDIS_KEY, EXPIRE_SECONDS)
+    await redis.multi().incr(REDIS_KEY).expire(REDIS_KEY, EXPIRE_SECONDS).exec()
   }
 
   /**
@@ -625,7 +704,13 @@ export class memes extends plugin {
    */
   async randomMemes(e, isDeleteUnharmoniousKeys = false) {
     if (Config.meme_turnOff) return false;
-    let keys = Object.keys(infos).filter(key => infos[key].params_type.min_images === 1 && infos[key].params_type.min_texts === 0)
+    // 必须排除没有可用关键词的条目：normalizeKeywords 会有意留下 `keywords: []` 的 info，
+    // 一旦抽中就会 `e.msg = undefined`，下一层第一批逻辑 `e.msg.replace(...)` 直接炸
+    let keys = Object.keys(infos).filter(key =>
+      infos[key].params_type.min_images === 1 &&
+      infos[key].params_type.min_texts === 0 &&
+      (infos[key].keywords || []).length > 0
+    )
     if (isDeleteUnharmoniousKeys) {
       /** 需要删除的不和谐的 keys */
       const keys_delete = ['behead', 'tomb_yeah', 'shishilani', 'thump_wildly', 'clown', 'taunt', 'mourning', 'rise_dead'];
@@ -664,7 +749,8 @@ export class memes extends plugin {
         return false
       }
     } else if (!bypassCD && (await redis.get(cdKey))) {
-      // meme_CD 关闭时沿用旧行为：残留在 key 上的 CD 仍然拦一次，只是不再写入
+      // meme_CD 关闭时不再写入新 CD，但**只 GET 不 DEL**：所以残留的 CD 不是"再拦一次"，
+      // 而是在它原有 TTL 到期前**每次都拦**（名字叫残留，行为是继续生效）
       return false
     }
 
@@ -696,18 +782,27 @@ export class memes extends plugin {
       return true
     }
 
-    let [text, args = ''] = text1.split('#')
+    // 只按**第一个** `#` 切：裸参数本身也可以含 `#`（例如 string 参数要传 URL 的 fragment
+    // `关键词#https://a.com/p#sec`）。split('#') 会把第二个 `#` 之后的内容整个丢掉
+    const hashAt = text1.indexOf('#')
+    let text = hashAt === -1 ? text1 : text1.slice(0, hashAt)
+    let args = hashAt === -1 ? '' : text1.slice(hashAt + 1)
     let formData = new FormData()
     let info = infos[targetCode]
     let fileLoc
 
     // 提取 @ 信息并获取用户详情缓存
-    const atMessages = e.message.filter(m => m.type === 'at');
+    // 两处防御：① `派蒙戳一戳.js` 是 `new memes().memes(e)` 直接调用，不保证带 message 数组；
+    // ② at 段在不同适配器下有 `{type:'at', qq}` 与 `{type:'at', data:{qq}}` 两种形态，
+    //    只读 atMsg.qq 会把 undefined 喂进 getUserDetailedInfo，头像变成 `nk=undefined`
+    const atMessages = Array.isArray(e.message) ? e.message.filter(m => m.type === 'at') : []
     let atUsers = [];
     for (let atMsg of atMessages) {
-      let user = await getUserDetailedInfo(e, atMsg.qq);
+      const atQq = atMsg.qq ?? atMsg.data?.qq
+      if (atQq === undefined || atQq === null) continue
+      let user = await getUserDetailedInfo(e, atQq);
       atUsers.push({
-        qq: atMsg.qq,
+        qq: atQq,
         text: user?.card || atMsg.name || atMsg.text || '',
         gender: user?.gender || 'unknown'
       });
@@ -750,6 +845,16 @@ export class memes extends plugin {
         imgUrls = [meAvatar].concat(imgUrls)
       }
 
+      // 来源就不够：既没带够图、也没 @ 人，而一张发送者头像填不上 min_images >= 2 的缺口。
+      // 必须在这里直接说清"要做什么"——否则只能把残缺请求丢给远端，用户看到的是一句服务端校验错
+      if (imgUrls.length < info.params_type.min_images) {
+        await e.reply(
+          `这个表情至少要 ${info.params_type.min_images} 张图片：请发送图片，或 @ 需要出镜的人（会用 TA 的头像）`,
+          true
+        )
+        return true
+      }
+
       logger.debug('imgUrls:', imgUrls)
       if (protectList.includes(targetCode) && masterProtectDo) {
         let masters = await getMasterQQ()
@@ -787,10 +892,25 @@ export class memes extends plugin {
               continue;
             }
             mimeType = matches[1];
+            // 与 HTTP 下载同口径：只接受图片。否则 `data:text/html;base64,...` 也能混进来
+            if (!mimeType.startsWith('image/')) {
+              logger.warn(`[meme] 第 ${i + 1} 张 data URI 不是图片(${mimeType})，跳过`);
+              continue;
+            }
             fileType = mimeType.split('/')[1] || 'jpeg';
             base64Data = matches[2];
           } else {
             base64Data = imgUrl.replace(/^base64:\/\//, '');
+          }
+          // 先按 base64 长度预估解码后大小，再决定要不要分配内存：
+          // Buffer.from 会一次性把整块开出来，只靠最后那次 checkFileSize() 拦不住这步分配
+          // 3/4 估算会因 Base64 的 '=' padding 最多高估 2 byte，而 1MB = 1048576 恰好 mod 3 = 1，
+          // 于是"实际正好等于上限"的图可能被误判。按 padding 精确扣掉再比
+          const padding = base64Data.endsWith('==') ? 2 : base64Data.endsWith('=') ? 1 : 0
+          const estimatedSize = Math.floor(base64Data.length * 3 / 4) - padding
+          if (estimatedSize > maxFileSizeByte) {
+            await e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`);
+            return true;
           }
           buffer = Buffer.from(base64Data, 'base64');
         } else {
@@ -832,9 +952,14 @@ export class memes extends plugin {
           new File([buffer], `avatar_${i}.${fileType}`, { type: mimeType })
         );
       }
-      if (formData.getAll('images').length < info.params_type.min_images) {
-        // 需要的图全部下载失败时给个明确回复，别把残缺请求丢给远端再报一堆看不懂的错
-        await e.reply('图片获取失败，请重发图片或检查链接后重试', true)
+      const gotImages = formData.getAll('images').length
+      if (gotImages < info.params_type.min_images) {
+        // 走到这里说明"来源够、但下载失败"：把差几张一起说出来，用户才知道要不要重发
+        const missing = info.params_type.min_images - gotImages
+        await e.reply(
+          `需要 ${info.params_type.min_images} 张图片，其中 ${missing} 张下载失败，请重发图片或检查链接后重试`,
+          true
+        )
         return true
       }
     }
@@ -850,21 +975,18 @@ export class memes extends plugin {
         text = e.sender.card || e.sender.nickname
       }
     }
-    let texts = text.split('/', info.params_type.max_texts)
-    if (texts.length < info.params_type.min_texts) {
-      await e.reply(`字不够！要至少${info.params_type.min_texts}个用/隔开！`, true)
-      return true
-    }
-    texts.forEach(t => {
-      formData.append('texts', t)
-    })
-
-    if (info.params_type.max_texts > 0 && formData.getAll('texts').length === 0) {
-      if (hasAt) {
-        formData.append('texts', atUsers[0].text)
-      } else {
-        formData.append('texts', e.sender.card || e.sender.nickname)
+    // 只有真有文字才提交 texts 字段。`''.split('/', n)` 得到的是 `['']`，而服务端会把空串过滤掉：
+    // 净效果等于"显式传了个空文本"，把上游的 default_texts 顶掉——可选文本的模板会渲染成空文字版，
+    // 而不是详情页里写的【默认文本】版（旧代码后面那个 nickname 兜底也因此永远进不去，是死逻辑）
+    if (text) {
+      const texts = text.split('/', info.params_type.max_texts)
+      if (texts.length < info.params_type.min_texts) {
+        await e.reply(`字不够！要至少${info.params_type.min_texts}个用/隔开！`, true)
+        return true
       }
+      texts.forEach(t => {
+        formData.append('texts', t)
+      })
     }
 
     let userInfos = hasAt ? atUsers : [{ text: e.sender.card || e.sender.nickname, gender: e.sender.sex }]
@@ -875,7 +997,8 @@ export class memes extends plugin {
     }
     const images = formData.getAll('images')
     if (checkFileSize(images)) {
-      return this.e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
+      // 用入参 e 而不是 this.e：派蒙戳一戳是 `new memes().memes(e)`，那种调用没有 this.e
+      return e.reply(`文件大小超出限制，最多支持${maxFileSize}MB`)
     }
 
     logger.info('派蒙meme表情制作:\ninput', { target, targetCode, images, texts: formData.getAll('texts'), args: formData.getAll('args') })
@@ -884,21 +1007,32 @@ export class memes extends plugin {
     try {
       response = await fetch(baseUrl + '/memes/' + targetCode + '/', {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: timeoutSignal(MEME_RENDER_TIMEOUT)
         // headers: {
         // 'Content-Type': 'multipart/form-data'
         // }
       })
     } catch (error) {
-      logger.error('[meme]请求失败:', error)
+      // node-fetch 的 Error.message 会把完整请求 URL 拼进去（`request to http://<ip>:<port>/… failed`），
+      // 直接打整个 Error 对象等于把部署机 IP 写进日志
+      logger.error('[meme] 请求失败:', hidePrivacyInfo(error.message))
       await e.reply(`[meme]表情制作失败: ${hidePrivacyInfo(error.message)}`, true, { recallMsg: !Config.is_recallMsg ? 0 : 119 })
       return true
     }
-    // console.log(response.status)
     if (response.status > 299) {
-      let error = await response.text()
-      console.error(error)
-      await e.reply(hidePrivacyInfo(error), true, { recallMsg: !Config.is_recallMsg ? 0 : 119 })
+      const errText = await response.text()
+      // 别用裸 console.error：它绕过日志级别，而且服务端错误正文未经脱敏
+      logger.error(`[meme] 服务端返回 ${response.status}:`, hidePrivacyInfo(errText))
+      await e.reply(hidePrivacyInfo(errText), true, { recallMsg: !Config.is_recallMsg ? 0 : 119 })
+      return true
+    }
+    // 200 也可能是反代 / WAF / 登录页的 HTML 错页。不校验的话会把 HTML 原样当成图片发给用户
+    const outType = response.headers.get('content-type') || ''
+    if (!outType.startsWith('image/')) {
+      const peek = await response.text()
+      logger.error(`[meme] 出图接口返回的不是图片(${outType || '空'}):`, hidePrivacyInfo(peek.slice(0, 300)))
+      await e.reply('表情生成失败：服务端返回的不是图片，请稍后重试', true)
       return true
     }
     // mkdirs('data/memes/result')
@@ -920,6 +1054,69 @@ export class memes extends plugin {
   }
 }
 
+/**
+ * 从一个字段关联的 `parser_options` 里抽出「可输入名 → 值」映射。
+ *
+ * 只收 `action.type === 0` 的**开关**类 option（`左` / `--left` / `爷` / `--person`）：
+ * 非 `-` 前缀的名字原样收；`--xxx` 去掉前缀收。带值的 option（`args[].name` 有值）不参与——
+ * 它的名字只用来关联字段，值由用户从 `#` 后给。
+ *
+ * 关联字段的三种方式任一命中即可：`opt.dest === prop`、`opt.args[].name === prop`、
+ * `names` 里含 `--<prop>`。最后这条是必需的——boolean 字段的 option `dest` 常为 null
+ * （如 `clown.person` 的 option 只有 `names: ['--person','爷']`），只能靠它认出来。
+ *
+ * **这个规则只在这里定义一份**：`handleArgs()` 与实际解析、`generateSupportArgsText()` 与
+ * 帮助文案都调它。两边各写一套的话，识别结果迟早会漂开（改了一处忘了另一处）。
+ * @param {string} prop 字段名
+ * @param {Array<object>} parserOptions
+ * @returns {Record<string, unknown>} 名字 → 该名字对应的值（可能是 `0` / `false`）
+ */
+function buildOptionValueMap(prop, parserOptions) {
+  const map = {}
+  for (const opt of parserOptions) {
+    if (opt.action?.type !== 0) continue
+    const related =
+      opt.dest === prop ||
+      (opt.args || []).some(a => a.name === prop) ||
+      (opt.names || []).includes(`--${prop}`)
+    if (!related) continue
+    for (const name of opt.names || []) {
+      if (!/^-/.test(name)) map[name] = opt.action.value
+      else if (name.startsWith('--')) map[name.slice(2)] = opt.action.value
+    }
+  }
+  return map
+}
+
+/**
+ * 解析 `<关键词><文本>#<参数>` 里的**单个**参数。
+ *
+ * ## 协议（插件自定义的子集，不是上游的完整 args 协议）
+ * `#` 后只接受一个裸值：`#左` / `#20` / `#0.5`。拿到值后按各字段自己的类型分别处理——
+ * 枚举走 `valueMap` 映射（找不到就走 `default`）、数字做整数/范围校验（越界就不传该字段）。
+ * 注意合法枚举值可能是 `0`，判断要用 `_.has` 而不是 `||`。
+ *
+ * ## 支持范围
+ * - **单字段模板（55 个）**：一个裸值没有歧义，上游的**基础类型全部支持**——
+ *   `enum`、`integer`、`number`、`string`（直接透传，如 `#奖状#2026年9月19日`）、
+ *   `boolean`（靠 `parser_options` 的开关名触发，如 `#小丑#爷`、`#摸#圆`）
+ * - **多字段模板（只有 5 个）**：**不完整支持**，只沿用旧行为把裸值交给 `enum` / `number` 字段：
+ *
+ *   | 模板 | 字段 | 现状 |
+ *   | --- | --- | --- |
+ *   | `ba_say` ba说 | `character`(int) `position`(enum) | 值写给 `character`，`position` 走默认 |
+ *   | `pjsk` | `character`(int) `number`(int) | **同一个值写给两个字段** |
+ *   | `note_for_leave` 请假条 / `abstinence` 戒导 / `my_wife` 我老婆 | `time` `name` `pronoun`（string） | 参数被丢弃（string 分支只对单字段开放，否则两个字段会被同一个值灌满） |
+ *
+ * **为什么不加多字段语法**：修它得引入 flag（上游 `parser_options` 里就有 `-t/--time`、`-n/--name`）。
+ * 实测评估过一版并**已按要求撤回**——那套写法用户记不住，为 5 个模板把参数协议搞复杂不划算，
+ * 所以保持"一个裸值"的最小接口。要加必须连 `generateSupportArgsText()` 一起改。
+ *
+ * @param {string} key meme 的 key
+ * @param {string} args `#` 之后的原始串（可能为空）
+ * @param {Array<{text: string, gender: string}>} userInfos @ 到的人，会填进 args.user_infos
+ * @returns {string} JSON 字符串，直接作为 multipart 的 args 字段发出
+ */
 function handleArgs(key, args, userInfos) {
   if (!args) {
     args = ''
@@ -932,6 +1129,15 @@ function handleArgs(key, args, userInfos) {
     const argsType = infos[key].params_type.args_type;
     const argsModel = argsType.args_model;
     const parserOptions = argsType.parser_options || [];
+    /**
+     * 模板是否只有**一个**可配字段。
+     * 单字段时"一个裸值"没有任何歧义，可以把上游的基础类型（含 string / boolean）都支持全；
+     * 多字段时说不清给谁，只保留旧行为（灌给 enum / number 字段），见 JSDoc 的表格。
+     */
+    const onlyField = Object.keys(argsModel.properties).filter(p => p !== 'user_infos').length === 1;
+
+    /** `#` 之后的原始值。协议只有一个裸值，所以所有字段共用同一个（在同一处声明，别在各分支里重复声明） */
+    const trimmedArg = args.trim();
 
     // 处理枚举类型参数
     for (const prop in argsModel.properties) {
@@ -940,39 +1146,19 @@ function handleArgs(key, args, userInfos) {
       const propInfo = argsModel.properties[prop];
 
       // 查找相关的parser选项
-      const relatedOptions = parserOptions.filter(opt =>
-        opt.dest === prop ||
-        (opt.args && opt.args.some(arg => arg.name === prop))
-      );
-
-      if (propInfo.enum && relatedOptions.length > 0) {
-        // 为枚举类型创建映射表
-        const valueMap = {};
-
-        // 从parser options中提取名称映射
-        relatedOptions.forEach(opt => {
-          if (opt.action?.type === 0) {
-            opt.names.forEach(name => {
-              // 处理非选项形式(如"左", "右")和选项形式(如"--right")
-              if (!/^-/.test(name)) {
-                valueMap[name] = opt.action.value;
-              } else if (name.startsWith('--')) {
-                // 处理选项形式，去掉前缀--
-                const simpleName = name.substring(2);
-                valueMap[simpleName] = opt.action.value;
-              }
-            });
-          }
-        });
-
-        // 设置默认值。注意合法枚举值可能是 0/false/''（左右、角度这类正是 0/1），
-        // 用 `valueMap[arg] || default` 会把这些合法值吞掉退回默认值
-        const trimmedArg = args.trim();
-        argsObj[prop] = _.has(valueMap, trimmedArg) ? valueMap[trimmedArg] : propInfo.default;
+      if (propInfo.enum) {
+        // 字段关联规则只在 buildOptionValueMap() 里定义一份。这里别再写第二套条件，
+        // 否则'只靠 --<字段名> 关联'的字段会被前置过滤掉、压根进不来
+        const valueMap = buildOptionValueMap(prop, parserOptions);
+        if (Object.keys(valueMap).length > 0) {
+          // 合法枚举值可能是 0/false/''（左右、角度这类正是 0/1），
+          // 用 `valueMap[arg] || default` 会把这些合法值吞掉退回默认值
+          argsObj[prop] = _.has(valueMap, trimmedArg) ? valueMap[trimmedArg] : propInfo.default;
+        }
+        continue;
       }
       // 处理数字类型参数
       else if (propInfo.type === 'integer' || propInfo.type === 'number') {
-        const trimmedArg = args.trim();
         // number 要接受小数与负数，integer 额外要求是整数；空串不能被 Number() 当成 0
         const numValue = trimmedArg === '' ? NaN : Number(trimmedArg);
         if (Number.isFinite(numValue) && (propInfo.type !== 'integer' || Number.isInteger(numValue))) {
@@ -986,6 +1172,20 @@ function handleArgs(key, args, userInfos) {
           } else {
             logger.debug(`[meme] 参数 ${prop} = ${numValue} 超出范围 [${minimum}, ${maximum}]，已忽略`);
           }
+        }
+      }
+      // 单字段模板：string 直接透传（`#奖状#2026年9月19日` → time）
+      else if (onlyField && propInfo.type === 'string') {
+        if (trimmedArg !== '') {
+          argsObj[prop] = trimmedArg;
+        }
+      }
+      // 单字段模板：boolean 没有 enum，靠 parser_options 里 action.type === 0 的开关名关联
+      // （`#小丑#爷` / `#摸#圆`）。值取 action.value（true），认不出来就不传、走默认 false
+      else if (onlyField && propInfo.type === 'boolean') {
+        const boolMap = buildOptionValueMap(prop, parserOptions);
+        if (_.has(boolMap, trimmedArg)) {
+          argsObj[prop] = boolMap[trimmedArg];
         }
       }
     }
@@ -1015,81 +1215,65 @@ const detail = code => {
   return ins;
 };
 
-// 辅助函数：根据infos生成参数说明文本
+/**
+ * 生成 `#关键词详情` 里的「支持参数」帮助文案。
+ *
+ * 只描述**一个**字段（循环里碰到第一个业务字段就 return）。范围与 `handleArgs()` 对齐：
+ * `enum` / `boolean` 列出可输入的开关名（`可选：圆、circle。如 #圆`）、数字给范围、
+ * `string` 给形态示例。开关名同样走 `buildOptionValueMap()`，与解析侧共用一套规则。
+ *
+ * 多字段 `args_model` 本就不完整支持（见 `handleArgs()` 的表格），所以文案也只讲第一个，
+ * 不假装支持多个。将来若真要加多字段语法，这里必须改成逐字段列出。
+ * @param {object} info meme 的 info
+ * @returns {string}
+ */
 function generateSupportArgsText(info) {
   try {
     const argsType = info.params_type.args_type;
     const props = argsType.args_model.properties;
     const options = argsType.parser_options;
 
-    // 寻找主要参数及其描述
-    let mainParam = '';
-    let description = '';
-
+    // 只描述第一个业务字段 —— 与 handleArgs() 的处理范围一致
     for (const prop in props) {
-      if (prop !== 'user_infos') {
-        const propInfo = props[prop];
-        mainParam = prop;
+      if (prop === 'user_infos') continue;
 
-        // 寻找参数说明
-        const option = options.find(opt =>
-          opt.dest === prop ||
-          (opt.args && opt.args.some(arg => arg.name === prop))
-        );
+      const propInfo = props[prop];
+      const option = options.find(opt =>
+        opt.dest === prop ||
+        (opt.args && opt.args.some(arg => arg.name === prop))
+      );
+      const description = option?.help_text || propInfo.description || prop;
 
-        if (option?.help_text) {
-          description = option.help_text;
-        } else if (propInfo.description) {
-          description = propInfo.description;
-        }
-
-        // 如果是枚举类型，列出可能的值
-        if (propInfo.enum) {
-          // 枚举值可能是 0/false/''，不能用 truthy 判断过滤，否则这些合法值不会出现在说明里
-          const isEnumOption = opt => opt.action?.type === 0 && opt.action?.value !== undefined && opt.dest === prop;
-
-          // 收集中文参数名称（非选项形式）
-          const chineseNames = options
-            .filter(isEnumOption)
-            .flatMap(opt => opt.names.filter(name => !/^-/.test(name)));
-
-          // 收集英文参数名称（从选项形式提取）
-          const englishNames = options
-            .filter(isEnumOption)
-            .flatMap(opt => opt.names
-              .filter(name => name.startsWith('--'))
-              .map(name => name.substring(2))
-            );
-
-          // 合并中文和英文参数名称
-          const valueNames = [...new Set([...chineseNames, ...englishNames])];
-
-          if (valueNames.length > 0) {
-            const valuesText = valueNames.join('、');
-            // 优先使用中文名称作为示例
-            const exampleName = chineseNames.length > 0 ? chineseNames[0] : valueNames[0];
-            return `${description || prop}，可选值：${valuesText}。如#${exampleName}`;
-          }
-        }
-        // 处理数字类型
-        else if (propInfo.type === 'integer' || propInfo.type === 'number') {
-          // 添加数字范围说明（如果有）
-          let rangeText = '';
-          if (propInfo.minimum !== undefined && propInfo.maximum !== undefined) {
-            rangeText = `范围为${propInfo.minimum}~${propInfo.maximum}`;
-          } else if (propInfo.description && propInfo.description.includes('范围')) {
-            rangeText = propInfo.description;
-          }
-
-          return `${description || prop}${rangeText ? '，' + rangeText : ''}。如#1`;
-        }
-
-        break;
+      // 开关名映射：enum 与 boolean 共用同一套规则（buildOptionValueMap），
+      // 否则帮助文案和实际解析会各认一套名字
+      const switchNames = Object.keys(buildOptionValueMap(prop, options));
+      if ((propInfo.enum || propInfo.type === 'boolean') && switchNames.length > 0) {
+        // 示例优先给中文名 —— 用户实际要打的就是它（`#万花筒#圆`）
+        const example = switchNames.find(n => !/^[a-z]/i.test(n)) || switchNames[0];
+        return `${description}，可选：${switchNames.join('、')}。如 #${example}`;
       }
+
+      if (propInfo.type === 'integer' || propInfo.type === 'number') {
+        let rangeText = '';
+        if (propInfo.minimum !== undefined && propInfo.maximum !== undefined) {
+          rangeText = `范围为${propInfo.minimum}~${propInfo.maximum}`;
+        } else if (propInfo.description && propInfo.description.includes('范围')) {
+          rangeText = propInfo.description;
+        }
+        return `${description}${rangeText ? '，' + rangeText : ''}。如 #1`;
+      }
+
+      // string：值直接透传，给个形态示例
+      if (propInfo.type === 'string') {
+        // 时间/日期类字段给日期示例，其它（名字、二维码内容…）给通用示例
+        const example = /时间|日期/.test(`${prop}${description}`) ? '#2026年9月19日' : '#示例文字';
+        return `${description}，直接跟文字。如 ${example}`;
+      }
+
+      return `${description}参数`;
     }
 
-    return description || `${mainParam}参数`;
-
+    return '支持额外参数';
   } catch (e) {
     console.error(`生成参数说明出错: ${hidePrivacyInfo(e.message)}`);
     return '支持额外参数';
@@ -1106,7 +1290,9 @@ function checkFileSize(files) {
   if (fileList.length === 0) {
     return false
   }
-  return fileList.some(file => file.size >= maxFileSizeByte)
+  // 用 > 而不是 >=：文案是"最多支持 N MB"，恰好等于上限应当算合法。
+  // 网络下载那两条检查用的也是 >，三处必须同口径
+  return fileList.some(file => file.size > maxFileSizeByte)
 }
 
 function mkdirs(dirname) {
@@ -1160,6 +1346,13 @@ const REQUEST_TIMEOUT = 15000
 const IMAGE_TIMEOUT = 20000
 
 /**
+ * 出图请求超时（毫秒）：POST /memes/<key>/ 生成、以及远端 /memes/render_list。
+ * 生成 GIF 天生慢，不能复用 REQUEST_TIMEOUT 的 15s；但也不能不设——远端连接挂住时
+ * `await fetch` 会无限 pending，用户那条命令就永远不返回。
+ */
+const MEME_RENDER_TIMEOUT = 120000
+
+/**
  * 生成超时中断信号（node-fetch 3.x 支持 `signal`）。
  * `AbortSignal.timeout` 需要 Node >= 17.3，低版本退回 AbortController + setTimeout。
  * @param {number} ms
@@ -1188,6 +1381,379 @@ async function safeJson(response) {
   }
 }
 
+/** `fetchMemeInfo()` 的返回值之一：服务端明确答复该 key 不存在，与"请求失败"区分开 */
+const MEME_NOT_FOUND = Symbol('meme-not-found')
+
+/**
+ * 校验一份「infos + keyMap」数据集是否可用。三道关：
+ *
+ * 1. **正向**：keyMap 的每个目标都得是真实存在的 meme
+ * 2. **反向逐关键词**：infos 里每个条目的**每个**关键词都必须回指它自己。
+ *    只查"某个关键词能指回来"是不够的——971 个关键词只剩 100 个、每个 meme 恰好残留 1 个的
+ *    截断能完全通过，然后被永久写回缓存。这里按 `keyMap[keyword] === memeKey` 逐个比对
+ * 3. **params_type**：见 `badParamsType()`。命令层直接读这些字段，外面数据缺了它，
+ *    要等到用户真发命令才在 `info.params_type.max_images` 处炸掉
+ * @param {unknown} infos
+ * @param {unknown} keyMap
+ * @returns {{ ok: boolean, reason: string }} 不通过时 reason 说明首个原因（写日志用）
+ */
+function validateMemeDataset(infos, keyMap) {
+  if (!infos || typeof infos !== 'object' || Array.isArray(infos)) return { ok: false, reason: 'infos 不是对象' }
+  if (!keyMap || typeof keyMap !== 'object' || Array.isArray(keyMap)) return { ok: false, reason: 'keyMap 不是对象' }
+
+  const infoKeys = Object.keys(infos)
+  if (infoKeys.length === 0) return { ok: false, reason: 'infos 为空' }
+  if (Object.keys(keyMap).length === 0) return { ok: false, reason: 'keyMap 为空' }
+
+  // 正向：每个关键词既要指向真实存在的 meme，**还要真的属于它**。
+  // 只查"目标存在"是不够的：外部数据可以塞一个 infos 里根本没有的额外触发词，
+  // 而 memeKeyRules() 会把它直接注册成命令——等于凭空多出一个消息路由入口。
+  // 配上反向那条（每个 infos 关键词都回指自己），合起来就是严格的 1:1
+  for (const [keyword, target] of Object.entries(keyMap)) {
+    // 必须用 Object.hasOwn：直接 `infos[target]` 会从 Object.prototype 取到 `toString` /
+    // `constructor` 这类 truthy 值，于是下一句 `infos[target].keywords` 直接 TypeError ——
+    // 等于校验器被脏输入打崩，和它存在的目的正好相反
+    if (!Object.hasOwn(infos, target)) {
+      return { ok: false, reason: `关键词「${keyword}」指向不存在的 meme「${target}」` }
+    }
+    if (!infos[target].keywords.includes(keyword)) {
+      return { ok: false, reason: `关键词「${keyword}」不属于 meme「${target}」` }
+    }
+  }
+
+  // 反向必须**逐关键词**核对，不能只看"这个 meme 至少被某个关键词指到"：
+  // 971 个关键词只剩 100 个、但每个 meme 恰好残留 1 个的那种截断，用"可达性"是查不出来的，
+  // 而它会被永久写回缓存。逐项重建路径下 keyMap 本来就由 infos[].keywords 1:1 构造，
+  // 所以这条约束对纯上游是零成本的；若某个聚合服务只给关键词子集，这里会判不合法 →
+  // 退到逐项重建（更慢但正确），属于安全降级
+  for (const [memeKey, info] of Object.entries(infos)) {
+    for (const keyword of info.keywords) {
+      if (keyMap[keyword] !== memeKey) {
+        return { ok: false, reason: `关键词「${keyword}」没有指回 meme「${memeKey}」，数据集疑似被截断` }
+      }
+    }
+  }
+
+  // params_type 也要守：外面数据缺了它，直到用户真发命令才在 `info.params_type.max_images` 处炸掉
+  for (const [memeKey, info] of Object.entries(infos)) {
+    const bad = badParamsType(info.params_type)
+    if (bad) return { ok: false, reason: `meme「${memeKey}」的 ${bad}` }
+  }
+
+  return { ok: true, reason: '' }
+}
+
+/**
+ * 校验 `params_type` 的最小 schema。合法返回 null，否则返回一句原因。
+ * 命令层直接读 `params_type.min_images` / `default_texts`，缺字段要在进门时挡住，
+ * 而不是等命令执行到一半再抛 TypeError。
+ * @param {unknown} p
+ * @returns {string|null}
+ */
+function badParamsType(p) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return 'params_type 缺失或不是对象'
+  for (const field of ['min_images', 'max_images', 'min_texts', 'max_texts']) {
+    const v = p[field]
+    if (!Number.isInteger(v) || v < 0) return `params_type.${field} 不是非负整数（${JSON.stringify(v)}）`
+  }
+  if (p.min_images > p.max_images) return 'params_type.min_images > max_images'
+  if (p.min_texts > p.max_texts) return 'params_type.min_texts > max_texts'
+  if (!Array.isArray(p.default_texts)) return 'params_type.default_texts 不是数组'
+
+  // args_type 也要守。只校验外层的话，`args_type: {}` 能通过，
+  // 等用户真触发命令才在 `Object.keys(argsModel.properties)` 处抛 TypeError
+  const at = p.args_type
+  if (at !== null && at !== undefined) {
+    if (typeof at !== 'object' || Array.isArray(at)) return 'params_type.args_type 不是对象'
+    const model = at.args_model
+    if (!model || typeof model !== 'object' || Array.isArray(model)) {
+      return 'params_type.args_type.args_model 缺失或不是对象'
+    }
+    const props = model.properties
+    if (!props || typeof props !== 'object' || Array.isArray(props)) {
+      return 'params_type.args_type.args_model.properties 缺失或不是对象'
+    }
+    const opts = at.parser_options
+    if (opts !== null && opts !== undefined && !Array.isArray(opts)) {
+      return 'params_type.args_type.parser_options 不是数组'
+    }
+    // 容器类型对了还不够，还得守住**里面的节点**：`properties.foo = null` 或
+    // `parser_options = [null]` 都能通过容器检查，而 handleArgs() 会直接
+    // `propInfo.enum` / `opt.action?.type` 解引用，等于 validator 被脏输入打崩
+    for (const [name, prop] of Object.entries(props)) {
+      if (!prop || typeof prop !== 'object' || Array.isArray(prop)) {
+        return `params_type.args_type.args_model.properties.${name} 不是对象`
+      }
+    }
+    for (const opt of opts || []) {
+      if (!opt || typeof opt !== 'object' || Array.isArray(opt)) {
+        return 'params_type.args_type.parser_options 里有非对象项'
+      }
+      if (opt.args !== null && opt.args !== undefined && !Array.isArray(opt.args)) {
+        return 'params_type.args_type.parser_options[].args 不是数组'
+      }
+      // 数组元素也要查：`args: [null]` 能过"是数组"这关，但 buildOptionValueMap() 里
+      // `(opt.args || []).some(a => a.name === prop)` 会直接解引用 null 抛 TypeError ——
+      // 这就是"脏输入必须守到真正解引用节点"的最后一个缺口
+      for (const arg of opt.args || []) {
+        if (!arg || typeof arg !== 'object' || Array.isArray(arg)) {
+          return 'params_type.args_type.parser_options[].args 里有非对象项'
+        }
+        if (arg.name !== undefined && typeof arg.name !== 'string') {
+          return 'params_type.args_type.parser_options[].args[].name 不是字符串'
+        }
+      }
+      if (opt.names !== null && opt.names !== undefined && !Array.isArray(opt.names)) {
+        return 'params_type.args_type.parser_options[].names 不是数组'
+      }
+      for (const name of opt.names || []) {
+        if (typeof name !== 'string') {
+          return 'params_type.args_type.parser_options[].names 里有非字符串项'
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * 读取本地缓存数据集。
+ *
+ * infos 与 keyMap 存在**同一个文件**里（见 `MEME_CACHE_FILE` 的说明），所以读取时不存在
+ * "两份文件来自不同代"的问题；剩下的风险只是单个文件残缺/被手工改过，交给校验兜住。
+ *
+ * @returns {{ infos: Record<string, object>, keyMap: Record<string, string> } | null}
+ *          读取失败或校验不过时返回 null——调用方据此转为"去拉远端"，这就是冷启动自愈
+ */
+function loadMemeDataset() {
+  let raw
+  try {
+    if (!fs.existsSync(MEME_CACHE_FILE)) {
+      // dataset.json 不存在，可能是刚从旧版升级上来 —— 试一次迁移，别把完好的旧缓存白扔
+      return migrateLegacyDataset()
+    }
+    raw = JSON.parse(fs.readFileSync(MEME_CACHE_FILE, 'utf-8'))
+  } catch (e) {
+    logger.warn(`[meme] 本地缓存 ${MEME_CACHE_FILE} 读取/解析失败，将从远端重新拉取:`, e.message)
+    // 顺手删掉坏文件，免得每次启动都重复报一次。删不掉也无所谓（下次同样会被解析失败挡下），
+    // 所以这里的 catch 是**有意的静默**，不是漏写的错误处理
+    try { fs.unlinkSync(MEME_CACHE_FILE) } catch { /* 有意忽略：best-effort 清理坏缓存 */ }
+    return null
+  }
+
+  if (raw?.v !== MEME_CACHE_VERSION) {
+    logger.warn(`[meme] 本地缓存版本不符（${raw?.v} != ${MEME_CACHE_VERSION}），将从远端重新拉取`)
+    return null
+  }
+
+  // 缓存也可能被手工改过或跨版本残留，同样过归一化 + 校验，不能当可信输入
+  const infos = sanitizeInfos(raw.infos)
+  const keyMap = sanitizeKeyMap(raw.keyMap)
+  const verdict = validateMemeDataset(infos, keyMap)
+  if (!verdict.ok) {
+    logger.warn(`[meme] 本地缓存不可用（${verdict.reason}），将从远端重新拉取`)
+    return null
+  }
+  return { infos, keyMap }
+}
+
+/**
+ * 从旧版的双文件缓存迁移一次（`infos.json` + `keyMap.json` → `dataset.json`）。
+ *
+ * 新版只认单文件缓存。如果没有这一步，**刚升级那一次远端恰好不可用**时会把两份仍然完好的
+ * 旧缓存一起无视掉，冷启动 `oldKeyMap` 又是空的，整套 meme 直接变不可用——
+ * 这与"远端挂了仍能沿用本地缓存"的目标直接冲突。校验通过才迁移并删旧文件，不通过就当作没缓存。
+ * @returns {{ infos: Record<string, object>, keyMap: Record<string, string> } | null}
+ */
+function migrateLegacyDataset() {
+  const readLegacy = file => {
+    try {
+      if (!fs.existsSync(file)) return null
+      return JSON.parse(fs.readFileSync(file, 'utf-8'))
+    } catch (e) {
+      logger.warn(`[meme] 旧缓存 ${file} 读取/解析失败，忽略:`, e.message)
+      return null
+    }
+  }
+
+  const rawInfos = readLegacy(LEGACY_INFOS_FILE)
+  const rawKeyMap = readLegacy(LEGACY_KEYMAP_FILE)
+  if (!rawInfos || !rawKeyMap) return null
+
+  const infos = sanitizeInfos(rawInfos)
+  const keyMap = sanitizeKeyMap(rawKeyMap)
+  const verdict = validateMemeDataset(infos, keyMap)
+  if (!verdict.ok) {
+    logger.warn(`[meme] 旧缓存不可用（${verdict.reason}），忽略`)
+    return null
+  }
+
+  // 只有新缓存**确实写成功**才删旧文件、才报"已迁移"。
+  // saveMemeDataset() 会把写盘失败吞成一句日志，若不看返回值就往下删，
+  // 就会变成"新缓存没落盘 + 旧缓存被删 + 下次启动远端又挂了 = 无任何可用数据"
+  if (!saveMemeDataset(infos, keyMap)) {
+    logger.warn('[meme] 新缓存写入失败，保留旧版 infos.json / keyMap.json 备下次使用')
+    return { infos, keyMap }
+  }
+
+  logger.mark('[meme] 已把旧版 infos.json / keyMap.json 迁移为 dataset.json')
+  for (const file of [LEGACY_INFOS_FILE, LEGACY_KEYMAP_FILE]) {
+    // 迁移完就删，免得下次启动再走一遍；删不掉也无所谓，上面的校验会兜住
+    try { fs.unlinkSync(file) } catch { /* best-effort */ }
+  }
+  return { infos, keyMap }
+}
+/**
+ * 落盘缓存数据集。
+ *
+ * 先写 `.tmp` 再 `rename`，**不要**直接 `writeFileSync` 到目标：后者会先截断目标文件，
+ * 写盘中途崩溃/断电就留下半个 JSON；若下次启动远端也挂了，最后一份可用缓存就没了。
+ * 同一分区内的 rename 是原子的，和整条刷新链路"数据备齐再提交"的思路一致。
+ * @param {Record<string, object>} infos
+ * @param {Record<string, string>} keyMap
+ * @returns {boolean} 是否真的写成功。**调用方必须看返回值**：
+ *          比如旧缓存迁移要靠它决定"能不能删旧文件"，吞掉失败就会丢掉最后一份可用缓存
+ */
+function saveMemeDataset(infos, keyMap) {
+  const tmp = `${MEME_CACHE_FILE}.tmp`
+  try {
+    fs.writeFileSync(tmp, JSON.stringify({ v: MEME_CACHE_VERSION, savedAt: Date.now(), infos, keyMap }))
+    fs.renameSync(tmp, MEME_CACHE_FILE)
+    return true
+  } catch (err) {
+    logger.warn('[meme] 写入本地缓存失败:', err.message)
+    try { fs.unlinkSync(tmp) } catch { /* best-effort 清理临时文件 */ }
+    return false
+  }
+}
+
+/**
+ * 拉单个 meme 的 info，带有限重试。
+ * 逐项重建里"任何一条失败整批作废"，所以单条值得重试；次数不能大，否则 971 条乘起来会拖很久。
+ * @param {string} key
+ * @returns {Promise<object | symbol | null>} info / MEME_NOT_FOUND（404）/ null（失败）
+ */
+async function fetchMemeInfo(key) {
+  for (let i = 0; i <= REBUILD_ITEM_RETRIES; i++) {
+    try {
+      const res = await fetch(`${baseUrl}/memes/${key}/info`, { signal: timeoutSignal(REQUEST_TIMEOUT) })
+      // 404 是确定性答复（服务端没有这个 key），交给调用方按"跳过"处理
+      if (res.status === 404) return MEME_NOT_FOUND
+      // 其它确定性 4xx（401/403/400…）重试同样没意义：/keys 能通但 /info 全 401 时
+      // 会对每个 key 白跑三轮。与 fetchJsonWithRetry 的口径保持一致
+      if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) return null
+      const info = await safeJson(res)
+      if (info && Array.isArray(info.keywords)) return info
+    } catch (e) {
+      logger.debug(`[meme] 拉取 ${key} 的 info 失败 (第${i + 1}次): ${hidePrivacyInfo(e.message)}`)
+    }
+    if (i < REBUILD_ITEM_RETRIES) await new Promise(r => setTimeout(r, 300 * (i + 1)))
+  }
+  return null
+}
+
+/**
+ * 用 `/memes/keys` + 逐个 `/memes/<key>/info` 重建数据集（原生上游没有聚合接口时的兜底）。
+ *
+ * 两处是刻意设计：
+ * - **并发**：971 个 key 串行请求按平均 150ms 要 ~146s，还叠加每条 15s 超时的最坏情况。
+ *   这里用固定数量 worker 分批跑，既快又不会一次性打爆后端。
+ * - **严格性**：逐项重建很容易只成功一部分，所以要求"除 404 之外全部成功"，否则会用
+ *   "300 个里成功 2 个"的残缺数据顶掉原有完整数据，还对外报更新成功。**404 单独放行**是因为
+ *   它是确定性答复而非瞬时失败——把它算作失败的话，只要有一个 key 数据漂移，插件就永远无法更新。
+ *
+ * @param {string[]} keys
+ * @returns {Promise<{ infos: Record<string, object>, keyMap: Record<string, string> } | null>}
+ *          未达完整性要求时返回 null
+ */
+async function rebuildFromKeys(keys) {
+  const infos = {}
+  const keyMap = {}
+  /** 服务端明确答复"不存在"的 key，不计入失败 */
+  const missing = []
+  const failed = []
+  let cursor = 0
+
+  const worker = async () => {
+    while (cursor < keys.length) {
+      const key = keys[cursor++]
+      const info = await fetchMemeInfo(key)
+      if (info === MEME_NOT_FOUND) { missing.push(key); continue }
+      if (!info) { failed.push(key); continue }
+      // 关键词过一遍归一化：空关键词会注册出 `cmdReg('')` 这种劫持消息路由的规则
+      const keywords = normalizeKeywords(info.keywords)
+      keywords.forEach(keyword => {
+        keyMap[keyword] = key
+      })
+      infos[key] = { ...info, keywords }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(REBUILD_CONCURRENCY, keys.length) }, worker))
+
+  if (failed.length) {
+    logger.warn(
+      `[meme] 逐项重建不完整（成功 ${Object.keys(infos).length}、服务端不存在 ${missing.length}、请求失败 ${failed.length}，共 ${keys.length}），丢弃本次结果`
+    )
+    return null
+  }
+  if (missing.length) {
+    logger.warn(
+      `[meme] 逐项重建：${missing.length} 个 key 在服务端不存在，已跳过（例：${missing.slice(0, 5).join('、')}）`
+    )
+  }
+  return { infos, keyMap }
+}
+
+/**
+ * 归一化外部数据里的关键词：只留非空字符串。
+ *
+ * 空关键词（`''` 或纯空白）会生成 `new RegExp('^#?')` 这种几乎匹配一切消息的规则，
+ * 动态注册之后等于把消息路由劫持掉，所以外部数据进门时必须先过这一关。
+ * 注意这里**只过滤，不因为过滤后为空就把整条目丢掉**——条目本身要留在 infos 里，
+ * 否则 keyMap 指向它会触发"数据不一致"整批作废，反而把插件卡在永不更新。
+ * @param {unknown} keywords
+ * @returns {string[]}
+ */
+function normalizeKeywords(keywords) {
+  if (!Array.isArray(keywords)) return []
+  return keywords.filter(kw => typeof kw === 'string' && kw.trim() !== '')
+}
+
+/**
+ * 归一化「关键词 → memeKey」映射：键必须是非空字符串，值必须是非空字符串。
+ * @param {unknown} raw
+ * @returns {Record<string, string>}
+ */
+function sanitizeKeyMap(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  // 无原型对象：外部数据里的 `__proto__` 键在普通 `{}` 上会走原型 setter 而不是写成 own property，
+  // 这正是原型污染最常见的入口。`Object.create(null)` 让所有键都只是普通数据
+  const out = Object.create(null)
+  for (const [keyword, key] of Object.entries(raw)) {
+    if (typeof keyword === 'string' && keyword.trim() !== '' && typeof key === 'string' && key !== '') {
+      out[keyword] = key
+    }
+  }
+  return out
+}
+
+/**
+ * 归一化 infos：丢掉非对象条目，把每个条目的 keywords 过滤一遍。
+ * 同样返回无原型对象，理由见 `sanitizeKeyMap()`。
+ * @param {unknown} raw
+ * @returns {Record<string, object>}
+ */
+function sanitizeInfos(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const out = Object.create(null)
+  for (const [key, info] of Object.entries(raw)) {
+    if (!info || typeof info !== 'object') continue
+    out[key] = { ...info, keywords: normalizeKeywords(info.keywords) }
+  }
+  return out
+}
+
 /**
  * 带重试的 JSON 拉取。
  * 远端（如 HF Space）偶发超时或响应截断，infos.json 已超过 300KB，单次失败概率不低。
@@ -1200,6 +1766,12 @@ async function fetchJsonWithRetry(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url, { signal: timeoutSignal(REQUEST_TIMEOUT) })
+      // 永久失败（4xx，408/429 除外）当场放弃，别重试：
+      // /memes/static/*.json 在纯上游必定 404，重试只换来 1s+2s 的退避白等，且必然再失败
+      if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+        logger.debug(`[meme] 拉取 ${hidePrivacyInfo(url)} 返回 ${res.status}，判定为永久失败，不再重试`)
+        return null
+      }
       const data = await safeJson(res)
       if (data) return data
       logger.warn(`[meme] 拉取 ${hidePrivacyInfo(url)} 返回非预期内容 (第${i + 1}次)`)

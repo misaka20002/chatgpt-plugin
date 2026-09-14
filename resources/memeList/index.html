@@ -29,8 +29,8 @@
             --badge-hot-fg: #c0562c;
             --badge-text-bg: #eeeaf8;
             --badge-text-fg: #7a6f96;
-            --badge-both-bg: #e3f1ea;
-            --badge-both-fg: #3f7a62;
+            --badge-img-bg: #e3f1ea;
+            --badge-img-fg: #3f7a62;
         }
 
         html,
@@ -182,9 +182,9 @@
             color: var(--badge-text-fg);
         }
 
-        .swatch-both {
-            background: var(--badge-both-bg);
-            color: var(--badge-both-fg);
+        .swatch-img {
+            background: var(--badge-img-bg);
+            color: var(--badge-img-fg);
         }
 
         /* ---------- 分组 ---------- */
@@ -284,16 +284,16 @@
             color: var(--badge-hot-fg);
         }
 
-        /* 需文 / 图文 用两支相近但能分辨的低饱和色：
-           需文偏薰衣草、图文偏薄荷，扫一眼就能分清"要不要打字"和"图片文字都带" */
+        /* 「图」「文」是两支低饱和色，色相区分"要你给图"还是"要你打字"：
+           文偏薰衣草、图偏薄荷。两者互不重叠，所以不会同时出现在一颗胶囊上 */
         .badge-text {
             background: var(--badge-text-bg);
             color: var(--badge-text-fg);
         }
 
-        .badge-both {
-            background: var(--badge-both-bg);
-            color: var(--badge-both-fg);
+        .badge-img {
+            background: var(--badge-img-bg);
+            color: var(--badge-img-fg);
         }
 
         /* ---------- 「新」整颗胶囊反白 ----------
@@ -305,6 +305,10 @@
             border-color: var(--new-fill);
         }
 
+        /* 蓝胶囊内部的**文字**元素要一并反相，否则深色字、暖色分隔线压在蓝底上会糊：
+           `#` 前缀改半透明白、别名改白 82% + 半透明白分隔线。
+           注意这里**不覆盖徽标**：徽标自带不透明底色，压到蓝底上依然清楚，
+           一旦把它们的底色抹掉改成白字，"图/文/热"就只剩字没有色，反而认不出来了 */
         .chip-new .chip-k {
             color: #fff;
         }
@@ -317,17 +321,6 @@
         .chip-new .chip-a {
             color: rgba(255, 255, 255, 0.82);
             border-left-color: rgba(255, 255, 255, 0.34);
-        }
-
-        /* 「热」/「需文」/「图文」在蓝底上不能再叠浅色底：浅橙底、浅紫底、浅薄荷底铺到蓝灰上
-           都会变成脏色块。降级成纯白文字，靠「比关键词小一档 + 没有底色」区分 */
-        .chip-new .badge-hot,
-        .chip-new .badge-text,
-        .chip-new .badge-both {
-            background: transparent;
-            color: #fff;
-            padding-left: 2px;
-            padding-right: 2px;
         }
 
         /* ---------- 页脚 ---------- */
@@ -381,9 +374,8 @@
                     {{else}}
                     <span class="hint"><b>直接发送关键词</b>即可制作表情（<b>#</b> 可省略）</span>
                     {{/if}}
-                    <span class="hint">要用的图默认取「回复图 → 本条图 → @对象头像」</span>
-                    <span class="hint"><i class="swatch swatch-text">需文</i>必须带上文字</span>
-                    <span class="hint"><i class="swatch swatch-both">图文</i>图片和文字都要</span>
+                    <span class="hint"><i class="swatch swatch-img">图</i>需要图或 @ 群友</span>
+                    <span class="hint"><i class="swatch swatch-text">文</i>需要文字</span>
                     <span class="hint"><i class="swatch swatch-new">新</i>近 {{stats.newThresholdDays}} 天新增</span>
                     <span class="hint">同一表情的别名用 <b>·</b> 分隔</span>
                 </div>
