@@ -1387,10 +1387,11 @@ const MEME_NOT_FOUND = Symbol('meme-not-found')
 /**
  * 校验一份「infos + keyMap」数据集是否可用。三道关：
  *
- * 1. **正向**：keyMap 的每个目标都得是真实存在的 meme
- * 2. **反向逐关键词**：infos 里每个条目的**每个**关键词都必须回指它自己。
- *    只查"某个关键词能指回来"是不够的——971 个关键词只剩 100 个、每个 meme 恰好残留 1 个的
- *    截断能完全通过，然后被永久写回缓存。这里按 `keyMap[keyword] === memeKey` 逐个比对
+ * 1. **正向**：keyMap 的每个目标都得是真实存在的 meme，且该 meme 的关键词表里真有这个关键词
+ *    （挡住外部数据凭空塞进来的"额外触发词"——它会被注册成命令）
+ * 2. **反向**：infos 里每个 meme 的**每个**关键词都必须能在 keyMap 里找到条目（截断信号）。
+ *    注意**只查存在性、不查归属**：关键词可以跨 meme 重复（实测 15 个），而 keyMap 一个关键词
+ *    只能有一个目标，要求"回指自己"会把合法数据判死
  * 3. **params_type**：见 `badParamsType()`。命令层直接读这些字段，外面数据缺了它，
  *    要等到用户真发命令才在 `info.params_type.max_images` 处炸掉
  * @param {unknown} infos
@@ -1421,15 +1422,20 @@ function validateMemeDataset(infos, keyMap) {
     }
   }
 
-  // 反向必须**逐关键词**核对，不能只看"这个 meme 至少被某个关键词指到"：
-  // 971 个关键词只剩 100 个、但每个 meme 恰好残留 1 个的那种截断，用"可达性"是查不出来的，
-  // 而它会被永久写回缓存。逐项重建路径下 keyMap 本来就由 infos[].keywords 1:1 构造，
-  // 所以这条约束对纯上游是零成本的；若某个聚合服务只给关键词子集，这里会判不合法 →
-  // 退到逐项重建（更慢但正确），属于安全降级
+  // 反向：infos 里每个 meme 的**每个**关键词都必须在 keyMap 里有条目——这才是"keyMap 被截断"的信号。
+  //
+  // 但**不能**要求 `keyMap[keyword] === memeKey`（回指自己）：实测 971 个 meme 里有 **15 个关键词被
+  // ≥2 个 meme 声明**（「嗦」同时属于 suck 和 kou、「口」同时属于 oral_sex 和 kou、「跳舞」同时属于
+  // stickman_dancing 和 tiaowu_mao……），而一个关键词在 keyMap 里只能有一个目标，必然有一方
+  // "回指不到自己"。曾经按严格 1:1 写过一版，结果逐项重建出的**合法**数据被整批判不合法，
+  // `#表情包更新` 直接失败（14 个关键词触发）——所以这里只查"存在性"，不查归属
   for (const [memeKey, info] of Object.entries(infos)) {
     for (const keyword of info.keywords) {
-      if (keyMap[keyword] !== memeKey) {
-        return { ok: false, reason: `关键词「${keyword}」没有指回 meme「${memeKey}」，数据集疑似被截断` }
+      if (!Object.hasOwn(keyMap, keyword)) {
+        return {
+          ok: false,
+          reason: `关键词「${keyword}」（属于 meme「${memeKey}」）在 keyMap 里没有条目，数据集疑似被截断`,
+        }
       }
     }
   }
