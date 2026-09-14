@@ -8,6 +8,7 @@ import path from 'node:path'
 import _ from 'lodash'
 import loader from '../../../lib/plugins/loader.js'
 import { Config } from '../utils/config.js'
+import { buildMemeListData } from '../utils/memeCategory.js'
 import {
   hidePrivacyInfo,
   getUserDetailedInfo,
@@ -50,6 +51,33 @@ let protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fast_
  * meme 使用计数 Redis key 前缀
  */
 const MEME_USAGE_REDIS_PREFIX = 'Yz:paimon_meme_usage:'
+
+/**
+ * 列表图的渲染宽度（px）。
+ *
+ * 图片的最终宽度就等于它：puppeteer 截取的是 `#container` 元素，元素多宽图就多宽，
+ * 所以想要 2K / 4K 改这里即可，不需要去动 deviceScaleFactor（那属于渲染器全局配置）。
+ * 971 个表情排下来是张长图，宽度给到 2560 能在"看得清"和"体积可控"之间取平衡。
+ */
+const MEME_LIST_WIDTH = 2560
+
+/** 列表图 JPEG 质量。长图给太高体积会失控，86 在肉眼无感的前提下能省掉一大半 */
+const MEME_LIST_QUALITY = 86
+
+/** 列表图分组方案，可选值见 utils/memeCategory.js 的 SUPPORTED_SCHEMES */
+const MEME_LIST_SCHEME = 'hybrid'
+
+/** 使用次数达到该值，列表图上给该表情打「热」标 */
+const MEME_LIST_HOT_THRESHOLD = 30
+
+/** 多少天内创建的表情打「新」标 */
+const MEME_LIST_NEW_DAYS = 30
+
+/**
+ * 列表图使用的模板（相对 `resources/`，不带 .html）。
+ * 换审美只需改这一行，模板之间共用同一份 `buildMemeListData()` 数据契约。
+ */
+const MEME_LIST_TEMPLATE = 'memeList/index'
 
 /**
  * 本插件在云崽插件加载器中的 key（file.name）后缀，用于定位已注册的插件条目
@@ -239,7 +267,9 @@ export class memes extends plugin {
         }
       }
     } catch (err) {
-      logger.warn('[meme] 远程拉取 meme 资源失败，插件仍可加载但功能将不可用:', err.message)
+      // node-fetch 的网络错误会把完整请求 URL 拼进 message（`request to http://<ip>:<port>/… failed`），
+      // 所以这里必须过一遍 hidePrivacyInfo，否则日志里会留下部署机 IP
+      logger.warn('[meme] 远程拉取 meme 资源失败，插件仍可加载但功能将不可用:', hidePrivacyInfo(err.message))
     }
 
     /** 数据必须成对且互相一致：keyMap 里每个 memeKey 都要能在 infos 里找到 */
@@ -405,32 +435,120 @@ export class memes extends plugin {
       }
     }
 
-    // 构建带标签和排序的 meme 列表
-    const memeList = await this.buildMemeListWithLabels()
-
-    const response = await fetch(`${baseUrl}/memes/render_list`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        meme_list: memeList,
-        text_template: '{keywords}',
-        add_category_icon: true
-      })
-    })
-
-    if (!response.ok) {
-      logger.error('[meme] render_list 请求失败:', response.status)
-      return false
+    // 本地模板渲染：按分组排版，宽度与质量见本文件顶部的 MEME_LIST_* 常量
+    if (await this.renderMemeListLocal(e, resultFileLoc)) {
+      await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
+      return true
     }
 
-    const resultBlob = await response.blob()
-    const resultBuffer = Buffer.from(await resultBlob.arrayBuffer())
-    fs.writeFileSync(resultFileLoc, resultBuffer)
-    await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
-    return true
+    // 本地渲染不可用（没装 Chromium 等）时退回远端 render_list，
+    // 否则这些环境下 #meme列表 会整个失联
+    return await this.renderMemeListRemote(e, resultFileLoc)
+  }
+
+  /**
+   * 用本地 HTML 模板渲染分组列表图。
+   *
+   * 图片由渲染器按 `path` 参数直接写进 resultFileLoc，省掉一次 base64 往返；
+   * 调用方只需确认文件真的存在，就能用与缓存命中相同的路径发图。
+   *
+   * @param {object} e
+   * @param {string} resultFileLoc 相对 cwd 的图片路径
+   * @returns {Promise<boolean>} 是否渲染成功
+   */
+  async renderMemeListLocal(e, resultFileLoc) {
+    if (Object.keys(infos).length === 0) {
+      logger.warn('[meme] infos 为空，跳过本地列表图渲染')
+      return false
+    }
+    try {
+      // 惰性 import：utils/common.js 会拉起 puppeteer / tts / pdfjs 一整条重依赖链，
+      // 而 meme 的其它命令都不需要它，测试套件也不该因此被迫加载框架
+      const { render } = await import('../utils/common.js')
+
+      const usageCounts = await this.getMemeUsageCounts(Object.keys(infos))
+      const { groups, stats } = buildMemeListData(infos, {
+        scheme: MEME_LIST_SCHEME,
+        usageCounts,
+        hotThreshold: MEME_LIST_HOT_THRESHOLD,
+        newThresholdDays: MEME_LIST_NEW_DAYS
+      })
+
+      // 渲染器按相对 cwd 的路径写盘，目录不存在会直接失败
+      mkdirs('data/memes')
+      // 先清掉上一轮留下的过期文件：否则渲染静默失败时 existsSync 会把旧图误判成新产物
+      if (fs.existsSync(resultFileLoc)) fs.unlinkSync(resultFileLoc)
+
+      // 刻意不往图上放 meme_baseUrl 与生成时间：前者会把部署机 IP 印到群里（图会被转发、存档），
+      // 后者对使用者没有价值。模板里的 sourceHost / generatedAt 已一并移除
+      await render(e, 'chatgpt-plugin', MEME_LIST_TEMPLATE, {
+        width: MEME_LIST_WIDTH,
+        groups,
+        stats,
+        // 列表图必须跟命令前缀保持一致：开了强制 # 却让图上写着裸关键词，用户照抄会一条都触发不了
+        forceSharp: !!Config.meme_forceSharp,
+        pageClass: Config.meme_forceSharp ? 'force-sharp' : '',
+        imgType: 'jpeg',
+        quality: MEME_LIST_QUALITY,
+        path: resultFileLoc
+      }, { retType: 'base64' })
+
+      if (!fs.existsSync(resultFileLoc)) {
+        logger.warn('[meme] 本地列表图渲染完成但文件未落盘')
+        return false
+      }
+
+      const size = fs.statSync(resultFileLoc).size
+      logger.mark(
+        `[meme] 本地列表图渲染完成：${groups.length} 个分组 / ${stats.totalMemes} 个表情 / ${(size / 1024 / 1024).toFixed(2)}MB`
+      )
+      return true
+    } catch (err) {
+      logger.error('[meme] 本地列表图渲染失败，将退回远端渲染:', hidePrivacyInfo(err.message))
+      return false
+    }
+  }
+
+  /**
+   * 旧版行为：请求远端 meme-generator 的 render_list 出图。
+   * 仅作为本地渲染不可用时的兜底，逻辑保持原样。
+   * @param {object} e
+   * @param {string} resultFileLoc
+   * @returns {Promise<boolean>}
+   */
+  async renderMemeListRemote(e, resultFileLoc) {
+    try {
+      // 构建带标签和排序的 meme 列表
+      const memeList = await this.buildMemeListWithLabels()
+
+      const response = await fetch(`${baseUrl}/memes/render_list`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          meme_list: memeList,
+          text_template: '{keywords}',
+          add_category_icon: true
+        })
+      })
+
+      if (!response.ok) {
+        logger.error('[meme] render_list 请求失败:', response.status)
+        return false
+      }
+
+      const resultBlob = await response.blob()
+      const resultBuffer = Buffer.from(await resultBlob.arrayBuffer())
+      mkdirs('data/memes')
+      fs.writeFileSync(resultFileLoc, resultBuffer)
+      await e.reply(segment.image(`${process.cwd()}/${resultFileLoc}`))
+      return true
+    } catch (err) {
+      logger.error('[meme] 远端列表图渲染也失败:', hidePrivacyInfo(err.message))
+      return false
+    }
   }
 
   /**
@@ -1086,7 +1204,7 @@ async function fetchJsonWithRetry(url, retries = 3) {
       if (data) return data
       logger.warn(`[meme] 拉取 ${hidePrivacyInfo(url)} 返回非预期内容 (第${i + 1}次)`)
     } catch (e) {
-      logger.warn(`[meme] 拉取 ${hidePrivacyInfo(url)} 失败 (第${i + 1}次): ${e.message}`)
+      logger.warn(`[meme] 拉取 ${hidePrivacyInfo(url)} 失败 (第${i + 1}次): ${hidePrivacyInfo(e.message)}`)
     }
     if (i < retries - 1) {
       await new Promise(r => setTimeout(r, 1000 * (i + 1)))

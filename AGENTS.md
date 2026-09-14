@@ -94,6 +94,22 @@
 - 图片下载必须容错：带 `timeoutSignal(IMAGE_TIMEOUT)`、`try/catch` 单张失败只跳过、检查 `response.ok`、`content-type` 必须是 `image/`、先看 `Content-Length` 再决定读不读进内存。QQ CDN 超时、失效链接、404 的 HTML 都不该让整个命令 reject（旧代码的 fetch 在最终 try 之外）；图全挂时回"图片获取失败…"，不要把残缺请求丢给远端。
 - meme CD 用 `redis.set(key, 1, { NX: true, EX: meme_CD })` 一步抢占，靠返回值 `null` 判断没抢到（见"常见坑"）。旧的 `GET`→`SET` 两步不原子，并发消息会一起通过。主人/戳一戳仍走 `SET EX` 刷新 CD，`meme_CD <= 0` 时保留"残留 CD 仍拦一次"的旧行为。
 - 参数（`args_type`）约定：语法是 `<关键词><文本>#<参数>`（`memes()` 里 `text1.split('#')`），**不是空格分隔**；`#关键词详情` 不能带 `#`，否则会被当成参数。解析时枚举用 `_.has(valueMap, arg)` 判断——**合法枚举值可能是 `0`**（左右、角度这类 schema 就是 0/1），用 `valueMap[arg] || default` 会把 0 吞掉退回默认值；数字用 `Number()` 解析（`number` 收小数与负数、`integer` 要求整数、空串不能当 0），并执行 schema 的 `minimum`/`maximum`（越界就不传该参数）；帮助文本（`generateSupportArgsText`）同样不能用 truthy 过滤枚举名。
+- **`#meme列表` 是本地模板渲染，不再依赖远端 `render_list`**：数据经 `utils/memeCategory.js` 的 `buildMemeListData()` 分组后交给模板渲染。渲染宽度 / JPEG 质量 / 分组方案 / **用哪套模板**都是本文件顶部的 `MEME_LIST_*` 常量——**图片宽度就等于 `#container` 的 CSS 宽度**（见"常见坑"），想要 2K / 4K 改 `MEME_LIST_WIDTH` 即可。图由渲染器按 `data.path` 直接落盘到 `data/memes/render_list.jpg`（省一次 base64 往返）；**渲染前必须先删旧文件**，否则渲染静默失败时 `existsSync` 会把上一轮的旧图误判成本次产物。本地渲染失败（没装 Chromium 等）会退回远端 `renderMemeListRemote`，别删这条兜底。
+- 模板是 `resources/memeList/index.html`（糖果 / 暖色玻璃态：每组一个主题色、emoji + 组名 + 组内数量，配色走 CSS 变量 `--accent`）。数据契约 `width`/`groups`/`stats`/`forceSharp`/`pageClass` 全部由 `buildMemeListData()` 产出，模板只管展示；换审美只改 `MEME_LIST_TEMPLATE`。
+- **图与日志都不要出现部署信息**：列表图的页脚只放指令帮助，**不放 `meme_baseUrl`、不放生成时间**——这张图会被转发和存档，`数据来源` 等于把部署机 IP 印到群里，生成时间对使用者也没有价值。因此模板数据里没有 `sourceHost` / `generatedAt`（原先用于它们的 `displayHost()` 已删除）。同理，**任何把网络错误 message 写进日志/回复的地方都必须包 `hidePrivacyInfo()`**：node-fetch 失败时 message 就是 `request to http://<ip>:<port>/… failed`，不处理等于直接把 IP 写进日志（`init()` 的总 catch 与 `fetchJsonWithRetry` 两处就是这么漏的）。
+- **视图层与分类层粒度不同，别顺手合并**：`buildMemeGroups()` 会在「其他作品」上挂 `subgroups`（44 个二级 IP，这是分类的事实），而 `buildMemeListData()` 只吐扁平的 `groups[].memes`——因为列表图不再显示二级 IP 标签。`subgroups` 的消费方目前只有分类层与 P7，但别删：`resolveOtherIp()` 是 `pickGroupName()` 判断"某条该不该进「其他作品」"的真实依据，二级 IP 只是它的副产品。
+- 徽标体系（模板按 `chip-new` / `badge-<kind>` / `swatch-<kind>` 挂样式，改名要同时改模板和样式）：
+  - 胶囊右侧所有标记统一走 `badges: [{ text, kind }]`，kind 只有三种：`hot`（热）/ `text`（需文）/ `both`（图文）。输入需求不再单开 `needLabel` 字段——模板因此只有一条 `{{each meme.badges}}` 渲染路径，也不必再 `{{if}}` 判空（判空漏掉过一次，971 个只吃图的表情每个都拖着一个空洞色块）。
+  - **徽标配色一律走 CSS 变量**（`--badge-hot-bg/fg`、`--badge-text-*`、`--badge-both-*`），正文胶囊与顶部图例共用同一组值。图例和列表各写一份颜色是最容易出现的图例失真（"图例画一种、列表里是另一种"）。
+  - `需文` 偏薰衣草、`图文` 偏薄荷，两支低饱和色相近但能分辨：扫一眼就能分清"要不要打字"和"图片文字都带"。
+  - `新` 表情**整颗胶囊翻成实心蓝灰**（`--new-fill: #5E72A4`，白字），**不挂「新」徽标**——整块实心色已经是最强信号，再挂个字是重复表达。数据层因此不产出 `kind: 'new'`，只保留 `isNew` 供模板决定胶囊样式；P8 专门钉住这点，谁把徽标加回来就会转红（模板已无 `.badge-new` 样式）。
+  - 蓝胶囊内部的元素必须**一并反相**，否则深色文字、暖色分隔线压在蓝底上会糊：`#` 前缀改半透明白、别名改白 82% + 半透明白分隔线；`hot` / `text` / `both` 三种徽标全部降级成**纯白文字并去掉底色**（浅橙/浅紫/浅薄荷底铺到蓝灰上都会变脏色块）。
+  - 底色之所以从最初点名的 `#6b7fb3` 压到 `#5E72A4`：白字在 `#6b7fb3` 上只有 3.95:1，别名那档 19px 小字达不到 4.5:1；压深一成后 4.8:1，观感仍是同一支蓝灰。
+- 顶部 `.hints` 那行是"使用说明 + 图例"混排，顺序有讲究：先讲怎么发（`发送 #关键词`）、再讲图从哪来，然后是三条**图例**（`.swatch` 迷你胶囊：需文 / 图文 / 新，造型与正文胶囊同比例圆角，颜色引用正文同一组变量），最后才是补充说明（别名用 `·` 分隔）。图例一律**画出来**而不是用颜色词描述颜色（写"蓝底"这种话既是废话又会随改配色失效）。
+- **别再照搬 Apple / iOS 风格了（试过一版，用户选了糖果风）**：静态长图里能落地的只有 Apple 的*静态*部分——克制的中性色板、靠字号阶 + 字重 + 透明度建立的层级、大字号负字距 / 小字号正字距、8pt 间距网格、细分割线、语义色只留给「新/热」。而响应延迟、弹簧、可中断过渡、1:1 拖拽都依赖"会动"，`backdrop-filter` 依赖"背后有内容"，搬进长图只会变成假装饰。另外 HIG 的字号阶是给 390pt 手机屏定的，搬到 2560px 画布要按 ~1.9x 放大，否则小到看不清。
+- `forceSharp` 必须透传到模板：开了强制 `#` 却让图上写着裸关键词，用户照抄会一条都触发不了。`#` 用 `.force-sharp .chip-k::before` 伪元素画，**不要**去改 `keyMap` 里的原始关键词。
+- **分类不是"按 tags 分组"**：远端 971 个 meme 只有 283 个带 tags，纯 tag 分组会留下 71% 的「未分类」（实测另一个方案 `scheme='ip'` 就是这样，「其他」占 62.3%）。`utils/memeCategory.js` 用「tags + key 前缀 + 关键词语义」三条互补线索做**单层互斥**归类，命中顺序即优先级：题材（米哈游 / 鸣潮 / 蔚蓝档案 / 其他作品）→ 属性（成人向）→ 功能（节日祝福 / 特效工具 / 工具应用 / 生活日常 / 网络热梗 / 举牌写字 / 动作互动 / 情绪表情 / 动物萌宠）→ 兜底「其他」。当前实测 15 组、971/971 全覆盖、零重复，「其他」15.2%。加分组只需往规则表的 `tags`/`prefixes`/`words` 补词，**别改判定顺序**（顺序一变整批归属都会漂）。`猫猫虫` 与 `咖波` 是同一角色（猫猫虫咖波），远端两个 tag 并存，必须映射到同一个名字，否则同一批 meme 会按 tags 顺序被拆到两组。
+- 模块依赖约定：`utils/memeCategory.js` **零 import、纯函数**（不碰 logger/redis/Config），可脱离 Yunzai 运行时独立测试；`apps/派蒙meme.js` 里对 `utils/common.js`（`render`）用**惰性 `await import()`**——那是重依赖链（puppeteer / tts / pdfjs），meme 其它命令都不需要，测试套件也不该因此被迫加载框架。
 
 ## 开发与验证
 
@@ -112,11 +128,22 @@
 - 临时调试脚本纪律：调试用脚本统一放**系统临时目录**（`$TMP`/`/tmp`）或即建即删，**不要留在仓库内**；用 `rm` 删除后必须确认生效（heredoc/管道组合命令可能因展开错误中断导致 rm 未执行，留下语法错误的残留文件）。
 - **探针/测试脚本结尾必须显式 `process.exit(0)`**：脚本会 import 主仓库的 `lib/config/config.js` / `lib/renderer/loader.js`，它们在 import 阶段就建立 chokidar 文件监听，句柄一直引用事件循环 → 业务跑完 node 也不会退出（实测挂满 8 分钟、无任何输出，后台任务状态一直停在 running，容易被误判成卡死）。配套做法：脚本把阶段结果**实时写日志并带结束标记**，用日志区分"跑完没退出"和"真卡住"，不要只看任务状态。
 - 派蒙meme 测试套件：`npm run test:meme`（完整，含一条约 48s 的超时用例 K）/ `npm run test:meme:fast`（跳过 K，日常回归）/ `npm run test:meme:mutants`（跑变异矩阵，慢）。实现放在 `test/meme/`——注意 **`test/` 在 .gitignore 里，属本地文件、不入库**（与 `test:memory` 同一约定），新克隆的仓库里没有这些测试，需要自行补齐后再跑：
-  - `meme.test.mjs`：断言套件，离线可跑（不依赖真实 Yunzai/Redis/远端）。做法是桩全局（`logger`/`redis`/`Bot`/`segment`）+ 本地 http 假 meme 服务端 + **真实** `lib/plugins/loader.js` 与插件模块，按 `PluginsLoader.deal()` 的匹配方式断言规则，直接调 `new memes().task.fnc`（等价 `loader.startTask`）验证定时任务真的请求远端，并用并发调用验证 CD 原子性。redis 桩必须实现真实的 `SET` 语义（`NX`/`EX` + 未抢到返回 `null`），否则原子性测不出来。
+  - `meme.test.mjs`：断言套件，离线可跑（不依赖真实 Yunzai/Redis/远端）。A–O 组覆盖规则注册 / 更新回退 / 取图 fallback / 图片下载容错 / CD 原子化 / 参数解析；**P 组覆盖 `#meme列表` 的分组分类**（互斥、全覆盖、题材与功能命中、展示字段、排序），**Q 组覆盖列表图渲染链路**（缓存命中直接发图、本地渲染不可用时退回远端并落盘）。做法是桩全局（`logger`/`redis`/`Bot`/`segment`）+ 本地 http 假 meme 服务端 + **真实** `lib/plugins/loader.js` 与插件模块，按 `PluginsLoader.deal()` 的匹配方式断言规则，直接调 `new memes().task.fnc`（等价 `loader.startTask`）验证定时任务真的请求远端，并用并发调用验证 CD 原子性。redis 桩必须实现真实的 `SET` 语义（`NX`/`EX` + 未抢到返回 `null`），否则原子性测不出来。注意**测试环境没有任何渲染后端**，所以本地列表图渲染必然失败、必然走远端兜底——这是 Q 组能确定性断言的前提。
   - `run.mjs`：入口。上述链路要求 cwd 看起来像云崽根目录（`config/default_config/`、`package.json`、`renderers/`），所以它自动搭临时 cwd 再跑、跑完清理，测试产生的 `data/memes/*` 只落在临时目录。支持 `--skip-slow` / `--force-sharp=false` / `--mutant <kind>` / `--all-mutants` / `--keep`。
   - `make-mutant.mjs`：15 个变异（每个对应一类断言）。`--mutant <kind>` 会生成变异 → 跑套件 → **在 finally 里删除副本**；变异副本落在 `apps/__mutant_meme.mjs`（相对 import 才能解析），以 `.mjs` 结尾所以不会被 loader 当成插件加载。预期是"只有目标断言转红"，全绿即说明断言没覆盖该行为。`timeout` 变异（去掉请求超时）的预期是**挂死**，只对慢用例 K 生效，因此 `--all-mutants` 会跳过它，需单独跑。
   - 新增断言后请至少跑一次对应变异；断言"绿了但删掉实现还是绿"等于没测。
 - 真实验证需重启 Yunzai 并在群内发指令；部分链路（真实模型提取、`awaitContext` 二次确认）无法在仓库内独立验证。
+- **本地预渲染模板改动的做法**（改 `resources/**/index.html` 时不必启动 Yunzai 就能看出图、量尺寸）：用一次性脚本（放系统临时目录或即用即删）——
+  1. `import template from 'art-template'`，把模板 `template.render(html, data)` 出来；
+  2. **落到 `<repo>/temp/html/<pluginKey>/<htmlPath>/<saveId>.html`**（例如 `temp/html/chatgpt-plugin/memeList/index/index.html`）——必须对齐 `Renderer.dealTpl()` 的目录层级，否则模板里的 `{{pluResPath}}`（= 5 层 `../` + `plugins/<key>/resources/`）会解析错、字体/图片全 404；
+  3. `page.goto('file://' + 该绝对路径, { waitUntil: 'networkidle0' })` 后对 `#container` 调 `elementHandle.screenshot({ path, type: 'jpeg', quality })`，与渲染器最终行为一致（宽度 = 元素宽度，不是 Viewport）；
+  4. 顺便断言渲染出的 HTML 里不再残留 `{{`（模板变量没被替换时最容易漏）。
+  本机 `puppeteer` 未下载 Chromium（`~/.cache/puppeteer` 为空），但 `msedge.exe` 在 `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`，用 `puppeteer.launch({ executablePath: 该路径 })` 可直接借用；量产物尺寸/体积用仓库已装的 `sharp`（`metadata()` / `extract().resize()` 裁剪局部看清细节）。
+- **`test:meme` 一行断言都不输出就直接退出码 1 时，先查 `es-toolkit` 能否解析**：根仓库的 `lodash` 是 pnpm 的 `link:lib/modules/lodash`，而该 shim 第一行就 `import 'es-toolkit/compat'`。若顶层链接缺失（包只躺在 `node_modules/.pnpm/` 里），`lib/config/config.js` 会在 **import 阶段**抛 `ERR_MODULE_NOT_FOUND: Cannot find package 'es-toolkit'`，表现为套件连 `# 被测文件: …` 都没打印出来——这与代码改动无关，别去改测试。补链接（pnpm 本该建的那个顶层软链）：
+  ```sh
+  node -e "require('fs').symlinkSync('<repo>/node_modules/.pnpm/es-toolkit@<ver>/node_modules/es-toolkit','<repo>/node_modules/es-toolkit','junction')"
+  ```
+  验证：`node -e "import('<repo>/lib/modules/lodash/index.js').then(()=>console.log('OK'))"`。
 
 ## Git 约定
 
@@ -150,5 +177,7 @@
 - **TRSS loader 匹配命令读的是「注册实例」的 `rule`**：`deal()` 里是 `for (const v of i.plugin.rule)`，而每条消息都 `Object.assign(new i.class(e), { e })` 新建副本——所以在插件方法里改 `this.rule` **完全无效**（改的是副本；加载期改的是 init 实例）。运行期新增/刷新命令必须回写注册条目：`import loader from '../../../lib/plugins/loader.js'`，在 `loader.priority` 里按 `i.class === 本类 || i.key.endsWith('本文件名')` 定位后 `entry.plugin.rule = rules`。`reg` 必须是 `RegExp`（`deal()` 不做字符串转换，只有 `loadPlugin()` 转一次）。热更新（chokidar 带 `?时间戳` 重新 import）会换掉类身份，定位别只靠 `i.class`；参考 `apps/派蒙meme.js` 的 `registerRules()`。
 - **云崽的 redis 是 node-redis v4 的驼峰 API**（`hGet` / `hIncrBy` / `hGetAll` / `mGet`，写法是 `set(k, v, { EX: n })`）。需要原子锁就用 `set(k, v, { NX: true, EX: n })`：守卫选项名是大写 `NX: true`，**没抢到时返回 `null`**（`@redis/client` 的 `transformReply()` 声明就是 `… | null`），据此判断是否放行；不要写 `GET`→`SET` 两步（并发会一起通过），也不要用 `INCR` + `EXPIRE` 两步。
 - **`loadPlugin()` 的顺序是 `new p()` → `await init.init()` → `new p()` 再 push 进 `priority`**：init() 执行期间本插件还没注册，此处的动态注册会「找不到条目」——不用补救，随后构造的注册实例会按当时的模块级状态生成 `rule`（这也是 `keyMap` 作为模块级变量在加载期可用的原因）。
+- **puppeteer 出图的宽度由「元素」决定，不是 `Viewport`**：`renderers/puppeteer/lib/puppeteer.js` 非分页路径执行的是 `#container`.screenshot()，`data.Viewport` 只在**分页**（`multiPage`）时才被用作分片高度——普通渲染传 `Viewport` 是死参数（`GenerateMathRenderTool` 传的 2560×1600×4 其实没生效）。要出 2K/4K 就**把元素 CSS 宽度调大**。另外 `data.path` 会被透传给 `element.screenshot({ path })`，可直接让渲染器把图写到指定文件、跳过 base64 往返（本项目 `#meme列表` 就用这招落 `data/memes/render_list.jpg`）；代价是**渲染前要先删旧文件**，否则失败时无法用 `existsSync` 判断成功。
+- **art-template 的 `{{each}}` 不能用 `block` 当循环变量名**：`block` 是它编译产物内部的标识符（子模板机制占用了该名字），用作 item 变量会直接 `CompileError: Unexpected token ','`，报错信息里只给一行 `generated: block(,function(){]`，很难从报错反推。`$` 开头的名字同理避开。
 - **定时任务里"重读本地缓存"等于空转**：`init()` 开头会清空内存再读 `data/memes/*.json`，而缓存在进程存活期间一直存在 → 「数组为空才拉远端」的守卫永不成立，日更实际什么都没拉（旧代码 `this.init.bind(this)` 就是这个 bug）。任何"定时刷新远端资源"的路径都必须显式跳过本地缓存读（本项目用 `init(true)`）。
 - **TRSS loader 的定时任务 `task.fnc` 必须传函数引用**（如 `this.runDaily.bind(this)`），不能传方法名字符串：`loader.collectTask` 只校验 `i.cron && i.fnc` 后原样入队，`startTask` 直接 `await i.fnc()`，字符串会被当作函数调用报 `TypeError: i.fnc is not a function`。注册方式参考 `apps/ScheduleTaskPlugin.js` 等：把 `task` 放在构造函数体内（`super()` 之后赋值 `this.task`，此时才能 `bind(this)`），而不是塞进 `super({...})` 配置。注意消息路由的 `rule[].fnc` 仍是字符串（loader 用 `plugin[v.fnc](e)` 按名解析），二者约定不同，勿混淆。

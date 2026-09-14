@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MEME 表情列表</title>
+
+    <!-- 复用插件内置的 Outfit / Nunito 字体（纯本地，渲染时无需联网） -->
+    <link rel="stylesheet" href="{{pluResPath}}/markmap/fonts/fonts.css">
+
+    <style>
+        /* 页面宽度由渲染参数注入：puppeteer 截的是 #container 元素，元素多宽图就多宽，
+           所以"4K / 2K"只需改这里，不必动 deviceScaleFactor */
+        :root {
+            --page-width: {{width}}px;
+            --ink: #3d3733;
+            --ink-2: #6f6660;
+            --ink-3: #a79d97;
+            --line: rgba(190, 175, 168, 0.34);
+            --glass: rgba(255, 255, 255, 0.74);
+            /* 「新」表情整颗胶囊的实心底色。比原设计的 #6b7fb3 压深约一成：
+               白字在 #6b7fb3 上只有 3.95:1，别名那档小字（19px）达不到 4.5:1；
+               压到 #5E72A4 后是 4.8:1，观感上仍是同一支蓝灰 */
+            --new-fill: #5E72A4;
+
+            /* 徽标配色统一放变量里：正文胶囊与顶部图例共用同一组值，
+               否则很容易演变成"图例画一种颜色、列表里是另一种"的图例失真 */
+            --badge-hot-bg: #ffe8dc;
+            --badge-hot-fg: #c0562c;
+            --badge-text-bg: #eeeaf8;
+            --badge-text-fg: #7a6f96;
+            --badge-both-bg: #e3f1ea;
+            --badge-both-fg: #3f7a62;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: #fdf7f4;
+        }
+
+        body {
+            font-family: "Outfit", "Nunito", "PingFang SC", "Hiragino Sans GB",
+                "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 截图目标元素：背景放在它自己身上，元素截图才会把它带进图里 */
+        #container {
+            width: var(--page-width);
+            box-sizing: border-box;
+            padding: 52px;
+            background-color: #fdf7f4;
+            background-image:
+                radial-gradient(circle at 12% 6%, rgba(255, 214, 224, 0.55), transparent 42%),
+                radial-gradient(circle at 88% 3%, rgba(214, 230, 255, 0.5), transparent 40%),
+                radial-gradient(circle at 78% 96%, rgba(224, 245, 235, 0.5), transparent 44%),
+                linear-gradient(160deg, #fffaf8 0%, #fdf5f2 45%, #f7f4fb 100%);
+        }
+
+        .page {
+            background: var(--glass);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            border-radius: 48px;
+            padding: 54px 56px 46px 56px;
+            box-shadow: 0 40px 90px -30px rgba(150, 120, 120, 0.22);
+        }
+
+        /* ---------- 顶部 ---------- */
+        .header {
+            padding-bottom: 34px;
+            border-bottom: 3px dashed var(--line);
+            margin-bottom: 40px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: flex-end;
+            gap: 22px;
+            flex-wrap: wrap;
+        }
+
+        .brand-title {
+            font-size: 56px;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: 1px;
+            line-height: 1.1;
+            margin: 0;
+        }
+
+        .brand-tag {
+            font-size: 23px;
+            font-weight: 700;
+            color: #c98a95;
+            background: rgba(255, 236, 240, 0.9);
+            border: 2px solid rgba(240, 200, 210, 0.7);
+            border-radius: 999px;
+            padding: 7px 22px;
+            margin-bottom: 8px;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 26px;
+        }
+
+        .stat {
+            flex: 0 0 auto;
+            min-width: 240px;
+            background: rgba(255, 255, 255, 0.86);
+            border: 2px solid var(--line);
+            border-radius: 22px;
+            padding: 14px 24px;
+        }
+
+        .stat-num {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--ink);
+            line-height: 1.15;
+        }
+
+        .stat-label {
+            font-size: 21px;
+            font-weight: 600;
+            color: var(--ink-3);
+            margin-top: 4px;
+        }
+
+        .hints {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            margin-top: 22px;
+        }
+
+        .hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 21px;
+            color: var(--ink-2);
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid var(--line);
+            border-radius: 14px;
+            padding: 7px 16px;
+        }
+
+        .hint b {
+            font-weight: 800;
+            color: var(--ink);
+        }
+
+        /* 图例用的小胶囊：造型与正文胶囊同比例（圆角按高度取同比例），
+           把"图上会看到的标记"和"它的含义"画在一起，比用文字描述颜色更直接。
+           颜色一律引用正文的同一组变量，图例不可能和列表跑偏 */
+        .swatch {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 32px;
+            padding: 0 14px;
+            border-radius: 9px;
+            font-size: 20px;
+            font-weight: 800;
+            font-style: normal;
+            letter-spacing: 1px;
+            flex: none;
+        }
+
+        .swatch-new {
+            background: var(--new-fill);
+            color: #fff;
+        }
+
+        .swatch-text {
+            background: var(--badge-text-bg);
+            color: var(--badge-text-fg);
+        }
+
+        .swatch-both {
+            background: var(--badge-both-bg);
+            color: var(--badge-both-fg);
+        }
+
+        /* ---------- 分组 ---------- */
+        .group {
+            margin-bottom: 40px;
+        }
+
+        .group:last-child {
+            margin-bottom: 0;
+        }
+
+        .group-head {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 0 0 12px 0;
+            margin-bottom: 16px;
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .group-icon {
+            font-size: 38px;
+            line-height: 1;
+        }
+
+        .group-name {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: 1px;
+        }
+
+        .group-count {
+            font-size: 24px;
+            font-weight: 800;
+            color: #fff;
+            background: var(--accent);
+            border-radius: 999px;
+            padding: 5px 20px;
+            margin-left: 2px;
+        }
+
+        /* ---------- 关键词胶囊 ---------- */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid var(--line);
+            border-radius: 14px;
+            padding: 9px 18px 9px 20px;
+            /* 不允许收缩：否则窄行上胶囊会被压扁，里面的 nowrap 文本反而溢出 */
+            flex-shrink: 0;
+        }
+
+        .chip-k {
+            font-size: 27px;
+            font-weight: 800;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        /* 开了强制 # 时，把 # 直接画在关键词前面——图上的字和要发的命令必须一模一样。
+           用伪元素而不是数据里的字符串，是为了别让展示逻辑污染 keyMap 的原始关键词 */
+        .force-sharp .chip-k::before {
+            content: "#";
+            color: var(--ink-3);
+            margin-right: 2px;
+        }
+
+        .chip-a {
+            font-size: 19px;
+            font-weight: 600;
+            color: var(--ink-3);
+            white-space: nowrap;
+            padding-left: 10px;
+            border-left: 2px solid var(--line);
+        }
+
+        .badge {
+            font-size: 17px;
+            font-weight: 800;
+            border-radius: 8px;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+
+        .badge-hot {
+            background: var(--badge-hot-bg);
+            color: var(--badge-hot-fg);
+        }
+
+        /* 需文 / 图文 用两支相近但能分辨的低饱和色：
+           需文偏薰衣草、图文偏薄荷，扫一眼就能分清"要不要打字"和"图片文字都带" */
+        .badge-text {
+            background: var(--badge-text-bg);
+            color: var(--badge-text-fg);
+        }
+
+        .badge-both {
+            background: var(--badge-both-bg);
+            color: var(--badge-both-fg);
+        }
+
+        /* ---------- 「新」整颗胶囊反白 ----------
+           新表情是这份列表最该被一眼扫到的一组，所以不给它挂「新」徽标，而是整颗胶囊翻成
+           实心蓝灰底，在满屏浅色胶囊里形成唯一的实心锚点——含义在顶部用一行图例交代。
+           下面把胶囊内部所有元素一并反相，否则深色文字/暖色分隔线压在蓝底上会糊成一团。 */
+        .chip-new {
+            background: var(--new-fill);
+            border-color: var(--new-fill);
+        }
+
+        .chip-new .chip-k {
+            color: #fff;
+        }
+
+        /* 蓝底上 # 要用半透明白，暖灰的 --ink-3 会显脏 */
+        .force-sharp .chip-new .chip-k::before {
+            color: rgba(255, 255, 255, 0.62);
+        }
+
+        .chip-new .chip-a {
+            color: rgba(255, 255, 255, 0.82);
+            border-left-color: rgba(255, 255, 255, 0.34);
+        }
+
+        /* 「热」/「需文」/「图文」在蓝底上不能再叠浅色底：浅橙底、浅紫底、浅薄荷底铺到蓝灰上
+           都会变成脏色块。降级成纯白文字，靠「比关键词小一档 + 没有底色」区分 */
+        .chip-new .badge-hot,
+        .chip-new .badge-text,
+        .chip-new .badge-both {
+            background: transparent;
+            color: #fff;
+            padding-left: 2px;
+            padding-right: 2px;
+        }
+
+        /* ---------- 页脚 ---------- */
+        .footer {
+            margin-top: 44px;
+            padding-top: 26px;
+            border-top: 3px dashed var(--line);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 22px;
+            align-items: center;
+            font-size: 22px;
+            color: var(--ink-3);
+            font-weight: 600;
+        }
+
+        .footer b {
+            color: var(--ink-2);
+            font-weight: 800;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container" class="{{pageClass}}">
+        <div class="page">
+            <div class="header">
+                <div class="brand">
+                    <h1 class="brand-title">MEME表情列表</h1>
+                    <span class="brand-tag">共 {{stats.groupCount}} 个分类</span>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-num">{{stats.totalMemes}}</div>
+                        <div class="stat-label">可用表情</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-num">{{stats.totalKeywords}}</div>
+                        <div class="stat-label">触发关键词</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-num">{{stats.newMemes}}</div>
+                        <div class="stat-label">近 {{stats.newThresholdDays}} 天新增</div>
+                    </div>
+                </div>
+
+                <div class="hints">
+                    {{if forceSharp}}
+                    <span class="hint"><b>发送 #关键词</b>制作表情</span>
+                    {{else}}
+                    <span class="hint"><b>直接发送关键词</b>即可制作表情（<b>#</b> 可省略）</span>
+                    {{/if}}
+                    <span class="hint">要用的图默认取「回复图 → 本条图 → @对象头像」</span>
+                    <span class="hint"><i class="swatch swatch-text">需文</i>必须带上文字</span>
+                    <span class="hint"><i class="swatch swatch-both">图文</i>图片和文字都要</span>
+                    <span class="hint"><i class="swatch swatch-new">新</i>近 {{stats.newThresholdDays}} 天新增</span>
+                    <span class="hint">同一表情的别名用 <b>·</b> 分隔</span>
+                </div>
+            </div>
+
+            {{each groups group}}
+            <section class="group" style="--accent:{{group.accent}}">
+                <div class="group-head">
+                    <span class="group-icon">{{group.icon}}</span>
+                    <span class="group-name">{{group.name}}</span>
+                    <span class="group-count">{{group.count}}</span>
+                </div>
+
+                <div class="chips">
+                    {{each group.memes meme}}
+                    <span class="chip{{if meme.isNew}} chip-new{{/if}}">
+                        <span class="chip-k">{{meme.primary}}</span>
+                        {{if meme.hasAliases}}
+                        <span class="chip-a">{{meme.aliasText}}</span>
+                        {{/if}}
+                        {{each meme.badges badge}}
+                        <span class="badge badge-{{badge.kind}}">{{badge.text}}</span>
+                        {{/each}}
+                    </span>
+                    {{/each}}
+                </div>
+            </section>
+            {{/each}}
+
+            <div class="footer">
+                <span><b>#meme列表</b> → 查看全部分类与关键词（就是本图）</span>
+                <span><b>#meme搜索</b> 关键词 → 按名称搜索表情</span>
+                <span><b>#关键词详情</b> → 查看该表情支持的参数</span>
+                <span><b>#meme帮助</b> → 查看全部指令说明</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
