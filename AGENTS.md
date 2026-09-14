@@ -89,6 +89,7 @@
   - 返回 `{ refreshed, keys, fallback }`。强制刷新拿不到可用数据（`keyMap` 或 `infos` 为空）时**回退到更新前的 `keyMap`/`infos`** 并 `fallback: true`——否则 `memes()` 里 `infos[targetCode]` 取空直接报错，同时规则会被清空。
 - 更新成功后清 `data/memes/render_list.jpg`（`memesList` 的 24h 列表图缓存），下次查看时重渲染。
 - `init()` 末尾必须调用 `registerRules()` 把最新规则同步回 loader，否则新增关键词要重启才生效（见"常见坑"）。
+- **`/memes/static/infos.json`、`keyMap.json` 是可选加速，不是上游 meme-generator 的接口**：上游 `app.py` 只有 `/memes/keys`、`/memes/<key>/info`、`/memes/render_list` 等，对上游直连这两个 URL 一律 404；只有少数部署额外加了这层聚合（如 qwqcc HF Space 的 `bootstrap.py` 用动态路由生成）。因此 `init()` 必须保留逐项重建兜底（`/memes/keys` + 逐个 `/memes/<key>/info`），否则 `meme_baseUrl` 配到纯上游时功能不可用。
 - 取图优先级：回复消息 → 本条消息附图 → @对象头像，按 `needImages = max(min_images, 1)` 的缺口**逐级补齐**。旧的 `if (回复) … else if (e.img) … else if (hasAt)` 只要这条是回复就彻底不看本条图与 @，"回复纯文字 + 自己带图"会退化成发送者头像。取回复图统一走 `getReplyImages(e)`，它用入参 `e` 而不是 `this.e`——`派蒙戳一戳.js` 是 `new memes().memes(e)` 直接调用的，那种场景没有 `this.e`。
 - 图片下载必须容错：带 `timeoutSignal(IMAGE_TIMEOUT)`、`try/catch` 单张失败只跳过、检查 `response.ok`、`content-type` 必须是 `image/`、先看 `Content-Length` 再决定读不读进内存。QQ CDN 超时、失效链接、404 的 HTML 都不该让整个命令 reject（旧代码的 fetch 在最终 try 之外）；图全挂时回"图片获取失败…"，不要把残缺请求丢给远端。
 - meme CD 用 `redis.set(key, 1, { NX: true, EX: meme_CD })` 一步抢占，靠返回值 `null` 判断没抢到（见"常见坑"）。旧的 `GET`→`SET` 两步不原子，并发消息会一起通过。主人/戳一戳仍走 `SET EX` 刷新 CD，`meme_CD <= 0` 时保留"残留 CD 仍拦一次"的旧行为。

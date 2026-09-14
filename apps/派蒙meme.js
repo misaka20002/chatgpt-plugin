@@ -182,6 +182,10 @@ export class memes extends plugin {
       if (!baseUrl) {
         throw new Error('meme_baseUrl 未配置')
       }
+      // /memes/static/infos.json、keyMap.json 只是可选加速，不是上游 meme-generator 的接口：
+      // 上游 app.py 只有 /memes/keys、/memes/<key>/info、/memes/render_list 等，直连会 404；
+      // 只有少数部署额外加了这层聚合（如 qwqcc HF Space 的 bootstrap.py 动态生成）。
+      // 所以拿不到时必须保底重建（见下方逐项重建分支）。
       if (Object.keys(nextInfos).length === 0) {
         logger.mark('yunzai-meme infos资源本地不存在，正在远程拉取中')
         const data = await fetchJsonWithRetry(`${baseUrl}/memes/static/infos.json`)
@@ -201,6 +205,7 @@ export class memes extends plugin {
 
       if (Object.keys(nextInfos).length === 0 || Object.keys(nextKeyMap).length === 0) {
         // 两个静态资源拿不齐，才退回逐项重建
+        logger.warn('[meme] 静态资源拉取失败（判断为原生 meme 生成器），切换为逐项重建兜底：从 /memes/keys 取 key 列表，再逐个请求 /memes/<key>/info 重建 keyMap 与 infos')
         const keys = await fetchJsonWithRetry(`${baseUrl}/memes/keys`)
         if (Array.isArray(keys) && keys.length) {
           const keyMapTmp = {}
@@ -1079,9 +1084,9 @@ async function fetchJsonWithRetry(url, retries = 3) {
       const res = await fetch(url, { signal: timeoutSignal(REQUEST_TIMEOUT) })
       const data = await safeJson(res)
       if (data) return data
-      logger.warn(`[meme] 拉取 ${url} 返回非预期内容 (第${i + 1}次)`)
+      logger.warn(`[meme] 拉取 ${hidePrivacyInfo(url)} 返回非预期内容 (第${i + 1}次)`)
     } catch (e) {
-      logger.warn(`[meme] 拉取 ${url} 失败 (第${i + 1}次): ${e.message}`)
+      logger.warn(`[meme] 拉取 ${hidePrivacyInfo(url)} 失败 (第${i + 1}次): ${e.message}`)
     }
     if (i < retries - 1) {
       await new Promise(r => setTimeout(r, 1000 * (i + 1)))
