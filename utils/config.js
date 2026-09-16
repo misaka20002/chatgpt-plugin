@@ -298,11 +298,11 @@ const defaultConfig = {
   // 三种系统沙箱共用的执行规划子模型；current 表示跟随当前对话模型
   sandboxSubAgentProvider: 'current',
   agent_LocalSandboxSwitch: false,
-  localSandboxMasterOnly: true,
-  localSandboxSendCallForward: true,
-  localSandboxNetworkEnabled: false,
-  localSandboxRetentionMinutes: 30,
-  localSandboxChromePath: '',
+  // localSandboxMasterOnly: true,
+  // localSandboxSendCallForward: true,
+  // localSandboxNetworkEnabled: false,
+  // localSandboxRetentionMinutes: 30,
+  // localSandboxChromePath: '',
   agent_RemoteSandboxSwitch: false,
   remoteSandboxMasterOnly: true,
   remoteSandboxSendCallForward: true,
@@ -434,6 +434,7 @@ removeExtraKeys(config, defaultConfig);
 config.focus_CloudTranscode = false
 config.ttsHD = false
 config.doNotCheckPaintPluginSuccess = true
+config.agent_LocalSandboxSwitch = false
 // ===================
 
 function saveDiff(target) {
