@@ -8,7 +8,7 @@
  */
 
 import { buildExtractionPrompt, EXTRACTOR_SYSTEM } from './prompt.js'
-import { MemoryStore } from './store.js'
+import { MemoryStore, canonicalFactKey, validateCandidateShape } from './store.js'
 
 /** 中文为主的近似 token 估算：字符数 / 1.7 */
 export function estimateTokens(text) {
@@ -60,9 +60,12 @@ export function partitionRowsByTokens(rows, tokenLimit = 30000) {
  * 证据归属校验（模型输出不可信，服务端复检）
  * @param {Object} candidate 候选（含 subjectId/speakerId/scope/evidenceMessageIds）
  * @param {Object} evidenceMap { messageId: {groupId, senderId, senderName, role, time} }
+ * @param {Object} [ctx] 服务端可信上下文，`{ isBotMaster }`：Bot 主人等同群主/管理员。
+ *        只能由调用方从事件上下文（`e.isMaster`）传入，**绝不来自模型 candidate**；
+ *        这是"谁传谁授权"的字段，新增调用点必须先确认来源可信。离线每日提炼不传该字段。
  * @returns {{ok: boolean, reason: string}}
  */
-export function validateEvidence(candidate, evidenceMap = {}) {
+export function validateEvidence(candidate, evidenceMap = {}, ctx = {}) {
   const ids = Array.isArray(candidate.evidenceMessageIds) ? candidate.evidenceMessageIds : []
   const evidence = ids.map(id => evidenceMap[String(id)]).filter(Boolean)
   if (evidence.length === 0) return { ok: false, reason: '证据消息未在上下文中找到' }
@@ -82,10 +85,10 @@ export function validateEvidence(candidate, evidenceMap = {}) {
     return { ok: true, reason: '' }
   }
 
-  // group：至少两名不同成员支持，或群主/管理员明确宣布
+  // group：Bot 主人、群主/管理员公告，或至少两名不同成员支持
   const hasAuthoritative = roles.some(r => ['owner', 'admin'].includes(r))
-  if (senders.size >= 2 || hasAuthoritative) return { ok: true, reason: '' }
-  return { ok: false, reason: `群记忆需要至少两名成员支持或管理公告（当前 ${senders.size} 人）` }
+  if (ctx.isBotMaster === true || hasAuthoritative || senders.size >= 2) return { ok: true, reason: '' }
+  return { ok: false, reason: `群记忆需要 Bot 主人、群管理公告或至少两名成员支持（当前 ${senders.size} 人）` }
 }
 
 /**
@@ -99,6 +102,7 @@ export function toPromptRows(raws) {
     senderName: r.senderName,
     role: r.role,
     text: r.text,
+    time: r.time,
     replyTo: null,
     atUsers: [],
   }))
@@ -186,20 +190,31 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
         // ---- 服务端校验（模型输出不可信，片内完成；断点续跑时整片结果复用） ----
         const parsed = parseCandidates(text)
         if (!parsed.ok) throw new Error(`提炼输出解析失败: ${parsed.reason}`)
+        // 本片证据表：模型只应引用本片输入里的消息；越界引用（同窗口其他分片的真实消息）必须拒绝
+        const chunkEvidenceMap = pickEvidenceForRows(evidenceMap, chunk)
         for (const raw of parsed.candidates) {
-          const evidenceCheck = validateEvidence(raw, evidenceMap)
-          if (!evidenceCheck.ok) {
-            chunkRejected.push({ ...raw, reason: evidenceCheck.reason })
+          // 1) 形状 + 敏感信息校验前置：敏感候选不得进入断点数据
+          const shapeCheck = validateCandidateShape(raw)
+          if (!shapeCheck.ok) {
+            chunkRejected.push(sanitizeRejectedCandidate(raw, shapeCheck.reason))
             continue
           }
-          const confidence = Number(raw.confidence)
+          const candidate = shapeCheck.data
+          // 2) 证据归属（仅限本片可见的消息）
+          const evidenceCheck = validateEvidence(candidate, chunkEvidenceMap)
+          if (!evidenceCheck.ok) {
+            chunkRejected.push(sanitizeRejectedCandidate(candidate, evidenceCheck.reason))
+            continue
+          }
+          // 3) 置信度阈值
+          const confidence = Number(candidate.confidence)
           if (!Number.isFinite(confidence) || confidence < minConfidence) {
-            chunkRejected.push({ ...raw, reason: `置信度 ${raw.confidence} 低于阈值 ${minConfidence}` })
+            chunkRejected.push(sanitizeRejectedCandidate(candidate, `置信度 ${candidate.confidence} 低于阈值 ${minConfidence}`))
             continue
           }
           chunkAccepted.push({
-            ...raw,
-            subjectId: raw.scope === 'group' ? undefined : String(raw.subjectId || ''),
+            ...candidate,
+            subjectId: candidate.scope === 'group' ? undefined : String(candidate.subjectId || ''),
           })
         }
         lastError = null
@@ -263,6 +278,38 @@ export function chunkKey(rows) {
 }
 
 /**
+ * 只保留本分片输入里真实存在的消息 ID 对应的证据。
+ *
+ * prompt 要求"只引用当前输入中真实存在的消息 ID"，但 dailyTask 传进来的是**整个日窗口**的
+ * evidenceMap。若不按分片收窄，模型给出同一天另一个分片的真实 messageId 时服务端也会认可，
+ * 尽管模型根本没看到那条消息正文。
+ */
+export function pickEvidenceForRows(evidenceMap = {}, rows = []) {
+  const out = {}
+  for (const row of rows) {
+    const id = String(row?.messageId ?? '')
+    if (!id) continue
+    if (Object.prototype.hasOwnProperty.call(evidenceMap, id)) out[id] = evidenceMap[id]
+  }
+  return out
+}
+
+/**
+ * 被拒候选只保留脱敏诊断（scope/factKey/reason）。
+ *
+ * 这里必须脱敏：`runExtraction` 的结果会经 `onChunkProgress` 持久化到 task hash（断点数据），
+ * 被拒项的正文与取值没有任何理由跟着落库。若原样保存完整 raw，聊天原文会先一步写进 Redis，
+ * 即使它最终没有成为 memory item，也会多留一份没人清理的副本。
+ */
+export function sanitizeRejectedCandidate(candidate, reason) {
+  return {
+    scope: typeof candidate?.scope === 'string' ? candidate.scope : '',
+    factKey: canonicalFactKey(candidate?.factKey),
+    reason: String(reason || ''),
+  }
+}
+
+/**
  * 解析模型 JSON 输出（剥离 ```json 围栏）
  * @returns {{ok: boolean, candidates: Array, reason?: string}}
  */
@@ -277,8 +324,10 @@ export function parseCandidates(text) {
   cleaned = cleaned.slice(start, end + 1)
   try {
     const parsed = JSON.parse(cleaned)
-    const candidates = Array.isArray(parsed.candidates) ? parsed.candidates : []
-    return { ok: true, candidates }
+    // 必须真的是数组：`{"candidate":[...]}` / `{"candidates":{}}` 这类坏 schema 不能当成"确实没有记忆"，
+    // 否则一次格式错误会让整个窗口直接 completed 且不再重试
+    if (!Array.isArray(parsed?.candidates)) return { ok: false, candidates: [], reason: '输出缺少 candidates 数组' }
+    return { ok: true, candidates: parsed.candidates }
   } catch (err) {
     return { ok: false, candidates: [], reason: err.message }
   }

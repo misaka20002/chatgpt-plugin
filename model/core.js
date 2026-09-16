@@ -31,7 +31,6 @@ import { BilibiliSearchVideoTool } from '../utils/tools/SearchBilibiliTool.js'
 import { SendAvatarTool } from '../utils/tools/SendAvatarTool.js'
 import { SerpImageTool } from '../utils/tools/SearchImageTool.js'
 import { SendNetEaseMusicTool } from '../utils/tools/SendNetEaseMusicTool.js'
-import { SendAudioMessageTool } from '../utils/tools/SendAudioMessageTool.js'
 import { SendMessageToSpecificGroupOrUserTool } from '../utils/tools/SendMessageToSpecificGroupOrUserTool.js'
 import { QueryGenshinTool } from '../utils/tools/QueryGenshinTool.js'
 import { WeatherTool } from '../utils/tools/WeatherTool.js'
@@ -57,6 +56,7 @@ import Keyv from 'keyv'
 import crypto from 'crypto'
 import { getImageBase64 } from '../utils/paimonFuction.js'
 import { sendToolCallForwardMsg } from '../utils/toolForward.js'
+import { redactArgsForLog, maskSecret } from '../utils/toolArgRedaction.js'
 import { GithubAPITool } from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
@@ -229,7 +229,7 @@ class Core {
       let keys = Config.claudeApiKey?.split(/[,;]/).map(key => key.trim()).filter(key => key)
       let choiceIndex = Math.floor(Math.random() * keys.length)
       let key = keys[choiceIndex]
-      logger.info(`使用API Key：${key}`)
+      logger.info(`使用API Key：${maskSecret(key)}`)
       while (keys.length >= 0) {
         let errorMessage = ''
         const client = new ClaudeAPIClient({
@@ -330,7 +330,7 @@ class Core {
             }
             default:
           }
-          logger.warn(`claude api 错误：[${key}] ${errorMessage}`)
+          logger.warn(`claude api 错误：[${maskSecret(key)}] ${errorMessage}`)
         }
         if (keys.length === 0) {
           throw new Error(errorMessage)
@@ -338,7 +338,7 @@ class Core {
         keys.splice(choiceIndex, 1)
         choiceIndex = Math.floor(Math.random() * keys.length)
         key = keys[choiceIndex]
-        logger.info(`使用API Key：${key}`)
+        logger.info(`使用API Key：${maskSecret(key)}`)
       }
     } else if (use === 'gemini') { // 使用接口 ##############################
       let client = new CustomGoogleGeminiClient({
@@ -787,8 +787,8 @@ class Core {
                 args = {}
               }
 
-              logger.info(`[Chatgpt][API] execution function: ${JSON.stringify({ name, args })}`)
-              const toolArgsForForward = { ...args }
+              logger.info(`[Chatgpt][API] execution function: ${JSON.stringify({ name, args: redactArgsForLog(name, args) })}`)
+              const toolArgsForForward = redactArgsForLog(name, args)
 
               if (!args.groupId) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -922,7 +922,7 @@ async function executeResponsesToolCalls(core, e, toolCalls, fullFuncMap, isAdmi
       args = {}
     }
 
-    const toolArgsForForward = { ...args }
+    const toolArgsForForward = redactArgsForLog(name, args)
     if (!args.groupId) args.groupId = e.group_id + '' || e.sender.user_id + ''
     try {
       parseInt(args.groupId)

@@ -14,8 +14,6 @@
  * - 元信息          CHATGPT:MEMORY:V2:meta                     Hash
  */
 
-import { validateMemoryWrite } from './sensitive.js'
-
 const PREFIX = 'CHATGPT:MEMORY:V2'
 const IDX = (scope, ownerId, groupId) => `${PREFIX}:idx:${scope}:${ownerId}:${groupId || '-'}`
 const SLOT = (scope, ownerId, groupId, factKey) => `${PREFIX}:slot:${scope}:${ownerId}:${groupId || '-'}:${factKey}`
@@ -35,12 +33,32 @@ export function isSingleValueFact(factKey) {
   return factKey === 'communication.style' || /^(?:identity|profile|group_role|plan)\./.test(factKey)
 }
 
-/** factKey 规范化：小写、非法字符转点、必须形如 a.b */
+/**
+ * factKey 别名表：只收「语义确定等价」的**完整 factKey**。
+ *
+ * 为什么需要：模型在在线（MemoryTool）与离线（每日提炼）两条链路上可能给同一事实取不同的
+ * 槽位名，而 canonicalFactKey 只校验形状、不做语义判断，于是 profile.job 与 profile.occupation
+ * 会各自建槽位、并存且互不覆盖（isSingleValueFact 只保证"同一个 key 单值替换"）。
+ *
+ * 必须映射完整键，不要写成后缀替换（endsWith('.job')）——那会误伤 plan.job / preference.job /
+ * group.event.job 这类语义不同的槽位。
+ *
+ * 维护原则：保持保守，只加真实观察到漂移且语义等价的键，避免服务端"自作聪明"合并不同含义的槽位。
+ * 注意：别名只影响**新写入**（add/retract 都经 validateCandidateShape → canonicalFactKey），
+ * 不会自动迁移 Redis 里已存在的旧槽位数据。
+ */
+const FACT_KEY_ALIASES = Object.freeze({
+  'profile.job': 'profile.occupation',
+  'identity.sex': 'identity.gender',
+  'identity.birthday': 'identity.birth_date',
+})
+
+/** factKey 规范化：小写、非法字符转点、必须形如 a.b，再把已知别名归一到 canonical 槽位 */
 export function canonicalFactKey(factKey) {
   if (typeof factKey !== 'string') return ''
   const key = factKey.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '.').replace(/\.+/g, '.').replace(/^[^a-z]+/, '')
   if (!/^[a-z][a-z0-9_-]*(\.[a-z0-9_-]+)+$/.test(key)) return ''
-  return key
+  return FACT_KEY_ALIASES[key] || key
 }
 
 /** factValue 规范化：去空白标点、小写、截断 */
@@ -83,6 +101,19 @@ function isDerivedMemory(memory) {
 }
 
 /**
+ * operation 归一化：只接受 add / retract / ignore，其余一律判非法。
+ *
+ * 历史写法 `candidate.operation === 'retract' ? 'retract' : 'add'` 会把模型的拼写错误
+ * （如 "remove" / "delete"）静默解释成"新增事实"，语义完全相反。
+ */
+function normalizeOperation(value) {
+  if (value === undefined || value === null || value === '' || value === 'add') return 'add'
+  if (value === 'retract') return 'retract'
+  if (value === 'ignore') return 'ignore'
+  return null
+}
+
+/**
  * 服务端校验候选的通用字段（不依赖证据归属的静态校验）
  * @returns {{ok: boolean, reason?: string, data?: Object}}
  */
@@ -91,10 +122,13 @@ export function validateCandidateShape(candidate) {
 
   const scope = SCOPES.includes(candidate.scope) ? candidate.scope : null
   const kind = KINDS.includes(candidate.kind) ? candidate.kind : null
-  const operation = candidate.operation === 'retract' ? 'retract' : (candidate.operation === 'ignore' ? 'ignore' : 'add')
+  const operation = normalizeOperation(candidate.operation)
 
+  if (operation === null) return { ok: false, reason: `非法 operation: ${candidate.operation}` }
   if (operation === 'ignore') return { ok: false, reason: 'ignore' }
   if (!scope) return { ok: false, reason: `非法作用域: ${candidate.scope}` }
+  // add 必须给出合法 kind：静默降级（例如 episode 拼成 episod）会让记忆失去应有的生命周期语义
+  if (operation === 'add' && !kind) return { ok: false, reason: `非法 kind: ${candidate.kind}` }
 
   const factKey = canonicalFactKey(candidate.factKey)
   if (!factKey) return { ok: false, reason: `非法 factKey: ${candidate.factKey}` }
@@ -143,11 +177,7 @@ export function validateCandidateShape(candidate) {
   if (operation === 'add' && evidenceMessageIds.length === 0) return { ok: false, reason: '缺少证据消息 ID' }
   if (evidenceMessageIds.length > 8) return { ok: false, reason: `证据过多(${evidenceMessageIds.length}>8)` }
 
-  // 敏感信息复检（模型 sensitivity 字段不可信）
-  const sensitiveCheck = validateMemoryWrite(text, factValue)
-  if (!sensitiveCheck.ok) return { ok: false, reason: `敏感信息: ${sensitiveCheck.reason}` }
-  if (candidate.sensitivity === 'sensitive') return { ok: false, reason: '模型标记为敏感' }
-
+  // 内容层面不做敏感/凭证过滤：本系统部署在私人授权群，记什么由使用者决定（见 AGENTS.md）
   return {
     ok: true,
     data: {
@@ -167,9 +197,26 @@ export class MemoryStore {
   /* ================= 记忆写入 ================= */
 
   /**
+   * 【ctx 可信字段约定】
+   * `ctx` 是**服务端可信上下文**，`candidate` 是模型给的**不可信数据**，两者绝不能混。
+   * 其中 `ctx.isBotMaster: true` 表示"本次写入由 Bot 主人发起"，效果等同于群主/管理员：
+   * 群作用域（scope: 'group'）的候选只要有它就能用单条消息放行
+   * （见 validateEvidenceOwnership 的 group 分支）。
+   *
+   * 因此这是"**谁传谁授权**"的字段：
+   * - 新增任何调用 applyFact / applyCandidates 的地方，若要在 ctx 里带上它，
+   *   该值**必须**取自服务端事件上下文（如 `e.isMaster`），
+   *   绝不能来自模型参数（tool_calls.arguments）、候选对象或任何外部输入；
+   * - 不要把 `isBotMaster`（或任何鉴权字段）写进 candidate —— 模型能构造 candidate，
+   *   一旦混进去就等于把授权交给模型伪造。
+   * - 目前唯一的生产调用点是 `utils/tools/MemoryTool.js`；
+   *   `dailyTask` / `applyExtractedCandidates` / `profile-scan` 都不传，规则保持原样。
+   */
+
+  /**
    * 批量应用候选（同批合并 + 逐条写入）
    * @param {Array<Object>} candidates
-   * @param {Object} ctx { groupId, day?, source, evidenceMap }
+   * @param {Object} ctx { groupId, day?, source, evidenceMap }（可信字段约定见上）
    * @returns {Promise<Array<Object>>} 每条候选的处理结果
    */
   async applyCandidates(candidates, ctx = {}) {
@@ -199,6 +246,8 @@ export class MemoryStore {
 
   /**
    * 应用单条候选（add/reinforce/update/retract 语义）
+   * @param {Object} candidate 模型给出的候选（不可信）
+   * @param {Object} ctx 服务端可信上下文；`ctx.isBotMaster` 的授权语义见上方"ctx 可信字段约定"
    * @returns {Promise<{ok: boolean, action: string, memoryId?: string, reason?: string}>}
    */
   async applyFact(candidate, ctx = {}) {
@@ -213,15 +262,27 @@ export class MemoryStore {
       if (!ownerId) return { ok: false, action: 'invalid', reason: '缺少 ownerId(subjectId)' }
       const groupId = c.scope === 'user' ? '' : String(ctx.groupId || '')
 
+      // user_group / group 必须在群语境里：私聊（ctx.groupId 为空）写入会落到 `...:user_group:<uid>:-`，
+      // 而 _insertMemory 只在有 groupId 时建 GRP 反向索引，clearUser 又靠扫 GRP:* 找 user_group →
+      // 会出现"召回得到、清不掉"的孤儿数据
+      if (c.scope !== 'user' && !groupId) {
+        return { ok: false, action: 'invalid', reason: `${c.scope} 作用域必须在群聊中使用` }
+      }
+
       // 证据归属二次校验（即使 extractor 已校验，store 也不信任）
       const evidence = this._buildEvidence(c.evidenceMessageIds, ctx)
       if (c.operation === 'add' && evidence.length === 0) {
         return { ok: false, action: 'invalid', reason: '证据无法在上下文中定位' }
       }
-      const ownership = this.validateEvidenceOwnership(c, evidence)
+      const ownership = this.validateEvidenceOwnership(c, evidence, ctx)
       if (!ownership.ok) {
         return { ok: false, action: 'invalid', reason: ownership.reason }
       }
+
+      // 事件类有效期以"最新证据时间"为基准，而不是入库时间。
+      // 补提炼 6 个月前的"我现在失业了"时，若以入库时间起算，会凭空多出从今天开始的保留期。
+      const evidenceTimeSec = Math.max(0, ...evidence.map(ev => Number(ev.t) || 0))
+      const eventTtlBase = evidenceTimeSec || nowSec()
 
       // 槽位现有行
       const slotIds = await redis.sMembers(SLOT(c.scope, ownerId, groupId, c.factKey))
@@ -245,6 +306,14 @@ export class MemoryStore {
       }
 
       // ---- add ----
+      // 0) 单值槽位若已被「手工确认」记忆占据且取值不同，模型不得替换。
+      //    必须放在同值强化之前：否则"1 条 manual + 1 条 derived"时只会归档 derived 再插入新值，
+      //    最终留下旧 manual + 新 derived 两个 active 值，单值语义被破坏。
+      if (isSingleValueFact(c.factKey)) {
+        const manualConflict = active.some(m => isManualMemory(m) && m.factValue !== c.factValue)
+        if (manualConflict) return { ok: false, action: 'ignored', reason: '单值槽位被手工确认记忆占据，忽略新值' }
+      }
+
       // 1) 同值强化（合并证据 + 置信度提升）
       const sameValue = active.find(m => m.factValue === c.factValue)
       if (sameValue) {
@@ -252,6 +321,13 @@ export class MemoryStore {
         if (addedEvidence === 0) {
           // 证据全部已存在 → 幂等跳过（不重复提高置信度）
           return { ok: true, action: 'skipped', memoryId: sameValue.id, reason: '证据已存在，幂等跳过' }
+        }
+        // 有新证据 = 用户再次确认：text 同步刷新（年龄自述日期之类不能停在旧文本），
+        // episode/plan 的有效期按最新证据时间续期，显式 validTo 直接采用
+        if (c.text) sameValue.text = c.text
+        if (c.validTo) sameValue.validTo = c.validTo
+        else if (sameValue.kind === 'episode' || sameValue.kind === 'plan') {
+          sameValue.validTo = eventTtlBase + (ctx.eventRetentionDays ?? 90) * 86400
         }
         sameValue.confidence = Math.min(1, (sameValue.confidence || 0) + 0.04)
         sameValue.lastConfirmedAt = now
@@ -291,7 +367,7 @@ export class MemoryStore {
         confidence: c.confidence,
         status: 'active',
         source: ctx.source || 'Memory_Tool',
-        validTo: c.validTo || ((c.kind === 'episode' || c.kind === 'plan') && !c.validTo ? nowSec() + (ctx.eventRetentionDays ?? 90) * 86400 : 0),
+        validTo: c.validTo || ((c.kind === 'episode' || c.kind === 'plan') && !c.validTo ? eventTtlBase + (ctx.eventRetentionDays ?? 90) * 86400 : 0),
         createdAt: now,
         updatedAt: now,
         lastConfirmedAt: now,
@@ -324,10 +400,13 @@ export class MemoryStore {
 
   /**
    * 证据归属校验（服务端不信任任何调用方）
-   * 个人事实必须有本人消息作为证据；群事实必须来自管理公告或至少两名成员
+   * 个人事实必须有本人消息作为证据；群事实必须来自 Bot 主人、管理公告或至少两名成员
+   * @param {Object} [ctx] 服务端可信上下文，`{ isBotMaster }`：Bot 主人等同群主/管理员。
+   *        只能由调用方从事件上下文（`e.isMaster`）传入，绝不来自模型 candidate；
+   *        这是"谁传谁授权"的字段（授权语义与生产调用点见文件上方"ctx 可信字段约定"）。
    * @returns {{ok: boolean, reason: string}}
    */
-  validateEvidenceOwnership(c, evidence) {
+  validateEvidenceOwnership(c, evidence, ctx = {}) {
     if (c.scope === 'user' || c.scope === 'user_group') {
       const senders = new Set(evidence.map(ev => ev.s).filter(Boolean))
       const subjectId = String(c.subjectId || '')
@@ -339,8 +418,9 @@ export class MemoryStore {
     if (c.scope === 'group') {
       const senders = new Set(evidence.map(ev => ev.s).filter(Boolean))
       const authoritative = evidence.some(ev => ['owner', 'admin'].includes(String(ev.r || '').toLowerCase()))
-      if (senders.size >= 2 || authoritative) return { ok: true, reason: '' }
-      return { ok: false, reason: `群事实必须来自群管理公告或至少两名成员支持（当前 ${senders.size} 人）` }
+      // Bot 主人（可信 ctx）等同群主/管理员：单条消息即可写群级事实
+      if (ctx.isBotMaster === true || authoritative || senders.size >= 2) return { ok: true, reason: '' }
+      return { ok: false, reason: `群事实必须来自 Bot 主人、群管理公告或至少两名成员支持（当前 ${senders.size} 人）` }
     }
     return { ok: false, reason: `未知作用域 ${c.scope}` }
   }
@@ -401,10 +481,13 @@ export class MemoryStore {
   async _countActiveByScope(scope, ownerId, groupId) {
     const redis = this.redis
     const ids = await redis.sMembers(IDX(scope, ownerId, groupId))
+    const now = nowSec()
     let count = 0
     for (const id of ids) {
       const m = await this._getMemory(id)
-      if (m && m.status === 'active') count++
+      // 已过期（validTo 过去）但仍在 30 天物理清理宽限期内的记忆不该占配额：
+      // 它已不参与召回，却会挤掉仍有效的新记忆
+      if (m && m.status === 'active' && !(m.validTo > 0 && m.validTo <= now)) count++
     }
     return count
   }
@@ -414,11 +497,13 @@ export class MemoryStore {
     const redis = this.redis
     const ids = await redis.sMembers(IDX(scope, ownerId, groupId))
     const now = nowMs()
+    const nowS = nowSec()
     let lowest = null
     let lowestScore = Infinity
     for (const id of ids) {
       const m = await this._getMemory(id)
       if (!m || m.status !== 'active') continue
+      if (m.validTo > 0 && m.validTo <= nowS) continue // 已过期：不参与淘汰竞争
       const ageDays = (now - m.createdAt) / 86400000
       const decay = Math.max(0.1, 1 - (ageDays / 30) * 0.1)
       const score = (m.importance || 0) * decay

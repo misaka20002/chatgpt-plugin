@@ -41,7 +41,7 @@
 | `index.js` | 入口。扫描 `apps/*.js` 动态 import，导出 `apps` 给 Yunzai 注册 |
 | `apps/` | 命令层。每文件导出一个 `extends plugin` 的类（`rule` 正则 + 处理函数）。`memoryManage.js`（记忆指令+每日提炼 task+群记忆管理）、`chat.js`（对话，priority 1144）、`memoryGroupObserver.js`（记忆观察器，priority **-1011**）等 |
 | `model/` | 核心层。`core.js`（对话 + 工具注册/执行）、`SubLLM.js`（多 provider 子模型，支持 `systemPrompt` 与多模态 `media`）、`Onebot11_MessageHistoryManager.js`（历史消息拉取，**零 import，可独立测试**）等 |
-| `utils/` | 业务工具。`config.js`（配置单例 Proxy）、`common.js`（重依赖，勿在测试环境 import）、`tools/`（AI 工具，继承 `AbstractTool`：`MemoryTool`、`UserProfileTool` 等）、`memory/`（**V2 记忆系统 8 模块**，见下）、`openai/`、`tts/` 等 |
+| `utils/` | 业务工具。`config.js`（配置单例 Proxy）、`common.js`（重依赖，勿在测试环境 import）、`tools/`（AI 工具，继承 `AbstractTool`：`MemoryTool`、`UserProfileTool` 等）、`memory/`（**V2 记忆系统 7 模块**，见下）、`openai/`、`tts/` 等 |
 | `server/` | 本地 HTTP 服务（fastify） |
 | `config/` | `config.md` 文档；`config.json` 运行时生成，**勿提交** |
 | `guoba.support.js` | 锅巴配置面板 schema（3000+ 行，局部编辑勿整写） |
@@ -71,7 +71,10 @@
 ### 记忆系统 V2（`utils/memory/`）
 1. **采集**：`apps/memoryGroupObserver.js`（priority **-1011**，TRSS 升序调度下最先执行）→ `capture.observe(e)`：仅授权群、非指令、非 Bot；纯文本入库，富媒体段以占位符标记（`[图片]`/`[表情]`/`[语音]`/`[视频]`/`[文件]`，内容本身不入库）→ `store.saveRawMessage`（原文 TTL=30 天）
 2. **每日提炼**：`apps/memoryManage.js` 的 task（EasyCron `memoryGroupCapture.cronTime`，修改后重启生效）→ `dailyTask.runDaily`：北京时间自然日、断点游标、幂等、needsReextract 重提炼；**失败重试**：runDaily（`drainDueWindows`）对每个窗口**当日最多尝试 3 次**（节奏 0/5/10min：第 1 次立即、失败后固定等 5min 再试，`MAX_ATTEMPTS_PER_RUN=3` 额度耗尽留次日），总上限 `MAX_ATTEMPTS=20` 跨 runDaily 日累计、达即 failed；手动 `#立即提取`（`flushDueWindows`，`waitRetry:false`）**不等退避**、失败即返回并提示退避中窗口数；**错误分类**：网络/429/5xx 可重试，其他 4xx 短路直接 failed；手动重置 failed 任务 `attemptCount` 归零；**分片断点**：token 分片每成功一片即持久化到 task hash 的 `chunksDone`，重试经 `runExtraction` 的 `resumeChunks` 只补跑失败片（成功后清空）
-3. **提取+校验**：`extractor.runExtraction` → 模型（`systemPrompt: EXTRACTOR_SYSTEM`）→ `parseCandidates` → 服务端校验（证据归属/作用域/置信度/敏感/长度）→ `store.applyCandidates`
+3. **提取+校验**：`extractor.runExtraction` → 模型（`systemPrompt: EXTRACTOR_SYSTEM`）→ `parseCandidates` → 服务端校验（证据归属/作用域/置信度/kind/长度）→ `store.applyCandidates`
+   - **服务端不做内容层面的敏感过滤，这是刻意选择，不要"修复"它**：本系统部署在私人授权群里，手机号、证件号、银行卡、精确住址、家人工作单位，甚至聊天里出现的验证码/Token，都由使用者决定是否记录；`utils/memory/sensitive.js` 与 `validateMemoryWrite()` 已整体删除。不要重新引入敏感词/凭证写入拦截，也不要在提示词里列举具体敏感类目（既不写"可以记录 XX"、也不写"禁止记录 XX"）。
+   - 提示词侧只保留一条**弱**约束：`EXTRACTOR_SYSTEM` / `DEFAULT_GROUP_MEMORY_PROMPT` 仍写着"密码、验证码、Token/API Key、Cookie 这类登录凭证不要输出"——它只是给模型的取舍建议，**不是**写入校验（服务端不再因此拒绝任何候选）。
+   - 提示词立场是"**不要自我审查**"：本人有直接表达的个人与生活事实（家庭与关系、工作单位、居住场所、联系方式等）都要正常提取，并保留具体信息，不得泛化成笼统结论。
 4. **存储**：`store.js` —— 作用域 `user`/`user_group`/`group`；add/reinforce(+0.04)/update(单值替换)/retract；证据集合；索引（idx/slot/grp）
 5. **召回**：`recall.buildMemoryPrompt(e, prompt)` 注入对话（相关性 bigram 匹配 + 常驻画像 + @目标切换主体；输出标注"不可信数据"）
 6. **画像**：`profile.extractUserProfile`（UserProfileTool 调用，仅授权群 + 本人/主人限制）
