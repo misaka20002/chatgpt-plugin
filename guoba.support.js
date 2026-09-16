@@ -1340,7 +1340,7 @@ export function supportGuoba() {
         {
           field: 'githubAPIKey',
           label: 'github Access Token',
-          bottomHelpMessage: '用于 Github仓库读取工具；前往 https://github.com/settings/personal-access-tokens 生成；不填写的话请求Github限制为每小时 60 次',
+          bottomHelpMessage: '用于 Github仓库读取工具。为避免私有仓库内容泄露，请使用最小权限专用 token——fine-grained PAT 且只勾选 Public Repositories 只读。生成：https://github.com/settings/personal-access-tokens ；不填写则走匿名额度（60 次/小时）',
           component: 'InputPassword'
         },
         {

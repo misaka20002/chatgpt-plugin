@@ -17,6 +17,7 @@ import { KeyvFile } from 'keyv-file'
 // import { getChatHistoryGroup } from '../utils/chat.js'
 import { msgHistoryMgr } from '../model/Onebot11_MessageHistoryManager.js'
 import { APTool } from '../utils/tools/APTool.js'
+import { mergeTrustedToolArgs } from '../utils/tools/AbstractTool.js'
 import { ClaudeAPIClient } from '../client/ClaudeAPIClient.js'
 import { getMessageById, upsertMessage } from '../utils/history.js'
 import { v4 as uuid } from 'uuid'
@@ -801,10 +802,10 @@ class Core {
               let functionResult = ''
               try {
                 if (fullFuncMap[name.trim()]) {
-                  functionResult = await fullFuncMap[name.trim()].exec.bind(this)(Object.assign({
+                  functionResult = await fullFuncMap[name.trim()].exec.bind(this)(mergeTrustedToolArgs(args, {
                     isAdmin,
                     sender
-                  }, args), e)
+                  }), e)
                   logger.info(`[Chatgpt][API] function ${name} execution result: ${JSON.stringify(functionResult)}`)
                 } else {
                   functionResult = `Function ${name} not found.`
@@ -932,7 +933,7 @@ async function executeResponsesToolCalls(core, e, toolCalls, fullFuncMap, isAdmi
     let functionResult = ''
     try {
       if (fullFuncMap[name.trim()]) {
-        functionResult = await fullFuncMap[name.trim()].exec.bind(core)(Object.assign({ isAdmin, sender }, args), e)
+        functionResult = await fullFuncMap[name.trim()].exec.bind(core)(mergeTrustedToolArgs(args, { isAdmin, sender }), e)
         logger.info(`[Chatgpt][Responses] function ${name} execution result: ${JSON.stringify(functionResult)}`)
       } else {
         functionResult = `Function ${name} not found.`
