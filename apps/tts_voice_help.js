@@ -1141,13 +1141,43 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         try {
             Config.geminiModelsByFetch = await getGeminiModelsByFetch();
             logger.info('[sf插件自动任务] 成功更新 Gemini 模型列表');
-            if (e?.reply) e.reply('[派蒙chatgpt自动任务] 成功更新 Gemini 模型列表，请刷新锅巴');
+            if (e?.reply) {
+                e.reply('[派蒙chatgpt自动任务] 成功更新 Gemini 模型列表，请刷新锅巴');
+                await this.replyGeminiModelList(e, Config.geminiModelsByFetch);
+            }
         } catch (err) {
             logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
             if (e?.reply) e.reply('[派蒙chatgpt自动任务] 每日获取Gemini模型错误')
         }
 
         return true
+    }
+
+    /**
+     * 以合并转发形式列出本次拉取到的 Gemini 模型名，每个模型名一个节点
+     * @param {*} e 事件对象
+     * @param {string[]} models getGeminiModelsByFetch 的返回值（已剥离 models/ 前缀）
+     */
+    async replyGeminiModelList(e, models) {
+        if (!Array.isArray(models) || models.length === 0) {
+            e.reply('[派蒙chatgpt自动任务] 本次未获取到任何 Gemini 模型')
+            return
+        }
+        // 合并转发节点数有上限（QQ 一般为 99），超出部分只截断展示，不影响已写入的完整列表
+        const maxNodes = 90
+        const shown = models.slice(0, maxNodes)
+        const messages = shown.map((name) => String(name))
+        let title = `Gemini 模型列表（共 ${models.length} 个）`
+        if (shown.length < models.length) {
+            messages.push(`…… 还有 ${models.length - shown.length} 个未展示`)
+            title += `，仅展示前 ${shown.length} 个`
+        }
+        try {
+            await e.reply(await common.makeForwardMsg(e, messages, title))
+        } catch (err) {
+            logger.error(`[派蒙chatgpt自动任务]发送Gemini模型列表合并转发失败:\n` + err)
+            e.reply(`[派蒙chatgpt自动任务] 模型列表发送失败，共 ${models.length} 个模型，请查看日志`)
+        }
     }
 
     async searchFishVoices(e) {
