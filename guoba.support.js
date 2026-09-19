@@ -481,7 +481,7 @@ export function supportGuoba() {
         },
         {
           field: 'responsesReasoningEffort',
-          label: 'Responses 思考程度',
+          label: '思考程度',
           bottomHelpMessage: '控制 Responses 推理模型的思考深度；不修改（默认）为使用模型默认值。',
           component: 'Select',
           componentProps: {
@@ -499,7 +499,7 @@ export function supportGuoba() {
         },
         {
           field: 'responsesTemperature',
-          label: 'Responses temperature',
+          label: '温度',
           bottomHelpMessage: '用于控制 Responses 回复内容的多样性。',
           component: 'InputNumber',
           componentProps: {
@@ -510,13 +510,13 @@ export function supportGuoba() {
         },
         {
           field: 'responsesApiMaxToken',
-          label: 'Responses 回复内容最大Token数',
+          label: '回复内容最大Token数',
           bottomHelpMessage: 'Responses API 单次回复的 Token 上限（通常设置为 总上下文的一半以内）',
           component: 'InputNumber'
         },
         {
           field: 'responsesMaxModelTokens',
-          label: 'Responses 模型总上下文Token数',
+          label: '模型总上下文Token数',
           bottomHelpMessage: '模型支持的输入+回复总Token上限，可查询模型官网，例如 100万 上下文。说明：仅用于插件自动压缩历史或群聊记录',
           component: 'InputNumber'
         },

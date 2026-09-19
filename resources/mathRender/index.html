@@ -166,6 +166,80 @@
             margin-bottom: 16px;
         }
 
+        /* 表格：圆角外框 + 浅粉网格线 + 粉色表头，配色沿用主题变量 */
+        .markdown-body .table-wrap {
+            margin: 28px 0;
+            border: 1.5px solid rgba(244, 219, 216, 0.95);
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            /* 正文 24px，表格略小以容纳多列并减少短标签折行 */
+            line-height: 1.55;
+        }
+
+        .markdown-body thead th {
+            background: rgba(255, 229, 231, 0.9);
+            color: #d3607c;
+            font-weight: 800;
+            text-align: left;
+            padding: 13px 16px;
+            border-bottom: 1.5px solid rgba(244, 219, 216, 0.95);
+        }
+
+        .markdown-body tbody td {
+            color: #4a3735;
+            padding: 13px 16px;
+            vertical-align: top;
+            word-break: break-word;
+            border-bottom: 1px solid rgba(236, 204, 202, 0.9);
+        }
+
+        /* 竖线只画在单元格左侧，避免最后一列多出一条线 */
+        .markdown-body thead th + th,
+        .markdown-body tbody td + td {
+            border-left: 1px solid rgba(236, 204, 202, 0.9);
+        }
+
+        /* 外框已经画了底线，最后一行不再重复 */
+        .markdown-body tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 引用块：主题粉左标 + 半透明白底，圆角语言与表格保持一致 */
+        .markdown-body blockquote {
+            margin: 24px 0;
+            padding: 18px 24px;
+            border-left: 5px solid rgba(255, 143, 163, 0.7);
+            border-radius: 6px 18px 18px 6px;
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: inset 0 0 0 1.5px rgba(244, 219, 216, 0.55);
+            color: #66504c;
+        }
+
+        /* 段间距由 p 自己控制，末段不再留白 */
+        .markdown-body blockquote > :last-child {
+            margin-bottom: 0;
+        }
+
+        /* 引用内的加粗用主题粉强调，与正文加粗区分 */
+        .markdown-body blockquote strong {
+            color: #d3607c;
+        }
+
+        /* 嵌套引用：收窄内距并降低底色，避免左侧色条层层叠加 */
+        .markdown-body blockquote blockquote {
+            margin: 16px 0;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.45);
+            color: #7a625d;
+        }
+
         /* 统一代码块和数学块的底色 */
         .markdown-body pre,
         .markdown-body code {
@@ -308,6 +382,12 @@
 
                 return defaultFenceRenderer(tokens, idx, options, env, self);
             };
+
+            // 表格外包一层容器，便于统一绘制圆角外框
+            const defaultTableOpen = md.renderer.rules.table_open || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+            const defaultTableClose = md.renderer.rules.table_close || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
+            md.renderer.rules.table_open = (tokens, idx, options, env, self) => '<div class="table-wrap">' + defaultTableOpen(tokens, idx, options, env, self);
+            md.renderer.rules.table_close = (tokens, idx, options, env, self) => defaultTableClose(tokens, idx, options, env, self) + '</div>';
 
             // 将内容写入容器
             const contentDiv = document.getElementById('content');
