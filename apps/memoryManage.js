@@ -117,7 +117,7 @@ export class memoryManage extends plugin {
     }
     await this.reply(
       `⚠️ 确定要开启本群记忆采集吗？\n` +
-      `将授权采集本群的非指令、非Bot纯文本消息（原文默认保留 ${Config.memoryGroupCapture?.rawRetentionDays ?? 30} 天）\n` +
+      `将授权采集本群的非Bot消息（含 # 开头的指令，指令只记录、不参与提炼；原文默认保留 ${Config.memoryGroupCapture?.rawRetentionDays ?? 30} 天）\n` +
       `并补录最近 24 小时、最多 500 条可获取的历史消息，用于每日批量提炼\n` +
       `回复"是"确认，回复其他内容取消`,
       true
@@ -277,7 +277,8 @@ export class memoryManage extends plugin {
         await e.reply('你还没有任何记忆哦~', true)
         return
       }
-      memories.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      // 全序：同毫秒 updatedAt 用 id 兜底，否则底层 Set 顺序会让展示编号与按序号取用错位
+      memories.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) || String(a.id).localeCompare(String(b.id)))
       const messages = memories.map((m, index) => this.formatMemory(m, index + 1))
       await this.sendChunkedForwardMsg(e, messages, `我的记忆 (共${memories.length}条)`)
     } catch (err) {
@@ -341,7 +342,8 @@ export class memoryManage extends plugin {
         await e.reply(`用户 ${targetUserId} 还没有任何记忆`, true)
         return
       }
-      memories.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      // 全序：同毫秒 updatedAt 用 id 兜底，否则底层 Set 顺序会让展示编号与按序号取用错位
+      memories.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) || String(a.id).localeCompare(String(b.id)))
       const messages = memories.map((m, index) => this.formatMemory(m, index + 1))
       await this.sendChunkedForwardMsg(e, messages, `${targetUserId}的记忆 (共${memories.length}条)`)
     } catch (err) {
@@ -448,6 +450,10 @@ export class memoryManage extends plugin {
         await e.reply(`用户 ${targetUserId} 没有记忆`, true)
         return
       }
+      // 必须用与展示侧（myMemories / otherMemories）完全相同的排序，否则用户看到的
+      // 「记忆 N」与这里按下标取到的可能不是同一条——而这是一个破坏性操作。
+      // 底层来源含 Redis Set，返回顺序不能当作稳定的展示序号，所以比较器必须是全序。
+      memories.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) || String(a.id).localeCompare(String(b.id)))
       let memoryToDelete = null
       if (/^\d{1,4}$/.test(memoryIdentifier)) {
         const index = parseInt(memoryIdentifier) - 1

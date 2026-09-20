@@ -1,5 +1,5 @@
 /**
- * 工具上下文占用审计（本地脚本，test/ 不入库）
+ * 工具上下文占用审计（本地脚本，随仓库入库）
  *
  * 目的：量化 utils/tools 下每个工具对「模型上下文」的占用——
  * 即每次请求都要发给模型的 name / description / parameters JSON schema。

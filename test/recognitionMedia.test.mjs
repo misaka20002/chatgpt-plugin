@@ -1,5 +1,5 @@
 /**
- * 本地辅助验证（test/ 在 .gitignore 中、不入库）：按需内容识别工具的来源选择与失败语义
+ * 本地辅助验证（随仓库入库）：按需内容识别工具的来源选择与失败语义
  *
  * 运行：node --experimental-test-module-mocks --test test/recognitionMedia.test.mjs
  *

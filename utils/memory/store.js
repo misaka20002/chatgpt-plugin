@@ -703,8 +703,9 @@ export class MemoryStore {
    * 关闭某群记忆：来源级清理
    * - 删除该群原文、任务、运行时策略
    * - user_group/group 且 groupId=该群 → 整条删除
-   * - user 派生记忆（group-window）仅本群证据 → 整条删除；多群证据 → 仅移除本群证据
-   * - user 手工/工具记忆 → 仅移除本群证据
+   * - user 派生记忆（`group-window*` / `profile-scan` / `Memory_Tool`，见 `isDerivedMemory`）：
+   *   仅本群证据 → 整条删除；多群证据 → 仅移除本群证据
+   * - user 手工确认的记忆 → 仅移除本群证据，记忆本体保留
    */
   async clearGroup(groupId) {
     const redis = this.redis
@@ -809,7 +810,9 @@ export class MemoryStore {
 
   /**
    * 保存一条群消息原文
-   * @param {Object} row { groupId, messageId, senderId, senderName, role, text, time, isCommand, contentHash }
+   * @param {Object} row { groupId, messageId, senderId, senderName, role, text, time, isCommand, contentHash,
+   *                       at?, atAll?, reply?, forward?, cards?, poke? }
+   *        结构化字段（@/引用/合并转发/卡片/戳一戳）可选，缺省时记录形状与旧数据一致
    * @param {number} retentionDays 保留天数（0=永久）
    */
   async saveRawMessage(row, retentionDays = 30) {
@@ -827,6 +830,13 @@ export class MemoryStore {
       contentHash: row.contentHash || '',
       groupId: gid,
     }
+    // 结构化段：仅在确有内容时落库（旧记录无这些字段，读取方按缺省处理）
+    if (Array.isArray(row.at) && row.at.length) payload.at = row.at.map(String)
+    if (row.atAll) payload.atAll = true
+    if (row.reply) payload.reply = row.reply
+    if (row.forward) payload.forward = row.forward
+    if (Array.isArray(row.cards) && row.cards.length) payload.cards = row.cards
+    if (row.poke) payload.poke = row.poke
     await redis.set(key, JSON.stringify(payload))
     if (retentionDays > 0) await redis.expire(key, retentionDays * 86400)
     // score 统一为秒（与 getRawMessages 的秒级范围查询一致）
@@ -836,7 +846,11 @@ export class MemoryStore {
     // - running：消息在模型生成期间到达，不在当前输入中，必须标记，完成后由下一轮重提炼
     //   （processWindow 开始运行时清脏、完成时不清脏，标记才会保留）
     // - 游标已跨过且无任务的空白日（历史补录）：直接创建待提炼任务，避免永久漏提炼
-    if (payload.time) {
+    //
+    // 仅对「会进入提炼输入」的记录标脏：dailyTask 取行时按 `!r.isCommand && r.text` 过滤，
+    // 所以无文本记录（纯 @ / 纯引用 / 戳一戳）与指令记录永远不会参与提炼，
+    // 给它们标脏只会让同一个窗口白跑一次模型调用。
+    if (payload.text && !payload.isCommand && payload.time) {
       const day = dayKeyOf(payload.time)
       const task = await redis.hGetAll(TASK(gid, day))
       if (task && (task.status === 'completed' || task.status === 'running')) {

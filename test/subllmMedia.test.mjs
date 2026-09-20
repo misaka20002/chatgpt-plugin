@@ -1,5 +1,5 @@
 /**
- * 本地辅助验证（test/ 在 .gitignore 中、不入库）：SubLLM 的 media 多模态载荷构造
+ * 本地辅助验证（随仓库入库）：SubLLM 的 media 多模态载荷构造
  *
  * 运行：node --experimental-test-module-mocks --test test/subllmMedia.test.mjs
  *

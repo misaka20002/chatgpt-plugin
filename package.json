@@ -55,7 +55,7 @@
     }
   },
   "scripts": {
-    "test:memory": "node --test test/memoryV2.test.js test/chain.test.mjs test/chain2.test.mjs test/chain3.test.mjs test/chain5.test.mjs",
+    "test:memory": "node --experimental-test-module-mocks --test test/memoryV2.test.js test/memoryApps.test.mjs",
     "test:tools": "node --test test/githubTool.test.js test/toolContext.test.js test/toolArgRedaction.test.js && node test/htmlTool.check.mjs && node test/render/htmlRender.template.check.mjs",
     "test:media": "node --experimental-test-module-mocks --test test/subllmMedia.test.mjs test/recognitionMedia.test.mjs test/mediaUrlGuard.test.mjs",
     "test:meme": "node test/meme/run.mjs",

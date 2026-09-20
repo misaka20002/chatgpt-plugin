@@ -1,5 +1,5 @@
 /**
- * 本地辅助验证（test/ 在 .gitignore 中、不入库）：
+ * 本地辅助验证（随仓库入库）：
  * 不可信媒体地址的来源校验、连接目标固定、MIME 校验与下载资源边界
  *
  * 运行：node --experimental-test-module-mocks --test test/mediaUrlGuard.test.mjs
