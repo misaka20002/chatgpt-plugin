@@ -3,7 +3,7 @@
 // mathRender 模板渲染检查（跨平台：Win11 本地 / Ubuntu 服务器都能跑）
 //
 // 用法：
-//   node test/render/mathRender.check.mjs                 只跑断言（25 项）
+//   node test/render/mathRender.check.mjs                 只跑断言（26 项）
 //   node test/render/mathRender.check.mjs --shot          额外把整页截图写到系统临时目录（只看观感）
 //   PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium node ...  指定浏览器（Ubuntu 上常用）
 //
@@ -136,6 +136,24 @@ function mdWithWideImage() {
   const b64 = fs.readFileSync(WIDE_PNG).toString('base64')
   return ['## 图片限宽', '', `![宽图](data:image/png;base64,${b64})`].join('\n')
 }
+
+// 引用块内距：首/末子元素自带的 margin 会各自叠到引用块的内距上，只清末尾不清开头时，
+// 文字上方是「内距 + margin-top」、下方只有内距，看起来就是整段文字往下坠（曾经如此）。
+// 覆盖单段、多段、首元素是列表、嵌套引用四种形态。
+const mdQuoteSpacing = [
+  '## 引用块内距',
+  '',
+  '> 单段引用',
+  '',
+  '> 第一段',
+  '>',
+  '> 第二段',
+  '',
+  '> - 列表项一',
+  '> - 列表项二',
+  '',
+  '> > 嵌套引用',
+].join('\n')
 
 // ---------- 渲染 ----------
 // 每个用例的未捕获异常都汇总到这里（渲染完一次性断言，避免只查了某一个用例，
@@ -309,7 +327,33 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
       console.log('（跳过图片用例：缺少 fixtures/wide.png）')
     }
 
-    // 页面健康放在所有用例跑完后统一断言——之前只在用例 1 查，后三个用例即使抛未捕获异常也会全绿
+    // —— 用例 5：引用块内距对称 ——
+    console.log('=== 用例 5：引用块内距对称 ===')
+    await renderFixture(page, 'quoteSpacing', mdQuoteSpacing)
+    const a5 = await page.evaluate(() => {
+      const c = document.getElementById('content')
+      const round = (n) => Math.round(n * 100) / 100
+      return [...c.querySelectorAll('blockquote')].map((q, i) => {
+        const first = q.firstElementChild
+        const last = q.lastElementChild
+        // 只量「首/末子元素的外边距盒到引用块边框盒」的距离（= 内距 + 该子元素的 margin），
+        // 与字体、折行、行高都无关；子元素为空的引用块（例如只有一行 `>`）没有可量的边距
+        if (!first || !last) return { i, gapTop: null, gapBottom: null, mt: null, mb: null }
+        return {
+          i,
+          gapTop: round(first.getBoundingClientRect().top - q.getBoundingClientRect().top),
+          gapBottom: round(q.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom),
+          mt: getComputedStyle(first).marginTop,
+          mb: getComputedStyle(last).marginBottom,
+        }
+      })
+    })
+    const quotable = a5.filter((q) => q.gapTop !== null)
+    check('引用块上下内距对称（首个子元素不再被 margin-top 顶下去）',
+      quotable.length > 0 && quotable.every((q) => Math.abs(q.gapTop - q.gapBottom) <= 0.5),
+      JSON.stringify(a5))
+
+    // 页面健康放在所有用例跑完后统一断言——之前只在用例 1 查，后面几个用例即使抛未捕获异常也会全绿
     check('所有用例页面均无未捕获 JS 异常', pageErrorLog.length === 0, pageErrorLog.join('; '))
   } finally {
     await browser.close()

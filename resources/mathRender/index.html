@@ -227,7 +227,13 @@
             color: var(--text-color);
         }
 
-        /* 段间距由 p 自己控制，末段不再留白 */
+        /* 首/末子元素自带的外边距不再叠加到引用块内距上：p、ul、pre、.table-wrap 都有上下
+           margin，只清末尾会让内距上下不对称（上方 18+24、下方只有 18），文字整体看起来下坠。
+           中间相邻项的间距仍由它们自己的 margin 决定。 */
+        .markdown-body blockquote > :first-child {
+            margin-top: 0;
+        }
+
         .markdown-body blockquote > :last-child {
             margin-bottom: 0;
         }
