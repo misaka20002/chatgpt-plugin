@@ -39,7 +39,7 @@ const defaultConfig = {
   responsesApiMaxToken: 65536,
   responsesMaxModelTokens: 128000,
   responsesStore: false,
-  enableHostedBuiltinTools: false,
+  enableHostedBuiltinTools: true,
   responsesFileSearchVectorStoreIds: [],
   responsesFileSearchMaxNumResults: 10,
   /**
@@ -259,7 +259,7 @@ const defaultConfig = {
   fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
   tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
-  meme_baseUrl: "https://misaka20001-memegenerator.hf.space",
+  meme_baseUrl: "https://qwqcc-meme.hf.space",
   meme_reply: true,
   meme_forceSharp: true,
   meme_masterProtectDo: true,
@@ -411,11 +411,11 @@ const defaultConfig = {
   // 三种系统沙箱共用的执行规划子模型；current 表示跟随当前对话模型
   sandboxSubAgentProvider: 'current',
   agent_LocalSandboxSwitch: false,
-  localSandboxMasterOnly: true,
-  localSandboxSendCallForward: true,
-  localSandboxNetworkEnabled: false,
-  localSandboxRetentionMinutes: 30,
-  localSandboxChromePath: '',
+  // localSandboxMasterOnly: true,
+  // localSandboxSendCallForward: true,
+  // localSandboxNetworkEnabled: false,
+  // localSandboxRetentionMinutes: 30,
+  // localSandboxChromePath: '',
   agent_RemoteSandboxSwitch: false,
   remoteSandboxMasterOnly: true,
   remoteSandboxSendCallForward: true,
@@ -483,7 +483,7 @@ const defaultConfig = {
   mcpServers: `{
   "mcpServers": {
     "nocturne_memory": {
-      "enabled": true,
+      "enabled": false,
       "command": "python",
       "args": ["/root/nocturne_memory/backend/mcp_server.py"],
       "env": {
@@ -547,6 +547,7 @@ removeExtraKeys(config, defaultConfig);
 config.focus_CloudTranscode = false
 config.ttsHD = false
 config.doNotCheckPaintPluginSuccess = true
+config.agent_LocalSandboxSwitch = false
 // ===================
 
 function saveDiff(target) {
@@ -628,7 +629,7 @@ export const Config = new Proxy(config, {
     }
     else if (property === 'get_geminiModels') {
       return function () {
-        const defaultArr = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-pro-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest']
+        const defaultArr = ['gemini-pro-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview']
         try {
           const fetchModels = Array.isArray(target.geminiModelsByFetch) ? target.geminiModelsByFetch : [];
           return lodash.uniq([...defaultArr, ...fetchModels]);

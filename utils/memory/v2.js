@@ -8,7 +8,6 @@ import { groupCapture } from './capture.js'
 import { dailyConsolidation } from './dailyTask.js'
 import * as extractor from './extractor.js'
 import * as recall from './recall.js'
-import * as sensitive from './sensitive.js'
 import * as profile from './profile.js'
 
 export {
@@ -17,7 +16,6 @@ export {
   dailyConsolidation,
   extractor,
   recall,
-  sensitive,
   profile,
 }
 
