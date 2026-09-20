@@ -37,17 +37,11 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* 截图目标元素：puppeteer 截的是 #container，成品图宽度 = 它的布局宽度 × zoom
-           （本渲染器的元素截图路径不读 Viewport / deviceScaleFactor，别指望那两个参数）。
-           设计按 1380px 画（卡片 1280 + 左右内距各 50），这里整体 zoom 到 2560px 出图：
-           排版与字号比例完全不变，只是像素翻倍到 2K。要改出图宽度只改这一处。
-           canvas 的位图仍是 1760×1320（CSS 尺寸 880×660 的 2 倍），放大后 ≈1:1 显示，不会糊。 */
         #container {
             padding: 50px;
             width: fit-content;
             position: relative;
             z-index: 1;
-            zoom: 1.8551;
         }
 
         .card {

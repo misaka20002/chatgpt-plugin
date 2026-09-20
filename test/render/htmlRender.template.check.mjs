@@ -23,9 +23,8 @@ const TEMPLATE = path.resolve(HERE, '../../resources/htmlRender/index.html')
 
 // 与模板里的 MAX_CONTENT_WIDTH / MAX_CONTENT_HEIGHT 保持一致（有意耦合）：
 // 上限的意义就是"一个确定的小数字"，所以在这里写死；改模板的上限就要同步改这里。
-// 注意两者都是**设计 CSS px**：成品图还有 #container 的 zoom（≈×1.97），实际位图上限 ≈4250×5900。
 const MAX_CONTENT_WIDTH = 2160
-const MAX_CONTENT_HEIGHT = 3000
+const MAX_CONTENT_HEIGHT = 12000
 
 // ---------- 取出模板里的脚本 ----------
 const source = fs.readFileSync(TEMPLATE, 'utf8')

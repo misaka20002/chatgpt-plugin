@@ -128,16 +128,7 @@ const onlyCardChromeLeft = (cardWidth, frameClientWidth) =>
 
 // 与 resources/htmlRender/index.html 里的 MAX_CONTENT_HEIGHT 保持一致（有意耦合）：
 // 这条断言的意义就是"上限是个确定的小数字"，所以这里写死；改模板的上限必须同步改这里。
-// 单位是设计 CSS px（成品图还有 #container 的 zoom）。
-const MAX_CONTENT_HEIGHT = 3000
-
-// 出图宽度 = #container 的布局宽度 × zoom：模板把 1300px 的设计整体放大到 2560px（2K）。
-// zoom 直接从模板里读，避免"改了模板宽度还要记着改这里"（改不出来就直接报错，别让断言悄悄失效）。
-const RENDER_ZOOM = (() => {
-  const m = fs.readFileSync(TEMPLATE, 'utf8').match(/#container\s*\{[^}]*zoom:\s*([\d.]+)/)
-  if (!m) throw new Error('模板里读不到 #container 的 zoom：出图宽度断言失去依据')
-  return Number(m[1])
-})()
+const MAX_CONTENT_HEIGHT = 12000
 
 // ---------- 渲染一个用例 ----------
 async function renderFixture (page, c, opts = {}) {
@@ -166,10 +157,7 @@ async function renderFixture (page, c, opts = {}) {
   await page.evaluate(() => document.fonts.ready)
   await new Promise((r) => setTimeout(r, 300))
 
-  // renderZoom：#container 带 zoom（成品图放大到 2K），getBoundingClientRect 返回的是**放大后**的值，
-  // 而 iframe 内部量到的 scrollHeight 是它自己那套 CSS px。统一折回 CSS px 再比较，
-  // 下面「高度 = 内容高度」「高度 = 硬上限」这些断言才仍然成立。
-  const facts = await page.evaluate((renderZoom) => {
+  const facts = await page.evaluate(() => {
     const frame = document.getElementById('page')
     const inner = frame.contentDocument
     const cs = (el, prop) => (el ? getComputedStyle(el)[prop] : null)
@@ -182,7 +170,7 @@ async function renderFixture (page, c, opts = {}) {
       cardWidth: cs(card, 'width'),
       cardRadius: cs(card, 'borderRadius'),
       frameWidth: cs(frame, 'width'),
-      frameHeight: frame.getBoundingClientRect().height / renderZoom,
+      frameHeight: frame.getBoundingClientRect().height,
       frameSandbox: frame.getAttribute('sandbox'),
       innerScrollHeight: inner ? Math.max(inner.documentElement.scrollHeight, inner.body.scrollHeight) : -1,
       innerScrollWidth: inner ? Math.max(inner.documentElement.scrollWidth, inner.body.scrollWidth) : -1,
@@ -205,7 +193,7 @@ async function renderFixture (page, c, opts = {}) {
       outerBodyBg: cs(document.body, 'backgroundColor'),
       outerContainerPadding: cs(document.getElementById('container'), 'paddingTop'),
     }
-  }, RENDER_ZOOM)
+  })
 
   if (WANT_SHOT) {
     fs.mkdirSync(SHOT_DIR, { recursive: true })
@@ -245,10 +233,6 @@ async function renderFixture (page, c, opts = {}) {
     check('完整文档里的 <body style> 正常生效（解析器合并，不靠模板透传）', f.innerBodyBg === 'rgb(250, 250, 250)', `${f.innerBodyStyleAttr} → ${f.innerBodyBg}`)
     check('hidden 容器不显示源码文本', f.rawBoxDisplay === 'none', String(f.rawBoxDisplay))
     check('页脚署名保留', f.footer.includes('Created By PaimonChatGPT-Plugin'), f.footer)
-    // 出图宽度必须真的到 2K：截的是 #container，宽度 =（卡片 + 左右内距）× zoom
-    const shot1 = Buffer.from(await (await page.$('#container')).screenshot({ type: 'png' }))
-    const shot1Width = shot1.readUInt32BE(16)
-    check('成品图宽度达到 2K（≥2560px）', shot1Width >= 2560, `png=${shot1Width} card=${f.cardWidth} zoom=${RENDER_ZOOM}`)
     check('用例 1 页面无未捕获 JS 异常', r1.pageErrors.length === 0, r1.pageErrors.join('; '))
 
     // —— 用例 2：片段 + 样式隔离 ——
@@ -276,11 +260,9 @@ async function renderFixture (page, c, opts = {}) {
     check('卡片跟着内容一起变宽（仍只多内距与边框）', onlyCardChromeLeft(h.cardWidth, h.frameClientWidth), `card=${h.cardWidth} frame=${h.frameClientWidth}`)
     check('用例 3 高度同样自适应', h.frameHeight > 0 && Math.abs(h.frameHeight - h.innerScrollHeight) <= 2, `frame=${h.frameHeight} inner=${h.innerScrollHeight}`)
     const wideShot = Buffer.from(await (await page.$('#container')).screenshot({ type: 'png' }))
-    // 期望宽度 =（撑宽后的卡片 + 左右内距）× zoom；zoom 会把小数放大，留 2px 取整余量
-    const expectWide = (parseFloat(h.cardWidth) + 100) * RENDER_ZOOM
     check('成品图完整包含变宽的卡片（没被窄视口裁掉）',
-      Math.abs(wideShot.readUInt32BE(16) - expectWide) <= 2,
-      `png=${wideShot.readUInt32BE(16)} 期望≈${Math.round(expectWide)}（card=${h.cardWidth} zoom=${RENDER_ZOOM}）`)
+      wideShot.readUInt32BE(16) === Math.round(parseFloat(h.cardWidth)) + 100,
+      `png=${wideShot.readUInt32BE(16)} card=${h.cardWidth}`)
     check('用例 3 页面无未捕获 JS 异常', r3.pageErrors.length === 0, r3.pageErrors.join('; '))
     await page.setViewport({ width: 1400, height: 1000, deviceScaleFactor: 1 })
 
@@ -339,8 +321,7 @@ async function renderFixture (page, c, opts = {}) {
       html: '<div style="height:50000px;padding:20px">异常高度</div>',
     })
     const t = r6.facts
-    // frameHeight 已按 zoom 折回 CSS px，除 zoom 会带浮点误差 → 用容差比较，别用严格等值
-    check(`异常高度被硬上限截住（${MAX_CONTENT_HEIGHT}px）`, Math.abs(t.frameHeight - MAX_CONTENT_HEIGHT) <= 2, `frame=${t.frameHeight}`)
+    check(`异常高度被硬上限截住（${MAX_CONTENT_HEIGHT}px）`, t.frameHeight === MAX_CONTENT_HEIGHT, `frame=${t.frameHeight}`)
     check('该 fixture 确实超过上限（这条断言不是空跑）', t.innerScrollHeight > MAX_CONTENT_HEIGHT, `inner=${t.innerScrollHeight}`)
     check('用例 6 页面无未捕获 JS 异常', r6.pageErrors.length === 0, r6.pageErrors.join('; '))
   } finally {

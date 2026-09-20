@@ -43,23 +43,16 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* 截图目标元素：puppeteer 截的是 #container，成品图宽度 = 它的布局宽度 × zoom
-           （本渲染器的元素截图路径不读 Viewport / deviceScaleFactor，别指望那两个参数）。
-           设计按 1300px 画（卡片 1200 + 左右内距各 50），这里整体 zoom 到 2560px 出图：
-           排版与字号比例完全不变，只是像素翻倍到 2K。要改出图宽度只改这一处。
-           下面 fitFrame() 量到的 clientWidth / offsetWidth 与写回的 style.width 都在同一套
-           CSS px 里（zoom 不参与这些数字），所以撑宽逻辑与 zoom 互不干扰。 */
         #container {
             padding: 50px;
             width: fit-content;
             position: relative;
             z-index: 1;
-            zoom: 1.9692;
         }
 
         .card {
-            /* 与 markdown 图（mathRender）同宽的设计宽度：成品图 =（1200 + #container 左右各 50）× zoom
-               = 2560px（2K）。内容超宽时由脚本按需把这里撑大，宁可图更宽也不裁掉内容 */
+            /* 与 markdown 图（mathRender）同宽：成品图 = 1200 + #container 左右各 50 = 1300px。
+               内容超宽时由脚本按需把这里撑大，宁可图更宽也不裁掉内容 */
             width: 1200px;
             min-height: 360px;
             margin: 0 auto;
@@ -261,17 +254,13 @@
 
             // 内容超宽时的兜底上限：设计 skill 约定 1100px，超出说明模型没守约束，
             // 撑宽能保住内容；但不换行的超长串（长 URL 等）会把图撑成巨幅，到上限就只保留裁断。
-            // 单位是**设计 CSS px**：成品图还有 #container 的 zoom（≈×1.97），所以宽上限对应的
-            // 实际位图约 4250px 宽。
             var MAX_CONTENT_WIDTH = 2160;
 
             // 高度同样要有硬上限，理由与宽度对称但更严重：截图是对 #container 的元素截图，
             // iframe 多高最终位图就多高，而模型输出里一条 height:100000000px 就能把 Chromium
             // 的位图内存拉爆——本工具对任意聊天用户开放，不能只靠设计 skill 的「≤60 行」兜底。
             // 正常内容（1100px 宽、60 行量级）远低于这里；真超限说明输出异常，宁可裁断也不要拉爆内存。
-            // 上限同样是设计 CSS px，乘上 zoom 后实际约 5900px 高：宽高上限同时命中时位图约 2500 万像素，
-            // 与加 zoom 之前同一量级（旧值 2160×12000 也是 2500 万像素量级），不会因为放大而翻数倍。
-            var MAX_CONTENT_HEIGHT = 3000;
+            var MAX_CONTENT_HEIGHT = 12000;
 
             const card = document.getElementById('render-card');
 

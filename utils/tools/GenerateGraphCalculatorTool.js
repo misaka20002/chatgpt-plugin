@@ -74,12 +74,14 @@ export class GenerateGraphCalculatorTool extends AbstractTool {
         }
 
         try {
-            // 出图宽度由模板决定：resources/graphCalculator/index.html 的 #container
-            // （设计宽 1380px × zoom ≈ 2560px = 2K）。Viewport / deviceScaleFactor 在本渲染器的
-            // 元素截图路径上不生效（截的是 #container 元素），不要在这里传。
             const img = await render(e, 'chatgpt-plugin', 'graphCalculator/index', {
                 title: graphData.title,
-                graphData: JSON.stringify(graphData)
+                graphData: JSON.stringify(graphData),
+                Viewport: {
+                    width: 2560,
+                    height: 1600,
+                    deviceScaleFactor: 4
+                }
             }, { retType: 'base64' })
 
             if (!img) {

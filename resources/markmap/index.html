@@ -44,18 +44,12 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* 截图目标元素（带精致的内外边距）：puppeteer 截的是 #container，成品图宽度 = 它的布局宽度 × zoom
-           （本渲染器的元素截图路径不读 Viewport / deviceScaleFactor，别指望那两个参数）。
-           设计按 1300px 画（卡片 1200 + 左右内距各 50），这里整体 zoom 到 2560px 出图：
-           排版与字号比例完全不变，只是像素翻倍到 2K。要改出图宽度只改这一处。
-           注意 autoResizeContainer 量到的都是 CSS px（zoom 不影响这些数字），
-           所以「导图更宽 → 卡片更宽」的逻辑与出图像素互不干扰。 */
+        /* 截图容器：带有精致的内外边距 */
         #container {
             padding: 50px;
             width: fit-content;
             position: relative;
             z-index: 1;
-            zoom: 1.9692;
         }
 
         /* 2. 白玉玻璃拟态卡片容器 (Spring Card) */
@@ -246,13 +240,6 @@
             const customColors = ['#ff8fa3', '#7adbbd', '#fcd373', '#8acafc', '#cbb2fe'];
             const colorFn = window.d3.scaleOrdinal(customColors);
 
-            // #container 的 zoom（CSS 里那一处）就是出图的放大倍数：2K 出图靠它，而 markmap-view
-            // 自己按「设备像素」量尺寸，下面两处都按这个倍数把差值补回来
-            function renderZoom() {
-                const z = parseFloat(getComputedStyle(document.getElementById('container')).zoom);
-                return Number.isFinite(z) && z > 0 ? z : 1;
-            }
-
             const { Markmap } = window.markmap;
             const svg = document.querySelector('#markmap');
             
@@ -273,10 +260,6 @@
 
             const mm = Markmap.create(svg, {
                 autoFit: true,
-                // markmap 的默认上限是 2（相对内容固有尺寸最多放大 2 倍）。出图改用 #container 的
-                // zoom 放大到 2K 后，SVG 用户单位 = 设备像素（见 autoResizeContainer），
-                // 「最多 2 倍」要乘上同一个 zoom 才保持原来的观感（否则导图会缩到卡片中间一小块）。
-                maxInitialScale: 2 * renderZoom(),
                 color: (node) => colorFn(node.state.path || node.state.key),
                 nodeMinHeight: 48,
                 spacingHorizontal: spacingH,
@@ -387,16 +370,8 @@
                 const svgPxH = Math.round(idealH - extraH);
                 svg.style.width = svgPxW + 'px';
                 svg.style.height = svgPxH + 'px';
-                // markmap-view 的 fit() 把 svg.getBoundingClientRect()（**设备像素**）当"容器尺寸"用，
-                // 而 state.rect 是 SVG 用户单位：`#container` 带 zoom 出 2K 之后两者差 zoom 倍，
-                // 导图会被放大 zoom 倍、溢出卡片后被裁掉。
-                // 消掉这一差别的办法是让**用户单位 = 设备像素**：CSS 尺寸保持 CSS px（布局不变），
-                // 另给一个「CSS 尺寸 × zoom」的 viewBox，1 用户单位就正好等于 1 设备像素，
-                // fit() 与 state.rect 从此是同一套数字。（zoom 从 CSS 现读，两处数字不会漂开）
-                const zoom = renderZoom();
                 svg.setAttribute('width', svgPxW);
                 svg.setAttribute('height', svgPxH);
-                svg.setAttribute('viewBox', `0 0 ${Math.round(svgPxW * zoom)} ${Math.round(svgPxH * zoom)}`);
 
                 setTimeout(() => {
                     mm.fit();
