@@ -114,7 +114,7 @@ export function toPromptRows(raws) {
  * @param {Array<Object>} options.rows 消息行
  * @param {Object} options.ctx { groupId, day, windowLabel, source }
  * @param {Object} options.evidenceMap
- * @param {Object} options.cfg { inputTokenLimit, outputTokenLimit, minConfidence, use,
+ * @param {Object} options.cfg { inputTokenLimit, minConfidence, use,
  *                                chunkRetries, chunkRetryBackoffMs }
  * @param {Function} [options.llm] 可注入的模型调用函数（测试用），默认走 SubLLM
  * @param {Array<Object>} [options.resumeChunks] 断点续跑：已完成分片 [{key, accepted, rejected}]，
@@ -124,7 +124,6 @@ export function toPromptRows(raws) {
  */
 export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, resumeChunks = [], onChunkProgress }) {
   const inputTokenLimit = cfg.inputTokenLimit || 30000
-  const outputTokenLimit = cfg.outputTokenLimit || 4096
   const minConfidence = cfg.minConfidence ?? 0.7
   // 每片模型调用失败后的即时重试次数（网络瞬时故障快速吸收）；退避 2s×2^(n-1)
   const chunkRetries = Number(cfg.chunkRetries) || 2
@@ -178,7 +177,6 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
             llmClient = new SubLLM({
               provider: useToProvider(use),
               systemPrompt: EXTRACTOR_SYSTEM, // yui-chat：提取规则作为系统提示词，独立于用户消息，抗注入且优先级最高
-              maxTokens: outputTokenLimit,
               temperature: 0.2,
               timeoutMs: 90000,
             })

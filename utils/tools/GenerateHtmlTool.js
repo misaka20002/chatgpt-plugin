@@ -4,12 +4,6 @@ import { SubLLM } from '../../model/SubLLM.js'
 import { resolveCurrentChatProvider } from '../paimonFuction.js'
 import { HTML_DESIGN_SYSTEM_PROMPT } from '../htmlDesignSkill.js'
 
-/**
- * 子代理输出上限：HTML 比一句话长得多，而 Provider 默认值并不都够用
- * （例如 claudeApiMaxToken 默认 1024 会把卡片截断成半张）。
- */
-const HTML_OUTPUT_MAX_TOKENS = 8000
-
 /** 可执行 / 可嵌入外部文档的标签，属纵深防御：渲染端 iframe 已用 sandbox 关掉脚本 */
 const ACTIVE_TAGS = ['script', 'iframe', 'object', 'embed']
 
@@ -122,10 +116,12 @@ Rules:
     try {
       // 与沙箱规划子代理同一语义：默认跟随当前用户正在使用的对话模型
       const provider = await resolveCurrentChatProvider(e)
+      // 不在这里设 maxTokens：直接跟随 provider 的「回复内容最大Token数」配置（api / responses /
+      // claude / gemini 四家都在锅巴可改）。历史上这里自设 8000，长 SVG 会先于 provider 上限被截断，
+      // 表现是"背景画完了、主体没了"。
       const subLLM = new SubLLM({
         provider,
         systemPrompt: HTML_DESIGN_SYSTEM_PROMPT,
-        maxTokens: HTML_OUTPUT_MAX_TOKENS,
         timeoutMs: 180000
       })
 

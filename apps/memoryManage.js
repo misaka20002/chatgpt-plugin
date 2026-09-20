@@ -179,7 +179,7 @@ export class memoryManage extends plugin {
     }
     lines.push(`每日提炼时间：${cfg.cronTime || '0 0 4 * * ? *'}（修改后重启生效）`)
     lines.push(`原文保留：${cfg.rawRetentionDays ?? 30} 天 | 事件保留：${cfg.eventRetentionDays ?? 90} 天`)
-    lines.push(`提取 Token：输入 ${cfg.inputTokenLimit ?? 30000} / 输出 ${cfg.outputTokenLimit ?? 4096} | 最低置信度：${cfg.minConfidence ?? 0.7}`)
+    lines.push(`提取 Token：输入 ${cfg.inputTokenLimit ?? 30000}（输出上限跟随模型配置） | 最低置信度：${cfg.minConfidence ?? 0.7}`)
     lines.push('')
     lines.push('📊 记忆统计（V2）')
     lines.push(`总事实数：${stats.total} 条`)

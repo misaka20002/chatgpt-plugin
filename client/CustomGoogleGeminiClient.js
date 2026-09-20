@@ -298,7 +298,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         { category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, threshold: HarmBlockThreshold.BLOCK_NONE }
       ],
       generationConfig: {
-        maxOutputTokens: opt.maxOutputTokens || 4096,
+        maxOutputTokens: opt.maxOutputTokens || Config.geminiMaxOutputTokens || 65536,
         temperature: opt.temperature || 0.9,
         topP: opt.topP || 0.95,
         topK: opt.tokK || 16

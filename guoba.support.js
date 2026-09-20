@@ -597,6 +597,12 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'geminiMaxOutputTokens',
+          label: '回复内容最大Token数',
+          bottomHelpMessage: '模型单次回复的Token上限，默认65536。注意 Gemini 的思考(thinking) token 也算在这个额度里，调得太小会让长输出被截断',
+          component: 'InputNumber'
+        },
+        {
           field: 'geminiThinkingLevel',
           label: '思考程度',
           bottomHelpMessage: '模型的思考深度(thinkingLevel)；minimal≈关闭思考；仅支持Gemini-3及以上；不修改（默认）为使用模型默认值',
@@ -1756,16 +1762,6 @@ export function supportGuoba() {
           componentProps: {
             min: 256,
             step: 1000
-          }
-        },
-        {
-          field: 'memoryGroupCapture.outputTokenLimit',
-          label: '提取输出Token上限',
-          bottomHelpMessage: '每日提炼模型输出 Token 上限，默认 4096',
-          component: 'InputNumber',
-          componentProps: {
-            min: 256,
-            step: 256
           }
         },
         {

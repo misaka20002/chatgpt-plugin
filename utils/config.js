@@ -240,7 +240,7 @@ const defaultConfig = {
   // origin: https://generativelanguage.googleapis.com
   geminiBaseUrl: 'https://gemini.ikechan8370.com',
   geminiTemperature: 0.9,
-  geminiMaxOutputTokens: 2000,
+  geminiMaxOutputTokens: 65536,
   sunoSessToken: '',
   sunoClientToken: '',
   enableChatSuno: false,
@@ -248,7 +248,7 @@ const defaultConfig = {
 
   claudeApiKey: '',
   claudeApiBaseUrl: 'http://claude-api.ikechan8370.com',
-  claudeApiMaxToken: 1024,
+  claudeApiMaxToken: 65536,
   claudeApiTemperature: 0.8,
   claudeApiModel: '', // claude-3-opus-20240229 claude-3-sonnet-20240229
   claudeSystemPrompt: '', // claude api 设定
@@ -362,7 +362,7 @@ const defaultConfig = {
     rawRetentionDays: 30, // 群原文保留天数
     eventRetentionDays: 90, // 未指定期限的临时事件默认保留天数
     inputTokenLimit: 30000, // 提取模型输入 Token 上限
-    outputTokenLimit: 4096, // 提取模型输出 Token 上限
+    // 输出上限不再单独配置：提炼用的子模型直接跟随 provider 的「回复内容最大Token数」
     minConfidence: 0.7, // 提取最低置信度
   },
 
