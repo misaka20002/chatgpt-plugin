@@ -224,7 +224,7 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
         taskDone: q('.task-box.is-done').length,
         taskItem: q('li.task-item').length,
         rawMarkerLeft: q('li').some((e) => /^\s*\[[ xX]\]/.test(e.textContent)),
-        hr: c.querySelector('hr') ? cs(c.querySelector('hr')).borderTopWidth + ' ' + cs(c.querySelector('hr')).borderTopStyle : null,
+        hr: c.querySelector('hr') ? { width: parseFloat(cs(c.querySelector('hr')).borderTopWidth), style: cs(c.querySelector('hr')).borderTopStyle } : null,
         tableWrap: q('.table-wrap').length,
         tableRows: q('table tr').length,
         tdColor: c.querySelector('tbody td') ? cs(c.querySelector('tbody td')).color : null,
@@ -238,7 +238,12 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
     check('列表项间距为 8px', a1.liMargin === '8px', String(a1.liMargin))
     check('任务列表生成复选框（未完成 2 + 已完成 1）', a1.taskBox === 3 && a1.taskDone === 1, `box=${a1.taskBox} done=${a1.taskDone}`)
     check('无残留字面 [ ] / [x]', a1.rawMarkerLeft === false)
-    check('hr 为 2px 虚线', a1.hr === '2px dashed', String(a1.hr))
+    // #container 带 zoom（出图放大到 2K），border-width 这类会被「按设备像素取整」：
+    // 2px × 1.9692 = 3.94 设备像素 → 3 → 折回 CSS px 约 1.52px。所以这里断言"接近 2px 的虚线"，
+    // 精确等值在缩放下（以及换 DPR / 换浏览器版本时）不是稳定事实。
+    check('hr 为 2px 虚线（zoom 下按设备像素取整）',
+      a1.hr && a1.hr.style === 'dashed' && Math.abs(a1.hr.width - 2) <= 0.6,
+      JSON.stringify(a1.hr))
     check('表格包裹与行数正确', a1.tableWrap === 1 && a1.tableRows === 3, `wrap=${a1.tableWrap} tr=${a1.tableRows}`)
     check('表格单元格用正文色（--text-color）', a1.tdColor === COLOR.body, String(a1.tdColor))
     check('无管道符泄漏成段落', a1.strayPipes === 0)
@@ -308,6 +313,14 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
     } else {
       console.log('（跳过图片用例：缺少 fixtures/wide.png）')
     }
+
+    // —— 出图宽度 ——
+    // 截的是 #container，成品图宽度 = 设计宽 1300px × 模板里的 zoom ≈ 2560px（2K）。
+    // 宽度由 CSS 决定、与字体无关，所以这里可以安全断言（本机 Win11 与服务器都成立）。
+    console.log('=== 出图宽度 ===')
+    const shot = Buffer.from(await (await page.$('#container')).screenshot({ type: 'png' }))
+    const shotWidth = shot.readUInt32BE(16)
+    check('成品图宽度达到 2K（≥2560px）', shotWidth >= 2560, `png=${shotWidth}`)
 
     // 页面健康放在所有用例跑完后统一断言——之前只在用例 1 查，后三个用例即使抛未捕获异常也会全绿
     check('所有用例页面均无未捕获 JS 异常', pageErrorLog.length === 0, pageErrorLog.join('; '))

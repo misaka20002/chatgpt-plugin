@@ -79,14 +79,12 @@ export class GenerateMathRenderTool extends AbstractTool {
                 return "```mermaid\n" + code + "\n```";
             });
 
+            // 出图宽度由模板决定：resources/mathRender/index.html 的 #container
+            // （设计宽 1300px × zoom ≈ 2560px = 2K）。Viewport / deviceScaleFactor 在本渲染器的
+            // 元素截图路径上不生效（截的是 #container 元素），不要在这里传。
             let img = await render(e, 'chatgpt-plugin', 'mathRender/index', {
                 markdown: markdown,
-                title: title || '数学演算与图表',
-                Viewport: {
-                    width: 2560,
-                    height: 1600,
-                    deviceScaleFactor: 4
-                }
+                title: title || '数学演算与图表'
             }, { retType: 'base64' })
 
             if (!img) {

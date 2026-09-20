@@ -29,16 +29,13 @@ export class GenerateMarkmapTool extends AbstractTool {
         let { title, markdown } = opts
 
         try {
+            // 出图宽度由模板决定：resources/markmap/index.html 的 #container
+            // （设计宽 1300px × zoom ≈ 2560px = 2K；导图内容更宽时卡片会跟着变宽，出图同比更宽）。
+            // Viewport / deviceScaleFactor 在本渲染器的元素截图路径上不生效（截的是 #container
+            // 元素），不要在这里传。
             let img = await render(e, 'chatgpt-plugin', 'markmap/index', {
                 markdown: markdown,
-                title: title || '思维导图',
-                // DPR 4x 超清截图，viewport 足够大让 autoResizeContainer 自由展开
-                // 截图只截 #container（fit-content），不受 viewport 大小影响
-                Viewport: {
-                    width: 2560,
-                    height: 1600,
-                    deviceScaleFactor: 4
-                }
+                title: title || '思维导图'
             }, { retType: 'base64' })
 
             if (!img) {
