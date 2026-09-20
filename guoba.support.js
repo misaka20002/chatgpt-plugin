@@ -362,7 +362,7 @@ export function supportGuoba() {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
           component: 'Select',
-          bottomHelpMessage: '识别引用的图片的内容；推荐无识图能力的API选择“Gemini内容识别”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
+          bottomHelpMessage: '识别引用的图片的内容；选择“模型内置”会让当前对话模型直接识图（需该模型自身支持图片输入，且失败时“按需内容识别”工具会自动回退 Gemini 识别）；推荐无识图能力的API选择“Gemini内容识别”，可在对话的前面加上gemini的图片/视频结果，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型；',
           componentProps: {
             options: [
               { label: '模型内置', value: 'Orignal' },
@@ -481,7 +481,7 @@ export function supportGuoba() {
         },
         {
           field: 'responsesReasoningEffort',
-          label: 'Responses 思考程度',
+          label: '思考程度',
           bottomHelpMessage: '控制 Responses 推理模型的思考深度；不修改（默认）为使用模型默认值。',
           component: 'Select',
           componentProps: {
@@ -499,7 +499,7 @@ export function supportGuoba() {
         },
         {
           field: 'responsesTemperature',
-          label: 'Responses temperature',
+          label: '温度',
           bottomHelpMessage: '用于控制 Responses 回复内容的多样性。',
           component: 'InputNumber',
           componentProps: {
@@ -510,13 +510,13 @@ export function supportGuoba() {
         },
         {
           field: 'responsesApiMaxToken',
-          label: 'Responses 回复内容最大Token数',
+          label: '回复内容最大Token数',
           bottomHelpMessage: 'Responses API 单次回复的 Token 上限（通常设置为 总上下文的一半以内）',
           component: 'InputNumber'
         },
         {
           field: 'responsesMaxModelTokens',
-          label: 'Responses 模型总上下文Token数',
+          label: '模型总上下文Token数',
           bottomHelpMessage: '模型支持的输入+回复总Token上限，可查询模型官网，例如 100万 上下文。说明：仅用于插件自动压缩历史或群聊记录',
           component: 'InputNumber'
         },
@@ -653,7 +653,7 @@ export function supportGuoba() {
         {
           field: 'mediaMaxSizeInMB',
           label: '媒体识别大小限制',
-          bottomHelpMessage: '智能模式对话中 gemini recognize_media Tool (基于 gemini 接口的图片/视频内容识别工具) 最大识别大小的限制，注意 token 的使用',
+          bottomHelpMessage: '智能模式对话中 recognize_media Tool（按需内容识别工具，模型内置与 Gemini 两条路径共用）的最大识别大小限制，注意 token 的使用',
           helpMessage: '单位：MB',
           component: 'InputNumber',
           componentProps: {
@@ -1251,7 +1251,7 @@ export function supportGuoba() {
         {
           field: 'enableHostedBuiltinTools',
           label: '开启托管内置工具',
-          bottomHelpMessage: '开启托管内置工具后，OpenAI Responses API / Claude API 会随请求携带由服务商托管执行的内置工具（如 web_search 联网搜索等工具），由服务商在云端执行，不依赖智能模式，也不会进入本地工具循环。可用指令：#chatgpt查看托管内置工具',
+          bottomHelpMessage: '开启托管内置工具后，OpenAI Responses API / Claude API 会随请求携带由服务商托管执行的内置工具（如 web_search 联网搜索等工具），由服务商在云端执行，不依赖智能模式，也不会进入本地工具循环，默认推荐开启。可用指令：#chatgpt查看托管内置工具',
           component: 'Switch'
         },
         // { // 暂时不启动这个，guoba 太乱了
@@ -1340,7 +1340,7 @@ export function supportGuoba() {
         {
           field: 'githubAPIKey',
           label: 'github Access Token',
-          bottomHelpMessage: '用于 Github仓库读取工具；前往 https://github.com/settings/personal-access-tokens 生成；不填写的话请求Github限制为每小时 60 次',
+          bottomHelpMessage: '用于 Github仓库读取工具。为避免私有仓库内容泄露，请使用最小权限专用 token——fine-grained PAT 且只勾选 Public Repositories 只读。生成：https://github.com/settings/personal-access-tokens ；不填写则走匿名额度（60 次/小时）',
           component: 'InputPassword'
         },
         {
@@ -1409,8 +1409,8 @@ export function supportGuoba() {
         },
         {
           field: 'mediaRecognitionGeminiTool',
-          label: '工具新增-Gemini内容识别',
-          bottomHelpMessage: '新增Gemini内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等，需要配置 对话-Gemini方式 中的接口和gemini内容识别模型',
+          label: '工具新增-按需内容识别',
+          bottomHelpMessage: '新增按需内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等；当“内容识别来源”为“模型内置”时优先使用当前对话模型识别（需该模型自身支持识图/识视频），失败时自动回退 Gemini 内容识别（需配置 对话-Gemini方式 中的接口和gemini内容识别模型）',
           component: 'Switch'
         },
         {
@@ -2233,54 +2233,54 @@ export function supportGuoba() {
             ]
           }
         },
-        {
-          label: '本地系统沙箱',
-          component: 'Divider'
-        },
-        {
-          field: 'agent_LocalSandboxSwitch',
-          label: '工具新增-本地系统沙箱',
-          bottomHelpMessage: '智能模式中新增 localSandbox 工具，主模型描述任务后由子代理在 Linux/WSL2 上通过 bubblewrap 执行。需要本地安装 bwrap、prlimit 和 bash。Ubuntu下安装指令：apt install bubblewrap util-linux bash python3 python3-pip',
-          component: 'Switch'
-        },
-        {
-          field: 'localSandboxMasterOnly',
-          label: '本地沙箱仅主人可用',
-          bottomHelpMessage: '开启后只有主人权限会获得并能够调用 localSandbox 工具；任意本地命令会消耗 CPU、内存和磁盘，强烈建议保持开启',
-          component: 'Switch'
-        },
-        {
-          field: 'localSandboxSendCallForward',
-          label: '发送本地沙箱执行过程',
-          bottomHelpMessage: '每次调用本地沙箱后，以合并转发发送执行源码和结果',
-          component: 'Switch'
-        },
-        {
-          field: 'localSandboxNetworkEnabled',
-          label: '允许本地沙箱联网',
-          bottomHelpMessage: '默认关闭。开启后沙箱命令可访问外网、宿主网络和局域网，也允许动态安装 Python/Node.js 依赖，请仅在理解风险后开启',
-          component: 'Switch'
-        },
-        {
-          field: 'localSandboxRetentionMinutes',
-          label: '本地沙箱闲置保留时间',
-          helpMessage: '单位：分钟',
-          bottomHelpMessage: '默认 30 分钟，范围 1-1440；最后一次调用完成后重新计时',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            max: 1440
-          }
-        },
-        {
-          field: 'localSandboxChromePath',
-          label: '本地沙箱 Chromium 路径',
-          bottomHelpMessage: '可选。为空时依次使用现有 chromePath 和系统 PATH 中的 chromium、chromium-browser 或 google-chrome',
-          component: 'Input',
-          componentProps: {
-            placeholder: '/usr/bin/chromium'
-          }
-        },
+        // {
+        //   label: '本地系统沙箱',
+        //   component: 'Divider'
+        // },
+        // {
+        //   field: 'agent_LocalSandboxSwitch',
+        //   label: '工具新增-本地系统沙箱',
+        //   bottomHelpMessage: '智能模式中新增 localSandbox 工具，主模型描述任务后由子代理在 Linux/WSL2 上通过 bubblewrap 执行。需要本地安装 bwrap、prlimit 和 bash。Ubuntu下安装指令：apt install bubblewrap util-linux bash python3 python3-pip',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'localSandboxMasterOnly',
+        //   label: '本地沙箱仅主人可用',
+        //   bottomHelpMessage: '开启后只有主人权限会获得并能够调用 localSandbox 工具；任意本地命令会消耗 CPU、内存和磁盘，强烈建议保持开启',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'localSandboxSendCallForward',
+        //   label: '发送本地沙箱执行过程',
+        //   bottomHelpMessage: '每次调用本地沙箱后，以合并转发发送执行源码和结果',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'localSandboxNetworkEnabled',
+        //   label: '允许本地沙箱联网',
+        //   bottomHelpMessage: '默认关闭。开启后沙箱命令可访问外网、宿主网络和局域网，也允许动态安装 Python/Node.js 依赖，请仅在理解风险后开启',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'localSandboxRetentionMinutes',
+        //   label: '本地沙箱闲置保留时间',
+        //   helpMessage: '单位：分钟',
+        //   bottomHelpMessage: '默认 30 分钟，范围 1-1440；最后一次调用完成后重新计时',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 1,
+        //     max: 1440
+        //   }
+        // },
+        // {
+        //   field: 'localSandboxChromePath',
+        //   label: '本地沙箱 Chromium 路径',
+        //   bottomHelpMessage: '可选。为空时依次使用现有 chromePath 和系统 PATH 中的 chromium、chromium-browser 或 google-chrome',
+        //   component: 'Input',
+        //   componentProps: {
+        //     placeholder: '/usr/bin/chromium'
+        //   }
+        // },
         {
           label: '远程沙箱',
           component: 'Divider'

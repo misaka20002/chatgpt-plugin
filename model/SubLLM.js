@@ -39,6 +39,50 @@ function getConfiguredModel(provider) {
 }
 
 /**
+ * 把 base64 媒体转成 data URL（OpenAI Chat Completions / Responses 的图片入参格式）
+ *
+ * @param {{mimeType?: string, data: string}} media
+ * @returns {string}
+ */
+function toMediaDataUrl(media) {
+  return `data:${media.mimeType || 'image/jpeg'};base64,${media.data}`
+}
+
+/**
+ * OpenAI Chat Completions 的多模态 message content。
+ * 无 media 时保持纯字符串，不改变既有调用形态。
+ *
+ * @param {string} prompt
+ * @param {{mimeType?: string, data: string}|null} [media]
+ * @returns {string|Array<object>}
+ */
+function buildOpenAIContent(prompt, media) {
+  if (!media?.data) return prompt
+  return [
+    { type: 'text', text: prompt },
+    { type: 'image_url', image_url: { url: toMediaDataUrl(media) } }
+  ]
+}
+
+/**
+ * Responses API 的多模态 input（结构同 model/core.js 的 initialInput）
+ *
+ * @param {string} prompt
+ * @param {{mimeType?: string, data: string}|null} [media]
+ * @returns {string|Array<object>}
+ */
+function buildResponsesInput(prompt, media) {
+  if (!media?.data) return prompt
+  return [{
+    role: 'user',
+    content: [
+      { type: 'input_text', text: prompt },
+      { type: 'input_image', image_url: toMediaDataUrl(media) }
+    ]
+  }]
+}
+
+/**
  * 子LLM调用器 —— 主LLM可以通过它调用另一个LLM完成子任务
  *
  * @example
@@ -64,6 +108,8 @@ export class SubLLM {
    * @param {number}  [options.maxTokens]       最大输出token
    * @param {number}  [options.timeoutMs]       超时毫秒，默认 120000
    * @param {boolean} [options.debug]           调试模式
+   * @param {{mimeType?: string, data: string}} [options.media] 多模态媒体（base64）；各 provider 按自身协议转换：
+   *                                            OpenAI 走 image_url、Responses 走 input_image、Claude/Gemini 走 option.media
    */
   constructor(options = {}) {
     // 支持直接传入 use 值（如 api/gemini 等），自动映射为 provider
@@ -83,6 +129,7 @@ export class SubLLM {
     this.maxTokens = options.maxTokens ?? undefined
     this.timeoutMs = options.timeoutMs || 120000
     this.debug = options.debug ?? Config.debug ?? false
+    this.media = options.media || null
   }
 
   /**
@@ -92,11 +139,13 @@ export class SubLLM {
    * @param {object} [opts]  额外选项
    * @param {string} [opts.systemPrompt]  本次调用临时覆盖的systemPrompt
    * @param {object} [opts.conversation]  对话上下文（parentMessageId / conversationId），openai/claude/gemini 可用
+   * @param {{mimeType?: string, data: string}} [opts.media]  本次调用携带的多模态媒体（base64），覆盖构造时的 media
    * @returns {Promise<{text: string, id?: string, conversationId?: string, parentMessageId?: string}>}
    */
   async chat(prompt, opts = {}) {
     const systemPrompt = opts.systemPrompt || this.systemPrompt
     const conversation = opts.conversation || {}
+    const media = opts.media || this.media
 
     if (this.debug) {
       logger.info(`[SubLLM] provider=${this.provider}, model=${this.model}, prompt=${prompt?.slice(0, 100)}`)
@@ -104,13 +153,13 @@ export class SubLLM {
 
     switch (this.provider) {
       case 'openai':
-        return await this._chatOpenAI(prompt, systemPrompt, conversation)
+        return await this._chatOpenAI(prompt, systemPrompt, conversation, media)
       case 'responses':
-        return await this._chatResponses(prompt, systemPrompt)
+        return await this._chatResponses(prompt, systemPrompt, media)
       case 'gemini':
-        return await this._chatGemini(prompt, systemPrompt, conversation)
+        return await this._chatGemini(prompt, systemPrompt, conversation, media)
       case 'claude':
-        return await this._chatClaude(prompt, systemPrompt, conversation)
+        return await this._chatClaude(prompt, systemPrompt, conversation, media)
       default:
         throw new Error(`SubLLM: 未实现的provider "${this.provider}"`)
     }
@@ -118,7 +167,7 @@ export class SubLLM {
 
   /* ===================== 各 Provider 实现 ===================== */
 
-  async _chatOpenAI(prompt, systemPrompt, conversation) {
+  async _chatOpenAI(prompt, systemPrompt, conversation, media) {
     const completionParams = {}
     if (this.model) completionParams.model = this.model
     if (this.temperature !== undefined) completionParams.temperature = this.temperature
@@ -148,7 +197,7 @@ export class SubLLM {
       option.parentMessageId = conversation.parentMessageId
     }
 
-    const result = await client.sendMessage(prompt, option)
+    const result = await client.sendMessage(buildOpenAIContent(prompt, media), option)
     return {
       text: result.text,
       id: result.id,
@@ -157,7 +206,7 @@ export class SubLLM {
     }
   }
 
-  async _chatResponses(prompt, systemPrompt) {
+  async _chatResponses(prompt, systemPrompt, media) {
     const completionParams = {}
     if (this.model || Config.responsesModel) completionParams.model = this.model || Config.responsesModel
     if (this.temperature !== undefined) completionParams.temperature = this.temperature
@@ -173,7 +222,7 @@ export class SubLLM {
       maxModelTokens: Config.responsesMaxModelTokens
     })
     // 子模型请求永远不附带 tools/tool_choice，避免不兼容模型被强制工具调用。
-    const result = await client.sendMessage(prompt, {
+    const result = await client.sendMessage(buildResponsesInput(prompt, media), {
       instructions: systemPrompt || undefined,
       completionParams,
       store: false,
@@ -185,7 +234,7 @@ export class SubLLM {
     }
   }
 
-  async _chatGemini(prompt, systemPrompt, conversation) {
+  async _chatGemini(prompt, systemPrompt, conversation, media) {
     const client = new CustomGoogleGeminiClient({
       key: this.apiKey || Config.getGeminiKey,
       model: this.model || Config.geminiModel,
@@ -203,6 +252,8 @@ export class SubLLM {
     if (conversation.parentMessageId) option.parentMessageId = conversation.parentMessageId
     if (conversation.conversationId) option.conversationId = conversation.conversationId
     if (this.temperature !== undefined) option.temperature = this.temperature
+    // 记录点: opt.media —— Gemini 客户端按 { mimeType, data } 组装 inlineData
+    if (media?.data) option.media = { mimeType: media.mimeType || 'image/jpeg', data: media.data }
 
     const result = await client.sendMessage(prompt, option)
     return {
@@ -213,7 +264,7 @@ export class SubLLM {
     }
   }
 
-  async _chatClaude(prompt, systemPrompt, conversation) {
+  async _chatClaude(prompt, systemPrompt, conversation, media) {
     const keys = (this.apiKey || Config.claudeApiKey)?.split(/[,;]/).map(k => k.trim()).filter(k => k)
     if (!keys || keys.length === 0) {
       throw new Error('SubLLM: claude provider 未配置API Key')
@@ -234,6 +285,8 @@ export class SubLLM {
     }
     if (conversation.parentMessageId) option.parentMessageId = conversation.parentMessageId
     if (conversation.conversationId) option.conversationId = conversation.conversationId
+    // 记录点: opt.media —— Claude 客户端按 { mimeType, data } 组装 image block
+    if (media?.data) option.media = { mimeType: media.mimeType || 'image/jpeg', data: media.data }
 
     const result = await client.sendMessage(prompt, option)
     return {

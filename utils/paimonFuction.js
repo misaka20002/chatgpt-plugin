@@ -2,7 +2,14 @@ import { Config } from '../utils/config.js'
 // import { parseSourceImg } from '../utils/common.js'
 import fetch from 'node-fetch'
 import { CustomGoogleGeminiClient } from "../client/CustomGoogleGeminiClient.js";
-import axios from 'axios'
+import dns from 'node:dns/promises'
+import net from 'node:net'
+import http from 'node:http'
+import https from 'node:https'
+import { newFetch } from './proxy.js'
+
+/** 媒体识别的默认系统提示词：Gemini 识别与「当前模型」识别共用，避免两处文案漂移 */
+const DEFAULT_MEDIA_RECOGNITION_PROMPT = `描述这个媒体中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`
 
 /**
  * @description: 获取gemini的识图/识视频结果，需要填写了gemini的token
@@ -10,11 +17,23 @@ import axios from 'axios'
  * @param {*} img 图片url数组
  * @param {*} video 视频url数组 (传入的是url字符串数组)
  * @param {*} systemPrompt 自定义识别媒体的系统提示词（可选）
- * @return {string}
+ * @param {object} [options]
+ * @param {string} [options.prompt] 本次识别的具体要求，缺省用 e.msg
+ * @param {boolean} [options.throwOnError] 失败时抛错，而不是返回「识别出错：...」字符串（工具调用方应传 true）
+ * @param {boolean} [options.untrustedSource] 媒体地址来自不可信输入（如模型参数）：只允许公网 http(s)，禁止本地文件与内网地址
+ * @return {string|Promise<string>}
  */
-export async function recognitionResultsByGemini(e, img = [], video = [], systemPrompt = `描述这个媒体中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`) {
+export async function recognitionResultsByGemini(e, img = [], video = [], systemPrompt = DEFAULT_MEDIA_RECOGNITION_PROMPT, options = {}) {
+  const { prompt, throwOnError = false, untrustedSource = false } = options
+
+  // 默认保持旧的「返回错误字符串」契约；工具调用方要求失败即抛错时传 throwOnError
+  const fail = (message) => {
+    if (throwOnError) throw new Error(message)
+    return '识别出错：' + message
+  }
+
   if (!Config.geminiKey)
-    return "识别出错：请先配置Geimin对话接口"
+    return fail('请先配置Gemini对话接口')
 
   // 确定目标 URL 和类型
   let targetUrl = null
@@ -33,7 +52,7 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
   if (!targetUrl)
     ({ targetUrl, isVideo } = getMediaTargetUrl(e));
 
-  if (!targetUrl) return "识别出错：请传入要识别的媒体链接";
+  if (!targetUrl) return fail('请传入要识别的媒体链接');
 
   let client = new CustomGoogleGeminiClient({
     e,
@@ -44,16 +63,24 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
     debug: Config.debug
   })
 
+  const limitMB = Config.mediaMaxSizeInMB || 10;
+  const maxSizeInBytes = limitMB * 1024 * 1024;
+
+  const blobRes = await url2Base64(targetUrl, false, true, {
+    maxSizeBytes: maxSizeInBytes,
+    allowLocalFile: !untrustedSource,
+    allowPrivateNetwork: !untrustedSource,
+    mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined
+  }).catch(err => {
+    logger.warn('[recognitionResultsByGemini] 媒体获取失败: ' + hidePrivacyInfo(err.message || String(err)))
+    return null
+  });
+
+  if (!blobRes || !blobRes.imageBlob) {
+    return fail(`媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
+  }
+
   try {
-    const limitMB = Config.mediaMaxSizeInMB || 10;
-    const maxSizeInBytes = limitMB * 1024 * 1024;
-
-    const blobRes = await url2Base64(targetUrl, false, true, { maxSizeBytes: maxSizeInBytes });
-
-    if (!blobRes || !blobRes.imageBlob) {
-      return `识别出错：媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB。`;
-    }
-
     // 自动获取探测到的 MimeType
     let mimeType = blobRes.imageBlob.type;
     if (!mimeType || mimeType === 'application/octet-stream') {
@@ -65,7 +92,12 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
     let base64Data = Buffer.from(arrayBuffer).toString('base64');
 
     const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
-    let msg = e.msg.replace(reg_chatgpt_for_firstperson_call, '') || 'describe this content in Simplified Chinese'
+    // 显式传了 prompt 字段（即使为空串）就以它为准，不再回退到 e.msg；
+    // 只有旧调用方完全没传 options.prompt 时才沿用 e.msg
+    const promptText = Object.hasOwn(options, 'prompt')
+      ? String(prompt ?? '').trim()
+      : (e?.msg || '').replace(reg_chatgpt_for_firstperson_call, '').trim()
+    let msg = promptText || 'describe this content in Simplified Chinese'
 
     let res = await client.sendMessage(msg, {
       system: systemPrompt,
@@ -75,12 +107,120 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
         data: base64Data
       }
     })
-    return res.text
+
+    const text = res?.text?.trim()
+    if (!text) return fail('识别结果为空')
+    return text
 
   } catch (err) {
-    logger.error('[recognitionResultsByGemini] 识别结果出错: ' + err)
-    return '识别出错：' + (err.message || "网络或API错误")
+    // 日志与返回都给调用方，错误信息中的网址/IP 必须脱敏
+    logger.warn('[recognitionResultsByGemini] 识别请求失败: ' + hidePrivacyInfo(err.message || String(err)))
+    return fail(hidePrivacyInfo(err.message || "网络或API错误"))
   }
+}
+
+/**
+ * @description: 解析当前对话使用的模型提供商（apps/chat.js 中 use 的语义）
+ * 与沙箱规划子代理（utils/sandboxSubAgent.js）的 current 语义一致：用户自定义模式 > 全局 CHATGPT:USE > api
+ * @param {*} e 事件对象
+ * @return {Promise<string>} 如 api / responses / claude / gemini，可直接交给 SubLLM 使用
+ */
+export async function resolveCurrentChatProvider(e) {
+  let mode = ''
+  try {
+    const userId = e?.sender?.user_id || e?.user_id
+    if (userId) {
+      // common.js 反向依赖本文件，惰性引入以避免循环导入
+      const { getUserData } = await import('./common.js')
+      const userData = await getUserData(userId)
+      mode = userData?.mode === 'default' ? '' : (userData?.mode || '')
+    }
+  } catch (err) {
+    logger.warn(`[resolveCurrentChatProvider] 读取用户对话模式失败，改用全局模式: ${err.message || err}`)
+  }
+  return mode || await redis.get('CHATGPT:USE') || 'api'
+}
+
+/** 当前模型识别只支持这些对话模式；其余模式（如 chatglm/azure）在 SubLLM 里会落到普通 OpenAI 配置，语义错位，应交给 Gemini 回退 */
+const MEDIA_SUPPORTED_USES = ['api', 'responses', 'claude', 'gemini']
+
+/**
+ * @description: 使用当前对话模型内置的多模态能力识别图片/视频内容，要求该模型本身支持对应的输入类型
+ * 识别失败（模式不支持、模型无识图能力、请求报错、返回空结果）时抛错，由调用方决定是否回退其他识别来源
+ * @param {*} e
+ * @param {*} img 图片url数组
+ * @param {*} video 视频url数组 (传入的是url字符串数组)
+ * @param {*} systemPrompt 自定义识别媒体的系统提示词（可选）
+ * @param {object} [options]
+ * @param {string} [options.prompt] 本次识别的具体要求，缺省用 e.msg
+ * @param {boolean} [options.untrustedSource] 媒体地址来自不可信输入（如模型参数）：只允许公网 http(s)，禁止本地文件与内网地址
+ * @return {Promise<string>} 识别结果文本
+ */
+export async function recognitionResultsByCurrentModel(e, img = [], video = [], systemPrompt = DEFAULT_MEDIA_RECOGNITION_PROMPT, options = {}) {
+  const { prompt, untrustedSource = false } = options
+
+  let targetUrl = null
+  let isVideo = false
+
+  // 优先识别视频url
+  if (video && video.length > 0) {
+    targetUrl = video[0]
+    isVideo = true
+  } else if (img && img.length > 0) {
+    targetUrl = img[0]
+    isVideo = false
+  }
+
+  if (!targetUrl)
+    ({ targetUrl, isVideo } = getMediaTargetUrl(e));
+
+  if (!targetUrl) throw new Error('请传入要识别的媒体链接')
+
+  // 先判定模式：不支持的模式没必要先去下载媒体
+  const provider = await resolveCurrentChatProvider(e)
+  if (!MEDIA_SUPPORTED_USES.includes(provider)) {
+    throw new Error(`当前对话模式(${provider})不支持媒体识别`)
+  }
+
+  const limitMB = Config.mediaMaxSizeInMB || 10;
+  const blobRes = await url2Base64(targetUrl, false, true, {
+    maxSizeBytes: limitMB * 1024 * 1024,
+    allowLocalFile: !untrustedSource,
+    allowPrivateNetwork: !untrustedSource,
+    mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined
+  });
+
+  if (!blobRes || !blobRes.imageBlob) {
+    throw new Error(`媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
+  }
+
+  // 自动获取探测到的 MimeType
+  let mimeType = blobRes.imageBlob.type;
+  if (!mimeType || mimeType === 'application/octet-stream') {
+    mimeType = isVideo ? 'video/mp4' : 'image/jpeg'; // Fallback
+  }
+  const base64Data = Buffer.from(await blobRes.imageBlob.arrayBuffer()).toString('base64');
+
+  const { SubLLM } = await import('../model/SubLLM.js')
+
+  const reg_chatgpt_for_firstperson_call = new RegExp(Config.tts_First_person + "[,，.。]*", "g");
+  // 与 recognitionResultsByGemini 同一语义：显式 prompt（含空串）优先，不再回退 e.msg
+  const promptText = Object.hasOwn(options, 'prompt')
+    ? String(prompt ?? '').trim()
+    : (e?.msg || '').replace(reg_chatgpt_for_firstperson_call, '').trim()
+  const msg = promptText || 'describe this content in Simplified Chinese'
+
+  const subLLM = new SubLLM({ provider, systemPrompt, timeoutMs: 120000 })
+  const res = await subLLM.chat(msg, {
+    media: {
+      mimeType,
+      data: base64Data
+    }
+  })
+
+  const text = res?.text?.trim()
+  if (!text) throw new Error(`当前模型(${provider})未返回识别结果`)
+  return text
 }
 
 /**
@@ -690,6 +830,275 @@ export async function getOnebotFileOrMediaUrl(e, msg) {
   return fileUrl || '';
 }
 
+/** 媒体下载允许的最大重定向跳数（每一跳都会重新校验目标地址） */
+const MEDIA_MAX_REDIRECTS = 3
+
+/**
+ * 把 IPv6 文本解析成 8 个 16 位分组（支持 `::` 压缩、末尾 IPv4 写法与 zone id）
+ *
+ * @param {string} address
+ * @returns {number[]|null} 非法时返回 null
+ */
+function parseIpv6Groups(address) {
+  let text = address.toLowerCase()
+  const zoneIndex = text.indexOf('%')
+  if (zoneIndex >= 0) text = text.slice(0, zoneIndex)
+  if (text.indexOf('::') !== text.lastIndexOf('::')) return null
+
+  const parseSegment = (segment) => {
+    if (!segment) return []
+    const groups = []
+    for (const part of segment.split(':')) {
+      if (!part) return null
+      if (part.includes('.')) {
+        const nums = part.split('.').map(Number)
+        if (nums.length !== 4 || nums.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null
+        groups.push((nums[0] << 8) | nums[1], (nums[2] << 8) | nums[3])
+      } else {
+        if (!/^[0-9a-f]{1,4}$/.test(part)) return null
+        groups.push(parseInt(part, 16))
+      }
+    }
+    return groups
+  }
+
+  const doubleColon = text.indexOf('::')
+  if (doubleColon < 0) {
+    const groups = parseSegment(text)
+    return groups && groups.length === 8 ? groups : null
+  }
+
+  const head = parseSegment(text.slice(0, doubleColon))
+  const tail = parseSegment(text.slice(doubleColon + 2))
+  if (!head || !tail) return null
+  const fill = 8 - head.length - tail.length
+  if (fill < 1) return null
+  return [...head, ...new Array(fill).fill(0), ...tail]
+}
+
+/**
+ * 判断 IPv4 是否为不应被外部输入访问的网段
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isDisallowedIpv4(address) {
+  const [a, b] = address.split('.').map(Number)
+  if (a === 0 || a === 10 || a === 127) return true
+  if (a === 169 && b === 254) return true // link-local
+  if (a === 172 && b >= 16 && b <= 31) return true
+  if (a === 192 && b === 168) return true
+  if (a === 100 && b >= 64 && b <= 127) return true // CGNAT
+  if (a === 198 && (b === 18 || b === 19)) return true // benchmark
+  if (a >= 224) return true // 组播与保留
+  return false
+}
+
+/**
+ * 判断 IP 是否属于不应被外部输入访问的网段（loopback / 私网 / link-local / 保留 / 组播）
+ *
+ * IPv6 必须按 128 位真实解析后再判定：只识别 `::ffff:1.2.3.4` 这种 dotted 写法会漏掉
+ * `::ffff:7f00:1`（十六进制写法，等价 127.0.0.1）等同义绕过。非法地址一律视为不安全。
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isDisallowedIpAddress(address) {
+  const version = net.isIP(address)
+  if (version === 4) return isDisallowedIpv4(address)
+  if (version !== 6) return true
+
+  const groups = parseIpv6Groups(address)
+  if (!groups) return true
+
+  if (groups.every((g) => g === 0)) return true // ::
+  if (groups.slice(0, 7).every((g) => g === 0) && groups[7] === 1) return true // ::1
+
+  // IPv4-mapped (::ffff:0:0/96, groups[5]=0xffff) 与 IPv4-compatible (::/96, groups[5]=0)：
+  // 都按内嵌的末 32 位重新交给 IPv4 判定
+  if (groups.slice(0, 5).every((g) => g === 0) && (groups[5] === 0xffff || groups[5] === 0)) {
+    const ipv4 = `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}`
+    return isDisallowedIpv4(ipv4)
+  }
+
+  if ((groups[0] & 0xffc0) === 0xfe80) return true // fe80::/10 link-local
+  if ((groups[0] & 0xffc0) === 0xfec0) return true // fec0::/10 已废弃的 site-local（RFC 3879）
+  if ((groups[0] & 0xfe00) === 0xfc00) return true // fc00::/7 ULA
+  if ((groups[0] & 0xff00) === 0xff00) return true // ff00::/8 组播
+  // 64:ff9b:1::/48：RFC 8215 保留给「域内 IPv4/IPv6 translation」的 local-use 前缀，
+  // 在部署 NAT64/翻译的网络里可能成为访问域内 IPv4 资源的入口（注意与公网 WKP 64:ff9b::/96 不同）
+  if (groups[0] === 0x0064 && groups[1] === 0xff9b && groups[2] === 0x0001) return true
+  return false
+}
+
+/**
+ * 校验「不可信来源」的媒体地址，并返回本次连接应当使用的目标地址
+ *
+ * 模型的 tool arguments 属于不可信输入；直接交给下载函数等于开放 SSRF 与任意本地文件读取通道。
+ * 返回值里的 address 必须交给 createPinnedAgent 固定连接：只校验不固定的话，实际建连时 Node 会
+ * 再解析一次域名，攻击者可以让第一次解析返回公网、第二次返回内网（DNS rebinding / TOCTOU）。
+ *
+ * @param {string} url
+ * @returns {Promise<{address: string, family: number}>}
+ * @throws {Error} 地址不合法、协议不允许或指向内网时抛错
+ */
+export async function resolveSafeRemoteMediaUrl(url) {
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new Error('媒体地址不是合法的 URL')
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('媒体地址只允许 http/https 协议')
+  }
+
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, '')
+  const literal = net.isIP(hostname)
+  if (literal) {
+    if (isDisallowedIpAddress(hostname)) throw new Error('媒体地址指向内网或本机，已拒绝')
+    return { address: hostname, family: literal }
+  }
+  // 纯数字 / 0x 主机名可能被部分解析器当成整数形式的 IPv4（inet_aton 兼容写法），保守拒绝
+  if (/^\d+$/.test(hostname) || /^0x[0-9a-f]+$/i.test(hostname)) {
+    throw new Error('媒体地址主机名不合法，已拒绝')
+  }
+
+  let resolved
+  try {
+    resolved = await dns.lookup(hostname, { all: true })
+  } catch (err) {
+    throw new Error('媒体地址域名解析失败')
+  }
+  if (!resolved.length) throw new Error('媒体地址域名没有解析结果')
+  for (const { address } of resolved) {
+    if (isDisallowedIpAddress(address)) throw new Error('媒体地址解析到内网或本机，已拒绝')
+  }
+  const picked = resolved[0]
+  return { address: picked.address, family: picked.family }
+}
+
+/**
+ * 只做校验的兼容入口（测试与其他调用方使用）
+ *
+ * @param {string} url
+ * @returns {Promise<void>}
+ */
+export async function assertSafeRemoteMediaUrl(url) {
+  await resolveSafeRemoteMediaUrl(url)
+}
+
+/**
+ * 创建把域名固定解析到指定地址的 agent
+ *
+ * 用于消除「先校验、后连接」之间的二次解析（DNS rebinding）。注意 agent 会覆盖 newFetch 的
+ * 代理配置：严格模式下必须直连到已校验的地址，否则代理侧的目标解析无法由本机保证。
+ *
+ * @param {string} protocol
+ * @param {{address: string, family: number}} target
+ * @returns {import('node:http').Agent}
+ */
+function createPinnedAgent(protocol, { address, family }) {
+  const lookup = (hostname, options, callback) => {
+    const done = typeof options === 'function' ? options : callback
+    const lookupOptions = typeof options === 'function' ? {} : options
+    if (lookupOptions?.all) return done(null, [{ address, family }])
+    return done(null, address, family)
+  }
+  return protocol === 'https:' ? new https.Agent({ lookup }) : new http.Agent({ lookup })
+}
+
+/**
+ * 下载媒体到 Buffer：手动接管重定向（逐跳校验）并限制响应体字节数
+ *
+ * 响应头与 body 的读取必须留在同一个 try 内——超时也可能发生在「响应头已到、body 很慢」阶段，
+ * 此时错误只在读取 body 时抛出。
+ *
+ * @param {string} url
+ * @param {object} options
+ * @param {number} options.maxSizeBytes 响应体字节上限
+ * @param {boolean} options.verifyUrl 是否按不可信来源逐跳校验地址（并固定连接目标）
+ * @param {'image'|'video'} [options.expectedKind] 期望的媒体大类，仅在严格校验时传入
+ * @param {number} [options.timeoutMs]
+ * @returns {Promise<{buffer: Buffer, contentType: string, contentLength: number}>}
+ */
+async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKind, timeoutMs = 60000 }) {
+  let currentUrl = url
+  const sizeTip = `${(maxSizeBytes / 1024 / 1024).toFixed(1)}MB`
+
+  for (let hop = 0; hop <= MEDIA_MAX_REDIRECTS; hop++) {
+    // 严格模式：先校验并把本次连接固定到已审核的地址，避免建连时二次解析
+    let pinnedAgent
+    if (verifyUrl) {
+      const target = await resolveSafeRemoteMediaUrl(currentUrl)
+      pinnedAgent = createPinnedAgent(new URL(currentUrl).protocol, target)
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const response = await newFetch(currentUrl, {
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: { 'user-agent': 'Mozilla/5.0 (compatible; YunzaiBot)' },
+        ...(pinnedAgent ? { agent: pinnedAgent } : {})
+      })
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location')
+        response.body?.destroy?.()
+        if (!location) throw new Error(`媒体地址重定向缺少 Location（HTTP ${response.status}）`)
+        if (hop === MEDIA_MAX_REDIRECTS) throw new Error('媒体地址重定向次数过多')
+        // 相对地址按当前跳解析，下一轮循环会重新校验，避免被跳进内网
+        currentUrl = new URL(location, currentUrl).href
+        continue
+      }
+
+      if (!response.ok) {
+        response.body?.destroy?.()
+        throw new Error(`媒体下载失败：HTTP ${response.status || response.statusText}`)
+      }
+
+      // 类型校验放在读 body 之前：URL 返回 200 的 WAF/登录 HTML 不该被当成媒体送进模型
+      if (expectedKind) {
+        const mimeType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+        const accepted = expectedKind === 'video' ? mimeType.startsWith('video/') : mimeType.startsWith('image/')
+        if (!accepted) {
+          response.body?.destroy?.()
+          throw new Error(`媒体类型不符：期望 ${expectedKind}/*，实际 ${mimeType || '未知'}`)
+        }
+      }
+
+      const declaredLength = Number(response.headers.get('content-length') || 0)
+      if (declaredLength > maxSizeBytes) {
+        response.body?.destroy?.()
+        throw new Error(`媒体文件超过限制大小 ${sizeTip}`)
+      }
+
+      const chunks = []
+      let total = 0
+      for await (const chunk of response.body) {
+        total += chunk.length
+        if (total > maxSizeBytes) {
+          response.body.destroy?.()
+          throw new Error(`媒体文件超过限制大小 ${sizeTip}`)
+        }
+        chunks.push(chunk)
+      }
+
+      return {
+        buffer: Buffer.concat(chunks),
+        contentType: response.headers.get('content-type') || '',
+        contentLength: total
+      }
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  throw new Error('媒体地址重定向次数过多')
+}
+
 /**
  * @description: URL下载图片(或视频)转Base64 （默认） 或 Buffer 或 Blob，支持 base64:// 协议及 file:// 本地路径
  * @param {string} url 可以是 http(s)://, base64://, data:image/...;base64, 或 file:// (及本地绝对路径)
@@ -699,6 +1108,12 @@ export async function getOnebotFileOrMediaUrl(e, msg) {
  * @param {number} opt.maxPixels 图片缩放选项 { maxPixels: 1048576 } 表示最大像素为 1024*1024=1048576
  * @param {number} opt.maxSizeBytes 最大下载字节
  * @param {number} opt.onlyCheck 仅检查大小不下载
+ * @param {boolean} opt.allowLocalFile 是否允许 file://、本地绝对路径与 base64 直传，默认 true；
+ *                                     处理不可信来源（如模型提供的地址）时必须传 false
+ * @param {boolean} opt.allowPrivateNetwork 是否允许访问内网/本机地址，默认 true；
+ *                                          处理不可信来源时必须传 false（只允许公网 http/https，逐跳校验并固定连接目标）
+ * @param {'image'|'video'} opt.mediaKind 期望的媒体大类；传入后响应 Content-Type 必须是 image/* 或 video/*，
+ *                                        用于在读 body 前拒绝返回 200 的 HTML/JSON 等非媒体响应
  * @param {*} e e 可选，用于回复
  * @return {*}
  */
@@ -709,9 +1124,18 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     let contentType = 'image/jpeg'; // 默认类型
 
     const maxSizeInBytes = opt.maxSizeBytes || 10 * 1024 * 1024; // 10MB in bytes
+    // 不可信来源（模型提供的地址等）必须显式关闭本地文件与内网访问
+    const allowLocalFile = opt.allowLocalFile !== false;
+    const allowPrivateNetwork = opt.allowPrivateNetwork !== false;
+    const sizeTip = `${(maxSizeInBytes / 1024 / 1024).toFixed(1)}MB`;
 
     // 1. 判断是否为 base64 直传 (兼容 base64:// 和标准的 data: URL)
     if (url.startsWith('base64://') || url.startsWith('data:')) {
+      if (!allowLocalFile) {
+        logger.warn('[url2Base64] 不可信来源不接受 base64 直传地址，已拒绝');
+        return null;
+      }
+
       let base64Str = url;
 
       // 提取纯 Base64 字符串 和 Content-Type
@@ -725,12 +1149,26 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
         }
       }
 
+      // 解码前先按 base64 长度估算（扣除末尾 padding，避免恰好等于上限的数据被误杀），
+      // 避免先分配大块内存再判断
+      const paddingLength = base64Str.endsWith('==') ? 2 : (base64Str.endsWith('=') ? 1 : 0);
+      const estimatedBytes = Math.floor(base64Str.length / 4) * 3 - paddingLength;
+      if (estimatedBytes > maxSizeInBytes) {
+        logger.warn(`[url2Base64] base64 数据超过限制大小 ${sizeTip}，已拒绝`);
+        return null;
+      }
+
       buffer = Buffer.from(base64Str, 'base64');
       contentLength = buffer.length;
 
     }
     // 2. 判断是否为 file:// 协议或本地绝对路径 (兼容 Windows / Linux)
     else if (url.startsWith('file://') || /^[a-zA-Z]:(\\|\/)|^\//.test(url)) {
+      if (!allowLocalFile) {
+        logger.warn('[url2Base64] 不可信来源不接受本地文件地址，已拒绝');
+        return null;
+      }
+
       const fs = await import('node:fs');
       let localPath = url;
 
@@ -740,8 +1178,14 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
         localPath = urlModule.fileURLToPath(localPath);
       }
 
-      if (!fs.existsSync(localPath)) {
+      // 先 stat 再读取：避免为了判断大小把整个文件读进内存
+      const stat = fs.statSync(localPath, { throwIfNoEntry: false });
+      if (!stat?.isFile()) {
         throw new Error(`找不到本地文件: ${localPath}`);
+      }
+      if (stat.size > maxSizeInBytes) {
+        logger.warn(`[url2Base64] 文件超过限制大小 ${sizeTip}，已拒绝`);
+        return null;
       }
 
       buffer = fs.readFileSync(localPath);
@@ -758,18 +1202,15 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
       contentType = mimeMap[ext] || 'application/octet-stream';
 
     } else {
-      // 3. 常规 URL 下载
-      const response = await axios.get(url, {
-        responseType: 'arraybuffer',
-        timeout: 60000 // 设置超时时间为60秒
+      // 3. 常规 URL 下载：手动接管重定向 + 流式累计字节上限
+      const downloaded = await downloadMediaToBuffer(url, {
+        maxSizeBytes: maxSizeInBytes,
+        verifyUrl: !allowPrivateNetwork,
+        expectedKind: opt.mediaKind
       });
-
-      // 获取长度和类型
-      contentLength = response.headers?.['content-length'] || response.headers?.get('size') || response.data.byteLength;
-      // 兼容 axios 不同版本的 headers 获取方式
-      contentType = response.headers?.['content-type'] || response.headers?.get('content-type') || 'image/jpeg';
-
-      buffer = Buffer.from(response.data, 'binary');
+      buffer = downloaded.buffer;
+      contentLength = downloaded.contentLength;
+      contentType = downloaded.contentType || 'image/jpeg';
     }
 
     // 4. 校验文件大小
@@ -822,7 +1263,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     }
 
   } catch (error) {
-    logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(error.message || error));
+    logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(hidePrivacyInfo(error.message || String(error))));
     if (e.reply) {
       if (!e.isFromHandUpRepaint) e.reply('引用的文件地址已失效或解析失败，请重新发送.', true);
     }
