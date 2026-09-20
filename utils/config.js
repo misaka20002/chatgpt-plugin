@@ -330,6 +330,7 @@ const defaultConfig = {
   enableEmojiLikeTool: true,
   disable_SendAvatarTool: true,
   generateMathRender_ToolSwitch: false,
+  generateHtml_ToolSwitch: false,
   generateGraphCalculator_ToolSwitch: false,
   enableGroupMemberSkillTool: false,
   enableDefaultMessageTriggerTool: false,

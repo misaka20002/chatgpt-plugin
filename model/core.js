@@ -89,6 +89,7 @@ import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
 import { GroupMemberSkillTool } from '../utils/tools/GroupMemberSkillTool.js'
 import { GenerateMathRenderTool } from '../utils/tools/GenerateMathRenderTool.js'
 import { GenerateGraphCalculatorTool } from '../utils/tools/GenerateGraphCalculatorTool.js'
+import { GenerateHtmlTool } from '../utils/tools/GenerateHtmlTool.js'
 import { DefaultMessageTriggerTool } from '../utils/tools/DefaultMessageTriggerTool.js'
 
 export const roleMap = {
@@ -1069,6 +1070,7 @@ async function collectTools(e) {
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },
     { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },
+    { condition: Config.generateHtml_ToolSwitch, ToolClass: GenerateHtmlTool },
     { condition: Config.generateGraphCalculator_ToolSwitch, ToolClass: GenerateGraphCalculatorTool },
     { condition: Config.anythingllm_enable, ToolClass: AnythingLLMQueryTool },
     { condition: Config.anythingllm_enable, ToolClass: AnythingLLMWorkspaceTool },

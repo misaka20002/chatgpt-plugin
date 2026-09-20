@@ -1462,6 +1462,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'generateHtml_ToolSwitch',
+          label: '工具新增-HTML图',
+          bottomHelpMessage: '新增 HTML 视觉图工具：由子模型按内置设计规范编写单文件 HTML，可生成信息卡、示意图、流程图、UI 稿、inline SVG 等',
+          component: 'Switch'
+        },
+        {
           field: 'agent_MarkmapToolSwitch',
           label: '工具新增-思维导图',
           bottomHelpMessage: '新增 生成markmap思维导图 工具',

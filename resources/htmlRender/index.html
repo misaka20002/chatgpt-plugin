@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>HTML 卡片渲染</title>
+
+    <style>
+        /* 与 markdown（mathRender）渲染图同源：春樱初绽背景 + 拟态卡片 */
+        html {
+            background-color: #fff8f8;
+            background-image: linear-gradient(135deg, #ffe5e7 0%, #ffeae0 35%, #f4e6ff 70%, #e0ffff 100%);
+            background-repeat: no-repeat;
+            background-size: cover;
+            min-height: 100%;
+            width: 100%;
+            min-width: fit-content;
+        }
+
+        body {
+            margin: 0;
+            background: transparent;
+            font-family: "Outfit", "Nunito", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            width: 100%;
+            min-width: fit-content;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 噪点纹理 */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.025;
+            pointer-events: none;
+            z-index: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #container {
+            padding: 50px;
+            width: fit-content;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            /* 与 markdown 图（mathRender）同宽：成品图 = 1200 + #container 左右各 50 = 1300px。
+               内容超宽时由脚本按需把这里撑大，宁可图更宽也不裁掉内容 */
+            width: 1200px;
+            min-height: 360px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(35px) saturate(140%);
+            -webkit-backdrop-filter: blur(35px) saturate(140%);
+            border: 1.5px solid rgba(244, 219, 216, 0.85);
+            border-radius: 40px;
+            padding: 40px 45px 30px 45px;
+            box-shadow:
+                0 30px 70px -15px rgba(244, 190, 190, 0.25),
+                0 15px 35px -20px rgba(0, 0, 0, 0.06),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.9),
+                inset 0 -1.5px 3px rgba(244, 219, 216, 0.3);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* macOS 风格标题栏 */
+        .window-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0 22px 0;
+            border-bottom: 1.5px dashed rgba(244, 219, 216, 0.55);
+            margin-bottom: 25px;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 8px;
+            width: 90px;
+        }
+
+        .window-buttons .btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .window-buttons .btn.close {
+            background-color: #ff5f56;
+        }
+
+        .window-buttons .btn.minimize {
+            background-color: #ffbd2e;
+        }
+
+        .window-buttons .btn.maximize {
+            background-color: #27c93f;
+        }
+
+        .window-title {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .window-title-box {
+            background-color: rgba(255, 255, 255, 0.72);
+            padding: 6px 28px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 180, 190, 0.35);
+            box-shadow: 0 6px 15px rgba(255, 143, 163, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+        }
+
+        .window-title-text {
+            color: #c8a7a4;
+            font-weight: 800;
+            letter-spacing: 2px;
+            font-size: 20px;
+        }
+
+        /* 右上角标签 */
+        .window-subtitle {
+            font-size: 11px;
+            font-weight: 800;
+            color: #c8a7a4;
+            text-transform: uppercase;
+            width: 90px;
+            text-align: right;
+        }
+
+        /* 生成内容由 iframe 承载：样式与父页面隔离，且禁用脚本 */
+        .content-frame {
+            display: block;
+            /* 铺满卡片内容区（1200 - 左右内距 90 - 边框 3 = 1107px）。
+               不写死像素：卡片被撑宽时 iframe 自动跟着变宽 */
+            width: 100%;
+            min-height: 120px;
+            border: 0;
+            background: transparent;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1.5px dashed rgba(244, 219, 216, 0.55);
+            font-size: 14px;
+            color: #c8a7a4;
+            font-weight: 700;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer::before {
+            content: "✨";
+            margin-right: 8px;
+            font-size: 14px;
+            animation: breathe 2.5s infinite ease-in-out;
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                opacity: 0.55;
+                transform: scale(0.9) rotate(0deg);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.15) rotate(15deg);
+            }
+        }
+
+        #raw-html {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="card" id="render-card">
+            <!-- 标题栏 -->
+            <div class="window-header">
+                <div class="window-buttons"><span class="btn close"></span><span class="btn minimize"></span><span
+                        class="btn maximize"></span></div>
+                <div class="window-title"><span class="window-title-box"><span
+                            class="window-title-text">{{title}}</span></span></div>
+                <div class="window-subtitle">HTML</div>
+            </div>
+
+            <!-- 生成内容渲染区 -->
+            <iframe id="page" class="content-frame" sandbox="allow-same-origin" title="HTML 内容"></iframe>
+
+            <!-- 页脚 -->
+            <div class="footer">Created By PaimonChatGPT-Plugin</div>
+        </div>
+    </div>
+
+    <!-- 原始注入的数据（art-template 已转义，读出后即还原为 HTML 源码） -->
+    <div id="raw-html">{{html}}</div>
+
+    <script>
+        (function () {
+            const rawBox = document.getElementById('raw-html');
+            const raw = (rawBox.textContent || '').trim();
+            const frame = document.getElementById('page');
+
+            // 不主动透传模型的 <html>/<body> 属性。raw 里的这两个 token 位于 CSP meta **之后**，
+            // 交给 HTML 解析器按标准树构造规则处理即可：in body 状态再遇到 <html>/<body> 时，解析器会把
+            // 尚未出现在既有 html/body 元素上的属性合并过去（parse5 与 Chromium 实测一致），所以
+            // 「整页背景写在 body style 上」这类写法照样生效，属性里的资源请求也仍在 CSP 之后。
+            //
+            // 为什么不再自己用正则抓一遍属性：属性值里**合法允许**出现 >，
+            // /<body\b([^>]*)>/ 这种写法不认引号，会在引号内的 > 处截断，把合法 HTML 拼坏
+            // （实测 <body data-note="a>b"> 会被拼成 <body data-note="a> + 原文）。二次解析交给解析器，
+            // 顺带也不会误抓 <template> 等上下文里的 <html>/<body>。
+            const baseStyle = 'html,body{margin:0;padding:0;background:transparent;'
+                + 'font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#4a3735;}';
+
+            // sandbox 只挡脚本，不挡网络：生成内容里的 <img src="http...">、CSS url() 依然会让
+            // Bot 主机的 Chromium 发请求（内网探测 / 追踪像素）。所以内层文档自带一份 CSP 白名单：
+            // 只放行内联样式与 data: 资源，外链图片/样式/字体、fetch、frame 一律拒绝。
+            // 用白名单而不是继续在工具侧堆正则清洗——正则挡不住 CSS url() 这类写法。
+            // 注意 CSP 必须放在 <head> 里且不能有 frame-ancestors/sandbox 这类只有响应头才生效的指令。
+            const csp = [
+                "default-src 'none'",
+                "script-src 'none'",
+                "style-src 'unsafe-inline'",
+                'img-src data:',
+                'font-src data:',
+                "media-src 'none'",
+                "connect-src 'none'",
+                "frame-src 'none'",
+                "object-src 'none'",
+                "base-uri 'none'",
+                "form-action 'none'"
+            ].join('; ');
+
+            const doc = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
+                + '<meta http-equiv="Content-Security-Policy" content="' + csp + '">'
+                + '<style>' + baseStyle + '</style></head><body>' + raw + '</body></html>';
+
+            // 内容超宽时的兜底上限：设计 skill 约定 1100px，超出说明模型没守约束，
+            // 撑宽能保住内容；但不换行的超长串（长 URL 等）会把图撑成巨幅，到上限就只保留裁断。
+            var MAX_CONTENT_WIDTH = 2160;
+
+            // 高度同样要有硬上限，理由与宽度对称但更严重：截图是对 #container 的元素截图，
+            // iframe 多高最终位图就多高，而模型输出里一条 height:100000000px 就能把 Chromium
+            // 的位图内存拉爆——本工具对任意聊天用户开放，不能只靠设计 skill 的「≤60 行」兜底。
+            // 正常内容（1100px 宽、60 行量级）远低于这里；真超限说明输出异常，宁可裁断也不要拉爆内存。
+            var MAX_CONTENT_HEIGHT = 12000;
+
+            const card = document.getElementById('render-card');
+
+            // iframe 不会按内容自适应，宽高都得量出来写回；页面截图按 #container 大小裁剪
+            function fitFrame () {
+                const inner = frame.contentDocument;
+                if (!inner) return;
+                const root = inner.documentElement;
+                const body = inner.body;
+
+                // 宽度先量：内容比 iframe 宽时把卡片撑到「内容宽度 + 卡片自身占位」
+                // （内距 + 边框用实测差值补，别在 JS 里硬编码 px），iframe 是 100% 会跟着变宽。
+                // 撑宽后内容不再溢出，下一轮量到的宽度不会继续增长，收敛。
+                const needed = Math.ceil(Math.max(
+                    root ? root.scrollWidth : 0,
+                    body ? body.scrollWidth : 0
+                ));
+                if (needed > frame.clientWidth && needed <= MAX_CONTENT_WIDTH) {
+                    card.style.width = (needed + card.offsetWidth - frame.clientWidth) + 'px';
+                }
+
+                // 高度后量：宽度变了会重新折行，必须在定宽之后量
+                const height = Math.max(
+                    root ? root.scrollHeight : 0,
+                    body ? body.scrollHeight : 0
+                );
+                if (height > 0) frame.style.height = Math.min(Math.ceil(height), MAX_CONTENT_HEIGHT) + 'px';
+            }
+
+            frame.addEventListener('load', function () {
+                fitFrame();
+                // 字体/图片可能在 load 事件之后才完成布局，补测一次
+                setTimeout(fitFrame, 300);
+            });
+
+            frame.srcdoc = doc;
+        })();
+    </script>
+</body>
+
+</html>
