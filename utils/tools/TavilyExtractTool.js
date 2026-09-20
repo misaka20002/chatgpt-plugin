@@ -52,7 +52,7 @@ export class TavilyExtractTool extends AbstractTool {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(60000)
+                signal: AbortSignal.timeout(120000)
             })
 
             if (!response.ok) {

@@ -382,13 +382,13 @@ export function supportGuoba() {
         },
         {
           field: 'apiKey',
-          label: 'OpenAI API Key',
+          label: 'Chat API Key',
           bottomHelpMessage: 'OpenAI的ApiKey，用于访问OpenAI的API接口；可用指令： #chatgpt切换API #chatgpt[开启|关闭]API流',
           component: 'InputPassword'
         },
         {
           field: 'openAiBaseUrl',
-          label: 'OpenAI API/反代地址',
+          label: 'Chat API/反代地址',
           bottomHelpMessage: 'OpenAI兼容API服务器地址，通常以 /v1 结尾；默认值为 https://api.openai.com/v1',
           component: 'Input',
           componentProps: {
@@ -397,7 +397,7 @@ export function supportGuoba() {
         },
         {
           field: 'model',
-          label: 'OpenAI 模型',
+          label: 'Chat API 模型',
           bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型',
           component: 'Input'
         },
@@ -1744,37 +1744,37 @@ export function supportGuoba() {
             step: 1
           }
         },
-        {
-          field: 'memoryGroupCapture.eventRetentionDays',
-          label: '事件保留天数',
-          bottomHelpMessage: '未指定期限的临时事件（episode）默认保留天数，默认 90 天',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'memoryGroupCapture.inputTokenLimit',
-          label: '提取输入Token上限',
-          bottomHelpMessage: '每日提炼单次模型输入 Token 上限，默认 30000',
-          component: 'InputNumber',
-          componentProps: {
-            min: 256,
-            step: 1000
-          }
-        },
-        {
-          field: 'memoryGroupCapture.minConfidence',
-          label: '最低置信度',
-          bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.05,
-            step: 0.05,
-            max: 1
-          }
-        },
+        // {
+        //   field: 'memoryGroupCapture.eventRetentionDays',
+        //   label: '事件保留天数',
+        //   bottomHelpMessage: '未指定期限的临时事件（episode）默认保留天数，默认 90 天',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 1,
+        //     step: 1
+        //   }
+        // },
+        // {
+        //   field: 'memoryGroupCapture.inputTokenLimit',
+        //   label: '提取输入Token上限',
+        //   bottomHelpMessage: '每日提炼单次模型输入 Token 上限，默认 30000',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 256,
+        //     step: 1000
+        //   }
+        // },
+        // {
+        //   field: 'memoryGroupCapture.minConfidence',
+        //   label: '最低置信度',
+        //   bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 0.05,
+        //     step: 0.05,
+        //     max: 1
+        //   }
+        // },
         {
           label: 'MCP',
           component: 'Divider'
