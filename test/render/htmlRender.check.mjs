@@ -9,7 +9,10 @@
 //
 // 设计约定（与 mathRender.check.mjs 一致）：
 //   只断言「跨平台等价」的事实：DOM 结构、getComputedStyle 的尺寸/颜色、sandbox 属性、
-//   高度自适应是否生效、样式隔离是否成立。不断言由字体决定的折行位置与最终图片尺寸。
+//   高度自适应是否生效、样式隔离是否成立。这些都由 CSS 数字决定，与字体无关。
+//   **不**断言由字体决定的折行位置（同一段文字在不同平台折成几行，行高总和跟着变）。
+//   唯一涉及的「图片尺寸」是 #container / .card 的外框几何——它只由 CSS 宽度与内距决定，
+//   同样与字体无关，所以可以安全断言（见风险点 8）。
 //
 // 本模板的特殊风险点（也是这组断言的靶子）：
 //   1. 生成内容放在 iframe 里，iframe 不会自动撑高 → 高度没量出来内容就被裁掉（静默丢内容）
@@ -21,6 +24,10 @@
 //      （raw 自带的 <html> token 会被解析器把属性合并到已有的 html 元素上，那是解析器行为）
 //   6. 高度无上限 → 模型输出一条 height:100000000px 就能把截图位图拉到巨幅（用例 6 钉住硬上限）
 //   7. inline SVG 是这个工具的一等能力 → 需要一条真实的矢量渲染用例（用例 5）
+//   8. 出图是两个外框的几何 → 模板按原生 2× 设计（卡片 2400、内距 100，出图 2600）。
+//      「成品图宽度对不对」**单独不够**：#container 宽度固定，卡片整块右移溢出、内容被右裁时
+//      图片宽度照样是 2600px（历史断言 shotWidth >= 2560 就是这样漏掉真 bug 的）。
+//      所以这里同时钉容器与卡片的真实 rect（卡片完整落在容器内 + 左右留白对称）。
 // ============================================================
 import fs from 'node:fs'
 import os from 'node:os'
@@ -97,10 +104,12 @@ const fragment = [
   '<div id="frag" style="padding:24px;color:#fff;">片段内容（没有 html/body 标签）</div>',
 ].join('\n')
 
-// 用例 3：内容超出约定的 1100px（模型没守约束）——必须撑宽而不是静默裁掉右边
+// 用例 3：内容超出约定的 2200px（模型没守约束）——必须撑宽而不是静默裁掉右边。
+// 宽度要真的超过设计画布（iframe 实宽 2214px）才会触发撑宽，所以这里用 2600px；
+// 用旧口径的 1400px 会比画布还窄，撑宽分支根本不会被走到（断言会变成空跑）。
 const overflow = [
-  '<div style="padding:20px">',
-  '  <div id="wide" style="width:1400px;padding:12px;">外层 1400px 的内容</div>',
+  '<div style="padding:40px">',
+  '  <div id="wide" style="width:2600px;padding:24px;">外层 2600px 的内容</div>',
   '</div>',
 ].join('\n')
 
@@ -119,16 +128,21 @@ function check (name, ok, detail = '') {
 
 const SUBTITLE_COLOR = 'rgb(200, 167, 164)' // #c8a7a4
 
-// 卡片自身占位 = 左右 45px 内距 + 1.5px 边框（Chrome 对 1.5px 边框取整，实测合计 92px）。
+// 卡片自身占位 = 左右 90px 内距 + 3px 边框（模板是 2× 设计，都是整数，不涉及取整修正）。
 // 只断言「iframe 铺满卡片、且只差这点占位」，不写死 iframe 的绝对宽度：
 // 容器宽度一变（比如改卡片宽度）就不该再改这条断言。
-const CARD_CHROME = 92
+const CARD_CHROME = 186
 const onlyCardChromeLeft = (cardWidth, frameClientWidth) =>
   Math.abs(parseFloat(cardWidth) - frameClientWidth - CARD_CHROME) <= 2
 
 // 与 resources/htmlRender/index.html 里的 MAX_CONTENT_HEIGHT 保持一致（有意耦合）：
 // 这条断言的意义就是"上限是个确定的小数字"，所以这里写死；改模板的上限必须同步改这里。
-const MAX_CONTENT_HEIGHT = 12000
+const MAX_CONTENT_HEIGHT = 6000
+
+// 模板的原生设计尺寸（都是 CSS px，且因为渲染器 DPR 恒为 1，也就是成品图的像素）：
+// 卡片 2400 + #container 左右内距各 100 = 2600px。改模板必须同步改这里。
+const DESIGN_OUTPUT_WIDTH = 2600
+const CONTAINER_PADDING = 100
 
 // ---------- 渲染一个用例 ----------
 async function renderFixture (page, c, opts = {}) {
@@ -162,6 +176,13 @@ async function renderFixture (page, c, opts = {}) {
     const inner = frame.contentDocument
     const cs = (el, prop) => (el ? getComputedStyle(el)[prop] : null)
     const card = document.getElementById('render-card')
+    const container = document.getElementById('container')
+    // 出图 = 把 #container 的元素框按 1:1 光栅化（渲染器不设 viewport，DPR 恒为 1），
+    // 所以「卡片有没有被右裁、左右留白是否对称」必须用真实几何来钉：
+    // #container 的宽度是固定的，卡片整块右移溢出后被裁掉时，成品图宽度**照样**是 2600px，
+    // 只看图片宽度会给出假绿（这正是旧断言 shotWidth >= 2560 漏掉的那类 bug）。
+    const containerRect = container.getBoundingClientRect()
+    const cardRect = card.getBoundingClientRect()
     return {
       subtitle: document.querySelector('.window-subtitle').textContent.trim(),
       subtitleColor: cs(document.querySelector('.window-subtitle'), 'color'),
@@ -191,7 +212,16 @@ async function renderFixture (page, c, opts = {}) {
       innerImgNatural: inner && inner.getElementById('ext') ? inner.getElementById('ext').naturalWidth : -1,
       scriptRan: inner ? !!inner.getElementById('injected-by-script') : null,
       outerBodyBg: cs(document.body, 'backgroundColor'),
-      outerContainerPadding: cs(document.getElementById('container'), 'paddingTop'),
+      outerContainerPadding: cs(container, 'paddingTop'),
+      // 几何：容器与卡片的外框（成品图就是容器框内那一片像素）
+      containerRectWidth: containerRect.width,
+      // 正值 = 卡片溢出到容器外（会被元素截图裁掉）；负值 = 留白，绝对值就是留白宽度
+      cardOverflowLeft: containerRect.left - cardRect.left,
+      cardOverflowRight: cardRect.right - containerRect.right,
+      cardInsetLeft: cardRect.left - containerRect.left,
+      cardGapDelta: Math.abs(
+        (cardRect.left - containerRect.left) - (containerRect.right - cardRect.right)
+      ),
     }
   })
 
@@ -223,8 +253,8 @@ async function renderFixture (page, c, opts = {}) {
     const f = r1.facts
     check('右上角标签为 HTML', f.subtitle === 'HTML', f.subtitle)
     check('右上角标签沿用主题弱化色', f.subtitleColor === SUBTITLE_COLOR, String(f.subtitleColor))
-    check('卡片宽度 1200px（与 markdown 图同宽）', f.cardWidth === '1200px', String(f.cardWidth))
-    check('卡片圆角 40px（与 markdown 图一致）', f.cardRadius === '40px', String(f.cardRadius))
+    check('卡片宽度 2400px（模板为原生 2× 设计）', f.cardWidth === '2400px', String(f.cardWidth))
+    check('卡片圆角 80px（与 2× 设计一致）', f.cardRadius === '80px', String(f.cardRadius))
     check('iframe 铺满卡片内容区（只差内距与边框）', onlyCardChromeLeft(f.cardWidth, f.frameClientWidth), `card=${f.cardWidth} frameClient=${f.frameClientWidth}`)
     check('iframe 带 sandbox 且未开 allow-scripts', !!f.frameSandbox && !f.frameSandbox.includes('allow-scripts'), String(f.frameSandbox))
     check('iframe 高度按内容量出（内容不会被裁）', f.frameHeight > 0 && Math.abs(f.frameHeight - f.innerScrollHeight) <= 2, `frame=${f.frameHeight} inner=${f.innerScrollHeight}`)
@@ -233,6 +263,26 @@ async function renderFixture (page, c, opts = {}) {
     check('完整文档里的 <body style> 正常生效（解析器合并，不靠模板透传）', f.innerBodyBg === 'rgb(250, 250, 250)', `${f.innerBodyStyleAttr} → ${f.innerBodyBg}`)
     check('hidden 容器不显示源码文本', f.rawBoxDisplay === 'none', String(f.rawBoxDisplay))
     check('页脚署名保留', f.footer.includes('Created By PaimonChatGPT-Plugin'), f.footer)
+
+    // —— 用例 1 的出图几何 ——
+    // 出图 = #container 的元素截图，DPR 恒为 1，所以成品图宽度必须等于模板写死的设计宽度
+    // （卡片 2400 + 左右内距各 100 = 2600），这里不乘任何 zoom，数字变了就说明模板被改过。
+    const shot1 = Buffer.from(await (await page.$('#container')).screenshot({ type: 'png' }))
+    const shot1Width = shot1.readUInt32BE(16)
+    check(`成品图宽度 = 原生设计宽 ${DESIGN_OUTPUT_WIDTH}px，且与 #container 布局宽 1:1（无缩放）`,
+      Math.abs(shot1Width - DESIGN_OUTPUT_WIDTH) <= 1 && Math.abs(shot1Width - f.containerRectWidth) <= 1,
+      `png=${shot1Width} rect=${f.containerRectWidth}（1:1 成立说明渲染器确实是 DPR 1；若被谁塞了缩放，这里会先红）`)
+    // 光有宽度不够：#container 宽度固定，卡片整块右移溢出、内容被裁掉时成品图仍然是 2600px 宽。
+    // 下面三条才是「内容没被裁」的真正证据（旧断言只有宽度，是假绿）。
+    check('卡片完整落在 #container 内（左右都没被裁）',
+      f.cardOverflowLeft <= 0.5 && f.cardOverflowRight <= 0.5,
+      `左溢出=${f.cardOverflowLeft.toFixed(1)} 右溢出=${f.cardOverflowRight.toFixed(1)}`)
+    check('卡片左右留白对称（居中，留白 = 容器内距）',
+      f.cardGapDelta <= 1 && Math.abs(f.cardInsetLeft - CONTAINER_PADDING) <= 1,
+      `左右差=${f.cardGapDelta.toFixed(1)} 左留白=${f.cardInsetLeft.toFixed(1)} 容器内距=${f.outerContainerPadding}`)
+    check('iframe 内正文没有横向溢出（没被卡片右边界裁掉）',
+      f.innerScrollWidth <= f.frameClientWidth,
+      `innerScrollWidth=${f.innerScrollWidth} <= frameClient=${f.frameClientWidth}`)
     check('用例 1 页面无未捕获 JS 异常', r1.pageErrors.length === 0, r1.pageErrors.join('; '))
 
     // —— 用例 2：片段 + 样式隔离 ——
@@ -243,13 +293,13 @@ async function renderFixture (page, c, opts = {}) {
     check('片段用例的 iframe 高度同样自适应', g.frameHeight > 0 && Math.abs(g.frameHeight - g.innerScrollHeight) <= 2, `frame=${g.frameHeight} inner=${g.innerScrollHeight}`)
     check('片段没有 html/body 时也套用了基础 margin:0', g.innerBodyMargin === '0px', String(g.innerBodyMargin))
     check('生成内容的 body 样式只作用于 iframe 内', g.innerBodyBg === 'rgb(18, 52, 86)', String(g.innerBodyBg))
-    check('生成内容的 !important 不会污染外层卡片圆角', g.cardRadius === '40px', String(g.cardRadius))
-    check('生成内容的 !important 不会污染外层容器内距', g.outerContainerPadding === '50px', String(g.outerContainerPadding))
+    check('生成内容的 !important 不会污染外层卡片圆角', g.cardRadius === '80px', String(g.cardRadius))
+    check('生成内容的 !important 不会污染外层容器内距', g.outerContainerPadding === `${CONTAINER_PADDING}px`, String(g.outerContainerPadding))
     check('外层页面背景不受生成内容影响', g.outerBodyBg === 'rgba(0, 0, 0, 0)', String(g.outerBodyBg))
     check('用例 2 页面无未捕获 JS 异常', r2.pageErrors.length === 0, r2.pageErrors.join('; '))
 
     // —— 用例 3：超宽内容 ——
-    console.log('=== 用例 3：内容超出 1100px 时撑宽而不是裁掉 ===')
+    console.log('=== 用例 3：内容超出 2200px 画布时撑宽而不是裁掉 ===')
     // 真实渲染后端不设 viewport（默认 800×600），这里切到同样的窄视口，
     // 确认「比视口还宽的卡片」仍被完整截进图片（否则图会被裁到 800 宽）
     await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 })
@@ -260,9 +310,15 @@ async function renderFixture (page, c, opts = {}) {
     check('卡片跟着内容一起变宽（仍只多内距与边框）', onlyCardChromeLeft(h.cardWidth, h.frameClientWidth), `card=${h.cardWidth} frame=${h.frameClientWidth}`)
     check('用例 3 高度同样自适应', h.frameHeight > 0 && Math.abs(h.frameHeight - h.innerScrollHeight) <= 2, `frame=${h.frameHeight} inner=${h.innerScrollHeight}`)
     const wideShot = Buffer.from(await (await page.$('#container')).screenshot({ type: 'png' }))
+    // 期望宽度 = 撑宽后的卡片 + 左右内距各 100（没有 zoom，所以不乘任何系数）
+    const expectWide = Math.round(parseFloat(h.cardWidth)) + 2 * CONTAINER_PADDING
     check('成品图完整包含变宽的卡片（没被窄视口裁掉）',
-      wideShot.readUInt32BE(16) === Math.round(parseFloat(h.cardWidth)) + 100,
-      `png=${wideShot.readUInt32BE(16)} card=${h.cardWidth}`)
+      Math.abs(wideShot.readUInt32BE(16) - expectWide) <= 1,
+      `png=${wideShot.readUInt32BE(16)} 期望=${expectWide} card=${h.cardWidth}`)
+    // 卡片被撑宽之后同样必须完整落在容器里，否则「撑宽」只是把内容推到框外而已
+    check('撑宽后卡片仍完整落在 #container 内',
+      h.cardOverflowLeft <= 0.5 && h.cardOverflowRight <= 0.5,
+      `左溢出=${h.cardOverflowLeft.toFixed(1)} 右溢出=${h.cardOverflowRight.toFixed(1)}`)
     check('用例 3 页面无未捕获 JS 异常', r3.pageErrors.length === 0, r3.pageErrors.join('; '))
     await page.setViewport({ width: 1400, height: 1000, deviceScaleFactor: 1 })
 
@@ -301,7 +357,7 @@ async function renderFixture (page, c, opts = {}) {
     const s = r5.facts
     check('SVG 节点被保留（没被清洗或转义掉）', s.innerSvgCount === 1, String(s.innerSvgCount))
     check('SVG 按 viewBox 铺满容器宽度（width:100% 生效）',
-      s.innerSvgWidth > 1000 && Math.abs(s.innerSvgWidth - s.frameClientWidth) <= 2,
+      s.innerSvgWidth > 2000 && Math.abs(s.innerSvgWidth - s.frameClientWidth) <= 2,
       `svg=${s.innerSvgWidth} frame=${s.frameClientWidth}`)
     // 内部引用 url(#sky) 不产生网络请求、不受 CSP 约束；这里要防的是清洗/转义把 defs 弄坏
     check('defs 里的渐变与引用完整（stops 齐全、rect 仍指向 url(#sky)）',

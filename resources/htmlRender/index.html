@@ -43,30 +43,41 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
+        /* 截图目标元素：puppeteer 的非分页路径截的就是 #container 元素，成品图宽度 = 它的**布局宽度**
+           （该渲染器不设 viewport、也不读 deviceScaleFactor，DPR 恒为 1），所以出图尺寸只能由 CSS 决定。
+
+           这里的「出 2K」是把版式**本身按 2× 画出来**（卡片 1200→2400、正文 24→48、内距 40/45→80/90…），
+           而不是把 1300px 的设计用 zoom / transform 放大：缩放那套会让 #container 的外框与卡片子树的
+           坐标口径在不同 Chromium 版本上对不上，实测表现是内容被右边界裁掉、或外框下方留下大片空白。
+           按 2× 写死则是普通布局，缩放系数恒为 1，没有可漂移的口径。
+
+           出图宽度 = 卡片 2400 + #container 左右内距各 100 = 2600px，与「1300 设计宽 × DPR 2」等价。
+           下面 fitFrame() 量到的 clientWidth / offsetWidth 与写回的 style.width 都在同一套 CSS px 里，
+           数字翻倍只影响绝对像素，撑宽逻辑本身不变。 */
         #container {
-            padding: 50px;
+            padding: 100px;
             width: fit-content;
             position: relative;
             z-index: 1;
         }
 
         .card {
-            /* 与 markdown 图（mathRender）同宽：成品图 = 1200 + #container 左右各 50 = 1300px。
+            /* 2× 设计宽度：成品图 = 2400 + #container 左右各 100 = 2600px（2K 量级）。
                内容超宽时由脚本按需把这里撑大，宁可图更宽也不裁掉内容 */
-            width: 1200px;
-            min-height: 360px;
+            width: 2400px;
+            min-height: 720px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.72);
-            backdrop-filter: blur(35px) saturate(140%);
-            -webkit-backdrop-filter: blur(35px) saturate(140%);
-            border: 1.5px solid rgba(244, 219, 216, 0.85);
-            border-radius: 40px;
-            padding: 40px 45px 30px 45px;
+            backdrop-filter: blur(70px) saturate(140%);
+            -webkit-backdrop-filter: blur(70px) saturate(140%);
+            border: 3px solid rgba(244, 219, 216, 0.85);
+            border-radius: 80px;
+            padding: 80px 90px 60px 90px;
             box-shadow:
-                0 30px 70px -15px rgba(244, 190, 190, 0.25),
-                0 15px 35px -20px rgba(0, 0, 0, 0.06),
-                inset 0 1.5px 2px rgba(255, 255, 255, 0.9),
-                inset 0 -1.5px 3px rgba(244, 219, 216, 0.3);
+                0 60px 140px -30px rgba(244, 190, 190, 0.25),
+                0 30px 70px -40px rgba(0, 0, 0, 0.06),
+                inset 0 3px 4px rgba(255, 255, 255, 0.9),
+                inset 0 -3px 6px rgba(244, 219, 216, 0.3);
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
@@ -77,22 +88,22 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 5px 0 22px 0;
-            border-bottom: 1.5px dashed rgba(244, 219, 216, 0.55);
-            margin-bottom: 25px;
+            padding: 10px 0 44px 0;
+            border-bottom: 3px dashed rgba(244, 219, 216, 0.55);
+            margin-bottom: 50px;
         }
 
         .window-buttons {
             display: flex;
-            gap: 8px;
-            width: 90px;
+            gap: 16px;
+            width: 180px;
         }
 
         .window-buttons .btn {
-            width: 12px;
-            height: 12px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .window-buttons .btn.close {
@@ -115,45 +126,46 @@
 
         .window-title-box {
             background-color: rgba(255, 255, 255, 0.72);
-            padding: 6px 28px;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 180, 190, 0.35);
-            box-shadow: 0 6px 15px rgba(255, 143, 163, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+            padding: 12px 56px;
+            border-radius: 48px;
+            border: 2px solid rgba(255, 180, 190, 0.35);
+            box-shadow: 0 12px 30px rgba(255, 143, 163, 0.08), inset 0 2px 4px rgba(255, 255, 255, 0.9);
         }
 
         .window-title-text {
             color: #c8a7a4;
             font-weight: 800;
-            letter-spacing: 2px;
-            font-size: 20px;
+            letter-spacing: 4px;
+            font-size: 40px;
         }
 
         /* 右上角标签 */
         .window-subtitle {
-            font-size: 11px;
+            font-size: 22px;
             font-weight: 800;
             color: #c8a7a4;
             text-transform: uppercase;
-            width: 90px;
+            width: 180px;
             text-align: right;
         }
 
         /* 生成内容由 iframe 承载：样式与父页面隔离，且禁用脚本 */
         .content-frame {
             display: block;
-            /* 铺满卡片内容区（1200 - 左右内距 90 - 边框 3 = 1107px）。
-               不写死像素：卡片被撑宽时 iframe 自动跟着变宽 */
+            /* 铺满卡片内容区（2400 - 左右内距 180 - 边框 6 = 2214px）。
+               不写死像素：卡片被撑宽时 iframe 自动跟着变宽。
+               这个 2214 就是设计 skill 里内容画布 2200px 的落地宽度，两边要一起改 */
             width: 100%;
-            min-height: 120px;
+            min-height: 240px;
             border: 0;
             background: transparent;
         }
 
         .footer {
             margin-top: auto;
-            padding-top: 20px;
-            border-top: 1.5px dashed rgba(244, 219, 216, 0.55);
-            font-size: 14px;
+            padding-top: 40px;
+            border-top: 3px dashed rgba(244, 219, 216, 0.55);
+            font-size: 28px;
             color: #c8a7a4;
             font-weight: 700;
             display: flex;
@@ -163,8 +175,8 @@
 
         .footer::before {
             content: "✨";
-            margin-right: 8px;
-            font-size: 14px;
+            margin-right: 16px;
+            font-size: 28px;
             animation: breathe 2.5s infinite ease-in-out;
         }
 
@@ -252,15 +264,20 @@
                 + '<meta http-equiv="Content-Security-Policy" content="' + csp + '">'
                 + '<style>' + baseStyle + '</style></head><body>' + raw + '</body></html>';
 
-            // 内容超宽时的兜底上限：设计 skill 约定 1100px，超出说明模型没守约束，
-            // 撑宽能保住内容；但不换行的超长串（长 URL 等）会把图撑成巨幅，到上限就只保留裁断。
-            var MAX_CONTENT_WIDTH = 2160;
+            // 内容超宽时的兜底上限：设计 skill 约定内容画布 2200px（iframe 实宽 2214），
+            // 超出说明模型没守约束，撑宽能保住内容；但不换行的超长串（长 URL 等）会把图撑成巨幅，
+            // 到上限就只保留裁断。数字 = 上一版（1× 设计下 2160，约为画布 1107 的 1.95 倍）整体 ×2，
+            // 保持"比约定画布宽出约一倍"的容忍度不变。
+            var MAX_CONTENT_WIDTH = 4320;
 
             // 高度同样要有硬上限，理由与宽度对称但更严重：截图是对 #container 的元素截图，
             // iframe 多高最终位图就多高，而模型输出里一条 height:100000000px 就能把 Chromium
             // 的位图内存拉爆——本工具对任意聊天用户开放，不能只靠设计 skill 的「≤60 行」兜底。
-            // 正常内容（1100px 宽、60 行量级）远低于这里；真超限说明输出异常，宁可裁断也不要拉爆内存。
-            var MAX_CONTENT_HEIGHT = 12000;
+            // 这里改成 6000 而不是把旧的 12000 直接 ×2（24000）：位图是 2K 宽（2600），
+            // 宽高上限同时命中时 4700×6000 ≈ 2800 万像素，与 1× 时代（约 2350×12000）同一量级；
+            // 若照抄 24000 会变成 1.1 亿像素（约 450MB），反而把内存风险放大四倍。
+            // 正常内容（2200px 宽、60 行 32px 正文 ≈ 3300px）远低于这个上限，超限说明输出异常。
+            var MAX_CONTENT_HEIGHT = 6000;
 
             const card = document.getElementById('render-card');
 

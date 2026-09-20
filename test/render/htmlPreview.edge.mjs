@@ -20,6 +20,9 @@
 //
 // dpr：给 build 传 --dpr=2（或在 PowerShell 命令里改 --force-device-scale-factor）可出 2x 清晰版；
 //      crop 对任意 dpr 都成立，因为品红 bbox 是在实际像素上量的。
+//      注意模板**本身**就是原生 2× 设计（#container 2600px 宽），与生产同款，所以这里不改 dpr
+//      也已经得到 2600px 的成品；dpr 只用于把预览再放大来看细节。
+// 窗口宽度要 ≥ 2600px（#container 的固定宽度）：比它窄会把右边的品红描边切出视口。
 //
 // 隐私提示：脚本本身不含任何本机信息，但它打印的命令里带系统临时目录的绝对路径
 // （Windows 上即 C:\Users\<用户名>\AppData\Local\Temp\...）。要把那段命令贴给别人时先替换掉。
@@ -66,11 +69,13 @@ function runBuild () {
   console.log(`预览页：${out}（标题 = ${title}）`)
   console.log('\n把下面这条丢给 PowerShell 工具跑（Bash/node 起不来浏览器）：\n')
   console.log('$edge = "' + EDGE + '"; $out = "' + shot.replace(/\//g, '\\') + '";')
-  console.log(`Start-Process -FilePath $edge -ArgumentList '--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--hide-scrollbars',"--user-data-dir=$env:TEMP\\edge-preview",'--virtual-time-budget=4000','--force-device-scale-factor=${dpr}','--window-size=1500,2200','--screenshot=${shot}','${fileUrl}' -NoNewWindow -Wait`)
+  console.log(`Start-Process -FilePath $edge -ArgumentList '--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--hide-scrollbars',"--user-data-dir=$env:TEMP\\edge-preview",'--virtual-time-budget=4000','--force-device-scale-factor=${dpr}','--window-size=2700,3000','--screenshot=${shot}','${fileUrl}' -NoNewWindow -Wait`)
   console.log('\n然后：')
   console.log(`  node test/render/htmlPreview.edge.mjs crop "${shot}" "<输出.png>"`)
-  // 视口给小了会截掉内容：品红描边是判据，crop 找不到描边就会报错
-  console.log('\n（内容比 --window-size 还高时加大窗口；crop 找不到描边会明确报错）')
+  // 视口给小了会截掉内容：品红描边是判据，crop 找不到描边就会报错。
+  // 宽度尤其要注意——模板的 #container 是固定 2600px（原生 2× 设计），窗口比它窄会把右侧描边切掉，
+  // 那时 crop 虽然找得到描边，量到的 bbox 却是被裁过的，裁出来会缺右边一块。
+  console.log('\n（#container 固定 2600px 宽，--window-size 的宽度必须 ≥ 2600；内容比窗口还高时加大高度；crop 找不到描边会明确报错）')
 }
 
 async function runCrop () {

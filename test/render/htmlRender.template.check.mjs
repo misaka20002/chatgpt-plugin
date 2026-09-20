@@ -23,8 +23,14 @@ const TEMPLATE = path.resolve(HERE, '../../resources/htmlRender/index.html')
 
 // 与模板里的 MAX_CONTENT_WIDTH / MAX_CONTENT_HEIGHT 保持一致（有意耦合）：
 // 上限的意义就是"一个确定的小数字"，所以在这里写死；改模板的上限就要同步改这里。
-const MAX_CONTENT_WIDTH = 2160
-const MAX_CONTENT_HEIGHT = 12000
+// 单位一律是 CSS px；因为渲染器 DPR 恒为 1，也就是成品图的像素（模板是原生 2× 设计，无 zoom）。
+const MAX_CONTENT_WIDTH = 4320
+const MAX_CONTENT_HEIGHT = 6000
+
+// 模板的原生设计尺寸（与 resources/htmlRender/index.html 一致，改模板要同步改这里）：
+// 卡片 2400、iframe 实宽 2214、卡片占位 = 左右内距各 90 + 边框各 3 = 186。
+const CARD_WIDTH = 2400
+const FRAME_WIDTH = 2214
 
 // ---------- 取出模板里的脚本 ----------
 const source = fs.readFileSync(TEMPLATE, 'utf8')
@@ -45,17 +51,17 @@ const TEMPLATE_SCRIPT = scriptMatch[1]
  */
 function renderTemplate (rawHtml, metrics = {}) {
   const listeners = {}
-  const scrollWidth = metrics.scrollWidth ?? 1107
+  const scrollWidth = metrics.scrollWidth ?? FRAME_WIDTH
   const scrollHeight = metrics.scrollHeight ?? 800
   const rawBox = { textContent: rawHtml }
-  const card = { style: {}, offsetWidth: metrics.cardOffsetWidth ?? 1202 }
+  const card = { style: {}, offsetWidth: metrics.cardOffsetWidth ?? CARD_WIDTH }
   const innerDoc = {
     documentElement: { scrollWidth, scrollHeight },
     body: { scrollWidth, scrollHeight },
   }
   const frame = {
     style: {},
-    clientWidth: metrics.frameClientWidth ?? 1107,
+    clientWidth: metrics.frameClientWidth ?? FRAME_WIDTH,
     contentDocument: innerDoc,
     addEventListener (type, fn) { listeners[type] = fn },
   }
@@ -129,10 +135,18 @@ check('量到 0 时不动 iframe 高度（保持模板里的 min-height）', tin
 
 // ---------- 3. 宽度写回（与高度对称：正常超宽要撑宽，超上限才放弃） ----------
 console.log('=== 卡片宽度写回 ===')
-const wide = renderTemplate('<div>超宽</div>', { scrollWidth: 1400, frameClientWidth: 1107, cardOffsetWidth: 1202 })
+// 内容 2600px（> iframe 实宽 2214，模型没守 2200px 画布约定）→ 卡片 = 内容宽 + 卡片占位 186
+const CONTENT_W = 2600
+const wide = renderTemplate('<div>超宽</div>', { scrollWidth: CONTENT_W, frameClientWidth: FRAME_WIDTH, cardOffsetWidth: CARD_WIDTH })
 check('超宽内容按实测差值撑宽卡片（内容宽 + 卡片占位）',
-  wide.card.style.width === `${1400 + 1202 - 1107}px`, String(wide.card.style.width))
-const tooWide = renderTemplate('<div>极端超宽</div>', { scrollWidth: 5000, frameClientWidth: 1107 })
+  wide.card.style.width === `${CONTENT_W + CARD_WIDTH - FRAME_WIDTH}px`, String(wide.card.style.width))
+// 这条同时钉住"阈值确实随模板翻倍"：5000 超过新上限 4320 才该放弃，
+// 若模板上限没跟着改（仍是 2160），这里会因为 5000 > 2160 继续绿——所以下面再补一条
+// 落在「旧上限之上、新上限之下」的用例，确保上限真的被放大了。
+const midWide = renderTemplate('<div>中度过宽</div>', { scrollWidth: 3000, frameClientWidth: FRAME_WIDTH, cardOffsetWidth: CARD_WIDTH })
+check(`上限放宽到 ${MAX_CONTENT_WIDTH}px：3000px 内容仍然撑宽（旧上限 2160 会误判成超限）`,
+  midWide.card.style.width === `${3000 + CARD_WIDTH - FRAME_WIDTH}px`, String(midWide.card.style.width))
+const tooWide = renderTemplate('<div>极端超宽</div>', { scrollWidth: 5000, frameClientWidth: FRAME_WIDTH })
 check(`超过宽度上限（${MAX_CONTENT_WIDTH}px）不再继续撑宽（宁可裁断也不无限拉宽）`,
   tooWide.card.style.width === undefined, String(tooWide.card.style.width))
 
