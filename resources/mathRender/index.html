@@ -145,7 +145,10 @@
         /* 解决你提到的字体大小问题核心区：直接由这里接管，无需改底层 JS */
         .markdown-body {
             flex: 1;
-            color: #4a3735;
+            /* 当前语义正文色：引用块等语义容器会覆盖这个变量，
+               任务列表里「切断父项灰化」的地方引用它，才不会把所在容器的语义色一起丢掉 */
+            --text-color: #4a3735;
+            color: var(--text-color);
             font-size: 24px;
             /* 基础大字体，适应高清截图 */
             line-height: 1.7;
@@ -161,8 +164,9 @@
             margin-top: 1.5em;
         }
 
-        .markdown-body p,
-        .markdown-body li {
+        /* 段落间距；列表项间距由下面的列表样式单独控制，不在这里给 li 设值，
+           免得两条规则特异性相同、靠源码先后决定结果 */
+        .markdown-body p {
             margin-bottom: 16px;
         }
 
@@ -193,7 +197,7 @@
         }
 
         .markdown-body tbody td {
-            color: #4a3735;
+            color: var(--text-color);
             padding: 13px 16px;
             vertical-align: top;
             word-break: break-word;
@@ -219,7 +223,8 @@
             border-radius: 6px 18px 18px 6px;
             background: rgba(255, 255, 255, 0.6);
             box-shadow: inset 0 0 0 1.5px rgba(244, 219, 216, 0.55);
-            color: #66504c;
+            --text-color: #66504c;
+            color: var(--text-color);
         }
 
         /* 段间距由 p 自己控制，末段不再留白 */
@@ -237,7 +242,142 @@
             margin: 16px 0;
             padding: 14px 18px;
             background: rgba(255, 255, 255, 0.45);
-            color: #7a625d;
+            --text-color: #7a625d;
+            color: var(--text-color);
+        }
+
+        /* 标题 h4-h6：h1-h3 之外补齐层级，字号递减、颜色随层级减弱 */
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+            color: #d3607c;
+            margin-top: 1.4em;
+        }
+
+        .markdown-body h4 {
+            font-size: 1.1em;
+            border-bottom: 1.5px dashed rgba(244, 219, 216, 0.5);
+            padding-bottom: 8px;
+        }
+
+        .markdown-body h5 {
+            font-size: 1em;
+        }
+
+        .markdown-body h6 {
+            font-size: 0.92em;
+            color: #c8a7a4;
+        }
+
+        /* 链接：主题粉 + 淡化的下划线，替换浏览器默认蓝 */
+        .markdown-body a {
+            color: #d3607c;
+            text-decoration: underline;
+            text-decoration-color: rgba(211, 96, 124, 0.4);
+            text-decoration-thickness: 1.5px;
+            text-underline-offset: 4px;
+        }
+
+        /* 列表：圆点/序号用主题粉，缩进与项间距收紧 */
+        .markdown-body ul,
+        .markdown-body ol {
+            margin: 20px 0;
+            padding-left: 1.5em;
+        }
+
+        .markdown-body li {
+            margin-bottom: 8px;
+        }
+
+        .markdown-body li:last-child {
+            margin-bottom: 0;
+        }
+
+        .markdown-body li::marker {
+            color: #ff8fa3;
+            font-weight: 700;
+        }
+
+        /* 松散列表的列表项自带段落，不再各留 16px */
+        .markdown-body li > p {
+            margin-bottom: 8px;
+        }
+
+        .markdown-body li > p:last-child {
+            margin-bottom: 0;
+        }
+
+        .markdown-body li > ul,
+        .markdown-body li > ol {
+            margin: 8px 0;
+        }
+
+        /* 任务列表：去掉圆点，复选框由 JS 生成的 span 绘制 */
+        .markdown-body li.task-item {
+            list-style: none;
+        }
+
+        /* 已完成项文字弱化；子列表是独立条目，不能跟着父项一起变灰。
+           只在「直接子列表」上切断灰色继承，并且要还原成**当前容器的语义正文色**
+           （--text-color：正文区是 #4a3735，引用区是引用自己的颜色），
+           不要写死颜色，否则引用块里的完成任务会连带丢掉引用色。 */
+        .markdown-body li.task-item.is-done {
+            color: #8a7671;
+        }
+
+        .markdown-body li.task-item.is-done > ul,
+        .markdown-body li.task-item.is-done > ol {
+            color: var(--text-color);
+        }
+
+        .markdown-body .task-box {
+            display: inline-block;
+            position: relative;
+            vertical-align: -0.1em;
+            width: 0.78em;
+            height: 0.78em;
+            margin-right: 0.45em;
+            border: 2px solid rgba(255, 143, 163, 0.9);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .markdown-body .task-box.is-done {
+            background: rgba(255, 143, 163, 0.9);
+        }
+
+        .markdown-body .task-box.is-done::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 45%;
+            width: 0.42em;
+            height: 0.22em;
+            border-left: 2.5px solid #fff;
+            border-bottom: 2.5px solid #fff;
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        /* 图片：限宽防溢出，圆角描边与卡片一致；独占一段时居中 */
+        .markdown-body img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 14px;
+            border: 1.5px solid rgba(244, 219, 216, 0.9);
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .markdown-body p > img:only-child {
+            display: block;
+            margin: 20px auto;
+        }
+
+        /* 分隔线：与标题虚线底同语言，替换浏览器默认灰线 */
+        .markdown-body hr {
+            height: 0;
+            margin: 32px 0;
+            border: none;
+            border-top: 2px dashed rgba(244, 219, 216, 0.85);
         }
 
         /* 统一代码块和数学块的底色 */
@@ -253,6 +393,14 @@
             padding: 20px;
             border: 1px solid rgba(244, 219, 216, 0.6);
             overflow-x: auto;
+        }
+
+        /* pre 里的 code 会继承行内 code 的内距：行内盒的左内距只作用在行首，
+           会让代码块第一行比后续行右移 8px，同时内层多出一块白底 */
+        .markdown-body pre code {
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
         }
 
         /* 数学公式调整：放大显示 */
@@ -388,6 +536,65 @@
             const defaultTableClose = md.renderer.rules.table_close || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
             md.renderer.rules.table_open = (tokens, idx, options, env, self) => '<div class="table-wrap">' + defaultTableOpen(tokens, idx, options, env, self);
             md.renderer.rules.table_close = (tokens, idx, options, env, self) => defaultTableClose(tokens, idx, options, env, self) + '</div>';
+
+            // markdown-it 默认没有脚注语法：`[^x]` 会命中引用式链接规则，生成一个指向定义文本的
+            // 错误相对链接（href 是中文定义内容），定义行也会被 reference 规则吞掉。这里让引用和
+            // 定义都退回普通文本，宁可原样显示，也不产出假链接、不静默丢内容。
+            // label 只排除 `]` 与换行，允许内部空白：markdown-it 的 reference 规则本身接受含空格的
+            // label（并会把连续空白折叠），若这里限成「不含任何空白」，`[^source 1]` + 同 label 定义
+            // 就会绕过本规则、退回原生 shortcut reference，假链接照样出现。目标不是校验脚注 label，
+            // 而是抢在 reference 之前保住 `[^...]` 原文。
+            const footnoteRef = /^\[\^([^\]\r\n]+)\]/;
+            md.inline.ruler.before('link', 'footnote_ref', function (state, silent) {
+                if (state.src.charCodeAt(state.pos) !== 0x5B) return false;
+                const match = footnoteRef.exec(state.src.slice(state.pos));
+                if (!match) return false;
+                if (!silent) {
+                    const token = state.push('text', '', 0);
+                    token.content = match[0];
+                }
+                state.pos += match[0].length;
+                return true;
+            });
+
+            const footnoteDef = /^ {0,3}\[\^([^\]\r\n]+)\]:[ \t]*(.*)$/;
+            md.block.ruler.before('reference', 'footnote_def', function (state, startLine, endLine, silent) {
+                const start = state.bMarks[startLine] + state.tShift[startLine];
+                const line = state.src.slice(start, state.eMarks[startLine]);
+                if (!footnoteDef.test(line)) return false;
+                if (silent) return true;
+                const open = state.push('paragraph_open', 'p', 1);
+                open.map = [startLine, startLine + 1];
+                const inline = state.push('inline', '', 0);
+                inline.content = line.trim();
+                inline.map = [startLine, startLine + 1];
+                inline.children = [];
+                state.push('paragraph_close', 'p', -1);
+                state.line = startLine + 1;
+                return true;
+            });
+
+            // 任务列表：`- [ ]` / `- [x]` 默认只是纯文本（还挂着个圆点），这里换成主题化复选框
+            const taskMarker = /^\[([ xX])\][ \t]+/;
+            md.core.ruler.after('inline', 'task_list', function (state) {
+                const tokens = state.tokens;
+                for (let i = 0; i < tokens.length; i++) {
+                    if (tokens[i].type !== 'inline') continue;
+                    const itemOpen = tokens[i - 2];
+                    if (!itemOpen || itemOpen.type !== 'list_item_open') continue;
+                    if (!tokens[i - 1] || tokens[i - 1].type !== 'paragraph_open') continue;
+                    const text = tokens[i].children[0];
+                    if (!text || text.type !== 'text') continue;
+                    const match = taskMarker.exec(text.content);
+                    if (!match) continue;
+                    const done = match[1].toLowerCase() === 'x';
+                    itemOpen.attrJoin('class', done ? 'task-item is-done' : 'task-item');
+                    text.content = text.content.slice(match[0].length);
+                    const box = new state.Token('html_inline', '', 0);
+                    box.content = done ? '<span class="task-box is-done"></span>' : '<span class="task-box"></span>';
+                    tokens[i].children.unshift(box);
+                }
+            });
 
             // 将内容写入容器
             const contentDiv = document.getElementById('content');
