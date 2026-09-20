@@ -2494,30 +2494,6 @@ export function supportGuoba() {
             max: 100
           }
         },
-        {
-          label: '以下为服务超时配置',
-          component: 'Divider'
-        },
-        {
-          field: 'defaultTimeoutMs',
-          label: '默认超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '各个地方的默认超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'chromeTimeoutMS',
-          label: '浏览器超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '浏览器默认超时，浏览器可能需要更高的超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
         // {
         //   field: 'sydneyFirstMessageTimeout',
         //   label: 'Sydney模式接受首条信息超时时间',

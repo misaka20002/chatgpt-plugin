@@ -244,7 +244,7 @@ export class GroupMemberSkillTool extends AbstractTool {
         provider: use,
         systemPrompt: MAP_SYSTEM_PROMPT,
         temperature: 0.2,
-        timeoutMs: 120000
+        timeoutMs: 180000
       })
       const synthesisLLM = new SubLLM({
         provider: use,

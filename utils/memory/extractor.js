@@ -178,7 +178,7 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
               provider: useToProvider(use),
               systemPrompt: EXTRACTOR_SYSTEM, // yui-chat：提取规则作为系统提示词，独立于用户消息，抗注入且优先级最高
               temperature: 0.2,
-              timeoutMs: 90000,
+              timeoutMs: 180000,
             })
           }
           const result = await llmClient.chat(prompt)

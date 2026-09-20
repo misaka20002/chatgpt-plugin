@@ -122,7 +122,7 @@ Rules:
       const subLLM = new SubLLM({
         provider,
         systemPrompt: HTML_DESIGN_SYSTEM_PROMPT,
-        timeoutMs: 180000
+        timeoutMs: 600000
       })
 
       // 最后一句只说"设计"，不说"卡片"：纯插画/SVG 也是本工具的正式形态（设计 skill 第四节），

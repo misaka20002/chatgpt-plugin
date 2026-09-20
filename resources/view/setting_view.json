@@ -600,18 +600,6 @@
     "view": [
       {
         "type": "number",
-        "label": "默认超时时间",
-        "placeholder": "各个地方的默认超时时间",
-        "data": "defaultTimeoutMs"
-      },
-      {
-        "type": "number",
-        "label": "浏览器超时时间",
-        "placeholder": "浏览器默认超时，浏览器可能需要更高的超时时间",
-        "data": "chromeTimeoutMS"
-      },
-      {
-        "type": "number",
         "label": "Sydney模式接受首条信息超时时间",
         "placeholder": "超过该时间阈值未收到Bing的任何消息，则断开本次连接并重试",
         "data": "sydneyFirstMessageTimeout"

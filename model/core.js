@@ -215,11 +215,8 @@ class Core {
     }
   }) {
     use = normalizeChatMode(use)
-    if (!conversation) {
-      conversation = {
-        timeoutMs: Config.defaultTimeoutMs
-      }
-    }
+    // 兜底 null：调用方总是传对象，超时由下面各分支自行决定
+    conversation = conversation || {}
     if (Config.debug) {
       logger.mark(`using ${use} mode`)
     }

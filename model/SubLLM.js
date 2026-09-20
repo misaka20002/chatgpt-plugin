@@ -106,7 +106,7 @@ export class SubLLM {
    * @param {string}  [options.apiBaseUrl]      API BaseUrl，留空则用全局Config
    * @param {number}  [options.temperature]     温度
    * @param {number}  [options.maxTokens]       最大输出token
-   * @param {number}  [options.timeoutMs]       超时毫秒，默认 120000
+   * @param {number}  [options.timeoutMs]       超时毫秒，默认 600000
    * @param {boolean} [options.debug]           调试模式
    * @param {{mimeType?: string, data: string}} [options.media] 多模态媒体（base64）；各 provider 按自身协议转换：
    *                                            OpenAI 走 image_url、Responses 走 input_image、Claude/Gemini 走 option.media
@@ -127,7 +127,7 @@ export class SubLLM {
     this.apiBaseUrl = options.apiBaseUrl || ''
     this.temperature = options.temperature ?? undefined
     this.maxTokens = options.maxTokens ?? undefined
-    this.timeoutMs = options.timeoutMs || 120000
+    this.timeoutMs = options.timeoutMs || 600000
     this.debug = options.debug ?? Config.debug ?? false
     this.media = options.media || null
   }

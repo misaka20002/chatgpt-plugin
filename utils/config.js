@@ -76,8 +76,6 @@ const defaultConfig = {
   chromePath: '',
   proxy: '',
   debug: true,
-  defaultTimeoutMs: 120000,
-  chromeTimeoutMS: 120000,
   // sydneyFirstMessageTimeout: 40000,
   sunoApiTimeout: 60,
   ttsSpace: '',

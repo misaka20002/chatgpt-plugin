@@ -94,7 +94,7 @@ export class TavilySearchAndExtractTool extends AbstractTool {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(searchPayload),
-                timeout: 10000
+                signal: AbortSignal.timeout(60000)
             })
 
             if (!searchResponse.ok) {
@@ -140,7 +140,7 @@ export class TavilySearchAndExtractTool extends AbstractTool {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(extractPayload),
-                        timeout: 20000 // 网页提取需要更多时间
+                        signal: AbortSignal.timeout(60000)
                     })
 
                     if (!extractResponse.ok) {
