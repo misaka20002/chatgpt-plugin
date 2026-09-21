@@ -219,7 +219,7 @@ export function supportGuoba() {
         {
           field: 'paimon_globalInnerOs',
           label: '面包版 思考模式/全局破限',
-          bottomHelpMessage: '可填写思考模式/全局破限提示词，将通过算法确保在聊天记录中 user 消息末尾拼接思考模式/全局破限提示词。目前可选：1. https://github.com/victorchen96/deepseek_v4_rolepaly_instruct',
+          bottomHelpMessage: '可填写思考模式/全局破限提示词，将通过算法确保在聊天记录中 user 消息末尾拼接思考模式/全局破限提示词。目前可选：1. victorchen96/deepseek_v4_rolepaly_instruct',
           component: 'InputTextArea',
           componentProps: {
             placeholder: '此功能略消耗CPU，如不需要请确保输入框为空',
@@ -833,7 +833,7 @@ export function supportGuoba() {
         {
           field: 'siliconflow_Voice_ApiKey',
           label: 'Api Key',
-          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）；呆毛注：自定义个人音色可能没法给其他人使用',
+          bottomHelpMessage: '参考 docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）；呆毛注：自定义个人音色可能没法给其他人使用',
           component: 'InputPassword'
         },
         {
@@ -1334,7 +1334,7 @@ export function supportGuoba() {
         {
           field: 'baiduAppBuilderKey',
           label: '百度智能云Key',
-          bottomHelpMessage: '用于 百度AI搜索；前往 https://console.bce.baidu.com/iam/#/iam/apikey/list 申请；百度AI搜索 每日免费50次，未开通“按量后付费”不会自动扣费；若拥有多个 Key 使用英文逗号分割',
+          bottomHelpMessage: '用于 百度AI搜索；前往 console.bce.baidu.com/iam/#/iam/apikey/list 申请；百度AI搜索 每日免费50次，未开通“按量后付费”不会自动扣费；若拥有多个 Key 使用英文逗号分割',
           component: 'InputPassword'
         },
         {
@@ -1926,7 +1926,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_IsSendLocalpic',
           label: '戳一戳发送本地图片（重启生效）',
-          bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在"云崽根目录/data/autoEmoticons/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦） https://github.com/AIGC-Yunzai/siliconflow-plugin。',
+          bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在 云崽根目录 /data/autoEmoticons/PaimonChuoYiChouPictures/ 这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦） https://github.com/AIGC-Yunzai/siliconflow-plugin。',
           component: 'Switch'
         },
         {
@@ -2260,7 +2260,7 @@ export function supportGuoba() {
         {
           field: 'anythingllm_enable',
           label: '启用 AnythingLLM 知识库',
-          bottomHelpMessage: '启用后可使用 RAG 知识检索功能，AI 将能够从知识库中检索相关信息回答问题；修改后需重启生效',
+          bottomHelpMessage: '启用后可使用 RAG 知识检索功能，AI 将能够从知识库中检索相关信息回答问题；部署教程 docs\AnythingLLM.md ；修改后需重启生效',
           component: 'Switch'
         },
         {
@@ -2511,7 +2511,7 @@ export function supportGuoba() {
         {
           field: 'emojiBaseURL',
           label: '合成emoji的API地址',
-          bottomHelpMessage: '默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
+          bottomHelpMessage: '默认谷歌厨房 www.gstatic.com/android/keyboard/emojikitchen',
           component: 'Input'
         },
         {
