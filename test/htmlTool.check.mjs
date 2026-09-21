@@ -5,8 +5,10 @@
 // 用法：node test/htmlTool.check.mjs
 //
 // 覆盖：子代理回复 → HTML 源码的提取（围栏/前言/后记/取不到）、
-//       可执行标签的清洗（script / iframe / object / embed）、
-//       会绕开渲染端 CSP 的空元素清洗（meta refresh / link 连接提示）。
+//       渲染前清洗（script / iframe / object / embed 等可执行标签、
+//       meta refresh / link 连接提示 / base 基址 等会绕开渲染端 CSP 的空元素）。
+//       `stripActiveMarkup` 由 utils/renderSanitize.js 提供，generate_html 与 generate_math_markdown
+//       两个模板共用同一份实现，所以这里断言的是两个工具共同的第一道防线。
 // 说明：本脚本桩掉全局对象后直接 import 工具模块（会连带拉起 utils/common.js 的依赖链），
 //       因此结尾必须显式 process.exit —— 否则框架侧的 chokidar 句柄会让进程挂住。
 // 另：该依赖链会 import 主仓库的 lib/config/config.js，它按 **cwd** 读 config/default_config/，
@@ -35,7 +37,8 @@ globalThis.segment = { image: (x) => x }
 globalThis.Bot = {}
 globalThis.Renderer = {}
 
-const { extractHtmlSource, stripActiveMarkup } = await import('../utils/tools/GenerateHtmlTool.js')
+const { extractHtmlSource } = await import('../utils/tools/GenerateHtmlTool.js')
+const { stripActiveMarkup } = await import('../utils/renderSanitize.js')
 
 const results = []
 function eq (name, actual, expected) {
@@ -90,6 +93,18 @@ eq('meta 清洗不受属性换行影响（<meta 后换行再跟属性）',
 eq('移除 <link>（preconnect / dns-prefetch 是 CSP 管不到的连接提示）',
   stripActiveMarkup('<link rel="preconnect" href="http://127.0.0.1:8080"><link rel="dns-prefetch" href="//evil"><div>a</div>'),
   '<div>a</div>')
+// <base href> 会把文档里所有相对 URL 的解析基准换到别处：模型只要写一句
+// <base href="http://attacker/">，模板里那些相对路径就可能被带到外站（CSP 的 base-uri 只是第二道锁）
+eq('移除 <base>（相对 URL 的解析基准不能被内容改写）',
+  stripActiveMarkup('<base href="http://127.0.0.1:8080/"><div>a</div>'), '<div>a</div>')
+eq('base 清洗不受大小写与换行影响',
+  stripActiveMarkup('<BASE\n  HREF="http://evil/">\n<div>a</div>'), '\n<div>a</div>')
+// 多个危险标签混在一段内容里时不能只删掉一个
+eq('多个危险标签同时出现时全部清除',
+  stripActiveMarkup('<meta http-equiv="refresh" content="0;url=http://evil/"><base href="http://evil/"><iframe src="http://evil/"></iframe><link rel="preconnect" href="http://evil/"><p>正文</p>'),
+  '<p>正文</p>')
+eq('普通内容里的 <br/> 等正常行内标签不受影响',
+  stripActiveMarkup('<p>第一行<br/>第二行</p>'), '<p>第一行<br/>第二行</p>')
 
 const failed = results.filter((r) => !r.ok)
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`)

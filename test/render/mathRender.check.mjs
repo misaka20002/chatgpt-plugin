@@ -3,9 +3,13 @@
 // mathRender 模板渲染检查（跨平台：Win11 本地 / Ubuntu 服务器都能跑）
 //
 // 用法：
-//   node test/render/mathRender.check.mjs                 只跑断言（26 项）
+//   node test/render/mathRender.check.mjs                 只跑断言
 //   node test/render/mathRender.check.mjs --shot          额外把整页截图写到系统临时目录（只看观感）
 //   PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium node ...  指定浏览器（Ubuntu 上常用）
+//   PUPPETEER_BROWSER_URL=http://127.0.0.1:9333 node ...  连已启动的浏览器（node 自己拉不起 Chromium 时用）
+//
+// 覆盖：代码块/列表/任务/链接/表格/图片/引用块内距/脚注外形与 KaTeX、Mermaid 是否真的渲染。
+// 「CSP + 渲染前清洗」的安全断言在 test/render/mathRender.security.check.mjs（带探针服务器）。
 //
 // 假绿点验证（证明这些断言真的拦得住回归，改的是生产模板，跑完务必 restore）：
 //   node test/render/mutate-check.mjs apply     → 本脚本应 exit 1 且指定断言转红
@@ -24,7 +28,7 @@ import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import artTemplate from 'art-template'
-import puppeteer from 'puppeteer'
+import { openBrowser, closeBrowser, browserLabel } from './harnessBrowser.mjs'
 
 // 用 fileURLToPath 而不是 import.meta.dirname：后者需要 Node >= 20.11，
 // 服务器上的 Node 版本可能更老，这个写法两边都能跑
@@ -36,19 +40,7 @@ const WIDE_PNG = path.join(HERE, 'fixtures/wide.png')
 const WANT_SHOT = process.argv.includes('--shot')
 const SHOT_DIR = path.join(os.tmpdir(), 'mathRender-check')
 
-// ---------- 浏览器：按平台挑，别写死路径 ----------
-function resolveBrowserPath() {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH
-  if (process.platform === 'win32') {
-    const candidates = [
-      'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-      'C:/Program Files/Google/Chrome/Application/chrome.exe',
-    ]
-    return candidates.find((p) => fs.existsSync(p)) // 都找不到就交给 puppeteer 自带 Chrome
-  }
-  return undefined // Linux/macOS：puppeteer 自带 Chrome，或用 PUPPETEER_EXECUTABLE_PATH
-}
-
+// ---------- 浏览器：共用引导（连已启动实例 / 自己 launch 的规则见 harnessBrowser.mjs） ----------
 // ---------- 字体就绪情况：只打印，不参与断言 ----------
 function cjkFontReport() {
   if (process.platform === 'linux') {
@@ -155,6 +147,23 @@ const mdQuoteSpacing = [
   '> > 嵌套引用',
 ].join('\n')
 
+// 用例 6：Mermaid 与 KaTeX —— 这两条是"新加的 CSP 没把渲染器自己打死"的证据。
+// 图形本身由 mermaid.min.js 画（CSP 的 script-src 只有 file:），公式由 katex 画；
+// 所以断言的是"结构出现了、没退化成源码/报错"，不断言具体像素与折行。
+const mdMermaid = [
+  '## 图表与公式',
+  '',
+  '```mermaid',
+  'graph TD',
+  '  A["开始"] --> B{"判断"}',
+  '  B -->|"是"| C["结束"]',
+  '```',
+  '',
+  '行内公式 $a^2+b^2=c^2$',
+  '',
+  '$$\\int_0^1 x^2 dx = \\frac{1}{3}$$',
+].join('\n')
+
 // ---------- 渲染 ----------
 // 每个用例的未捕获异常都汇总到这里（渲染完一次性断言，避免只查了某一个用例，
 // 也避免把「页面没炸」重复记成多条测试数）
@@ -200,13 +209,12 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
 ;(async () => {
   console.log('=== 环境 ===')
   console.log(`平台      : ${process.platform} ${process.arch} / node ${process.version}`)
-  const browserPath = resolveBrowserPath()
-  console.log(`浏览器    : ${browserPath || 'puppeteer 自带 Chrome'}`)
+  console.log(`浏览器    : ${browserLabel()}`)
   const font = cjkFontReport()
   console.log(`CJK 字体  : ${font.ok ? '有' : '缺'} —— ${font.detail}`)
   console.log('提示      : 字体相关的观感（折行/列宽/图片尺寸）不由本脚本断言，别把本地截图当回归依据\n')
 
-  const browser = await puppeteer.launch({ headless: true, executablePath: browserPath })
+  const browser = await openBrowser()
   try {
     const page = await browser.newPage()
     await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
@@ -248,6 +256,9 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
         tdColor: c.querySelector('tbody td') ? cs(c.querySelector('tbody td')).color : null,
         headings: q('h4,h5,h6').map((h) => cs(h).fontSize),
         strayPipes: q('p').filter((p) => p.textContent.trim().startsWith('|')).length,
+        // KaTeX 是否真的渲染成结构（CSP 的 script-src 是 file:，katex.min.js 一旦加载不到，
+        // 公式会原样留成 $E=mc^2$ 文本，这里就会是 0）
+        katex: q('.katex').length,
       }
     })
     check('代码块首行与后续行左边界一致（无 8px 内距泄漏）', a1.indentDiff === 0, `indentDiff=${a1.indentDiff} padding=${a1.codePadding}`)
@@ -261,6 +272,7 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
     check('表格单元格用正文色（--text-color）', a1.tdColor === COLOR.body, String(a1.tdColor))
     check('无管道符泄漏成段落', a1.strayPipes === 0)
     check('h4/h5/h6 字号递减', a1.headings.length === 3 && parseFloat(a1.headings[0]) > parseFloat(a1.headings[1]) && parseFloat(a1.headings[1]) > parseFloat(a1.headings[2]), a1.headings.join(' / '))
+    check('KaTeX 在模板 CSP 下仍能渲染（公式变成 .katex 结构）', a1.katex > 0, `.katex=${a1.katex}`)
 
     // —— 用例 2：脚注外形 ——
     console.log('=== 用例 2：脚注外形（含内部空白 label）===')
@@ -353,10 +365,52 @@ const COLOR = { body: 'rgb(74, 55, 53)', done: 'rgb(138, 118, 113)', quote: 'rgb
       quotable.length > 0 && quotable.every((q) => Math.abs(q.gapTop - q.gapBottom) <= 0.5),
       JSON.stringify(a5))
 
+    // —— 用例 6：Mermaid / KaTeX 在这份 CSP 下仍然可用 ——
+    // 这是"策略没把渲染器自己打死"的直接证据：CSP 的 script-src 只有 `file:`，katex.min.js /
+    // markdown-it / mermaid.min.js 全靠它加载。策略一旦写错（漏 file:、误加别的限制），
+    // 页面会先在这里炸，而不是等到线上出图变成一片源码/空白。
+    console.log('=== 用例 6：Mermaid 与 KaTeX ===')
+    await renderFixture(page, 'mermaid', mdMermaid)
+    let mermaidRendered = true
+    try {
+      await page.waitForSelector('.mermaid svg', { timeout: 15000 })
+    } catch {
+      mermaidRendered = false
+    }
+    const a6 = await page.evaluate(() => {
+      const c = document.getElementById('content')
+      const svg = c.querySelector('.mermaid svg')
+      const mr = c.querySelector('.mermaid')
+      return {
+        svg: !!svg,
+        svgWidth: svg ? Math.round(svg.getBoundingClientRect().width) : -1,
+        svgHeight: svg ? Math.round(svg.getBoundingClientRect().height) : -1,
+        mermaidText: mr ? mr.textContent.replace(/\s+/g, ' ').slice(0, 60) : null,
+        katex: c.querySelectorAll('.katex').length,
+        katexError: c.querySelectorAll('.katex-error').length,
+        // CSP 的 style-src / font-src 同样写成 file:。样式表或字体被挡住时**不会抛错**，
+        // 只会静默退化成"没样式的公式"——截图上看不出来，所以必须直接量这两件事
+        katexFontFamily: c.querySelector('.katex') ? getComputedStyle(c.querySelector('.katex')).fontFamily : null,
+        katexFontsLoaded: [...document.fonts].filter((f) => f.family.includes('KaTeX') && f.status === 'loaded').length,
+        sheets: [...document.styleSheets].map((s) => String(s.href || '').split('/').pop()).filter(Boolean),
+      }
+    })
+    check('Mermaid 图在 CSP 下真的渲染成 SVG', mermaidRendered && a6.svg && a6.svgWidth > 0 && a6.svgHeight > 0,
+      `svg=${a6.svg} ${a6.svgWidth}x${a6.svgHeight} text=${JSON.stringify(a6.mermaidText)}`)
+    check('Mermaid 没有把 fence 留成纯文本/报错（不退化成源码）',
+      a6.mermaidText !== null && !/graph TD/.test(a6.mermaidText) && !/Syntax error/i.test(a6.mermaidText),
+      JSON.stringify(a6.mermaidText))
+    check('行内与块级公式都渲染成功（无 .katex-error）', a6.katex >= 2 && a6.katexError === 0,
+      `.katex=${a6.katex} .katex-error=${a6.katexError}`)
+    check('KaTeX 样式表在 CSP 下仍然生效（style-src file:）', /KaTeX/i.test(a6.katexFontFamily || ''),
+      `fontFamily=${a6.katexFontFamily} sheets=${JSON.stringify(a6.sheets)}`)
+    check('KaTeX 字体在 CSP 下真的加载了（font-src file:）', a6.katexFontsLoaded > 0,
+      `已加载 KaTeX 字体=${a6.katexFontsLoaded}`)
+
     // 页面健康放在所有用例跑完后统一断言——之前只在用例 1 查，后面几个用例即使抛未捕获异常也会全绿
     check('所有用例页面均无未捕获 JS 异常', pageErrorLog.length === 0, pageErrorLog.join('; '))
   } finally {
-    await browser.close()
+    await closeBrowser(browser)
   }
 
   const failed = results.filter((r) => !r.ok)

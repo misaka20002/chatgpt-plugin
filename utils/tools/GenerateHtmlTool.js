@@ -3,38 +3,8 @@ import { render } from '../common.js'
 import { SubLLM } from '../../model/SubLLM.js'
 import { resolveCurrentChatProvider } from '../paimonFuction.js'
 import { HTML_DESIGN_SYSTEM_PROMPT } from '../htmlDesignSkill.js'
-
-/** 可执行 / 可嵌入外部文档的标签，属纵深防御：渲染端 iframe 已用 sandbox 关掉脚本 */
-const ACTIVE_TAGS = ['script', 'iframe', 'object', 'embed']
-
-/**
- * 空元素（没有闭合标签，只删标签本身）。它们不执行脚本，但能绕开渲染端的 CSP：
- * - `<meta http-equiv="refresh">` 让承载内容的 iframe 导航到任意地址。sandbox 的 navigation flag
- *   只禁止它导航**别的**浏览上下文，不禁止它导航自己；而 CSP 里没有能在 meta 中生效的
- *   "禁止导航"指令（`default-src` 不兜底导航），所以这条只能靠删标签。
- * - `<link rel="preconnect|dns-prefetch">` 是连接提示，同样不受 CSP 各 fetch 指令约束。
- * 内层文档的 charset 与 CSP meta 都由渲染端模板自己生成，模型输出不需要任何 meta，整类删除无副作用。
- */
-const REQUEST_TAGS = ['meta', 'link']
-
-/**
- * 去掉 <script> 等可执行/可嵌入标签，以及会绕开渲染端 CSP 的 <meta>/<link>，
- * 避免生成内容在截图用的 Chromium 里执行脚本、内嵌别的文档或主动发起请求。
- * @param {string} html
- * @returns {string}
- */
-export function stripActiveMarkup (html) {
-  let cleaned = html
-  for (const tag of ACTIVE_TAGS) {
-    cleaned = cleaned
-      .replace(new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}\\s*>`, 'gi'), '')
-      .replace(new RegExp(`<\\/?${tag}\\b[^>]*>`, 'gi'), '')
-  }
-  for (const tag of REQUEST_TAGS) {
-    cleaned = cleaned.replace(new RegExp(`<${tag}\\b[^>]*>`, 'gi'), '')
-  }
-  return cleaned
-}
+// 清洗逻辑与 mathRender 模板共用同一份实现（理由见 utils/renderSanitize.js）
+import { stripActiveMarkup } from '../renderSanitize.js'
 
 /**
  * 从子代理回复里取出 HTML 源码：容忍代码围栏与前后解说文字。
