@@ -60,7 +60,7 @@ export class SerpImageTool_by_bing extends AbstractTool {
             const url = `https://cn.bing.com/images/vsasync?q=${encodeURIComponent(q)}&first=0&count=${limit}&mmasync=1`
             const headers = await this.buildBingHeaders()
 
-            let response = await fetch(url, { headers, timeout: 8000 })
+            let response = await fetch(url, { headers, signal: AbortSignal.timeout(60000) })
             const text = await response.text()
 
             // 解析 JSON 或 HTML 节点

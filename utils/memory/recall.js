@@ -160,7 +160,7 @@ export async function buildMemoryPrompt(e, query, options = {}) {
   const groupId = e.group_id ? String(e.group_id) : ''
   if (!userId) return ''
 
-  // @ 他人时切换到目标成员作用域（yui-chat 的目标作用域），否则召回本人。
+  // @ 他人时切换到目标成员作用域，否则召回本人。
   // 非主人 @他人：只召回对方本群事实（user_group + 群公共），不泄露跨群 user 记忆，
   // 与 userProfile"普通成员只能分析自己"的权限模型一致
   const mentioned = getMentionedUserId(e)

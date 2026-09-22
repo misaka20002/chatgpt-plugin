@@ -13,7 +13,7 @@ export class BaseClient {
    */
   constructor (props = {}) {
     this.supportFunction = false
-    this.maxToken = 4096
+    this.maxToken = 65536
     /**
      * @type {Array<AbstractTool>}
      */

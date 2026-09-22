@@ -80,7 +80,7 @@ export class BaiduAISearchTool extends AbstractTool {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload),
-                timeout: 60000 // 设置 60 秒超时
+                signal: AbortSignal.timeout(60000)
             })
 
             if (!response.ok) {

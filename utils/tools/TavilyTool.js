@@ -115,7 +115,7 @@ export class TavilyTool extends AbstractTool {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload),
-                timeout: 10000
+                signal: AbortSignal.timeout(60000)
             })
 
             if (!response.ok) {

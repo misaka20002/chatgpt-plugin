@@ -219,7 +219,7 @@ export function supportGuoba() {
         {
           field: 'paimon_globalInnerOs',
           label: '面包版 思考模式/全局破限',
-          bottomHelpMessage: '可填写思考模式/全局破限提示词，将通过算法确保在聊天记录中 user 消息末尾拼接思考模式/全局破限提示词。目前可选：1. https://github.com/victorchen96/deepseek_v4_rolepaly_instruct',
+          bottomHelpMessage: '可填写思考模式/全局破限提示词，将通过算法确保在聊天记录中 user 消息末尾拼接思考模式/全局破限提示词。目前可选：1. victorchen96/deepseek_v4_rolepaly_instruct',
           component: 'InputTextArea',
           componentProps: {
             placeholder: '此功能略消耗CPU，如不需要请确保输入框为空',
@@ -382,13 +382,13 @@ export function supportGuoba() {
         },
         {
           field: 'apiKey',
-          label: 'OpenAI API Key',
+          label: 'Chat API Key',
           bottomHelpMessage: 'OpenAI的ApiKey，用于访问OpenAI的API接口；可用指令： #chatgpt切换API #chatgpt[开启|关闭]API流',
           component: 'InputPassword'
         },
         {
           field: 'openAiBaseUrl',
-          label: 'OpenAI API/反代地址',
+          label: 'Chat API/反代地址',
           bottomHelpMessage: 'OpenAI兼容API服务器地址，通常以 /v1 结尾；默认值为 https://api.openai.com/v1',
           component: 'Input',
           componentProps: {
@@ -397,7 +397,7 @@ export function supportGuoba() {
         },
         {
           field: 'model',
-          label: 'OpenAI 模型',
+          label: 'Chat API 模型',
           bottomHelpMessage: '填写OpenAI模型或OpenAI API兼容的其他模型',
           component: 'Input'
         },
@@ -595,6 +595,12 @@ export function supportGuoba() {
             maxTagCount: 1,
             options: Config.get_geminiModels().map(s => { return { label: s, value: s } })
           }
+        },
+        {
+          field: 'geminiMaxOutputTokens',
+          label: '回复内容最大Token数',
+          bottomHelpMessage: '模型单次回复的Token上限，默认65536。注意 Gemini 的思考(thinking) token 也算在这个额度里，调得太小会让长输出被截断',
+          component: 'InputNumber'
         },
         {
           field: 'geminiThinkingLevel',
@@ -827,7 +833,7 @@ export function supportGuoba() {
         {
           field: 'siliconflow_Voice_ApiKey',
           label: 'Api Key',
-          bottomHelpMessage: '参考 https://docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）；呆毛注：自定义个人音色可能没法给其他人使用',
+          bottomHelpMessage: '参考 docs.siliconflow.cn/cn/userguide/capabilities/text-to-speech 获取key和自定义个人音色（需要实名认证）；呆毛注：自定义个人音色可能没法给其他人使用',
           component: 'InputPassword'
         },
         {
@@ -1328,7 +1334,7 @@ export function supportGuoba() {
         {
           field: 'baiduAppBuilderKey',
           label: '百度智能云Key',
-          bottomHelpMessage: '用于 百度AI搜索；前往 https://console.bce.baidu.com/iam/#/iam/apikey/list 申请；百度AI搜索 每日免费50次，未开通“按量后付费”不会自动扣费；若拥有多个 Key 使用英文逗号分割',
+          bottomHelpMessage: '用于 百度AI搜索；前往 console.bce.baidu.com/iam/#/iam/apikey/list 申请；百度AI搜索 每日免费50次，未开通“按量后付费”不会自动扣费；若拥有多个 Key 使用英文逗号分割',
           component: 'InputPassword'
         },
         {
@@ -1465,6 +1471,12 @@ export function supportGuoba() {
           field: 'generateMathRender_ToolSwitch',
           label: '工具新增-Markdown图',
           bottomHelpMessage: '新增 生成支持 Markdown 语法图片、数学公式（纯文本渲染）图片以及流程图（Mermaid 结构图 / 函数图） 工具',
+          component: 'Switch'
+        },
+        {
+          field: 'generateHtml_ToolSwitch',
+          label: '工具新增-HTML图',
+          bottomHelpMessage: '新增 HTML 视觉图工具：由子模型按内置设计规范编写单文件 HTML，可生成信息卡、示意图、流程图、UI 稿、inline SVG 等',
           component: 'Switch'
         },
         {
@@ -1738,47 +1750,37 @@ export function supportGuoba() {
             step: 1
           }
         },
-        {
-          field: 'memoryGroupCapture.eventRetentionDays',
-          label: '事件保留天数',
-          bottomHelpMessage: '未指定期限的临时事件（episode）默认保留天数，默认 90 天',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            step: 1
-          }
-        },
-        {
-          field: 'memoryGroupCapture.inputTokenLimit',
-          label: '提取输入Token上限',
-          bottomHelpMessage: '每日提炼单次模型输入 Token 上限，默认 30000',
-          component: 'InputNumber',
-          componentProps: {
-            min: 256,
-            step: 1000
-          }
-        },
-        {
-          field: 'memoryGroupCapture.outputTokenLimit',
-          label: '提取输出Token上限',
-          bottomHelpMessage: '每日提炼模型输出 Token 上限，默认 4096',
-          component: 'InputNumber',
-          componentProps: {
-            min: 256,
-            step: 256
-          }
-        },
-        {
-          field: 'memoryGroupCapture.minConfidence',
-          label: '最低置信度',
-          bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.05,
-            step: 0.05,
-            max: 1
-          }
-        },
+        // {
+        //   field: 'memoryGroupCapture.eventRetentionDays',
+        //   label: '事件保留天数',
+        //   bottomHelpMessage: '未指定期限的临时事件（episode）默认保留天数，默认 90 天',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 1,
+        //     step: 1
+        //   }
+        // },
+        // {
+        //   field: 'memoryGroupCapture.inputTokenLimit',
+        //   label: '提取输入Token上限',
+        //   bottomHelpMessage: '每日提炼单次模型输入 Token 上限，默认 30000',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 256,
+        //     step: 1000
+        //   }
+        // },
+        // {
+        //   field: 'memoryGroupCapture.minConfidence',
+        //   label: '最低置信度',
+        //   bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
+        //   component: 'InputNumber',
+        //   componentProps: {
+        //     min: 0.05,
+        //     step: 0.05,
+        //     max: 1
+        //   }
+        // },
         {
           label: 'MCP',
           component: 'Divider'
@@ -1930,7 +1932,7 @@ export function supportGuoba() {
         {
           field: 'paimon_chou_IsSendLocalpic',
           label: '戳一戳发送本地图片（重启生效）',
-          bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在"云崽根目录/data/autoEmoticons/PaimonChuoYiChouPictures/"这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦） https://github.com/AIGC-Yunzai/siliconflow-plugin。',
+          bottomHelpMessage: '随机本地图片地址：如果需要安装 SF插件 并把需要发送随机图片则把图片放在 云崽根目录 /data/autoEmoticons/PaimonChuoYiChouPictures/ 这个文件夹中，支持子文件夹和中文文件夹；当没有本地图片时则返回随机文本。为减轻Cpu负担，该目录文件每30分钟的触发戳一戳才索引一次，不触发不索引（其实也没有多少负担啦） https://github.com/AIGC-Yunzai/siliconflow-plugin。',
           component: 'Switch'
         },
         {
@@ -2396,7 +2398,7 @@ export function supportGuoba() {
         {
           field: 'anythingllm_enable',
           label: '启用 AnythingLLM 知识库',
-          bottomHelpMessage: '启用后可使用 RAG 知识检索功能，AI 将能够从知识库中检索相关信息回答问题；修改后需重启生效',
+          bottomHelpMessage: '启用后可使用 RAG 知识检索功能，AI 将能够从知识库中检索相关信息回答问题；部署教程 docs\AnythingLLM.md ；修改后需重启生效',
           component: 'Switch'
         },
         {
@@ -2630,30 +2632,6 @@ export function supportGuoba() {
             max: 100
           }
         },
-        {
-          label: '以下为服务超时配置',
-          component: 'Divider'
-        },
-        {
-          field: 'defaultTimeoutMs',
-          label: '默认超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '各个地方的默认超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
-        {
-          field: 'chromeTimeoutMS',
-          label: '浏览器超时时间',
-          helpMessage: '单位：毫秒',
-          bottomHelpMessage: '浏览器默认超时，浏览器可能需要更高的超时时间',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0
-          }
-        },
         // {
         //   field: 'sydneyFirstMessageTimeout',
         //   label: 'Sydney模式接受首条信息超时时间',
@@ -2671,7 +2649,7 @@ export function supportGuoba() {
         {
           field: 'emojiBaseURL',
           label: '合成emoji的API地址',
-          bottomHelpMessage: '默认谷歌厨房 https://www.gstatic.com/android/keyboard/emojikitchen',
+          bottomHelpMessage: '默认谷歌厨房 www.gstatic.com/android/keyboard/emojikitchen',
           component: 'Input'
         },
         {
