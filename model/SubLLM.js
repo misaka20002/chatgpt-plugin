@@ -106,7 +106,7 @@ export class SubLLM {
    * @param {string}  [options.apiBaseUrl]      API BaseUrl，留空则用全局Config
    * @param {number}  [options.temperature]     温度
    * @param {number}  [options.maxTokens]       最大输出token
-   * @param {number}  [options.timeoutMs]       超时毫秒，默认 120000
+   * @param {number}  [options.timeoutMs]       超时毫秒，默认 600000
    * @param {boolean} [options.debug]           调试模式
    * @param {{mimeType?: string, data: string}} [options.media] 多模态媒体（base64）；各 provider 按自身协议转换：
    *                                            OpenAI 走 image_url、Responses 走 input_image、Claude/Gemini 走 option.media
@@ -127,7 +127,7 @@ export class SubLLM {
     this.apiBaseUrl = options.apiBaseUrl || ''
     this.temperature = options.temperature ?? undefined
     this.maxTokens = options.maxTokens ?? undefined
-    this.timeoutMs = options.timeoutMs || 120000
+    this.timeoutMs = options.timeoutMs || 600000
     this.debug = options.debug ?? Config.debug ?? false
     this.media = options.media || null
   }
@@ -252,6 +252,10 @@ export class SubLLM {
     if (conversation.parentMessageId) option.parentMessageId = conversation.parentMessageId
     if (conversation.conversationId) option.conversationId = conversation.conversationId
     if (this.temperature !== undefined) option.temperature = this.temperature
+    // 与 api / responses / claude 三个分支对齐：不传就等于静默丢弃调用方给的上限
+    // （CustomGoogleGeminiClient 只在收到 maxOutputTokens 时才用它，否则回落到它自己的默认值），
+    // HTML 卡片这类长结构化输出会因此被截断成半张图。
+    if (this.maxTokens) option.maxOutputTokens = this.maxTokens
     // 记录点: opt.media —— Gemini 客户端按 { mimeType, data } 组装 inlineData
     if (media?.data) option.media = { mimeType: media.mimeType || 'image/jpeg', data: media.data }
 
@@ -281,7 +285,7 @@ export class SubLLM {
     const option = {
       stream: false,
       system: systemPrompt || undefined,
-      max_tokens: this.maxTokens || Config.claudeApiMaxToken || 1024,
+      max_tokens: this.maxTokens || Config.claudeApiMaxToken || 65536,
     }
     if (conversation.parentMessageId) option.parentMessageId = conversation.parentMessageId
     if (conversation.conversationId) option.conversationId = conversation.conversationId

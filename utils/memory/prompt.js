@@ -129,7 +129,7 @@ export const EXTRACTION_JSON_FORMAT = `只返回严格 JSON，不要 Markdown：
 
 /**
  * 组装提取请求的完整 user prompt
- * 规则在前、原文在后（yui-chat 顺序）：降低规则被群聊原文覆盖/注入的风险
+ * 规则在前、原文在后：降低规则被群聊原文覆盖/注入的风险
  * @param {Object} options
  * @param {string} options.groupId 群号
  * @param {string} options.windowLabel 时间窗描述，如 "2026-08-31 全天"

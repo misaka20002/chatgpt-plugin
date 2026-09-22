@@ -1157,7 +1157,7 @@ export async function post_to_api_fish_audio_for_token(accountId, password) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            timeout: 60000
+            signal: AbortSignal.timeout(60000)
         })
             .then(response => response?.json())
             .then(data => {

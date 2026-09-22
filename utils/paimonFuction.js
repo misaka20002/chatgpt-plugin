@@ -210,7 +210,7 @@ export async function recognitionResultsByCurrentModel(e, img = [], video = [], 
     : (e?.msg || '').replace(reg_chatgpt_for_firstperson_call, '').trim()
   const msg = promptText || 'describe this content in Simplified Chinese'
 
-  const subLLM = new SubLLM({ provider, systemPrompt, timeoutMs: 120000 })
+  const subLLM = new SubLLM({ provider, systemPrompt, timeoutMs: 180000 })
   const res = await subLLM.chat(msg, {
     media: {
       mimeType,

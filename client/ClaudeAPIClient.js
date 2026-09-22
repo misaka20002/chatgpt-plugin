@@ -137,7 +137,7 @@ export class ClaudeAPIClient extends BaseClient {
     }
     body = Object.assign(body, {
       model: opt.model || this.model || 'claude-3-opus-20240229',
-      max_tokens: opt.max_tokens || 4096,
+      max_tokens: opt.max_tokens || 65536,
       messages,
       stream: false
     })

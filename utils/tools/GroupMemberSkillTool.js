@@ -238,17 +238,17 @@ export class GroupMemberSkillTool extends AbstractTool {
 
       const chunks = chunkEvidenceRecords(evidenceRecords)
       const use = await resolveCurrentUse(e)
+      // 不设 maxTokens：跟随 provider 的「回复内容最大Token数」。这两个阶段的产物都是 JSON，
+      // 真被截断会被 callJsonWithRetry 的 JSON 校验抓住并重试，不需要自己再设一层上限。
       const mapLLM = new SubLLM({
         provider: use,
         systemPrompt: MAP_SYSTEM_PROMPT,
-        maxTokens: 3072,
         temperature: 0.2,
-        timeoutMs: 120000
+        timeoutMs: 180000
       })
       const synthesisLLM = new SubLLM({
         provider: use,
         systemPrompt: SYNTHESIS_SYSTEM_PROMPT,
-        maxTokens: 6144,
         temperature: 0.2,
         timeoutMs: 180000
       })

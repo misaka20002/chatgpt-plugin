@@ -1,5 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { render } from '../common.js'
+import { stripActiveMarkup } from '../renderSanitize.js'
 
 /**
  * 生成 包含数学公式与作图的 Markdown 渲染图像 LLM 工具
@@ -15,7 +16,7 @@ export class GenerateMathRenderTool extends AbstractTool {
             },
             markdown: {
                 type: 'string',
-                description: 'The Markdown text. MUST use `$...$` for inline math, `$$...$$` for block math formulas.\n\n🚨 CRITICAL MERMAID RULES (v10+):\n1. Flowcharts: Node text with spaces, punctuation, or special characters MUST be double-quoted inside shapes, e.g., A["Hello"] (NOT A[Hello]). Edge text MUST be double-quoted, e.g., A -- "Wait!" --> B.\n2. State Diagrams: State descriptions and transitions after a colon (:) MUST NOT use double quotes, e.g., State1 --> State2 : Trigger (NOT State1 --> State2 : "Trigger").\n3. Sequence Diagrams: Message labels after a colon (:) MUST NOT use double quotes.\n4. NEVER use literal \\n or real newlines inside labels. You MUST use <br/> for line breaks.\n5. Node IDs must be alphanumeric without spaces (e.g., Step1, not Step 1).'
+                description: 'The Markdown text. MUST use `$...$` for inline math, `$$...$$` for block math formulas.\n\nOnly simple inline HTML tags (e.g. `<br/>`) are supported: tags that execute scripts, embed other documents or fetch external resources (`<script>`, `<iframe>`, `<meta>`, `<link>`, `<base>`) are removed before rendering, and remote images (`<img src="http://…">` / `![x](http://…)`) are only allowed for the bot owner.\n\n🚨 CRITICAL MERMAID RULES (v10+):\n1. Flowcharts: Node text with spaces, punctuation, or special characters MUST be double-quoted inside shapes, e.g., A["Hello"] (NOT A[Hello]). Edge text MUST be double-quoted, e.g., A -- "Wait!" --> B.\n2. State Diagrams: State descriptions and transitions after a colon (:) MUST NOT use double quotes, e.g., State1 --> State2 : Trigger (NOT State1 --> State2 : "Trigger").\n3. Sequence Diagrams: Message labels after a colon (:) MUST NOT use double quotes.\n4. NEVER use literal \\n or real newlines inside labels. You MUST use <br/> for line breaks.\n5. Node IDs must be alphanumeric without spaces (e.g., Step1, not Step 1).'
             }
         },
         required: ['title', 'markdown']
@@ -79,9 +80,18 @@ export class GenerateMathRenderTool extends AbstractTool {
                 return "```mermaid\n" + code + "\n```";
             });
 
+            // 交给出图之前先清洗：markdown-it 开着 html: true，模型给的正文里
+            // <meta http-equiv="refresh"> 能让渲染页自己导航（渲染器用 networkidle0 等它加载完再截图），
+            // <link rel="preconnect"> 能绕开渲染端 CSP 发连接。这类只会删标签，详见 renderSanitize.js。
+            // 其余的联网面（<img src="http://…">、CSS url(http://…)）由模板 CSP 兜底：
+            // 默认只允许 data:，只有 Bot 主人出图时才追加 http:/https:。
+            markdown = stripActiveMarkup(markdown)
+
             let img = await render(e, 'chatgpt-plugin', 'mathRender/index', {
                 markdown: markdown,
                 title: title || '数学演算与图表',
+                // 授权判定只认服务端事件上下文（e），不能来自模型参数；非主人一律用严格 CSP
+                allowRemoteImages: e?.isMaster === true,
                 Viewport: {
                     width: 2560,
                     height: 1600,

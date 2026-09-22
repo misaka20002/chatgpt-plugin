@@ -9,5 +9,3 @@ prompts/*
 node_modules/
 .vs/
 ckproject/
-/.workbuddy/
-/test/
