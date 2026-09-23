@@ -354,6 +354,7 @@ const defaultConfig = {
   maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）的 V2 记忆上限
   memoryMinImportance: 0.4, // 注入对话的最低重要性阈值（0-1）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数
+  allowMemberDeleteOwnMemory: true, // 允许成员删除自己的记忆（默认开启）
   memoryGroupCapture: {
     groups: [], // 授权采集的群列表 [{groupId, switchOn}]，锅巴 GSubForm 管理或 #群记忆开启
     cronTime: '0 0 4 * * ? *', // 每日提炼 EasyCron，修改后重启生效
@@ -361,7 +362,7 @@ const defaultConfig = {
     eventRetentionDays: 90, // 未指定期限的临时事件默认保留天数
     inputTokenLimit: 30000, // 提取模型输入 Token 上限
     // 输出上限不再单独配置：提炼用的子模型直接跟随 provider 的「回复内容最大Token数」
-    minConfidence: 0.7, // 提取最低置信度
+    // 最低置信度也不再是配置项：固定为 extractor.js 的 MEMORY_MIN_CONFIDENCE（0.7）
   },
 
   // MCP 协议配置

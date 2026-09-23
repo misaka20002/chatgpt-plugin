@@ -136,6 +136,7 @@ function resetConfig() {
     maxMemoriesPerUser: 100,
     memoryMinImportance: 0.4,
     memoryContextLimit: 8,
+    allowMemberDeleteOwnMemory: true,
     memoryGroupCapture: {
       groups: [{ groupId: '100', switchOn: true }],
       cronTime: '0 0 4 * * ? *',
@@ -143,7 +144,6 @@ function resetConfig() {
       eventRetentionDays: 90,
       inputTokenLimit: 30000,
       outputTokenLimit: 4096,
-      minConfidence: 0.7,
     },
   })
 }
@@ -213,7 +213,7 @@ test('原子提取：失业/求职/喜欢角色/玩游戏原因分别保存，�
     rows: rows.map(r => ({ messageId: r.messageId, senderId: r.senderId, senderName: r.senderName, role: r.role, text: r.text })),
     ctx: { groupId, day: '2026-08-30', windowLabel: '2026-08-30 全天' },
     evidenceMap,
-    cfg: { inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7 },
+    cfg: { inputTokenLimit: 30000 },
     llm: fakeLLM,
   })
   assert.equal(candidates.length, 4, '应接受 4 条独立原子事实')
@@ -261,7 +261,7 @@ test('拒绝：他人转述、猜测、低置信度、无证据不入库（内�
   const lowConf = await runExtraction({
     rows: [{ messageId: 'm1', senderId: '10001', senderName: 'A', role: '', text: '嗯嗯' }],
     ctx: { groupId, day: '2026-08-30', windowLabel: 'x' },
-    evidenceMap, cfg: { minConfidence: 0.7 }, llm: fakeLLM,
+    evidenceMap, llm: fakeLLM,
   })
   assert.equal(lowConf.candidates.length, 0, '低于置信度阈值必须拒绝')
 
@@ -386,7 +386,7 @@ test('任务：幂等入队、失败重试退避、漏跑补提炼', async () =>
   await clearStore()
   const store = new MemoryStore(mockRedis)
   const gid = '100'
-  const baseCfg = { inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7, maxAttempts: 3, rawRetentionDays: 30, eventRetentionDays: 90, use: null }
+  const baseCfg = { inputTokenLimit: 30000, outputTokenLimit: 4096, maxAttempts: 3, rawRetentionDays: 30, eventRetentionDays: 90, use: null }
   const dc = new DailyConsolidation({ store })
 
   // 预置三天原文（北京时间自然日：大前天、前天、昨天）
@@ -460,7 +460,7 @@ test('needs_reextract：补录新消息到已完成日会重新提炼，普通�
   const store = new MemoryStore(mockRedis)
   const gid = '100'
   const cfgOk = {
-    inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7, maxAttempts: 3,
+    inputTokenLimit: 30000, outputTokenLimit: 4096, maxAttempts: 3,
     rawRetentionDays: 30, eventRetentionDays: 90, use: null,
     llm: async () => ({ text: '{"candidates":[]}' }),
   }
@@ -630,7 +630,7 @@ test('游标不跳天：连续 runDaily 覆盖连续自然日（P1-1 回归）',
   const store = new MemoryStore(mockRedis)
   const gid = '100'
   const cfgOk = {
-    inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7, maxAttempts: 3,
+    inputTokenLimit: 30000, outputTokenLimit: 4096, maxAttempts: 3,
     rawRetentionDays: 30, eventRetentionDays: 90, use: null,
     llm: async () => ({ text: '{"candidates":[]}' }),
   }
@@ -895,7 +895,7 @@ test('running 窗口期间到达的新消息最终被重提炼（P1-3 竞态回�
   // 预置消息并完成第一次提炼
   await store.saveRawMessage({ groupId: gid, messageId: 'm1', senderId: '10001', senderName: 'A', role: '', text: '我叫玉玉', time: ts, isCommand: false, contentHash: 'h1' }, 30)
   const cfgOk = {
-    inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7, maxAttempts: 3,
+    inputTokenLimit: 30000, outputTokenLimit: 4096, maxAttempts: 3,
     rawRetentionDays: 30, eventRetentionDays: 90, use: null,
     llm: async () => ({ text: '{"candidates":[]}' }),
   }
@@ -954,19 +954,240 @@ test('group 作用域写入不误删同号用户旧 Hash（P1-5 回归）', asyn
   assert.equal(await mockRedis.exists('CHATGPT:MEMORY:USER:10001'), 0, '个人写入应删除本人旧 Hash')
 })
 
-test('MemoryTool 应用 minConfidence 拒绝低置信度候选（P2-2 回归）', async () => {
+test('固定阈值 0.7 边界：MemoryTool 拒绝 0.69、接受 0.70（P2-2 回归）', async () => {
   await clearStore()
   const { MemoryTool } = await import('../utils/tools/MemoryTool.js')
   const tool = new MemoryTool()
   const e = { message_id: 'mt1', user_id: '10001', group_id: '100', time: 1780000000, isGroup: true, isMaster: false, sender: { role: 'member' } }
-  const ret = await tool.func({
+  const add = (confidence) => ({
     candidates: [{
       scope: 'user', factKey: 'identity.age', factValue: '25', text: '用户25岁',
-      kind: 'identity', confidence: 0.1, importance: 0.6,
+      kind: 'identity', confidence, importance: 0.6,
     }],
-  }, e)
-  assert.match(ret, /置信度/, `低置信度应被拒绝: ${ret}`)
-  assert.match(ret, /0\.7/, '拒绝信息应包含阈值')
+  })
+
+  const below = await tool.func(add(0.69), e)
+  assert.match(below, /置信度/, `0.69 应被拒绝: ${below}`)
+  assert.match(below, /0\.7/, '拒绝信息应包含阈值')
+
+  const atBoundary = await tool.func(add(0.7), e)
+  assert.match(atBoundary, /成功 1 条/, `0.70 是闭区间下界，应被接受: ${atBoundary}`)
+})
+
+test('成员自助删除关闭：非主人 retract 被拒且既有记忆不受影响（不能靠对话删自己）', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const groupId = '100'
+  // 先用 Memory_Tool 来源写一条个人事实（该来源可被模型 retract 撤回，manual 才会免疫）
+  await writeFact(store, groupId, {
+    scope: 'user', subjectId: '10001', factKey: 'preference.coffee', factValue: 'like',
+    text: '用户喜欢喝咖啡', kind: 'preference', confidence: 0.9, importance: 0.6, source: 'Memory_Tool',
+  }, [{ messageId: 'c1', senderId: '10001' }])
+
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = false
+    const tool = new MemoryTool()
+    const e = { message_id: 'mt2', user_id: '10001', group_id: groupId, time: 1780000000, isGroup: true, isMaster: false, sender: { role: 'member' } }
+    const ret = await tool.func({ candidates: [{ operation: 'retract', scope: 'user', factKey: 'preference.coffee', factValue: 'like' }] }, e)
+    assert.match(ret, /成员自助删除记忆已关闭/, `非主人 retract 必须被明确拒绝: ${ret}`)
+
+    // 关键断言走生产读取路径：被拒的 retract 不能留下"已归档"的副作用
+    const left = await store.listRecallCandidates('10001', groupId)
+    assert.equal(left.filter(m => m.factKey === 'preference.coffee').length, 1, '被拒的 retract 不得抹掉记忆')
+
+    // 主人不受开关影响
+    const retMaster = await tool.func({ candidates: [{ operation: 'retract', scope: 'user', factKey: 'preference.coffee', factValue: 'like' }] }, { ...e, isMaster: true })
+    assert.match(retMaster, /成功 1 条/, `主人 retract 应放行: ${retMaster}`)
+    const afterMaster = await store.listRecallCandidates('10001', groupId)
+    assert.equal(afterMaster.filter(m => m.factKey === 'preference.coffee').length, 0, '主人撤回应生效')
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
+})
+
+test('成员自助删除开启（默认）：非主人 retract 照常生效', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const groupId = '100'
+  await writeFact(store, groupId, {
+    scope: 'user', subjectId: '10001', factKey: 'preference.coffee', factValue: 'like',
+    text: '用户喜欢喝咖啡', kind: 'preference', confidence: 0.9, importance: 0.6, source: 'Memory_Tool',
+  }, [{ messageId: 'c1', senderId: '10001' }])
+
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = true
+    const tool = new MemoryTool()
+    const e = { message_id: 'mt3', user_id: '10001', group_id: groupId, time: 1780000000, isGroup: true, isMaster: false, sender: { role: 'member' } }
+    const ret = await tool.func({ candidates: [{ operation: 'retract', scope: 'user', factKey: 'preference.coffee', factValue: 'like' }] }, e)
+    assert.match(ret, /成功 1 条/, `开启时非主人 retract 应放行: ${ret}`)
+    const left = await store.listRecallCandidates('10001', groupId)
+    assert.equal(left.filter(m => m.factKey === 'preference.coffee').length, 0, '撤回后不应再被召回')
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
+})
+
+test('成员自助删除关闭：group 作用域的撤回不受限制（群管理员仍可撤销公共事实）', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const groupId = '100'
+  await writeFact(store, groupId, {
+    scope: 'group', factKey: 'group.rule.no_fight', factValue: 'no_fight',
+    text: '群规则：本群不许吵架', kind: 'group_rule', confidence: 0.9, importance: 0.7,
+  }, [{ messageId: 'g1', senderId: '20002', role: 'admin' }])
+
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = false
+    const tool = new MemoryTool()
+    const eAdmin = { message_id: 'mt4', user_id: '20002', group_id: groupId, time: 1780000000, isGroup: true, isMaster: false, sender: { role: 'admin' } }
+    const ret = await tool.func({ candidates: [{ operation: 'retract', scope: 'group', factKey: 'group.rule.no_fight' }] }, eAdmin)
+    assert.match(ret, /成功 1 条/, `群级撤回不属于"删自己的记忆"，不应被该开关拦下: ${ret}`)
+    const left = await store.listRecallCandidates('10001', groupId)
+    assert.equal(left.filter(m => m.factKey === 'group.rule.no_fight').length, 0, '群规则撤回应生效')
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
+})
+
+test('成员自助删除关闭：MemoryStore 层不做权限判定（门控只在入口层，store 放行）', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const groupId = '100'
+  await writeFact(store, groupId, {
+    scope: 'user', subjectId: '10001', factKey: 'preference.coffee', factValue: 'like',
+    text: '用户喜欢喝咖啡', kind: 'preference', confidence: 0.9, importance: 0.6, source: 'Memory_Tool',
+  }, [{ messageId: 'c1', senderId: '10001' }])
+
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = false
+    // 这一层刻意不判权限（判定只在实际入口：MemoryTool / #清空我的记忆，见 utils/memory/policy.js），
+    // 所以即使成员自助删除关闭，store 本身仍会执行 retract——权限与数据语义分离，
+    // 真实入口的拒绝由入口层负责（对照见本文件「同一成员的同一个 retract」用例）。
+    const results = await store.applyCandidates(
+      [{ operation: 'retract', scope: 'user', subjectId: '10001', speakerId: '10001', factKey: 'preference.coffee', factValue: 'like', evidenceMessageIds: ['c2'] }],
+      {
+        groupId,
+        source: `group-window:${groupId}:2026-09-01`,
+        evidenceMap: mkEvidenceMap(groupId, [{ messageId: 'c2', senderId: '10001' }]),
+        maxMemoriesPerUser: 100,
+        eventRetentionDays: 90,
+      },
+    )
+    assert.equal(results[0].action, 'retracted', 'store 层应放行（权限判定不在这层）')
+    const left = await store.listRecallCandidates('10001', groupId)
+    assert.equal(left.filter(m => m.factKey === 'preference.coffee').length, 0, 'store 层撤回后不应再被召回')
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
+})
+
+test('成员自助删除关闭：完整离线链路（runImmediate → processWindow）仍会按明确否定撤回个人记忆', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const dc = new DailyConsolidation({ store })
+  const gid = '100'
+  // 已存在的个人记忆：离线链路应能按"本人明确否定"把它撤回（这正是启用离线 retract 的目的）
+  await writeFact(store, gid, {
+    scope: 'user', subjectId: '10001', factKey: 'preference.coffee', factValue: 'like',
+    text: '用户喜欢喝咖啡', kind: 'preference', confidence: 0.9, importance: 0.6, source: 'Memory_Tool',
+  }, [{ messageId: 'c1', senderId: '10001' }])
+  // 今天的原文 + 让它产出 retract：走真实 processGroupDaily → processWindow → runExtraction → applyCandidates
+  const day = todayKey()
+  await store.saveRawMessage({
+    groupId: gid, messageId: 'r1', senderId: '10001', senderName: 'A', role: '',
+    text: '我不喝咖啡了', time: dayToTs(day) + 3600, isCommand: false, contentHash: 'hr1',
+  }, 30)
+  const cfg = {
+    ...dcCfg(),
+    llm: async () => ({
+      text: JSON.stringify({
+        candidates: [{
+          operation: 'retract', scope: 'user', subjectId: '10001', speakerId: '10001',
+          factKey: 'preference.coffee', factValue: 'like', evidenceMessageIds: ['r1'],
+        }],
+      }),
+    }),
+  }
+
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = false
+    const res = await dc.runImmediate(gid, cfg)
+    assert.equal(res.ok, true, `立即提取应成功执行: ${JSON.stringify(res)}`)
+
+    // 产品语义：删除开关只管**实时主动删除入口**。每日提炼是"系统按后续聊天重新判断事实是否
+    // 成立"，不受该开关约束——成员不能一键让 Bot 忘掉，但之后说的话仍会影响长期记忆。
+    const left = await store.listRecallCandidates('10001', gid)
+    assert.equal(left.filter(m => m.factKey === 'preference.coffee').length, 0, '离线 personal retract 应照常生效')
+
+    // 同时证明它真的走完了服务端校验（而不是被置信度阈值误杀后"碰巧"没删成功）：
+    // retract 不参与 add 的置信度门槛，这条最终被 accepted
+    const task = await store.getTask(gid, day)
+    const resultJson = JSON.parse(task.resultJson || '{}')
+    assert.ok(resultJson.accepted >= 1, `离线 retract 应被接受，实际 ${task.resultJson}`)
+    const rejectedReasons = JSON.stringify(task.resultJson)
+    assert.ok(!/低于阈值/.test(rejectedReasons), `retract 不应再被置信度阈值拒收：${rejectedReasons}`)
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
+})
+
+test('同一成员的同一个 retract：实时入口拒绝、离线链路放行（开关关闭时的对照契约）', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const dc = new DailyConsolidation({ store })
+  const gid = '100'
+  const day = todayKey()
+  const writeCoffeeLike = () => writeFact(store, gid, {
+    scope: 'user', subjectId: '10001', factKey: 'preference.coffee', factValue: 'like',
+    text: '用户喜欢喝咖啡', kind: 'preference', confidence: 0.9, importance: 0.6, source: 'Memory_Tool',
+  }, [{ messageId: 'c1', senderId: '10001' }])
+  const recalledCoffee = async () => (await store.listRecallCandidates('10001', gid)).filter(m => m.factKey === 'preference.coffee').length
+
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = false
+
+    // ① 实时：成员在对话里让 Bot 撤回自己的记忆 → 拒绝，记忆仍在
+    await writeCoffeeLike()
+    const tool = new MemoryTool()
+    const e = { message_id: 'mt9', user_id: '10001', group_id: gid, time: 1780000000, isGroup: true, isMaster: false, sender: { role: 'member' } }
+    const ret = await tool.func({ candidates: [{ operation: 'retract', scope: 'user', factKey: 'preference.coffee', factValue: 'like' }] }, e)
+    assert.match(ret, /成员自助删除记忆已关闭/, `实时 retract 应被拒: ${ret}`)
+    assert.equal(await recalledCoffee(), 1, '被拒的实时 retract 不得抹掉记忆')
+
+    // ② 离线：同一个人后来在群里说"我不喝咖啡了"，每日提炼照常撤回
+    await store.saveRawMessage({
+      groupId: gid, messageId: 'r9', senderId: '10001', senderName: 'A', role: '',
+      text: '我不喝咖啡了', time: dayToTs(day) + 3600, isCommand: false, contentHash: 'hr9',
+    }, 30)
+    const cfg = {
+      ...dcCfg(),
+      llm: async () => ({
+        text: JSON.stringify({
+          candidates: [{
+            operation: 'retract', scope: 'user', subjectId: '10001', speakerId: '10001',
+            factKey: 'preference.coffee', factValue: 'like', evidenceMessageIds: ['r9'],
+          }],
+        }),
+      }),
+    }
+    const res = await dc.runImmediate(gid, cfg)
+    assert.equal(res.ok, true, `立即提取应成功: ${JSON.stringify(res)}`)
+    assert.equal(await recalledCoffee(), 0, '离线链路应撤回该记忆（同一开关不约束 dailyTask）')
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
 })
 
 test('stripCQCode 清除 OneBot CQ 码（P2-4 回归）', async () => {
@@ -1310,7 +1531,7 @@ test('补齐记录不改记忆行为：空文本记录不进提炼输入、不�
   const dc = new DailyConsolidation({ store })
   const gid = '100'
   const cfg = {
-    inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7, maxAttempts: 3,
+    inputTokenLimit: 30000, outputTokenLimit: 4096, maxAttempts: 3,
     rawRetentionDays: 30, eventRetentionDays: 90, use: null,
     llm: async () => ({ text: '{"candidates":[]}' }),
     groups: [{ groupId: gid, switchOn: true }],
@@ -1751,7 +1972,7 @@ test('UserProfileTool.func：Config 关闭时只读已存画像（真实链路�
 /* ========== runImmediate 授权/并发锁 · 配置 fallback · 提示词时间格式（自 chain5.test.mjs 迁移） ========== */
 
 const dcCfg = () => ({
-  inputTokenLimit: 30000, outputTokenLimit: 4096, minConfidence: 0.7, maxAttempts: 3,
+  inputTokenLimit: 30000, outputTokenLimit: 4096, maxAttempts: 3,
   rawRetentionDays: 30, eventRetentionDays: 90, use: null,
   llm: async () => ({ text: '{"candidates":[]}' }), // 绝不真实调用模型
   groups: [{ groupId: '100', switchOn: true }],
@@ -1796,23 +2017,30 @@ test('runImmediate 并发锁：runDaily 执行中被拒（真实并发，非手�
   }
 })
 
-test('配置 fallback：memoryGroupCapture 缺失时 minConfidence 回退到 0.7（不是任意值）', async () => {
-  await clearStore()
-  resetConfig()
-  setConfig({ memoryGroupCapture: undefined })
-  try {
-    const tool = new MemoryTool()
-    const e = { message_id: 'm1', user_id: '10001', group_id: '100', time: 1780000000, isGroup: true, isMaster: false, sender: { role: 'member' } }
-    // 用 0.6 而不是 0.1，才能同时区分三种实现：
-    //   阈值校验失效（NaN 比较恒 false）→ 0.6 被放行 → 红
-    //   fallback 数值写错（如 0.5）      → 0.6 被放行 → 红
-    //   正确 fallback 0.7                → 0.6 被拒  → 绿
-    const ret = await tool.func({ candidates: [{ scope: 'user', factKey: 'identity.age', factValue: '25', text: '用户25岁', kind: 'identity', confidence: 0.6, importance: 0.6 }] }, e)
-    assert.match(ret, /置信度/, `配置缺失时也必须拒绝低置信度（阈值不能因 NaN 而失效）: ${ret}`)
-    assert.match(ret, /0\.7/, `拒绝信息必须暴露实际使用的阈值 0.7: ${ret}`)
-  } finally {
-    resetConfig() // 必须在 finally 恢复，否则后续依赖 memoryGroupCapture 的用例会连环失败
-  }
+test('固定阈值 0.7 契约：提炼器拒绝 0.69、接受 0.70，且不接受 cfg.minConfidence 覆盖', async () => {
+  const rows = [{ messageId: 'm1', senderId: '10001', senderName: 'A', role: '', text: '嗯嗯', time: 1780000000 }]
+  const evidenceMap = mkEvidenceMap('100', rows)
+  // 阈值是内部常量（MEMORY_MIN_CONFIDENCE），调用方传进来的 cfg 不得覆盖它
+  const extract = (confidence, cfg) => runExtraction({
+    rows,
+    ctx: { groupId: '100', day: '2026-08-30', windowLabel: 'x' },
+    evidenceMap,
+    cfg,
+    llm: async () => ({
+      text: JSON.stringify({
+        candidates: [{
+          scope: 'user', subjectId: '10001', speakerId: '10001', factKey: 'identity.gender',
+          factValue: 'female', text: '用户是女生', kind: 'identity', confidence, importance: 0.5,
+          evidenceMessageIds: ['m1'],
+        }],
+      }),
+    }),
+  })
+
+  assert.equal((await extract(0.69)).candidates.length, 0, '0.69 应被拒绝')
+  assert.equal((await extract(0.7)).candidates.length, 1, '0.70 是闭区间下界，应被接受')
+  assert.equal((await extract(0.5, { minConfidence: 0.1 })).candidates.length, 0, 'cfg.minConfidence 不得放宽阈值')
+  assert.equal((await extract(0.8, { minConfidence: 0.99 })).candidates.length, 1, 'cfg.minConfidence 不得收紧阈值')
 })
 
 test('提炼提示词：时间戳按北京时间渲染 [YYYY-MM-DD HH:mm]，无 time 则不渲染', async () => {

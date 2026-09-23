@@ -42,7 +42,7 @@
 | `index.js` | 入口。扫描 `apps/*.js` 动态 import，导出 `apps` 给 Yunzai 注册 |
 | `apps/` | 命令层。每文件导出一个 `extends plugin` 的类（`rule` 正则 + 处理函数）。`memoryManage.js`（记忆指令+每日提炼 task+群记忆管理）、`chat.js`（对话，priority 1144）、`memoryGroupObserver.js`（记忆观察器，priority **-1011**）等 |
 | `model/` | 核心层。`core.js`（对话 + 工具注册/执行）、`SubLLM.js`（多 provider 子模型，支持 `systemPrompt` 与多模态 `media`）、`Onebot11_MessageHistoryManager.js`（历史消息拉取，**零 import，可独立测试**）等 |
-| `utils/` | 业务工具。`config.js`（配置单例 Proxy）、`common.js`（重依赖，勿在测试环境 import）、`tools/`（AI 工具，继承 `AbstractTool`：`MemoryTool`、`UserProfileTool` 等）、`memory/`（**V2 记忆系统 7 模块**，见下）、`openai/`、`tts/` 等 |
+| `utils/` | 业务工具。`config.js`（配置单例 Proxy）、`common.js`（重依赖，勿在测试环境 import）、`tools/`（AI 工具，继承 `AbstractTool`：`MemoryTool`、`UserProfileTool` 等）、`memory/`（**V2 记忆系统 8 模块**（含权限策略 `policy.js`），见下）、`openai/`、`tts/` 等 |
 | `server/` | 本地 HTTP 服务（fastify） |
 | `config/` | `config.md` 文档；`config.json` 运行时生成，**勿提交** |
 | `guoba.support.js` | 锅巴配置面板 schema（3000+ 行，局部编辑勿整写） |
@@ -93,9 +93,17 @@
    - **服务端不做内容层面的敏感过滤，这是刻意选择，不要"修复"它**：本系统部署在私人授权群里，手机号、证件号、银行卡、精确住址、家人工作单位，甚至聊天里出现的验证码/Token，都由使用者决定是否记录；`utils/memory/sensitive.js` 与 `validateMemoryWrite()` 已整体删除。不要重新引入敏感词/凭证写入拦截，也不要在提示词里列举具体敏感类目（既不写"可以记录 XX"、也不写"禁止记录 XX"）。
    - 提示词侧只保留一条**弱**约束：`EXTRACTOR_SYSTEM` / `DEFAULT_GROUP_MEMORY_PROMPT` 仍写着"密码、验证码、Token/API Key、Cookie 这类登录凭证不要输出"——它只是给模型的取舍建议，**不是**写入校验（服务端不再因此拒绝任何候选）。
    - 提示词立场是"**不要自我审查**"：本人有直接表达的个人与生活事实（家庭与关系、工作单位、居住场所、联系方式等）都要正常提取，并保留具体信息，不得泛化成笼统结论。
+   - **置信度阈值只约束 add（`MEMORY_MIN_CONFIDENCE = 0.7`）**：常量由 `extractor.js` 导出，在线 `MemoryTool`、离线提炼与画像扫描共用同一个值；调用方经 `cfg.minConfidence` 传入的值**不再被读取**（`utils/config.js` 已无此键，锅巴与 `#群记忆状态` 也不再暴露）。它是**内部提取策略，不是用户配置**，不要再把它加回配置项。契约由两条用例锁住：`test/memoryV2.test.js`「固定阈值 0.7 契约：提炼器拒绝 0.69、接受 0.70，且不接受 cfg.minConfidence 覆盖」与「固定阈值 0.7 边界：MemoryTool 拒绝 0.69、接受 0.70」。
+   - **retract 不参与置信度门槛**：`validateCandidateShape` 会把 retract 的 `confidence` 规范化为 0，"可信度"由**本人明确否定 + 证据归属**保证。一旦让 retract 也去比 0.7，模型产出的每个 retract 都会以「置信度 0 低于阈值」被拒收，离线 retract 直接变成死代码（2026-09 真实踩过：当时表现为"离线永远不会撤回"）。**不要**用"给 retract 填 confidence=1""把阈值配成 0"这类方式绕过——前者在数据结构里造假值，后者会连普通新增候选的质量门槛一起取消。
 4. **存储**：`store.js` —— 作用域 `user`/`user_group`/`group`；add/reinforce(+0.04)/update(单值替换)/retract；证据集合；索引（idx/slot/grp）
 5. **召回**：`recall.buildMemoryPrompt(e, prompt)` 注入对话（相关性 bigram 匹配 + 常驻画像 + @目标切换主体；输出标注"不可信数据"）
 6. **画像**：`profile.extractUserProfile`（UserProfileTool 调用，仅授权群 + 本人/主人限制）
+7. **删除权限**：`utils/memory/policy.js` 的 `canDeleteOwnMemory(e)` 是**指令层与 AI 工具层共用的唯一判定**——`e.isMaster` 恒为 true，其余看锅巴 `allowMemberDeleteOwnMemory`（「允许成员删除自己的记忆」，**默认开启**，显式 `false` 才算关闭）。关闭后：非主人失去 `#清空我的记忆`（`apps/memoryManage.js` 在**处理函数内**判定——`rule` 是加载期静态注册、`#清空我的记忆` 又不能标 `permission: 'master'`，只有这样才跟随锅巴实时生效；主人保留，也可用 `#清空他的记忆 @自己`/`@Bot` 清空自己），且 `MemoryTool` 不再接受非主人对**个人作用域**的 `retract`。
+   - 为什么 retract 也算"删除"：存储层只按 `SLOT(scope, ownerId, groupId, factKey)` 命中，`factValue` 留空时**整槽 active 记忆一起归档**（`validateCandidateShape` 对 retract 不要求 factValue/text，提示词还写着"不确定旧值时可留空"），归档后召回与 `#我的记忆` 都不再可见，30 天宽限期后由 `deleteExpired()` 物理清理。所以它和 `#清空我的记忆` 必须同受一个开关约束。
+   - **`group` 作用域刻意不在限制内（已与需求方确认，不要当缺口"修"）**：这个开关只管**个人**记忆（`user`/`user_group`）。群公共事实的撤回仍按原有群管理权限处理（群主/管理员或 Bot 主人），普通管理员通过 `MemoryTool` 撤回 `group` 记忆是**预期能力**；`#群记忆关闭` 那种来源级清理也不属于自助删除。
+   - **离线提炼必须继续不判权限（已确认的产品语义，不要加门）**：`allowMemberDeleteOwnMemory` 只管**实时主动删除入口**，`dailyTask` 不读这个配置、`MemoryStore` 也不判权限（`test/memoryV2.test.js`「MemoryStore 层不做权限判定」用例）。每日提炼按聊天原文产出的 `user`/`user_group` retract **即使在开关关闭时也照常应用**——它是"系统按后续聊天重新判断事实是否成立"，不是成员调用实时删除能力。成员可以用新的聊天陈述（真的、假的、故意误导的）影响离线结果，Bot 主人不承担事实真实性审核，**不要**加"真实性审核"或权限门去堵它。对照契约由「同一成员的同一个 retract：实时入口拒绝、离线链路放行」用例锁住。
+   - **二次确认后必须重新校验（TOCTOU）**：`#清空我的记忆` 在 `awaitContext()` 之后、`store.clearUser()` 之前再判一次 `canDeleteOwnMemory(e)`——否则入口检查与执行之间隔着"用户思考时间"，主人此时关掉开关也拦不住（`test/memoryApps.test.mjs`「授权在二次确认期间被撤销」用例锁住）。以后新增任何"先等确认再执行"的**运行期开关型**命令都要照此处理；`permission: 'master'` 的命令（`#清空他的记忆` 等）不受影响，主人身份不会在一次对话内变化。
+   - `@自己`/`@Bot` 的映射在 `apps/memoryManage.js` 的 `resolveAtTargetUserId()`：@自己或 @Bot（`self_id`/`bot.uin`）一律解释为"操作者本人"（Bot 账号不存在记忆），并兼容 at 段的 `{qq}` 与 `{data:{qq}}` 两种形态。**不要改用 `recall.getMentionedUserId`**——那个函数专门跳过 @自己/@Bot（@机器人是触发对话），语义正好相反。
 
 ## 配置系统
 
@@ -302,12 +310,12 @@ FAIL=0; while IFS= read -r f; do node --check "$f" 2>/dev/null || { echo "FAIL: 
 - **旧 Hash 清理只限个人作用域**：`_purgeLegacyOnce(ownerId)` 对 `group` 作用域会误删 `CHATGPT:MEMORY:USER:<群号>`（群号可能与 QQ 碰撞），必须在 `scope !== 'group'` 时执行。
 - **CQ 码处理**：`stripCQCode` 清除 `[CQ:...]` 并压缩残留空白；历史消息可能是段数组 / message 字符串 / raw_message 三种形态。
 - **`Number(x) ?? 默认值` 在 x 缺失时得到 NaN 而不是默认值**：`Number(undefined)` 返回 NaN，`??` 只回退 null/undefined——`Number(Config.xxx) ?? 0.7` 在配置缺失时阈值/上限会变 NaN 导致校验失效。**读取数字配置用 `||` 回退**（`Number(...) || 0.7`）。但 `||` 会把合法的 `0` 也当缺失，**只适用于"0 不是合法取值"的字段**；0 有业务意义的配置（如 `meme_CD <= 0` 表示关闭 CD）必须显式判空 + 范围校验，例如 `const n = Number(Config.x); const v = Number.isFinite(n) ? n : 默认值`，别套 `||`。
-- **MemoryTool 是模型自动写入**（非手工确认）：写入的事实必须可被后续 retract/单值替换；它同时应用配置的 `minConfidence`（服务端不信任模型自报置信度）。
+- **MemoryTool 是模型自动写入**（非手工确认）：写入的事实必须可被后续 retract/单值替换；add 类候选受固定阈值 `MEMORY_MIN_CONFIDENCE`（0.7）约束（服务端不信任模型自报置信度），retract 不参与该阈值。
 - **画像扫描消息带 `time`**（秒），`buildExtractionPrompt` 渲染 `[YYYY-MM-DD HH:mm]`（北京时间 +8h）——否则模型无法换算"上个月/明天"等相对时间。
 - 记忆指令 `#群记忆开启` / `#群记忆关闭` 需二次确认（`awaitContext`），确认文案说明将删除/保留的数据范围。
 - 历史补录消息可能为段数组 / `message` 字符串 / `raw_message` 三种形态，提取文本需全部兼容。
 - 锅巴 GSubForm 保存的是数组（如 `memoryGroupCapture.groups`），读取用 `Array.isArray` 防护。
-- **数字配置回退统一用 `||`**：除 `minConfidence` 外，`inputTokenLimit` / `eventRetentionDays` / `maxMemoriesPerUser` 等读取处同理（`Number(...) || 默认`）——前提是这些字段的 `0` 不是合法取值；`meme_CD` 这类 0 有语义的配置不适用，见上条。
+- **数字配置回退统一用 `||`**：`inputTokenLimit` / `eventRetentionDays` / `maxMemoriesPerUser` 等读取处同理（`Number(...) || 默认`）——前提是这些字段的 `0` 不是合法取值；`meme_CD` 这类 0 有语义的配置不适用，见上条。（`minConfidence` 已不是配置项，见「记忆系统 V2」第 3 条。）
 - **分片断点 `chunksDone` 的失效条件**：`runExtraction` 的断点续跑假设"同窗口 rows 不变 → 分区确定"，因此**原文变化的路径必须清断点**——`ensureTask` 的 needsReextract 分支重置 pending 时清 `chunksDone` 并把 `attemptCount` 归零；空窗/成功后也清空。`processWindow` 失败重试时不清断点（恰好用于续跑）。`chunksDone` 存于 task hash（字符串化 JSON，`store.setTask` 只写指定字段、其余保留），崩溃恢复（running>10min → pending）后断点依然有效。
 - **TRSS loader 匹配命令读的是「注册实例」的 `rule`**：`deal()` 里是 `for (const v of i.plugin.rule)`，而每条消息都 `Object.assign(new i.class(e), { e })` 新建副本——所以在插件方法里改 `this.rule` **完全无效**（改的是副本；加载期改的是 init 实例）。运行期新增/刷新命令必须回写注册条目：`import loader from '../../../lib/plugins/loader.js'`，在 `loader.priority` 里按 `i.class === 本类 || i.key.endsWith('本文件名')` 定位后 `entry.plugin.rule = rules`。`reg` 必须是 `RegExp`（`deal()` 不做字符串转换，只有 `loadPlugin()` 转一次）。热更新（chokidar 带 `?时间戳` 重新 import）会换掉类身份，定位别只靠 `i.class`；参考 `apps/派蒙meme.js` 的 `registerRules()`。
 - **云崽的 redis 是 node-redis v4 的驼峰 API**（`hGet` / `hIncrBy` / `hGetAll` / `mGet`，写法是 `set(k, v, { EX: n })`）。需要原子锁就用 `set(k, v, { NX: true, EX: n })`：守卫选项名是大写 `NX: true`，**没抢到时返回 `null`**（`@redis/client` 的 `transformReply()` 声明就是 `… | null`），据此判断是否放行；不要写 `GET`→`SET` 两步（并发会一起通过），也不要用 `INCR` + `EXPIRE` 两步。

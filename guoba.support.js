@@ -1666,6 +1666,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'allowMemberDeleteOwnMemory',
+          label: '允许成员删除自己的记忆',
+          bottomHelpMessage: '开启（默认）：成员可以主动用 #清空我的记忆 清空自己，也能在对话里让 Bot 撤回自己的个人记忆。关闭：成员不能通过实时指令或对话直接删除自己的个人记忆（#清空我的记忆 被拒、Memory_Tool 不再接受其个人事实的撤回），Bot 主人仍可用 #清空我的记忆 或 #清空他的记忆 @自己/@Bot 管理。注意：本开关只管"实时主动删除入口"——每日记忆提炼仍会根据后续聊天内容自动更新或撤回旧事实，群公共记忆的管理员维护也不受它影响',
+          component: 'Switch'
+        },
+        {
           field: 'enableUserProfileHistoryScan',
           label: '画像工具扫描群历史',
           bottomHelpMessage: '是否允许查看用户画像 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实；为提高ai回答速度，默认关闭',
@@ -1762,17 +1768,6 @@ export function supportGuoba() {
         //   componentProps: {
         //     min: 256,
         //     step: 1000
-        //   }
-        // },
-        // {
-        //   field: 'memoryGroupCapture.minConfidence',
-        //   label: '最低置信度',
-        //   bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
-        //   component: 'InputNumber',
-        //   componentProps: {
-        //     min: 0.05,
-        //     step: 0.05,
-        //     max: 1
         //   }
         // },
         {

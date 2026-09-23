@@ -4,6 +4,7 @@ import { makeForwardMsg } from '../utils/common.js'
 import { getStore } from '../utils/memory/v2.js'
 import { groupCapture } from '../utils/memory/capture.js'
 import { dailyConsolidation, normalizeCron } from '../utils/memory/dailyTask.js'
+import { canDeleteOwnMemory } from '../utils/memory/policy.js'
 
 const KIND_LABELS = {
   identity: '身份',
@@ -74,6 +75,9 @@ export class memoryManage extends plugin {
           permission: 'master'
         },
         {
+          // 不能标 permission: 'master'——成员自助删除开启时它是给所有人用的；
+          // 关闭时由处理函数按 allowMemberDeleteOwnMemory 拒绝非主人（rule 是加载期静态注册，
+          // 判定必须放在运行期的处理函数里才能跟随锅巴开关实时生效）
           reg: '^#清空我的记忆$',
           fnc: 'clearMyMemories'
         },
@@ -179,7 +183,7 @@ export class memoryManage extends plugin {
     }
     lines.push(`每日提炼时间：${cfg.cronTime || '0 0 4 * * ? *'}（修改后重启生效）`)
     lines.push(`原文保留：${cfg.rawRetentionDays ?? 30} 天 | 事件保留：${cfg.eventRetentionDays ?? 90} 天`)
-    lines.push(`提取 Token：输入 ${cfg.inputTokenLimit ?? 30000}（输出上限跟随模型配置） | 最低置信度：${cfg.minConfidence ?? 0.7}`)
+    lines.push(`提取 Token：输入 ${cfg.inputTokenLimit ?? 30000}（输出上限跟随模型配置）`)
     lines.push('')
     lines.push('📊 记忆统计（V2）')
     lines.push(`总事实数：${stats.total} 条`)
@@ -244,6 +248,33 @@ export class memoryManage extends plugin {
       const chunkTitle = `${title} [${i + 1}/${totalChunks}]`
       await e.reply(await makeForwardMsg(e, chunk, chunkTitle))
     }
+  }
+
+  /**
+   * 解析 `#清空他的记忆` / `#他的记忆` 的 @ 目标用户
+   *
+   * - @自己 或 @Bot（`self_id` / `bot.uin`）：一律视为"操作者本人"。记忆按 user_id 存储，
+   *   Bot 账号自身不存在记忆，所以主人 @机器人 的唯一合理语义就是"操作我自己的记忆"
+   *   （需求：#清空他的记忆 允许 at Bot主人自己）；
+   * - at 段有两种形态：`{ type:'at', qq }` 与 `{ type:'at', data:{ qq } }`（适配器差异）；
+   * - 这里不能像 `recall.getMentionedUserId` 那样"跳过 @自己 / @Bot"——那个函数是给召回用的
+   *   （@机器人只是触发对话），而本命令要的恰恰是把这两种 @ 解释成"我"。
+   * @returns {string|null} 目标 user_id；没有可用 @ 目标时返回 null（调用方再尝试用户ID写法）
+   */
+  resolveAtTargetUserId(e) {
+    if (!Array.isArray(e.message)) return null
+    const selfUserId = e.user_id === undefined || e.user_id === null ? '' : String(e.user_id)
+    const botId = e.self_id ? String(e.self_id) : (e.bot?.uin ? String(e.bot.uin) : '')
+    for (const seg of e.message) {
+      if (!seg || seg.type !== 'at') continue
+      const qq = seg.qq ?? seg.data?.qq
+      if (qq === undefined || qq === null || qq === '') continue
+      const qqStr = String(qq)
+      if (qqStr === selfUserId) return selfUserId
+      if (botId && qqStr === botId) return selfUserId || null
+      return qqStr
+    }
+    return null
   }
 
   /** 格式化一条 V2 记忆 */
@@ -323,11 +354,8 @@ export class memoryManage extends plugin {
       await e.reply('记忆系统未启用', true)
       return
     }
-    let targetUserId = null
-    const atUsers = e.message.filter(m => m.type === 'at')
-    if (atUsers.length > 0) {
-      targetUserId = atUsers[0].qq
-    } else {
+    let targetUserId = this.resolveAtTargetUserId(e)
+    if (!targetUserId) {
       const match = e.msg.match(/^#(?:他|她|TA|ta)的记忆\s+(\S+)/i)
       if (match) targetUserId = match[1]
     }
@@ -358,11 +386,8 @@ export class memoryManage extends plugin {
       await e.reply('记忆系统未启用', true)
       return
     }
-    let targetUserId = null
-    const atUsers = e.message.filter(m => m.type === 'at')
-    if (atUsers.length > 0) {
-      targetUserId = atUsers[0].qq
-    } else {
+    let targetUserId = this.resolveAtTargetUserId(e)
+    if (!targetUserId) {
       const match = e.msg.match(/^#清空(?:他|她|TA|ta)的记忆\s+(\S+)/i)
       if (match) targetUserId = match[1]
     }
@@ -397,10 +422,17 @@ export class memoryManage extends plugin {
     }
   }
 
-  /** 清空自己的记忆 */
+  /** 清空自己的记忆（成员自助删除关闭时仅主人可用） */
   async clearMyMemories(e) {
     if (!Config.enableMemory) {
       await e.reply('记忆系统未启用', true)
+      return
+    }
+    // 关闭「允许成员删除自己的记忆」后，非主人失去这条指令；主人保留（也可用
+    // #清空他的记忆 @自己 / @Bot 达到同样效果）。该开关只限制**实时主动删除入口**：
+    // 每日提炼仍会按后续聊天更新/撤回旧事实，也不影响群公共记忆的管理——产品语义见 utils/memory/policy.js
+    if (!canDeleteOwnMemory(e)) {
+      await e.reply('成员自助删除记忆已关闭，只有 Bot 主人可以删除记忆', true)
       return
     }
     try {
@@ -415,6 +447,13 @@ export class memoryManage extends plugin {
       const e_new = await this.awaitContext()
       if (!e_new.msg || !(/^(是|y|yes|确定|确认)$/i).test(e_new.msg.trim())) {
         await e.reply('操作已取消', true)
+        return
+      }
+      // 二次确认期间主人可能刚把开关关掉，必须在真正执行前重新判定一次：
+      // 入口那次检查到这里之间隔着 awaitContext（用户思考的时间），不做这一步就是一个
+      // "先通过检查 → 等确认 → 期间撤权 → 仍然执行" 的 TOCTOU 窗口。
+      if (!canDeleteOwnMemory(e)) {
+        await e.reply('成员自助删除记忆已关闭，只有 Bot 主人可以删除记忆', true)
         return
       }
       const success = await store.clearUser(e.user_id)
@@ -565,9 +604,10 @@ export class memoryManage extends plugin {
       `#群记忆 - 查看当前群的公共/个人记忆统计\n\n` +
       `【删除记忆】\n` +
       `#清空所有记忆 - 清空所有记忆并删除残留旧Hash(主人)\n` +
-      `#清空我的记忆 - 清空自己的所有记忆\n` +
-      `#清空他的记忆 @某人 - 清空某人的记忆(主人)\n` +
-      `#删除记忆 用户ID 序号 - 删除指定记忆(主人)\n\n` +
+      `#清空我的记忆 - 清空自己的所有记忆${Config.allowMemberDeleteOwnMemory === false ? '(仅主人：成员自助删除已关闭)' : ''}\n` +
+      `#清空他的记忆 @某人 - 清空某人的记忆(主人；@自己或@Bot 即清空自己)\n` +
+      `#删除记忆 用户ID 序号 - 删除指定记忆(主人)\n` +
+      `成员自助删除：${Config.allowMemberDeleteOwnMemory === false ? '❌ 已关闭（非主人不能使用 #清空我的记忆，对话中也不会接受其个人记忆撤回；每日提炼仍会根据后续聊天更新/撤回旧事实，群公共记忆也不受此开关影响）' : '✅ 已开启（可在锅巴关闭）'}\n\n` +
       `【群记忆采集】\n` +
       `#群记忆开启 - 授权当前群采集并补录最近24h历史(主人)\n` +
       `#群记忆关闭 - 关闭当前群采集并执行来源级清理(主人)\n` +
@@ -579,7 +619,7 @@ export class memoryManage extends plugin {
       `🌐 user - 跨群稳定的个人事实\n` +
       `👥 user_group - 仅当前群成立的个人事实\n` +
       `🏘️ group - 群规则、共同计划与公共经历\n\n` +
-      `说明：记忆由「每日批量提炼 + 对话中 Memory_Tool」写入，单值事实自动替换旧值，相同事实合并证据并提升置信度，明确否定自动撤回。`
+      `说明：记忆由「每日批量提炼 + 对话中 Memory_Tool」写入，单值事实自动替换旧值，相同事实合并证据并提升置信度，明确否定自动撤回（成员自助删除关闭时，对话中非主人的撤回会被拒绝）。`
     await e.reply(helpMsg, true)
   }
 }

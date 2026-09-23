@@ -1,6 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { MemoryStore } from '../memory/store.js'
-import { validateEvidence } from '../memory/extractor.js'
+import { validateEvidence, MEMORY_MIN_CONFIDENCE } from '../memory/extractor.js'
+import { canDeleteOwnMemory } from '../memory/policy.js'
 import { Config } from '../config.js'
 
 /**
@@ -9,7 +10,7 @@ import { Config } from '../config.js'
  * 批量原子事实接口：每条候选只表达一个可独立更新的事实。
  * 当前消息 ID、用户 ID、群 ID 与证据由服务端补充，模型不能伪造证据。
  * 服务端重新校验：作用域、证据归属、factKey/factValue 规范、置信度、
- * 敏感信息与重复候选。
+ * 候选形状与同批重复候选（内容层不做敏感/凭证过滤，见 AGENTS.md）。
  */
 export class MemoryTool extends AbstractTool {
   name = 'Memory_Tool'
@@ -128,11 +129,20 @@ export class MemoryTool extends AbstractTool {
         continue
       }
 
-      // 置信度阈值：与每日提炼一致应用配置的 minConfidence（默认 0.7），拒绝低质量候选
-      // 注意用 || 而非 ??：Number(undefined)=NaN，?? 不处理 NaN 会导致配置缺失时阈值失效
-      const minConfidence = Number(Config.memoryGroupCapture?.minConfidence) || 0.7
-      if (candidate.operation !== 'retract' && Number(candidate.confidence) < minConfidence) {
-        output.push({ ok: false, candidate: { factKey: candidate.factKey, scope: candidate.scope }, reason: `置信度 ${candidate.confidence} 低于阈值 ${minConfidence}` })
+      // 仅限制**实时** personal retract：成员自助删除关闭时，非主人不得撤回自己的个人事实。
+      // retract 会把该槽位下的 active 记忆归档（factValue 留空即整槽），用户视角与删除等同。
+      // group 作用域不在此列——群公共事实的撤回属于管理/公告语义，与"删自己的记忆"无关。
+      // 离线每日提炼根据聊天原文产生的 retract **不经过**这条策略（它是"系统按后续聊天重新判断
+      // 事实是否成立"，不是成员调用实时删除能力），这是已确认的产品语义，不要把开关传播过去。
+      if (candidate.operation === 'retract' && candidate.scope !== 'group' && !canDeleteOwnMemory(e)) {
+        output.push({ ok: false, candidate: { factKey: candidate.factKey, scope: candidate.scope }, reason: '成员自助删除记忆已关闭，非 Bot 主人不能撤回个人记忆' })
+        continue
+      }
+
+      // 置信度阈值：仅约束 add/更新类候选，与离线提炼共用同一个内部常量（retract 不参与：
+      // 它的 confidence 被规范化为 0，比较会把"明确否定"全部误杀）
+      if (candidate.operation !== 'retract' && Number(candidate.confidence) < MEMORY_MIN_CONFIDENCE) {
+        output.push({ ok: false, candidate: { factKey: candidate.factKey, scope: candidate.scope }, reason: `置信度 ${candidate.confidence} 低于阈值 ${MEMORY_MIN_CONFIDENCE}` })
         continue
       }
 

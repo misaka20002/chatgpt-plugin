@@ -86,7 +86,6 @@ export class DailyConsolidation {
     return {
       groups: g.groups || [],
       inputTokenLimit: Number(g.inputTokenLimit) || 30000,
-      minConfidence: Number(g.minConfidence) || 0.7,
       rawRetentionDays: Number(g.rawRetentionDays) || 30,
       eventRetentionDays: Number(g.eventRetentionDays) || 90,
       maxAttempts: MAX_ATTEMPTS,
@@ -368,7 +367,6 @@ export class DailyConsolidation {
         },
         cfg: {
           inputTokenLimit: cfg.inputTokenLimit,
-          minConfidence: cfg.minConfidence,
           use: cfg.use,
         },
       })
