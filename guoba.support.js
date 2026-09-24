@@ -1470,7 +1470,7 @@ export function supportGuoba() {
         {
           field: 'generateHtml_ToolSwitch',
           label: '工具新增-HTML图',
-          bottomHelpMessage: '新增 HTML 视觉图工具：由子模型按内置设计规范编写单文件 HTML，可生成信息卡、示意图、流程图、UI 稿、inline SVG 等',
+          bottomHelpMessage: '新增 HTML 视觉图工具：由子模型按内置设计规范编写单文件 HTML，可生成信息卡、示意图、流程图、UI 稿、inline SVG 等；用户明确索要源码/文件时，AI 可传 send_html_file 额外把生成的 .html 文件发到聊天里',
           component: 'Switch'
         },
         {

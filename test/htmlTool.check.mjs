@@ -6,7 +6,8 @@
 //
 // 覆盖：子代理回复 → HTML 源码的提取（围栏/前言/后记/取不到）、
 //       渲染前清洗（script / iframe / object / embed 等可执行标签、
-//       meta refresh / link 连接提示 / base 基址 等会绕开渲染端 CSP 的空元素）。
+//       meta refresh / link 连接提示 / base 基址 等会绕开渲染端 CSP 的空元素）、
+//       send_html_file 落盘文件名的清洗。
 //       `stripActiveMarkup` 由 utils/renderSanitize.js 提供，generate_html 与 generate_math_markdown
 //       两个模板共用同一份实现，所以这里断言的是两个工具共同的第一道防线。
 // 说明：本脚本桩掉全局对象后直接 import 工具模块（会连带拉起 utils/common.js 的依赖链），
@@ -37,7 +38,7 @@ globalThis.segment = { image: (x) => x }
 globalThis.Bot = {}
 globalThis.Renderer = {}
 
-const { extractHtmlSource } = await import('../utils/tools/GenerateHtmlTool.js')
+const { extractHtmlSource, sanitizeHtmlFileName } = await import('../utils/tools/GenerateHtmlTool.js')
 const { stripActiveMarkup } = await import('../utils/renderSanitize.js')
 
 const results = []
@@ -105,6 +106,14 @@ eq('多个危险标签同时出现时全部清除',
   '<p>正文</p>')
 eq('普通内容里的 <br/> 等正常行内标签不受影响',
   stripActiveMarkup('<p>第一行<br/>第二行</p>'), '<p>第一行<br/>第二行</p>')
+
+// —— send_html_file 的文件名清洗（纯函数；发送分支的端到端断言见 test/htmlToolSend.test.mjs）——
+// 标题来自模型（tool arguments），可能带 `/` 或 `..`：不清洗就等于让模型决定写入路径。
+eq('去掉路径分隔符与 Windows 非法字符', sanitizeHtmlFileName('a/b\\c:d*e?f"g<h>i|j'), 'a b c d e f g h i j')
+eq('折叠空白并剥掉首尾的点与空格', sanitizeHtmlFileName('  .. 链路图 .. '), '链路图')
+eq('只有点的标题清成空串（调用方回退默认名）', sanitizeHtmlFileName('...'), '')
+eq('空标题返回空串', sanitizeHtmlFileName(''), '')
+eq('超长标题截断到 48 字符', sanitizeHtmlFileName('x'.repeat(80)).length, 48)
 
 const failed = results.filter((r) => !r.ok)
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`)
