@@ -2,13 +2,26 @@
  * 记忆提取器：模型调用 + 服务端校验
  *
  * 服务端不信任模型输出，逐条重新校验：
- * 证据归属、作用域枚举、factKey/factValue 规范、置信度阈值、
- * 敏感信息、长度与重复候选；个人事实必须有本人消息作为证据，
+ * 证据归属、作用域枚举、factKey/factValue 规范、置信度阈值（仅 add）、
+ * 候选形状、长度与同批重复候选；个人事实必须有本人消息作为证据，
  * 群事实必须来自群管理公告或至少两名成员支持。
+ * 内容层不做敏感/凭证过滤（见 AGENTS.md）。
  */
 
 import { buildExtractionPrompt, EXTRACTOR_SYSTEM } from './prompt.js'
 import { MemoryStore, canonicalFactKey, validateCandidateShape } from './store.js'
+
+/**
+ * 新增/更新类候选的最低置信度：**内部提取策略，不是用户配置**。
+ *
+ * 唯一来源（在线 MemoryTool、离线提炼、画像扫描共用），不要再去读
+ * `Config.memoryGroupCapture.minConfidence`，也不要在这里另起一个 0.7。
+ *
+ * retract 不经过这个阈值：`validateCandidateShape` 会把 retract 的 confidence 规范化为 0，
+ * 若一并比较，模型产出的每个 retract 都会以"置信度 0 低于阈值"被永久拒收（离线 retract 形同死代码）。
+ * retract 的可信度来自「本人明确否定 + 证据归属校验」，与 add 的置信度不是同一回事。
+ */
+export const MEMORY_MIN_CONFIDENCE = 0.7
 
 /** 中文为主的近似 token 估算：字符数 / 1.7 */
 export function estimateTokens(text) {
@@ -114,8 +127,9 @@ export function toPromptRows(raws) {
  * @param {Array<Object>} options.rows 消息行
  * @param {Object} options.ctx { groupId, day, windowLabel, source }
  * @param {Object} options.evidenceMap
- * @param {Object} options.cfg { inputTokenLimit, minConfidence, use,
+ * @param {Object} options.cfg { inputTokenLimit, use,
  *                                chunkRetries, chunkRetryBackoffMs }
+ *                                （最低置信度不在此处：固定用 MEMORY_MIN_CONFIDENCE）
  * @param {Function} [options.llm] 可注入的模型调用函数（测试用），默认走 SubLLM
  * @param {Array<Object>} [options.resumeChunks] 断点续跑：已完成分片 [{key, accepted, rejected}]，
  *                                                命中时跳过模型调用直接复用其结果（只重试失败片）
@@ -124,7 +138,6 @@ export function toPromptRows(raws) {
  */
 export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, resumeChunks = [], onChunkProgress }) {
   const inputTokenLimit = cfg.inputTokenLimit || 30000
-  const minConfidence = cfg.minConfidence ?? 0.7
   // 每片模型调用失败后的即时重试次数（网络瞬时故障快速吸收）；退避 2s×2^(n-1)
   const chunkRetries = Number(cfg.chunkRetries) || 2
   const chunkRetryBackoffMs = Number(cfg.chunkRetryBackoffMs) || 2000
@@ -191,7 +204,7 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
         // 本片证据表：模型只应引用本片输入里的消息；越界引用（同窗口其他分片的真实消息）必须拒绝
         const chunkEvidenceMap = pickEvidenceForRows(evidenceMap, chunk)
         for (const raw of parsed.candidates) {
-          // 1) 形状 + 敏感信息校验前置：敏感候选不得进入断点数据
+          // 1) 形状校验前置：不合格候选不得进入断点数据
           const shapeCheck = validateCandidateShape(raw)
           if (!shapeCheck.ok) {
             chunkRejected.push(sanitizeRejectedCandidate(raw, shapeCheck.reason))
@@ -204,10 +217,12 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
             chunkRejected.push(sanitizeRejectedCandidate(candidate, evidenceCheck.reason))
             continue
           }
-          // 3) 置信度阈值
+          // 3) 置信度阈值：只约束 add/更新类候选。retract 的 confidence 被规范化成 0，
+          //    参与比较会导致"明确否定"永远被拒收（它的可信度由明确否定语义 + 证据归属保证；
+          //    实时 MemoryTool 另有删除权限门，离线提炼不看权限，这条阈值只保证 add 的质量）
           const confidence = Number(candidate.confidence)
-          if (!Number.isFinite(confidence) || confidence < minConfidence) {
-            chunkRejected.push(sanitizeRejectedCandidate(candidate, `置信度 ${candidate.confidence} 低于阈值 ${minConfidence}`))
+          if (candidate.operation !== 'retract' && (!Number.isFinite(confidence) || confidence < MEMORY_MIN_CONFIDENCE)) {
+            chunkRejected.push(sanitizeRejectedCandidate(candidate, `置信度 ${candidate.confidence} 低于阈值 ${MEMORY_MIN_CONFIDENCE}`))
             continue
           }
           chunkAccepted.push({

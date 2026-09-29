@@ -84,6 +84,7 @@ import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
 import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
+import { OpenCodeWebSearchTool } from '../utils/tools/OpenCodeWebSearchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
 import { GroupMemberSkillTool } from '../utils/tools/GroupMemberSkillTool.js'
@@ -979,6 +980,7 @@ async function collectTools(e) {
     'Send163_MusicTool': SendNetEaseMusicTool,
     'SendQQ_MusicTool': SendQQMusicTool,
     'BaiduAI_SearchTool': BaiduAISearchTool,
+    'opencode_WebSearchTool': OpenCodeWebSearchTool,
     'GithubAPI': GithubAPITool,
   }
   /** 搜索/网络来源 */

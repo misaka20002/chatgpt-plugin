@@ -1305,6 +1305,7 @@ export function supportGuoba() {
               { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
               { label: 'QQ音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
               { label: '网易云音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
+              { label: 'OpenCode联网搜索（免Key）', value: 'opencode_WebSearchTool' },
               { label: '高德天气搜索（推荐）（需配置）', value: 'Weather_Tool' },
               { label: '百度AI搜索（推荐）（需配置）', value: 'BaiduAI_SearchTool' },
               { label: 'Gemini原生搜索（需配置）', value: 'geminiSearchTool' },
@@ -1347,6 +1348,18 @@ export function supportGuoba() {
           field: 'githubAPIKey',
           label: 'github Access Token',
           bottomHelpMessage: '用于 Github仓库读取工具。为避免私有仓库内容泄露，请使用最小权限专用 token——fine-grained PAT 且只勾选 Public Repositories 只读。生成：https://github.com/settings/personal-access-tokens ；不填写则走匿名额度（60 次/小时）',
+          component: 'InputPassword'
+        },
+        {
+          field: 'exaApiKey',
+          label: 'Exa API Key',
+          bottomHelpMessage: '可选，用于 OpenCode联网搜索（与 OpenCode 使用 Zen 模型时内置的 websearch 相同，直连 Exa / Parallel 的公开托管搜索服务，免Key 可用；只填了一家的 Key 时优先用那家，否则按会话在两家之间分流，失败时自动换另一家）。不填走 Exa 免费额度（按服务器 IP 限流，很容易用完），填写后不受免费额度限制；前往 https://dashboard.exa.ai/api-keys 申请',
+          component: 'InputPassword'
+        },
+        {
+          field: 'parallelApiKey',
+          label: 'Parallel API Key',
+          bottomHelpMessage: '可选，用于 OpenCode联网搜索 的 Parallel 来源；不填走免费额度；前往 https://platform.parallel.ai 申请',
           component: 'InputPassword'
         },
         {
@@ -1476,7 +1489,7 @@ export function supportGuoba() {
         {
           field: 'generateHtml_ToolSwitch',
           label: '工具新增-HTML图',
-          bottomHelpMessage: '新增 HTML 视觉图工具：由子模型按内置设计规范编写单文件 HTML，可生成信息卡、示意图、流程图、UI 稿、inline SVG 等',
+          bottomHelpMessage: '新增 HTML 视觉图工具：由子模型按内置设计规范编写单文件 HTML，可生成信息卡、示意图、流程图、UI 稿、inline SVG 等；用户明确索要源码/文件时，AI 可传 send_html_file 额外把生成的 .html 文件发到聊天里',
           component: 'Switch'
         },
         {
@@ -1672,6 +1685,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'allowMemberDeleteOwnMemory',
+          label: '允许成员删除自己的记忆',
+          bottomHelpMessage: '开启（默认）：成员可以主动用 #清空我的记忆 清空自己，也能在对话里让 Bot 撤回自己的个人记忆。关闭：成员不能通过实时指令或对话直接删除自己的个人记忆（#清空我的记忆 被拒、Memory_Tool 不再接受其个人事实的撤回），Bot 主人仍可用 #清空我的记忆 或 #清空他的记忆 @自己/@Bot 管理。注意：本开关只管"实时主动删除入口"——每日记忆提炼仍会根据后续聊天内容自动更新或撤回旧事实，群公共记忆的管理员维护也不受它影响',
+          component: 'Switch'
+        },
+        {
           field: 'enableUserProfileHistoryScan',
           label: '画像工具扫描群历史',
           bottomHelpMessage: '是否允许查看用户画像 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实；为提高ai回答速度，默认关闭',
@@ -1768,17 +1787,6 @@ export function supportGuoba() {
         //   componentProps: {
         //     min: 256,
         //     step: 1000
-        //   }
-        // },
-        // {
-        //   field: 'memoryGroupCapture.minConfidence',
-        //   label: '最低置信度',
-        //   bottomHelpMessage: '提取候选的最低置信度阈值（0-1），低于此值不写入；服务端校验不信任模型输出的置信度字段，默认 0.7',
-        //   component: 'InputNumber',
-        //   componentProps: {
-        //     min: 0.05,
-        //     step: 0.05,
-        //     max: 1
         //   }
         // },
         {

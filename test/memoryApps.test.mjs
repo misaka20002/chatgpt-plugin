@@ -43,12 +43,18 @@ mock.module('../utils/common.js', {
 })
 
 /** store 工厂 stub：listRecallCandidates 按队列吐数据，用于模拟 Redis Set 的不稳定顺序 */
-const storeCalls = { deleted: [] }
+const storeCalls = { deleted: [], cleared: [] }
 let recallQueue = []
+let hasMemories = true
 mock.module('../utils/memory/v2.js', {
   namedExports: {
     getStore: () => ({
       listRecallCandidates: async () => recallQueue.shift() ?? [],
+      hasUserMemories: async () => hasMemories,
+      clearUser: async (id) => {
+        storeCalls.cleared.push(id)
+        return true
+      },
       deleteMemory: async (id) => {
         storeCalls.deleted.push(id)
         return true
@@ -190,4 +196,89 @@ test('按记忆 ID 删除不受编号顺序影响', async () => {
   await new memoryManage(e).deleteMemory(e)
 
   assert.deepEqual(storeCalls.deleted, ['m_b'])
+})
+
+/* ================= 成员自助删除记忆（allowMemberDeleteOwnMemory） ================= */
+
+/** 在指定开关值下执行一次 fn，结束后恢复原值 */
+async function withMemberDelete(value, fn) {
+  const original = Config.getConfig().allowMemberDeleteOwnMemory
+  try {
+    Config.getConfig().allowMemberDeleteOwnMemory = value
+    storeCalls.cleared.length = 0
+    hasMemories = true
+    return await fn()
+  } finally {
+    Config.getConfig().allowMemberDeleteOwnMemory = original
+  }
+}
+
+test('成员自助删除开启：非主人可清空自己的记忆', async () => {
+  await withMemberDelete(true, async () => {
+    const e = mkEvent('#清空我的记忆')
+    await new memoryManage(e).clearMyMemories(e)
+    assert.deepEqual(storeCalls.cleared, ['10001'], '默认开启时非主人应能清空自己')
+  })
+})
+
+test('成员自助删除关闭：非主人被拒，且不得触碰存储（不能删自己）', async () => {
+  await withMemberDelete(false, async () => {
+    const e = mkEvent('#清空我的记忆')
+    await new memoryManage(e).clearMyMemories(e)
+    // 断言生产调用结果：被拒时 clearUser 一次都不能被调用（只断言提示文案的话，
+    // 一个"先清空再提示已关闭"的实现也能骗过测试）
+    assert.deepEqual(storeCalls.cleared, [], '关闭后非主人不得调用 clearUser')
+    assert.ok(
+      e.replies.some(r => r.includes('已关闭')),
+      `应给出明确拒绝提示，实际：${JSON.stringify(e.replies)}`
+    )
+  })
+})
+
+test('成员自助删除关闭：主人保留 #清空我的记忆', async () => {
+  await withMemberDelete(false, async () => {
+    const e = mkEvent('#清空我的记忆', { isMaster: true, user_id: '9999' })
+    await new memoryManage(e).clearMyMemories(e)
+    assert.deepEqual(storeCalls.cleared, ['9999'], '开关关闭不应影响主人')
+  })
+})
+
+test('授权在二次确认期间被撤销：不得再执行清空（TOCTOU）', async () => {
+  await withMemberDelete(true, async () => {
+    const e = mkEvent('#清空我的记忆')
+    const plugin = new memoryManage(e)
+    // 入口检查必须已经通过（否则测不到"确认窗口"），确认时才把开关关掉：
+    // 这正是主人看到提示后去锅巴关开关、成员随后仍回复"是"的时序
+    plugin.awaitContext = async () => {
+      assert.ok(
+        e.replies.some(r => r.includes('确定要清空')),
+        `入口检查应在确认前通过，实际提示：${JSON.stringify(e.replies)}`
+      )
+      Config.getConfig().allowMemberDeleteOwnMemory = false
+      return { msg: '是' }
+    }
+    await plugin.clearMyMemories(e)
+    assert.deepEqual(storeCalls.cleared, [], '确认期间撤权后仍不得调用 clearUser')
+    assert.ok(
+      e.replies.some(r => r.includes('已关闭')),
+      `应给出拒绝提示，实际：${JSON.stringify(e.replies)}`
+    )
+  })
+})
+
+test('#清空他的记忆：@自己 / @Bot 都指向操作者本人，at 段两种形态都支持', async () => {
+  await withMemberDelete(false, async () => {
+    const master = { isMaster: true, user_id: '9999', self_id: '999' }
+    // @自己（自己的 QQ）
+    const atSelf = mkEvent('#清空他的记忆', { ...master, message: [{ type: 'at', qq: '9999' }] })
+    await new memoryManage(atSelf).clearOtherMemories(atSelf)
+    // @Bot：qq 等于 self_id，且用 data.qq 形态（适配器差异）
+    const atBot = mkEvent('#清空他的记忆', { ...master, message: [{ type: 'at', data: { qq: '999' } }] })
+    await new memoryManage(atBot).clearOtherMemories(atBot)
+    // @别人：仍按目标用户处理（这条命令是主人专用，不受成员自助删除开关影响）
+    const atOther = mkEvent('#清空他的记忆', { ...master, message: [{ type: 'at', qq: '10001' }] })
+    await new memoryManage(atOther).clearOtherMemories(atOther)
+
+    assert.deepEqual(storeCalls.cleared, ['9999', '9999', '10001'])
+  })
 })
