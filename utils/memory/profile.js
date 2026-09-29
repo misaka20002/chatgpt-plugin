@@ -92,7 +92,6 @@ export async function extractUserProfile(e, targetId, options = {}) {
     llm: options.llm, // 测试注入
     cfg: {
       inputTokenLimit: Number(cfg.inputTokenLimit) || 30000,
-      minConfidence: Number(cfg.minConfidence) || 0.7,
     },
   })
 
