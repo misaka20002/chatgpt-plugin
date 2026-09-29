@@ -1305,6 +1305,7 @@ export function supportGuoba() {
               { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
               { label: 'QQ音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
               { label: '网易云音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
+              { label: 'OpenCode联网搜索（免Key）', value: 'opencode_WebSearchTool' },
               { label: '高德天气搜索（推荐）（需配置）', value: 'Weather_Tool' },
               { label: '百度AI搜索（推荐）（需配置）', value: 'BaiduAI_SearchTool' },
               { label: 'Gemini原生搜索（需配置）', value: 'geminiSearchTool' },
@@ -1347,6 +1348,18 @@ export function supportGuoba() {
           field: 'githubAPIKey',
           label: 'github Access Token',
           bottomHelpMessage: '用于 Github仓库读取工具。为避免私有仓库内容泄露，请使用最小权限专用 token——fine-grained PAT 且只勾选 Public Repositories 只读。生成：https://github.com/settings/personal-access-tokens ；不填写则走匿名额度（60 次/小时）',
+          component: 'InputPassword'
+        },
+        {
+          field: 'exaApiKey',
+          label: 'Exa API Key',
+          bottomHelpMessage: '可选，用于 OpenCode联网搜索（与 OpenCode 使用 Zen 模型时内置的 websearch 相同，直连 Exa / Parallel 的公开托管搜索服务，免Key 可用；只填了一家的 Key 时优先用那家，否则按会话在两家之间分流，失败时自动换另一家）。不填走 Exa 免费额度（按服务器 IP 限流，很容易用完），填写后不受免费额度限制；前往 https://dashboard.exa.ai/api-keys 申请',
+          component: 'InputPassword'
+        },
+        {
+          field: 'parallelApiKey',
+          label: 'Parallel API Key',
+          bottomHelpMessage: '可选，用于 OpenCode联网搜索 的 Parallel 来源；不填走免费额度；前往 https://platform.parallel.ai 申请',
           component: 'InputPassword'
         },
         {

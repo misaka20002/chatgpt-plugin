@@ -223,6 +223,8 @@ const defaultConfig = {
   amapKey: '',
   azSerpKey: '',
   tavilyKey: '',
+  exaApiKey: '', // 可选，OpenCode联网搜索的 Exa Key；不填走免费额度
+  parallelApiKey: '', // 可选，OpenCode联网搜索的 Parallel Key；不填走免费额度
   serpSourceArr: ["SerpImageTool_Baidu", "Bilibili_SearchVideoTool", "Send163_MusicTool", "Weather_Tool", "geminiSearchTool", "SendQQ_MusicTool", "GithubAPI"],
   toolDefaultArr: ["SendPicture", "SendVideo", "QueryUserinfo", "BlockUser"],
   toolGameQueryArr: ["QueryStarRail", "QueryGenshin"],
@@ -407,7 +409,18 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
     }
   }
 }
-config = lodash.merge({}, defaultConfig, config)
+/**
+ * 数组整体采用用户的值，不按下标合并。
+ * lodash.merge 会把数组当成对象按下标合并：用户保存的数组比默认值短时，默认数组末尾的元素会被补回来——
+ * 多选工具列表里取消勾选的默认项重启后又出现（或与已选项重复）、清空的列表变回默认值、删掉的预置音色又回来。
+ * saveDiff 保存数组时一向整只写入，所以用户配置里的数组总是完整的，整体采用不会丢信息。
+ * 必须返回副本：用户没保存过的键会直接拿到 defaultConfig 的数组，而 ScheduleTaskTool 等处是原地 push 后
+ * 再 saveDiff——共用同一个数组时默认值被一起改掉，比较结果相等，新增内容就不会写盘。
+ */
+function useWholeArray(objValue, srcValue) {
+  if (Array.isArray(srcValue)) return lodash.cloneDeep(srcValue)
+}
+config = lodash.mergeWith({}, defaultConfig, config, useWholeArray)
 config.version = defaultConfig.version
 
 // V2 记忆迁移：旧版 memoryMinImportance 为 1-10 语义，V2 中 importance 为 0-1，归一化防止注入被全部过滤
