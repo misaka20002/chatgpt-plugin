@@ -10,6 +10,7 @@
 - 记忆 V2 前缀 `CHATGPT:MEMORY:V2:`：`item:{id}`（记忆本体）、`idx:*/slot:*/grp:*`（索引）、`evd:{id}`（证据集）、`raw:*/rawIdx:*`（原文）、`task:{gid}:{day}`（提炼任务）、`policy:{gid}`（游标）。
 - 旧记忆 Hash `CHATGPT:MEMORY:USER:*`：**只读用于清理**，首次 V2 写入即删，不要读取/展示其内容。
 - **node-redis 4.7 API 注意**：`zAdd(key, { score, value })`（对象形式）；`hSet(key, obj)`；`scanIterator({ MATCH })`；`del(...keys)` 支持多键。
+- **客户端 API 不等于服务端版本保证**：`zRange(..., { BY: 'SCORE', REV: true })` 发送的 `ZRANGE BYSCORE REV` 需要 Redis 6.2，6.0 会报整数范围错误。图谱的倒序时间查询用 `sendCommand(['ZREVRANGEBYSCORE', ...])` 保持 6.0 兼容，且仍带 `LIMIT`；node-redis v4 没有该旧命令的快捷方法。
 
 ## loader、定时任务与原子锁
 

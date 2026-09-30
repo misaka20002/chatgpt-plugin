@@ -50,7 +50,7 @@ beforeEach(() => {
   reads = []
   globalThis.redis = {
     get: async () => null,
-    zRange: async (...args) => { reads.push(args); return storedRows.map(r => r.messageId) },
+    sendCommand: async command => { reads.push(command); return storedRows.map(r => r.messageId) },
     mGet: async keys => keys.map(k => JSON.stringify(storedRows.find(r => k.endsWith(`:${r.messageId}`))))
   }
 })
@@ -113,21 +113,21 @@ test('存储查询有上限、按最新时间倒序、分批读取，并跳过�
   const calls = []
   const ids = Array.from({ length: 20001 }, (_, i) => String(i))
   const redis = {
-    zRange: async (...args) => { calls.push(args); return ids },
+    sendCommand: async command => { calls.push(command); return ids },
     mGet: async keys => {
       assert.ok(keys.length <= 200)
       return keys.map(key => key.endsWith(':0') ? null : JSON.stringify({ messageId: key.split(':').at(-1) }))
     }
   }
   const result = await new MemoryStore(redis).getRecentRawMessages('100', now)
-  assert.deepEqual(calls, [['CHATGPT:MEMORY:V2:rawIdx:100', now, '-inf', { BY: 'SCORE', REV: true, LIMIT: { offset: 0, count: 20001 } }]])
+  assert.deepEqual(calls, [['ZREVRANGEBYSCORE', 'CHATGPT:MEMORY:V2:rawIdx:100', String(now), '-inf', 'LIMIT', '0', '20001']])
   assert.equal(result.limited, true)
   assert.equal(result.rows.length, 19999)
   assert.equal(result.rows.at(-1).messageId, '19999')
 })
 
 test('存储损坏或 Redis 失败不能假装正常的空图谱', async () => {
-  const redis = { zRange: async () => ['坏记录'], mGet: async () => ['{'] }
+  const redis = { sendCommand: async () => ['坏记录'], mGet: async () => ['{'] }
   await assert.rejects(new MemoryStore(redis).getRecentRawMessages('100', now), /群 100 的原文 坏记录 失败/)
   redis.mGet = async () => { throw new Error('连接中断') }
   await assert.rejects(new MemoryStore(redis).getRecentRawMessages('100', now), /连接中断/)

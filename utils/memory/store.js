@@ -886,9 +886,11 @@ export class MemoryStore {
   async getRecentRawMessages(groupId, endTime) {
     const gid = String(groupId)
     const limit = 20000
-    const ids = await this.redis.zRange(RAWIDX(gid), endTime, '-inf', {
-      BY: 'SCORE', REV: true, LIMIT: { offset: 0, count: limit + 1 }
-    })
+    // ZRANGE BYSCORE REV 要求 Redis >= 6.2；宿主仍可能使用 6.0。
+    // node-redis v4 没有旧命令的快捷方法，用 sendCommand 保留同样的倒序、时间与条数边界。
+    const ids = await this.redis.sendCommand([
+      'ZREVRANGEBYSCORE', RAWIDX(gid), String(endTime), '-inf', 'LIMIT', '0', String(limit + 1)
+    ])
     const rows = []
     for (let offset = 0; offset < Math.min(ids.length, limit); offset += 200) {
       const batch = ids.slice(offset, Math.min(offset + 200, limit))

@@ -14,6 +14,7 @@
   - `test/atGraph.test.mjs`：@ 图谱聚合、好感度规则、读取上限、指令权限/参数、并发及发送前授权复查；模板实际布局另用 `node test/render/atGraph.check.mjs [--shot]` 检查。
   - 历史上出现过的 `chain.test.mjs` / `chain2.test.mjs` / `chain3.test.mjs` / `chain5.test.mjs` **不属于当前测试体系，不要引用、恢复、补建或假定它们存在**（`chain5` 已于 2026-09-20 删除）。测试报告只以当前 `package.json` 的 `test:memory` 实际列出的文件为准，**不要写死用例数**，读数以当次 Node 输出为准。
   - 本测试不依赖真实 Redis、真实模型或完整 TRSS 运行环境。
+- 图谱 Redis 协议兼容专项：`node --test test/atGraph.redis.test.mjs`，需要本机 `redis-server` 与 Unix socket；测试自行启动独立临时实例，禁用持久化，不连接云崽 Redis。用于确认服务端命令兼容、倒序时间边界、过期原文和读取条数上限；不加入日常无 Redis 依赖的 `test:memory`。
 - 工具相关：`npm run test:tools`（GithubTool 行为 + `test/opencodeWebSearchTool.test.js`：OpenCode 联网搜索的两家响应形态、凭证位置、失败识别（含 Exa 以 200 普通结果返回的限流提示）与失败换另一家，fetch 桩按实测形状构造 + 工具鉴权上下文合并与参数日志脱敏（`test/toolArgRedaction.test.js`） + `test/htmlTool.check.mjs`：`generate_html` 的源码提取、可执行标签与 `<meta>`/`<link>` 清洗与落盘文件名的纯函数 + `test/render/htmlRender.template.check.mjs`：htmlRender 模板脚本的宽容/上限逻辑，无浏览器 + `test/htmlToolSend.test.mjs`：`generate_html` 的 `send_html_file` 分支——默认只发图、开启时补发与渲染同源的清洗后 `.html`、适配器无 `segment.file` 时如实回填"未发送"、只有布尔 `true` 才开启；渲染与子模型用 `mock.module` 隔离，落盘写真实文件）。
 - 媒体识别相关：`npm run test:media`（SubLLM 多模态载荷、按需内容识别的来源选择与失败语义、不可信媒体地址与下载字节边界；用 `mock.module` + `--experimental-test-module-mocks`）。
 - 配置系统：`npm run test:config`（`test/configArrayMerge.test.js`：加载配置时数组整体采用用户的值、嵌套对象仍按键深合并、未保存过的默认数组原地修改后能写盘；每次加载起一个子进程并把 cwd 指到临时目录，走真实的加载与保存代码）。
