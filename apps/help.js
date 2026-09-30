@@ -58,6 +58,11 @@ let helpData = [
       },
       {
         icon: 'list',
+        title: '#at图谱 [@某人]',
+        desc: '本群 @ 互动图谱与前 5 位好感度排行，无需模型生成'
+      },
+      {
+        icon: 'list',
         title: '#gpt删除前n条对话',
         desc: '对话聊天记录的微调'
       },

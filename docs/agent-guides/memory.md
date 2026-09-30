@@ -12,11 +12,11 @@
    - **服务端不做内容层面的敏感过滤，这是刻意选择，不要"修复"它**：本系统部署在私人授权群里，手机号、证件号、银行卡、精确住址、家人工作单位，甚至聊天里出现的验证码/Token，都由使用者决定是否记录；`utils/memory/sensitive.js` 与 `validateMemoryWrite()` 已整体删除。不要重新引入敏感词/凭证写入拦截，也不要在提示词里列举具体敏感类目（既不写"可以记录 XX"、也不写"禁止记录 XX"）。
    - 提示词侧只保留一条**弱**约束：`EXTRACTOR_SYSTEM` / `DEFAULT_GROUP_MEMORY_PROMPT` 仍写着"密码、验证码、Token/API Key、Cookie 这类登录凭证不要输出"——它只是给模型的取舍建议，**不是**写入校验（服务端不再因此拒绝任何候选）。
    - 提示词立场是"**不要自我审查**"：本人有直接表达的个人与生活事实（家庭与关系、工作单位、居住场所、联系方式等）都要正常提取，并保留具体信息，不得泛化成笼统结论。
-   - **置信度阈值只约束 add（`MEMORY_MIN_CONFIDENCE = 0.7`）**：常量由 `extractor.js` 导出，在线 `MemoryTool`、离线提炼与画像扫描共用同一个值；调用方经 `cfg.minConfidence` 传入的值**不再被读取**（`utils/config.js` 已无此键，锅巴与 `#群记忆状态` 也不再暴露）。它是**内部提取策略，不是用户配置**，不要再把它加回配置项。契约由两条用例锁住：`test/memoryV2.test.js`「固定阈值 0.7 契约：提炼器拒绝 0.69、接受 0.70，且不接受 cfg.minConfidence 覆盖」与「固定阈值 0.7 边界：MemoryTool 拒绝 0.69、接受 0.70」。
+   - **置信度阈值只约束 add（`MEMORY_MIN_CONFIDENCE = 0.7`）**：常量由 `extractor.js` 导出，在线 `MemoryTool` 与离线提炼共用同一个值；调用方经 `cfg.minConfidence` 传入的值**不再被读取**（`utils/config.js` 已无此键，锅巴与 `#群记忆状态` 也不再暴露）。它是**内部提取策略，不是用户配置**，不要再把它加回配置项。契约由两条用例锁住：`test/memoryV2.test.js`「固定阈值 0.7 契约：提炼器拒绝 0.69、接受 0.70，且不接受 cfg.minConfidence 覆盖」与「固定阈值 0.7 边界：MemoryTool 拒绝 0.69、接受 0.70」。
    - **retract 不参与置信度门槛**：`validateCandidateShape` 会把 retract 的 `confidence` 规范化为 0，"可信度"由**本人明确否定 + 证据归属**保证。一旦让 retract 也去比 0.7，模型产出的每个 retract 都会以「置信度 0 低于阈值」被拒收，离线 retract 直接变成死代码（2026-09 真实踩过：当时表现为"离线永远不会撤回"）。**不要**用"给 retract 填 confidence=1""把阈值配成 0"这类方式绕过——前者在数据结构里造假值，后者会连普通新增候选的质量门槛一起取消。
 4. **存储**：`store.js` —— 作用域 `user`/`user_group`/`group`；add/reinforce(+0.04)/update(单值替换)/retract；证据集合；索引（idx/slot/grp）
 5. **召回**：`recall.buildMemoryPrompt(e, prompt)` 注入对话（相关性 bigram 匹配 + 常驻画像 + @目标切换主体；输出标注"不可信数据"）
-6. **画像**：`profile.extractUserProfile`（UserProfileTool 调用，仅授权群 + 本人/主人限制）
+6. **画像**：`profile.extractUserProfile`（UserProfileTool 调用，仅授权群 + 本人/主人限制）固定只读已存 V2 个人事实，不扫描群历史、不调用提炼模型、不补写事实。锅巴历史扫描设置与工具的扫描条数参数已移除；历史 `profile-scan` 来源的已有记忆仍按派生记忆维护。
 7. **删除权限**：`utils/memory/policy.js` 的 `canDeleteOwnMemory(e)` 是**指令层与 AI 工具层共用的唯一判定**——`e.isMaster` 恒为 true，其余看锅巴 `allowMemberDeleteOwnMemory`（「允许成员删除自己的记忆」，**默认开启**，显式 `false` 才算关闭）。关闭后：非主人失去 `#清空我的记忆`（`apps/memoryManage.js` 在**处理函数内**判定——`rule` 是加载期静态注册、`#清空我的记忆` 又不能标 `permission: 'master'`，只有这样才跟随锅巴实时生效；主人保留，也可用 `#清空他的记忆 @自己`/`@Bot` 清空自己），且 `MemoryTool` 不再接受非主人对**个人作用域**的 `retract`。
    - 为什么 retract 也算"删除"：存储层只按 `SLOT(scope, ownerId, groupId, factKey)` 命中，`factValue` 留空时**整槽 active 记忆一起归档**（`validateCandidateShape` 对 retract 不要求 factValue/text，提示词还写着"不确定旧值时可留空"），归档后召回与 `#我的记忆` 都不再可见，30 天宽限期后由 `deleteExpired()` 物理清理。所以它和 `#清空我的记忆` 必须同受一个开关约束。
    - **`group` 作用域刻意不在限制内（已与需求方确认，不要当缺口"修"）**：这个开关只管**个人**记忆（`user`/`user_group`）。群公共事实的撤回仍按原有群管理权限处理（群主/管理员或 Bot 主人），普通管理员通过 `MemoryTool` 撤回 `group` 记忆是**预期能力**；`#群记忆关闭` 那种来源级清理也不属于自助删除。
@@ -26,6 +26,10 @@
 
 ## 存储、游标与事件兼容边界
 
+- **`#at图谱 [@成员 / QQ号]`**：`apps/atGraph.js` → `MemoryStore.getRecentRawMessages` → `utils/memory/atGraph.js` → `resources/atGraph/index.html`，统计和模板渲染均不调用模型。只读当前授权群，默认本人，普通成员也可看他人在本群的 @ 统计；不读取跨群事实或输出聊天正文。每条消息对同一人的明确 @ 计一次，排除指令、Bot、自我 @ 和 @全体，引用/戳一戳不计；纯 @ 计入。读取最新最多 20000 条索引（每批 200 条原文），跳过 TTL 已过期记录；图片标明实际时间、读取截断与旧 @ 数据缺失，不能称为全历史。图上最多展示互动最多的 18 人，统计/排行仍覆盖读取范围内所有关联成员。沿用 Markdown 图片的春樱渐变，姓名徽章在本地绘制，模板无脚本/远程资源，动态文本只走 art-template 转义。行为测试纳入 `npm run test:memory`；改图谱模板时跑 `node test/render/atGraph.check.mjs [--shot]`（浏览器配置见[渲染指南](rendering.md)）。
+
+- 图谱的**好感度**是本地娱乐互动指数：`round(70 × (1 − exp(−主动次数 / 20)) + 30 × 2 × min(主动, 收到) / 总次数)`，主动频次逐渐饱和、双向均衡补分，纯收到 @ 为 0；按分数降序、总互动降序、ID 升序排列。固定展示前 5 人，不足 5 人时只显示实际关联成员；不提供人数参数。图片标明分数不代表真实感情，不调用 LLM 推断。
+- 图谱由锅巴「启用记忆系统」下的 `enableAtGraph`（「启用 AT 图谱」，默认 true）单独控制；仍须同时启用记忆总开关并授权当前群。处理函数实时判定，关闭后不读原文、不出图；发送前再次复查图谱与群记忆开关。锅巴通过现有通用 `getConfigData()` / `setConfigData()` 读写该字段，关闭图谱不影响采集。
 - **`Date.parse(0)` = 2000-01-01**（JS 把 `'0'` 解析为 2000 年）——validTo 等日期字段校验必须用 truthy 判断，数字 0 会通过 `!== ''`。
 - **validTo 二次校验数字秒**：`applyCandidates` 合并后把规范化 validTo（数字秒）传给 `applyFact` 二次校验，`Date.parse(数字)`=NaN——校验需接受数字（按秒）。
 - **记忆游标**：`lastDailyEnd` 只推进"实际有原文处理"的日子；无消息**不推进**（保持空），否则 `#群记忆开启` 补录的历史被永久跳过；循环退出时 `cursor` 已是 bound 下一天，勿直接保存。
@@ -38,6 +42,5 @@
 - **needsReextract 竞态**：任务 `running` 期间到达的新消息不在当前模型输入中，`saveRawMessage` 对 completed/running 都标脏；`processWindow` **运行时清脏、完成时保留脏标记**，由下一轮 `requeueDirtyTasks` 重提炼——不要在完成时清脏，否则运行期间消息永久漏提炼。
 - **旧 Hash 清理只限个人作用域**：`_purgeLegacyOnce(ownerId)` 对 `group` 作用域会误删 `CHATGPT:MEMORY:USER:<群号>`（群号可能与 QQ 碰撞），必须在 `scope !== 'group'` 时执行。
 - **CQ 码处理**：`stripCQCode` 清除 `[CQ:...]` 并压缩残留空白；历史消息可能是段数组 / message 字符串 / raw_message 三种形态。
-- **画像扫描消息带 `time`**（秒），`buildExtractionPrompt` 渲染 `[YYYY-MM-DD HH:mm]`（北京时间 +8h）——否则模型无法换算"上个月/明天"等相对时间。
 - 记忆指令 `#群记忆开启` / `#群记忆关闭` 需二次确认（`awaitContext`），确认文案说明将删除/保留的数据范围。
 - **分片断点 `chunksDone` 的失效条件**：`runExtraction` 的断点续跑假设"同窗口 rows 不变 → 分区确定"，因此**原文变化的路径必须清断点**——`ensureTask` 的 needsReextract 分支重置 pending 时清 `chunksDone` 并把 `attemptCount` 归零；空窗/成功后也清空。`processWindow` 失败重试时不清断点（恰好用于续跑）。`chunksDone` 存于 task hash（字符串化 JSON，`store.setTask` 只写指定字段、其余保留），崩溃恢复（running>10min → pending）后断点依然有效。

@@ -11,6 +11,7 @@
 - 记忆系统：`npm run test:memory`
   - `test/memoryV2.test.js`：V2 核心单元/回归测试，覆盖存储、提取、召回、每日提炼、采集与 Memory_Tool 等核心逻辑。
   - `test/memoryApps.test.mjs`：apps 层契约测试，通过 `mock.module()` 隔离 TRSS 插件基类与重依赖，覆盖观察器 `rule` 匹配（必须能匹配多行文本）、管理指令的展示编号与按序号删除的一致性（全序比较器不能被删）。**只 mock 边界，被测的排序/编号/正则匹配必须执行真实生产代码**——把业务逻辑写进 mock 等于自己验证自己。
+  - `test/atGraph.test.mjs`：@ 图谱聚合、好感度规则、读取上限、指令权限/参数、并发及发送前授权复查；模板实际布局另用 `node test/render/atGraph.check.mjs [--shot]` 检查。
   - 历史上出现过的 `chain.test.mjs` / `chain2.test.mjs` / `chain3.test.mjs` / `chain5.test.mjs` **不属于当前测试体系，不要引用、恢复、补建或假定它们存在**（`chain5` 已于 2026-09-20 删除）。测试报告只以当前 `package.json` 的 `test:memory` 实际列出的文件为准，**不要写死用例数**，读数以当次 Node 输出为准。
   - 本测试不依赖真实 Redis、真实模型或完整 TRSS 运行环境。
 - 工具相关：`npm run test:tools`（GithubTool 行为 + `test/opencodeWebSearchTool.test.js`：OpenCode 联网搜索的两家响应形态、凭证位置、失败识别（含 Exa 以 200 普通结果返回的限流提示）与失败换另一家，fetch 桩按实测形状构造 + 工具鉴权上下文合并与参数日志脱敏（`test/toolArgRedaction.test.js`） + `test/htmlTool.check.mjs`：`generate_html` 的源码提取、可执行标签与 `<meta>`/`<link>` 清洗与落盘文件名的纯函数 + `test/render/htmlRender.template.check.mjs`：htmlRender 模板脚本的宽容/上限逻辑，无浏览器 + `test/htmlToolSend.test.mjs`：`generate_html` 的 `send_html_file` 分支——默认只发图、开启时补发与渲染同源的清洗后 `.html`、适配器无 `segment.file` 时如实回填"未发送"、只有布尔 `true` 才开启；渲染与子模型用 `mock.module` 隔离，落盘写真实文件）。
@@ -22,7 +23,7 @@
 ## 测试技巧
 
 - mock redis：内存 `Map` 实现（见 `test/memoryV2.test.js` 顶部），支持 `scanIterator` 生成器。
-- **注入 llm 避免框架依赖**：`extractor.runExtraction` 的 `llm` 参数、`profile.extractUserProfile` 的 `options.llm`；SubLLM 是惰性 import（`await import('../../model/SubLLM.js')`），纯逻辑测试不会拉起框架。
+- **注入 llm 避免框架依赖**：`extractor.runExtraction` 的 `llm` 参数；SubLLM 是惰性 import（`await import('../../model/SubLLM.js')`），纯逻辑测试不会拉起框架。画像查询固定只读 V2，不再调用或注入模型。
 - 测试环境不要 import `utils/common.js`（重依赖链会触发框架配置加载）。
 - **mock ESM 模块依赖**：要替换模块级 import（如 `SubLLM` 的四个 provider client、工具的 `paimonFuction`）时用 `node:test` 的 `mock.module()`，注册必须在动态 `import` 目标模块之前，运行加 `--experimental-test-module-mocks`（示例见 `test/subllmMedia.test.mjs`、`test/recognitionMedia.test.mjs`）。
 - 断言脚本（非 node:test 结构）作为"文件级"测试加入对应 npm script 即可。

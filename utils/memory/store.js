@@ -882,6 +882,30 @@ export class MemoryStore {
     return out
   }
 
+  /** 图谱只读最近的保留记录：限制扫描量并分批取值，避免大群一次出图拖住 Redis。 */
+  async getRecentRawMessages(groupId, endTime) {
+    const gid = String(groupId)
+    const limit = 20000
+    const ids = await this.redis.zRange(RAWIDX(gid), endTime, '-inf', {
+      BY: 'SCORE', REV: true, LIMIT: { offset: 0, count: limit + 1 }
+    })
+    const rows = []
+    for (let offset = 0; offset < Math.min(ids.length, limit); offset += 200) {
+      const batch = ids.slice(offset, Math.min(offset + 200, limit))
+      const values = await this.redis.mGet(batch.map(mid => RAW(gid, mid)))
+      for (let i = 0; i < values.length; i++) {
+        // 索引的清理与原文 TTL 独立，过期的原文不能变成互动记录。
+        if (values[i] === null) continue
+        try {
+          rows.push(JSON.parse(values[i]))
+        } catch (err) {
+          throw new Error(`[MemoryV2] 读取群 ${gid} 的原文 ${batch[i]} 失败`, { cause: err })
+        }
+      }
+    }
+    return { rows, limited: ids.length > limit, limit }
+  }
+
   /** 最近一条原文的时间（用于确定首日游标） */
   async getRawTimeRange(groupId) {
     const redis = this.redis

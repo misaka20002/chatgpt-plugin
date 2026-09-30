@@ -5,9 +5,8 @@ import { extractUserProfile, formatProfileView } from '../memory/profile.js'
 /**
  * Tool: 用户画像（V2）
  *
- * 由 enableMemory 总开关自动注册。使用与每日提炼相同的提取器与 V2 存储：
- * 扫描群历史时写入精确事实（本人自述 + 消息证据），返回结构化画像，
- * 不再输出"外向、活跃、幽默"等无证据概括。
+ * 由 enableMemory 总开关自动注册。只从 V2 读取已存事实并返回结构化画像，
+ * 不扫描群历史、不写入新事实，也不输出无证据的人格概括。
  *
  * 安全约束（服务端强制）：
  * - 仅限已授权采集的群（memoryGroupCapture.groups 中 switchOn=true）
@@ -20,18 +19,14 @@ export class UserProfileTool extends AbstractTool {
     properties: {
       target_id: {
         type: 'string',
-        description: 'The QQ number of the target user to analyze. Only the caller themselves, or the bot master for any member.'
-      },
-      max_msg_count: {
-        type: 'number',
-        description: 'Maximum number of text messages to scan for extraction. Default 200.'
+        description: 'The QQ number of the user whose stored profile should be retrieved. Only the caller themselves, or the bot master for any member.'
       }
     },
     required: ['target_id']
   }
 
   func = async function (opts, e) {
-    const { target_id, max_msg_count = 200 } = opts
+    const { target_id } = opts
 
     if (!target_id) {
       return 'Error: target_id (QQ number) is required.'
@@ -55,18 +50,17 @@ export class UserProfileTool extends AbstractTool {
     }
 
     try {
-      const count = Math.min(Math.max(Number(max_msg_count) || 200, 1), 500)
-      const result = await extractUserProfile(e, target_id, { maxTargetMessages: count })
+      const result = await extractUserProfile(e, target_id)
       if (!result.ok) {
         return result.message
       }
       const view = formatProfileView(result.profile)
-      return `用户 ${target_id} 的画像（基于 ${result.message}）：\n\n${view}`
+      return `用户 ${target_id} 的已存画像：\n\n${view}`
     } catch (err) {
-      logger.error('[UserProfileTool] Error:', err)
-      return `Error: Failed to extract user profile: ${err.message || err.stack || String(err)}`
+      logger.error('[UserProfileTool] 读取画像失败:', err)
+      return `Error: Failed to read user profile: ${err.message || err.stack || String(err)}`
     }
   }
 
-  description = 'Analyze a user in the current authorized group and extract their precise profile facts (name, nickname, gender, age, occupation, interests, plans) from their own self-reports in group history. Returns a structured profile backed by evidence; never fabricates personality summaries. Only usable in memory-authorized groups; non-master users can only analyze themselves.'
+  description = 'Retrieve a user\'s existing precise profile facts (name, nickname, gender, age, occupation, interests, plans) from stored V2 memories. Does not scan group history or write new facts. Returns a structured profile backed by evidence; never fabricates personality summaries. Only usable in memory-authorized groups; non-master users can only view themselves.'
 }

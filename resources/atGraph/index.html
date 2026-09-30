@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src file: 'unsafe-inline'; font-src file:; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>AT 互动图谱</title>
+  <link rel="stylesheet" href="{{pluResPath}}/markmap/fonts/fonts.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #4a3735; font-family: 'Nunito', 'Noto Sans CJK SC', 'Microsoft YaHei', 'PingFang SC', sans-serif; }
+    #container { width: 1600px; padding: 60px; background: linear-gradient(135deg, #ffe5e7 0%, #ffeae0 35%, #f4e6ff 70%, #e0ffff 100%); }
+    .sheet { padding: 44px 50px 32px; border: 1.5px solid rgba(244,219,216,.9); border-radius: 42px; background: rgba(255,255,255,.74); box-shadow: 0 28px 70px -20px #e7b9c24d, inset 0 2px 1px #fff; overflow: hidden; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 27px; border-bottom: 1px dashed #e8cccb; color: #b49499; font-size: 15px; font-weight: 800; letter-spacing: 3px; }
+    .dots { display: flex; align-items: center; gap: 9px; }
+    .dots i { width: 13px; height: 13px; border-radius: 50%; background: #ffacae; }
+    .dots i:nth-child(2) { background: #f8ce99; }
+    .dots i:nth-child(3) { background: #9ed4c9; }
+    .dots span { margin-left: 14px; }
+    .hero { display: flex; align-items: center; justify-content: space-between; gap: 25px; padding: 37px 0 31px; }
+    .hero-main { min-width: 0; }
+    .eyebrow { font-family: 'Outfit', sans-serif; color: #cc8197; font-size: 16px; letter-spacing: 5px; font-weight: 600; }
+    h1 { font-size: 54px; line-height: 1.25; margin: 10px 0 14px; letter-spacing: 2px; color: #65494f; }
+    h1 em { font-style: normal; color: #d66c91; }
+    .subject { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 800; }
+    .subject strong { display: block; max-width: 700px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .subject span { padding: 4px 12px; border-radius: 20px; background: #faeaf0; color: #c47791; font-size: 14px; white-space: nowrap; }
+    .range { margin-top: 12px; color: #9c8a90; font-size: 17px; max-width: 900px; overflow-wrap: anywhere; }
+    .hero-symbol { width: 132px; height: 132px; flex-shrink: 0; border: 1px solid #fff; border-radius: 36px; transform: rotate(-9deg); background: linear-gradient(135deg, #ffebec, #eee6ff 65%, #e3f5f4); box-shadow: 0 14px 30px #c6a4c322, inset 0 2px 1px #fff; display: grid; place-items: center; font: 800 87px 'Outfit', sans-serif; color: #c77e9e; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 27px; }
+    .stat { border: 1px solid #fff; border-radius: 21px; padding: 21px 24px; background: #ffffffb3; }
+    .stat span { font-size: 17px; color: #9b8890; }
+    .stat strong { display: block; margin-top: 6px; font: 600 43px 'Outfit', sans-serif; color: #715965; }
+    .stat small { font: 400 16px 'Nunito', sans-serif; margin-left: 8px; color: #a6959b; }
+    .stat.purple strong { color: #9280cd; }
+    .stat.teal strong { color: #53aaa9; }
+    .stat.pink strong { color: #d66c91; }
+    .stat.total { background: linear-gradient(120deg, #fbe8ee, #f0e9fc); }
+    .panel { border: 1.5px solid #f0dfe4; border-radius: 27px; background: #ffffffa6; overflow: hidden; }
+    .panel-head { padding: 23px 27px 0; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    h2 { font-size: 23px; margin: 0; font-weight: 800; }
+    h2 b { font: 600 17px 'Outfit', sans-serif; color: #c997aa; margin-right: 12px; }
+    .note { font-size: 16px; color: #a38f98; }
+    .graph { position: relative; width: 1376px; height: 1040px; background: radial-gradient(ellipse at 50% 47%, #f9e9f578, transparent 60%); }
+    .graph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .orbit { fill: none; stroke: #eadce8; stroke-width: 1.3; stroke-dasharray: 5 10; }
+    .orbit-label { fill: #c1a9b9; font-size: 14px; letter-spacing: 4px; }
+    .node { position: absolute; width: 164px; text-align: center; transform: translate(-50%, -43px); }
+    .avatar { margin: 0 auto; width: 86px; height: 86px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; border: 3px solid var(--accent); color: var(--accent); background: linear-gradient(145deg, #fff 12%, #f8eef9 100%); box-shadow: 0 0 0 7px #ffffffbd, 0 10px 22px #bca2b329; position: relative; }
+    .rank-dot { position: absolute; right: -5px; bottom: 0; border: 3px solid white; border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; background: var(--accent); color: #fff; font: 600 12px 'Outfit', sans-serif; }
+    .node-name { display: inline-block; max-width: 164px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 12px; margin-top: 12px; background: #fffefef0; border: 1px solid #eee2e8; border-radius: 13px; font-size: 17px; font-weight: 800; }
+    .node-count { margin-top: 2px; font: 400 15px 'Nunito', sans-serif; color: #aa909e; }
+    .center { position: absolute; width: 240px; left: 568px; top: 399px; text-align: center; }
+    .center-avatar { width: 162px; height: 162px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font-size: 51px; font-weight: 800; color: #b96588; border: 5px solid #fff; background: linear-gradient(140deg, #ffdce3, #eee0ff 75%, #ddf3f4); box-shadow: 0 0 0 10px #ecd5e76e, 0 12px 40px #d799ba33; }
+    .center-name { margin: 18px auto 4px; max-width: 236px; padding: 8px 15px; border-radius: 18px; border: 1px solid #ebc7d9; background: #fff8fc; color: #b9668d; font-size: 22px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .center small { color: #b499a8; font-size: 14px; }
+    .legend { display: flex; justify-content: center; align-items: center; gap: 38px; padding: 0 20px 22px; font-size: 16px; color: #97828f; }
+    .legend span { display: flex; align-items: center; gap: 10px; }
+    .legend i { width: 28px; height: 4px; border-radius: 8px; }
+    .graph-caption { text-align: center; color: #ad98a2; font-size: 15px; padding: 17px; background: #fbf7fa; border-top: 1px dashed #ecdde6; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 23px; margin-top: 24px; }
+    .ranks { padding: 19px 27px 25px; }
+    .rank-row { height: 64px; display: flex; align-items: center; gap: 15px; }
+    .rank-num { width: 23px; color: #bba6b2; font: 600 20px 'Outfit', sans-serif; }
+    .rank-row:first-child .rank-num { color: #cf809c; }
+    .mini-avatar { width: 39px; height: 39px; flex-shrink: 0; border-radius: 14px; display: grid; place-items: center; font-size: 15px; font-weight: 800; background: #f5eefb; color: #9280cd; }
+    .incoming .mini-avatar { background: #e9f6f3; color: #53aaa9; }
+    .rank-detail { flex: 1; min-width: 0; }
+    .rank-text { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; font-size: 18px; margin-bottom: 7px; }
+    .rank-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-text strong { flex-shrink: 0; color: #9280cd; font: 600 21px 'Outfit', sans-serif; }
+    .incoming .rank-text strong { color: #53aaa9; }
+    .rank-text small { font: 400 13px 'Nunito', sans-serif; margin-left: 5px; }
+    .track { height: 4px; background: #f3edf7; border-radius: 8px; overflow: hidden; }
+    .track i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, #dfd5f5, #a695d9); }
+    .incoming .track { background: #eef7f5; }
+    .incoming .track i { background: linear-gradient(90deg, #ceeae1, #67b5b0); }
+    .affection { margin-top: 24px; }
+    .affection-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 15px; padding: 23px 27px 18px; }
+    .affection-card { padding: 17px 19px; border: 1px solid #f4dce6; border-radius: 20px; background: linear-gradient(140deg, #fff6f8, #f5effa); }
+    .affection-person { display: flex; align-items: center; gap: 9px; font-size: 18px; font-weight: 800; }
+    .affection-person b { color: #cb95ac; font: 600 15px 'Outfit', sans-serif; }
+    .affection-person span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .affection-score { display: flex; align-items: baseline; gap: 9px; color: #d0789b; margin: 12px 0 10px; }
+    .affection-score strong { font: 600 41px 'Outfit', sans-serif; }
+    .affection-score span { font-size: 20px; }
+    .affection-score small { font-size: 13px; color: #b898a8; }
+    .affection-card .track { height: 6px; background: #efdeea; }
+    .affection-card .track i { background: linear-gradient(90deg, #edb4c7, #d17d9f); }
+    .affection-detail { font-size: 13px; color: #b297a4; margin-top: 11px; }
+    .affection-note { padding: 0 27px 23px; color: #b199a5; font-size: 14px; }
+    .empty { color: #b09ba6; font-size: 18px; padding: 55px 5px; text-align: center; }
+    .bottom { display: grid; grid-template-columns: 1.45fr 1fr; gap: 23px; margin-top: 24px; }
+    .mutual-cards { display: flex; gap: 12px; padding: 25px 25px 28px; }
+    .mutual-card { flex: 1; min-width: 0; padding: 18px 15px; border-radius: 18px; background: linear-gradient(140deg, #fdf0f3, #f6f0fa); }
+    .mutual-name { font-size: 18px; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .mutual-total { font: 600 31px 'Outfit', sans-serif; margin: 12px 0 7px; color: #cd7c9b; }
+    .mutual-total small { font: 400 13px 'Nunito', sans-serif; margin-left: 5px; }
+    .mutual-detail { color: #b194a3; font-size: 13px; line-height: 1.7; }
+    .composition { padding: 25px 27px 28px; }
+    .stack { height: 11px; display: flex; border-radius: 10px; overflow: hidden; background: #f4eef6; margin-bottom: 22px; }
+    .composition-row { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; font-size: 16px; color: #9f8795; }
+    .composition-row span { display: flex; align-items: center; gap: 9px; }
+    .composition-row i { width: 8px; height: 8px; border-radius: 50%; }
+    .composition-row strong { color: #806574; font-weight: 800; }
+    .footer { margin-top: 27px; padding: 21px 3px 0; border-top: 1px dashed #e8cccb; font-size: 14px; line-height: 1.9; color: #ad969f; }
+    .footer-line { display: flex; justify-content: space-between; gap: 20px; }
+    .brand { font-family: 'Outfit', sans-serif; font-size: 15px; letter-spacing: 2px; color: #b991a4; margin-top: 10px; }
+    .limit-note { color: #bd7890; }
+  </style>
+</head>
+<body>
+<div id="container">
+  <main class="sheet">
+    <div class="topbar"><div class="dots"><i></i><i></i><i></i><span>群聊里的每一次呼应</span></div><span>AT · 互动图谱</span></div>
+    <header class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">CONNECTION ATLAS</div>
+        <h1>把每一次 <em>@</em> 连成星图</h1>
+        <div class="subject"><strong>{{target.name}}</strong><span>个人互动图谱</span></div>
+        <div class="range">{{groupName}} · {{rangeLabel}} · 北京时间</div>
+      </div>
+      <div class="hero-symbol">@</div>
+    </header>
+    <section class="stats">
+      <div class="stat"><span>关联成员</span><strong>{{partnerCount}}<small>人</small></strong></div>
+      <div class="stat purple"><span>主动 @</span><strong>{{outgoing}}<small>次</small></strong></div>
+      <div class="stat teal"><span>收到 @</span><strong>{{incoming}}<small>次</small></strong></div>
+      <div class="stat pink"><span>双向成员</span><strong>{{mutualCount}}<small>人</small></strong></div>
+      <div class="stat total"><span>互动总数</span><strong>{{total}}<small>次</small></strong></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2><b>01</b>围绕你的互动星图</h2><span class="note">连线越粗，互动越多 · 箭头指向被 @ 的人</span></div>
+      <div class="graph">
+        <svg viewBox="0 0 1376 1040" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            {{each composition item}}
+            <marker id="arrow-{{item.kind}}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="{{item.color}}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+            {{/each}}
+          </defs>
+          <ellipse class="orbit" cx="688" cy="480" rx="255" ry="226"/>
+          <ellipse class="orbit" cx="688" cy="480" rx="540" ry="420"/>
+          <ellipse class="orbit" cx="688" cy="480" rx="600" ry="467" opacity=".4"/>
+          {{each nodes item}}
+          <path d="{{item.path}}" fill="none" stroke="{{item.color}}" stroke-width="{{item.width}}" stroke-linecap="round" opacity=".56" marker-start="{{item.incoming ? 'url(#arrow-' + item.kind + ')' : 'none'}}" marker-end="{{item.outgoing ? 'url(#arrow-' + item.kind + ')' : 'none'}}"/>
+          {{/each}}
+        </svg>
+        {{each nodes item}}
+        <div class="node" style="left: {{item.x}}px; top: {{item.y}}px; --accent: {{item.color}}">
+          <div class="avatar">{{item.initials}}<span class="rank-dot">{{item.rank}}</span></div>
+          <div class="node-name">{{item.shortName}}</div>
+          <div class="node-count">{{item.total}} 次互动</div>
+        </div>
+        {{/each}}
+        <div class="center"><div class="center-avatar">{{target.initials}}</div><div class="center-name">{{target.name}}</div><small>这张星图的中心</small></div>
+      </div>
+      <div class="legend"><span><i style="background: #d66c91"></i>双向互动</span><span><i style="background: #9280cd"></i>主动 @ 对方</span><span><i style="background: #53aaa9"></i>对方 @ 我</span></div>
+      <div class="graph-caption">按互动总数排列 · 展示 {{nodes.length}} / {{partnerCount}} 位成员{{if hiddenCount > 0}} · 其余 {{hiddenCount}} 位仍计入全部统计{{/if}}</div>
+    </section>
+    <div class="columns">
+      <section class="panel outgoing"><div class="panel-head"><h2><b>02</b>主动呼唤</h2><span class="note">主动 @ 最多的成员</span></div><div class="ranks">
+        {{each outgoingRank item}}
+        <div class="rank-row"><div class="rank-num">{{item.rank}}</div><div class="mini-avatar">{{item.initials}}</div><div class="rank-detail"><div class="rank-text"><span>{{item.name}}</span><strong>{{item.count}}<small>次</small></strong></div><div class="track"><i style="width: {{item.bar}}%"></i></div></div></div>
+        {{/each}}
+        {{if !outgoingRank.length}}<div class="empty">这段时间，还没有主动 @ 成员</div>{{/if}}
+      </div></section>
+      <section class="panel incoming"><div class="panel-head"><h2><b>03</b>收到的呼应</h2><span class="note">@ 你最多的成员</span></div><div class="ranks">
+        {{each incomingRank item}}
+        <div class="rank-row"><div class="rank-num">{{item.rank}}</div><div class="mini-avatar">{{item.initials}}</div><div class="rank-detail"><div class="rank-text"><span>{{item.name}}</span><strong>{{item.count}}<small>次</small></strong></div><div class="track"><i style="width: {{item.bar}}%"></i></div></div></div>
+        {{/each}}
+        {{if !incomingRank.length}}<div class="empty">这段时间，还没有收到成员的 @</div>{{/if}}
+      </div></section>
+    </div>
+    <section class="panel affection">
+      <div class="panel-head"><h2><b>04</b>好感度 · 前 5 位</h2><span class="note">互动指数 / 100 · 仅供娱乐</span></div>
+      <div class="affection-grid">
+        {{each affectionRank item}}<div class="affection-card"><div class="affection-person"><b>{{item.rank}}</b><span>{{item.name}}</span></div><div class="affection-score"><span>♡</span><strong>{{item.score}}</strong><small>/ 100</small></div><div class="track"><i style="width: {{item.score}}%"></i></div><div class="affection-detail">主动 {{item.outgoing}} 次 · 收到 {{item.incoming}} 次</div></div>{{/each}}
+      </div>
+      <div class="affection-note">主动 @ 越多、双方次数越接近，分数越高；仅按本次统计范围计算，不代表真实感情。{{if affectionRank.length < 5}}当前有互动的成员共 {{partnerCount}} 位。{{/if}}</div>
+    </section>
+    <div class="bottom">
+      <section class="panel"><div class="panel-head"><h2><b>05</b>双向的默契</h2><span class="note">彼此都曾主动 @</span></div><div class="mutual-cards">
+        {{each mutualRank item}}<div class="mutual-card"><div class="mutual-name">{{item.name}}</div><div class="mutual-total">{{item.total}}<small>次互动</small></div><div class="mutual-detail">主动 {{item.outgoing}} 次<br>收到 {{item.incoming}} 次</div></div>{{/each}}
+        {{if !mutualRank.length}}<div class="empty">双向互动，等待下一次呼应</div>{{/if}}
+      </div></section>
+      <section class="panel"><div class="panel-head"><h2><b>06</b>互动的模样</h2><span class="note">双向成员占 {{mutualPercent}}%</span></div><div class="composition">
+        <div class="stack">{{each composition item}}<i style="width: {{item.percent}}%; background: {{item.color}}"></i>{{/each}}</div>
+        {{each composition item}}<div class="composition-row"><span><i style="background: {{item.color}}"></i>{{item.label}}</span><strong>{{item.count}} 人</strong></div>{{/each}}
+      </div></section>
+    </div>
+    <footer class="footer">
+      <div class="footer-line"><span>数据范围：本群当前保留的 {{records}} 条记录 · 未保存 @ 字段的旧消息无法补算</span><span>{{generatedLabel}} 生成</span></div>
+      <div>同一消息 @ 同一人计 1 次；不含指令、机器人、自我 @、@全体、引用及戳一戳。互动频次仅反映群内 @ 行为。</div>
+      {{if limited}}<div class="limit-note">记录较多，本次仅统计最近 {{limit}} 条以内的保留记录；排行与总数均基于这一范围。</div>{{/if}}
+      <div class="brand">PAIMON CHATGPT PLUGIN · AT ATLAS</div>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

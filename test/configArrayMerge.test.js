@@ -56,6 +56,7 @@ function loadConfigIn(userConfig) {
 }
 
 const USER_CONFIG = {
+  enableAtGraph: false,
   // 比默认值短：取消勾选了大部分默认工具
   serpSourceArr: ['SerpImageTool_Baidu', 'GithubAPI'],
   // 全部取消勾选
@@ -99,6 +100,12 @@ describe('配置加载：数组整体采用用户保存的值', () => {
 
   test('嵌套对象仍按键深合并：只保存了 groups 时，其余键沿用默认值', () => {
     assert.deepEqual(custom.loaded.memoryGroupCapture, { ...defaults.loaded.memoryGroupCapture, groups: USER_CONFIG.memoryGroupCapture.groups })
+  })
+
+  test('AT 图谱默认开启，用户显式关闭后加载和保存仍保留 false', () => {
+    assert.equal(defaults.loaded.enableAtGraph, true)
+    assert.equal(custom.loaded.enableAtGraph, false)
+    assert.equal(custom.written.enableAtGraph, false)
   })
 
   test('用户没保存过的数组拿到的是默认值副本：原地 push 后保存能写进 config.json（定时任务不丢）', () => {

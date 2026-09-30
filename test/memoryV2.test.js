@@ -1864,12 +1864,10 @@ test('群事实证据规则：单成员非管理证据必须被拒（与主人�
   assert.equal(two.ok, true, '两名成员支持应允许写入')
 })
 
-/* ================= 画像历史扫描开关（自 chain5.test.mjs 迁移） ================= */
+/* ================= 画像只读已存记忆 ================= */
 
 /**
- * 群 stub：`getChatHistory` 是否被调用是这组用例的判别点。
- * 语义要点：只有**显式 false** 才关闭扫描，`undefined` 必须按“扫描”处理
- * （`profile.js:46` 是 `options.scanHistory ?? Config.enableUserProfileHistoryScan !== false`）。
+ * 群 stub：画像查询不能调用 `getChatHistory`，已有事实只能从 V2 读取。
  */
 const mkScanEvent = () => {
   const state = { called: false }
@@ -1882,17 +1880,17 @@ const mkScanEvent = () => {
   }
 }
 
-test('画像：scanHistory=false 且无已存 → 提示无已存且不调用 getChatHistory', async () => {
+test('画像：无已存事实时直接提示，不扫描群历史', async () => {
   await clearStore()
   resetConfig()
   const { state, e } = mkScanEvent()
-  const res = await extractUserProfile(e, '10001', { scanHistory: false, store: new MemoryStore(mockRedis) })
+  const res = await extractUserProfile(e, '10001', { store: new MemoryStore(mockRedis) })
   assert.equal(res.ok, false)
   assert.match(res.message, /已存画像/)
-  assert.equal(state.called, false, '关闭扫描不得调用 getChatHistory')
+  assert.equal(state.called, false, '画像查询不得调用 getChatHistory')
 })
 
-test('画像：scanHistory=false 且有已存 → 返回已存画像且不扫描', async () => {
+test('画像：返回已存事实，不扫描历史也不改写存储', async () => {
   await clearStore()
   resetConfig()
   const store = new MemoryStore(mockRedis)
@@ -1905,44 +1903,16 @@ test('画像：scanHistory=false 且有已存 → 返回已存画像且不扫描
     },
   )
   const { state, e } = mkScanEvent()
-  const res = await extractUserProfile(e, '10001', { scanHistory: false, store })
+  const before = structuredClone(mockRedis.data)
+  const res = await extractUserProfile(e, '10001', { store })
   assert.equal(res.ok, true)
   assert.match(res.message, /已存画像/)
   assert.ok(res.profile.facts.length >= 1, '应包含已存事实')
-  assert.equal(state.called, false, '关闭扫描不得调用 getChatHistory')
+  assert.equal(state.called, false, '画像查询不得调用 getChatHistory')
+  assert.deepEqual(mockRedis.data, before, '画像查询不能写入或更改已存记忆')
 })
 
-test('画像：Config 全局关闭时真实链路不扫描', async () => {
-  await clearStore()
-  resetConfig()
-  const original = Config.getConfig().enableUserProfileHistoryScan
-  try {
-    Config.getConfig().enableUserProfileHistoryScan = false
-    const { state, e } = mkScanEvent()
-    const res = await extractUserProfile(e, '10001', { store: new MemoryStore(mockRedis) })
-    assert.equal(state.called, false, 'Config 关闭时不得扫描')
-    assert.match(res.message, /已存画像|暂无已存/)
-  } finally {
-    Config.getConfig().enableUserProfileHistoryScan = original
-  }
-})
-
-test('画像：Config 键缺失（undefined）→ 仍扫描，只有显式 false 才关闭', async () => {
-  await clearStore()
-  resetConfig()
-  const original = Config.getConfig().enableUserProfileHistoryScan
-  try {
-    delete Config.getConfig().enableUserProfileHistoryScan
-    const { state, e } = mkScanEvent()
-    const res = await extractUserProfile(e, '10001', { store: new MemoryStore(mockRedis) })
-    assert.equal(state.called, true, 'undefined 必须按「扫描」处理')
-    assert.match(res.message, /未找到|历史文本消息/)
-  } finally {
-    Config.getConfig().enableUserProfileHistoryScan = original
-  }
-})
-
-test('UserProfileTool.func：Config 关闭时只读已存画像（真实链路）', async () => {
+test('UserProfileTool.func：只读已存画像，工具不再提供扫描参数', async () => {
   await clearStore()
   resetConfig()
   const store = new MemoryStore(mockRedis)
@@ -1954,19 +1924,13 @@ test('UserProfileTool.func：Config 关闭时只读已存画像（真实链路�
       maxMemoriesPerUser: 100, eventRetentionDays: 90,
     },
   )
-  const original = Config.getConfig().enableUserProfileHistoryScan
-  try {
-    Config.getConfig().enableUserProfileHistoryScan = false
-    const tool = new UserProfileTool()
-    const { state, e } = mkScanEvent()
-    // 该工具不转发 scanHistory，扫描决策只来自 Config——正是本用例要守的接缝
-    const ret = await tool.func({ target_id: '10001' }, { ...e, user_id: '10001', isMaster: false, sender: { role: 'member' } })
-    assert.match(ret, /已存画像/)
-    assert.match(ret, /25岁|年龄/)
-    assert.equal(state.called, false, 'func 真实链路关闭时不得扫描历史')
-  } finally {
-    Config.getConfig().enableUserProfileHistoryScan = original
-  }
+  const tool = new UserProfileTool()
+  assert.equal(tool.function().parameters.properties.max_msg_count, undefined)
+  const { state, e } = mkScanEvent()
+  const ret = await tool.func({ target_id: '10001' }, { ...e, user_id: '10001', isMaster: false, sender: { role: 'member' } })
+  assert.match(ret, /已存画像/)
+  assert.match(ret, /25岁|年龄/)
+  assert.equal(state.called, false, '工具调用不得扫描历史')
 })
 
 /* ========== runImmediate 授权/并发锁 · 配置 fallback · 提示词时间格式（自 chain5.test.mjs 迁移） ========== */

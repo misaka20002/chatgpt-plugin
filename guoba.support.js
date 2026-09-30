@@ -1675,19 +1675,19 @@ export function supportGuoba() {
         {
           field: 'enableMemory',
           label: '启用记忆系统',
-          bottomHelpMessage: '智能模式 V2 记忆系统唯一总开关；开启后同时开放 Memory_Tool 与 userProfile 工具；群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助',
+          bottomHelpMessage: '智能模式 V2 记忆系统唯一总开关；开启后同时开放 Memory_Tool 与 userProfile 工具，userProfile 仅查看已存画像；群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助、#at图谱、#at图谱 @某人（图谱还需开启下方开关）',
+          component: 'Switch'
+        },
+        {
+          field: 'enableAtGraph',
+          label: '启用 AT 图谱',
+          bottomHelpMessage: '默认开启。授权群内使用 #at图谱 查看自己，#at图谱 @某人 查看该成员的 @ 互动图谱，也可填写 QQ 号；附固定前 5 位好感度排行（娱乐互动指数）。统计与出图不调用 LLM、不消耗 Token。关闭后这些图谱指令立即停用，不影响记忆采集与其他记忆功能',
           component: 'Switch'
         },
         {
           field: 'allowMemberDeleteOwnMemory',
           label: '允许成员删除自己的记忆',
           bottomHelpMessage: '开启（默认）：成员可以主动用 #清空我的记忆 清空自己，也能在对话里让 Bot 撤回自己的个人记忆。关闭：成员不能通过实时指令或对话直接删除自己的个人记忆（#清空我的记忆 被拒、Memory_Tool 不再接受其个人事实的撤回），Bot 主人仍可用 #清空我的记忆 或 #清空他的记忆 @自己/@Bot 管理。注意：本开关只管"实时主动删除入口"——每日记忆提炼仍会根据后续聊天内容自动更新或撤回旧事实，群公共记忆的管理员维护也不受它影响',
-          component: 'Switch'
-        },
-        {
-          field: 'enableUserProfileHistoryScan',
-          label: '画像工具扫描群历史',
-          bottomHelpMessage: '是否允许查看用户画像 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实；为提高ai回答速度，默认关闭',
           component: 'Switch'
         },
         {
