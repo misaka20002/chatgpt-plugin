@@ -31,6 +31,19 @@ test('头像经固定服务获取、重编码为 data URI，重复成员与缓�
   assert.equal(requests.length, 1)
 })
 
+test('最近 @ 的成员未进入图谱或排行时仍加载头像，重复成员复用缓存', async () => {
+  const png = await sharp({ create: { width: 12, height: 12, channels: 3, background: '#74adc4' } }).png().toBuffer()
+  respond = async () => response(png)
+  const before = requests.length
+  const data = { ...graph(['12345']), latestMention: { id: '56789' } }
+  const avatars = await loadAtGraphAvatars(data)
+  assert.match(avatars['56789'], /^data:image\/jpeg;base64,/)
+  assert.equal(requests.length, before + 1)
+  data.nodes.push({ id: '56789' })
+  await loadAtGraphAvatars(data)
+  assert.equal(requests.length, before + 1)
+})
+
 test('头像服务失败、类型不符、声明或流式超限均降级；跨域重定向不跟随', async () => {
   const scenarios = [
     response(Buffer.alloc(0), { status: 500 }),

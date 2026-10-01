@@ -22,7 +22,7 @@ for (let i = 0; i < names.length; i++) {
   const incoming = i % 4 === 2 ? 0 : Math.max(1, 139 - i * 8)
   for (let j = 0; j < outgoing + incoming; j++) {
     const sent = j < outgoing
-    rows.push({ groupId: '100', messageId: String(++serial), senderId: sent ? '10001' : peer, senderName: sent ? '小夏' : names[i], at: [sent ? peer : '10001'], time: generatedAt - 86400 * 12 + serial * 150 })
+    rows.push({ groupId: '100', messageId: String(++serial), senderId: sent ? '10001' : peer, senderName: sent ? '小夏' : names[i], at: [sent ? peer : '10001'], time: generatedAt - 86400 * 12 + serial * 150, text: '刚才那张星图好好看！\n下次也一起记录群里的小日常吧 🌟' })
   }
   // 只有收到 @ 的成员也可能留下不含 @ 的普通消息，昵称从其最新原文取得。
   rows.push({ groupId: '100', messageId: String(++serial), senderId: peer, senderName: names[i], time: generatedAt - 10 })
@@ -31,7 +31,7 @@ const options = { groupId: '100', targetId: '10001', targetName: '「🥝狼女�
 const dense = buildAtGraph({ ...options, rows })
 // 默认用本地位图夹具检查真实 img 解码；视觉预览可显式提供已有头像目录。
 const avatar = `data:image/png;base64,${(await sharp({ create: { width: 80, height: 80, channels: 3, background: '#79adc7' } }).png().toBuffer()).toString('base64')}`
-const avatars = Object.fromEntries([dense.target, ...dense.nodes, ...dense.outgoingRank, ...dense.incomingRank].map(p => [p.id, avatar]))
+const avatars = Object.fromEntries([dense.target, dense.latestMention, ...dense.nodes, ...dense.outgoingRank, ...dense.incomingRank].map(p => [p.id, avatar]))
 if (process.env.AT_GRAPH_PREVIEW_AVATARS) {
   const sources = JSON.parse(await fs.readFile(process.env.AT_GRAPH_PREVIEW_AVATARS, 'utf8'))
   Object.assign(avatars, sources)
@@ -40,9 +40,12 @@ const hostileName = '<img src="https://invalid.test/x" onerror="location=\'https
 const cases = [
   ['dense', dense],
   ['sparse', buildAtGraph({ ...options, rows: [rows[0]] })],
+  ['large-counts', buildAtGraph({ ...options, rows: Array.from({ length: 20000 }, (_, i) => ({ ...rows[0], messageId: `large-${i}`, senderId: i % 2 ? '10001' : '20000', at: [i % 2 ? '20000' : '10001'] })) })],
   ['outer-ring', buildAtGraph({ ...options, rows: rows.filter(r => r.senderId === '10001' ? Number(r.at?.[0]) < 20007 : Number(r.senderId) < 20007) })],
   ['long-names', buildAtGraph({ ...options, rows: rows.map(r => ({ ...r, senderName: `「🥝${'很长的群友昵称'.repeat(10)}」c` })) })],
-  ['hostile', buildAtGraph({ ...options, rows, targetName: hostileName, groupName: hostileName, limited: true })]
+  ['long-message', buildAtGraph({ ...options, rows: rows.map(r => ({ ...r, text: `${'消息🌟'.repeat(100)}\n${'第二行\n'.repeat(100)}` })) })],
+  ['mention-only', buildAtGraph({ ...options, rows: [{ ...rows.find(r => r.senderId === '20000'), text: '' }] })],
+  ['hostile', buildAtGraph({ ...options, rows: rows.map(r => ({ ...r, text: hostileName })), targetName: hostileName, groupName: hostileName, limited: true })]
 ]
 let browser
 try {
@@ -71,12 +74,37 @@ try {
       const iconRect = icon?.getBoundingClientRect()
       const ink = icon?.getBBox()
       const view = icon?.viewBox.baseVal
-      const girl = document.querySelector('.footer-girl')?.getBoundingClientRect()
-      const footerCopy = document.querySelector('.footer-copy').getBoundingClientRect()
-      const nodes = [...document.querySelectorAll('.node, .center')].map(el => {
-        const r = el.getBoundingClientRect()
-        return { x: r.x, y: r.y, right: r.right, bottom: r.bottom }
+      const girlElement = document.querySelector('.graph-girl')
+      const girl = girlElement?.getBoundingClientRect()
+      const girlStyle = girlElement && getComputedStyle(girlElement)
+      const centerAvatar = document.querySelector('.center-avatar').getBoundingClientRect()
+      const avatarSizes = [...document.querySelectorAll('.node .avatar')].map(el => {
+        const rect = el.getBoundingClientRect()
+        return { size: rect.width, distance: Math.hypot(rect.x + rect.width / 2 - centerAvatar.x - centerAvatar.width / 2, rect.y + rect.height / 2 - centerAvatar.y - centerAvatar.height / 2) }
       })
+      const nodes = [...document.querySelectorAll('.node, .center')].map(el => {
+        const parts = [el, ...el.querySelectorAll('.direction-pill')].map(part => part.getBoundingClientRect())
+        return { x: Math.min(...parts.map(r => r.x)), y: Math.min(...parts.map(r => r.y)), right: Math.max(...parts.map(r => r.right)), bottom: Math.max(...parts.map(r => r.bottom)) }
+      })
+      const directionPlacement = [...document.querySelectorAll('.node')].every(el => {
+        const avatar = el.querySelector('.avatar').getBoundingClientRect()
+        const name = el.querySelector('.node-name').getBoundingClientRect()
+        const ax = avatar.x + avatar.width / 2, ay = avatar.y + avatar.height / 2
+        const dx = ax - centerAvatar.x - centerAvatar.width / 2, dy = ay - centerAvatar.y - centerAvatar.height / 2
+        const distance = Math.hypot(dx, dy)
+        return ['sent', 'received'].every((kind, index) => {
+          const pill = el.querySelector(`.${kind}`).getBoundingClientRect()
+          const px = pill.x + pill.width / 2 - ax, py = pill.y + pill.height / 2 - ay
+          const projection = (px * dx + py * dy) / distance
+          return (index ? projection > 0 : projection < 0)
+            && Math.abs((px * dy - py * dx) / distance) < 0.1
+            && Math.hypot(px, py) >= avatar.width / 2 - 6
+            && Math.hypot(px, py) <= avatar.width / 2 + Math.hypot(pill.width, pill.height) / 2 + 1
+            && pill.bottom < name.top
+        })
+      })
+      const mention = document.querySelector('.mention-message')
+      const mentionText = mention?.querySelector('.mention-text')
       const overlaps = []
       for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
         const a = nodes[i], b = nodes[j]
@@ -89,14 +117,26 @@ try {
           && Math.abs(ink.x + ink.width / 2 - view.x - view.width / 2) < 0.1
           && Math.abs(ink.y + ink.height / 2 - view.y - view.height / 2) < 0.1,
         escapedName: document.querySelector('.subject strong').textContent,
+        mention: mention && {
+          name: mention.querySelector('.mention-name').textContent,
+          time: mention.querySelector('.mention-time').textContent,
+          text: mentionText.textContent,
+          avatar: mention.querySelector('img')?.src,
+          textFits: mentionText.scrollWidth <= mentionText.clientWidth + 1 && mentionText.scrollHeight <= mentionText.clientHeight + 1,
+          truncated: !!mention.querySelector('.mention-truncated')
+        },
         active: document.querySelectorAll('script:not([src$="/atGraph/layout.js"]), iframe, object, meta[http-equiv="refresh"]').length,
         imagesLoaded: [...document.images].every(img => img.src.startsWith('data:image/') && img.naturalWidth > 0),
         namesFit: [...document.querySelectorAll('[data-fit]')].every(el => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1),
         names: [...document.querySelectorAll('.node-name')].map(el => el.textContent),
-        counts: [...document.querySelectorAll('.count-badge')].map(el => Number(el.textContent)),
-        oldCaptions: document.querySelectorAll('.node-count').length,
-        girlCount: document.querySelectorAll('.footer-girl img').length,
-        girlFits: !!girl && girl.left >= footerCopy.right && girl.right <= box.right && girl.bottom <= box.bottom,
+        directions: [...document.querySelectorAll('.node')].map(el => [Number(el.querySelector('.sent strong').textContent), Number(el.querySelector('.received strong').textContent)]),
+        countsFit: [...document.querySelectorAll('.direction-pill')].every(el => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1),
+        directionPlacement,
+        avatarSizes,
+        girlCount: document.querySelectorAll('.graph-girl img').length,
+        girlFits: !!girl && girl.left >= graph.x + graph.width / 2 && girl.top >= graph.y + graph.height / 2 && girl.right <= graph.right && girl.bottom <= graph.bottom,
+        girlBehind: !!girlStyle && Number(girlStyle.opacity) > 0 && Number(girlStyle.opacity) < 0.5
+          && [...document.querySelectorAll('.graph > svg, .node, .center')].every(el => Number(getComputedStyle(el).zIndex) > Number(girlStyle.zIndex)),
         fits: nodes.every(n => n.x >= graph.x && n.right <= graph.right && n.y >= graph.y && n.bottom <= graph.bottom),
         overlaps, overflow: document.querySelector('.sheet').scrollWidth > document.querySelector('.sheet').clientWidth
       }
@@ -117,14 +157,28 @@ try {
     assert.ok(info.imagesLoaded)
     assert.ok(info.namesFit, `${name} 昵称未完整排入文本框`)
     assert.deepEqual(info.names, data.nodes.map(n => n.name))
-    assert.deepEqual(info.counts, data.nodes.map(n => n.total))
-    assert.equal(info.oldCaptions, 0)
+    assert.deepEqual(info.directions, data.nodes.map(n => [n.outgoing, n.incoming]))
+    assert.ok(info.countsFit, `${name} 双向次数胶囊溢出`)
+    assert.ok(info.directionPlacement, `${name} 胶囊未贴合头像内外两侧或遮挡昵称`)
     assert.equal(info.girlCount, 1)
-    assert.ok(info.girlFits, '女孩图片不能遮挡页脚文字或超出图片边界')
+    assert.ok(info.girlFits, '女孩图片须在图谱内部右下角')
+    assert.ok(info.girlBehind, '女孩图片须半透明并位于连线和头像下方')
+    for (let i = 0; i < data.nodes.length; i++) {
+      assert.ok(Math.abs(info.avatarSizes[i].size - data.nodes[i].avatarSize) < 0.1, '头像须使用布局计算的尺寸')
+      assert.ok(Math.abs(info.avatarSizes[i].distance - data.nodes[i].radius) < 0.1, '缩放不能偏移头像中心')
+    }
     assert.deepEqual(pageErrors, [])
     assert.deepEqual(requests.filter(url => /^https?:/.test(url)), [])
     assert.equal(page.url(), url)
     assert.equal(info.escapedName, data.target.name)
+    if (data.latestMention) {
+      assert.equal(info.mention.name, data.latestMention.name)
+      assert.equal(info.mention.time, data.latestMention.timeLabel)
+      assert.equal(info.mention.text, data.latestMention.text || '这条 @ 没有留下文字内容（纯 @ 或正文未保存）')
+      assert.equal(info.mention.avatar, avatars[data.latestMention.id])
+      assert.ok(info.mention.textFits, '最近 @ 正文不能溢出或被静默裁剪')
+      assert.equal(info.mention.truncated, data.latestMention.truncated)
+    } else assert.equal(info.mention, null)
     console.log(`${name}：尺寸 ${info.width}×${info.height}，布局、文本转义与网络边界通过`)
     await page.close()
   }

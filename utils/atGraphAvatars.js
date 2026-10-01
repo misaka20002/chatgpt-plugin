@@ -73,7 +73,7 @@ async function avatarFor(id) {
 
 /** 只加载实际展示成员的头像，限制并发；失败时用原有姓名徽章保持图谱可用。 */
 export async function loadAtGraphAvatars(graph) {
-  const people = [graph.target, ...graph.nodes, ...graph.outgoingRank, ...graph.incomingRank, ...graph.affectionRank, ...graph.mutualRank]
+  const people = [graph.target, ...(graph.latestMention ? [graph.latestMention] : []), ...graph.nodes, ...graph.outgoingRank, ...graph.incomingRank, ...graph.affectionRank, ...graph.mutualRank]
   const ids = [...new Set(people.map(p => String(p.id)).filter(id => /^\d{5,20}$/.test(id)))].slice(0, 40)
   const avatars = Object.create(null)
   let cursor = 0

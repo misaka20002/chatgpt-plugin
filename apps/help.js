@@ -58,8 +58,8 @@ let helpData = [
       },
       {
         icon: 'list',
-        title: '#at图谱 [@某人]',
-        desc: '本群 @ 互动图谱与前 5 位好感度排行，无需模型生成'
+        title: '#at图谱[At]',
+        desc: '不填查看自己，@成员查看对方；附前 5 位好感度排行'
       },
       {
         icon: 'list',
