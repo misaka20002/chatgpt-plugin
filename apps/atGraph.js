@@ -1,12 +1,15 @@
 import plugin from '../../../lib/plugins/plugin.js'
-import { createHash } from 'node:crypto'
+import { createHash, randomInt } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { Config } from '../utils/config.js'
 import { render } from '../utils/common.js'
 import { MemoryStore } from '../utils/memory/store.js'
 import { extractStructured, getBotUin } from '../utils/memory/capture.js'
 import { buildAtGraph } from '../utils/memory/atGraph.js'
+import { loadAtGraphAvatars } from '../utils/atGraphAvatars.js'
 
 const inFlight = new Set()
+const girlImages = ['girl.webp', 'girl01.webp', 'girl02.webp', 'girl03.webp', 'girl04.webp', 'girl05.webp']
 
 export class atGraph extends plugin {
   constructor() {
@@ -65,9 +68,13 @@ export class atGraph extends plugin {
         await e.reply(`${graph.target.name} 在本群当前保留的记录中还没有可统计的 @ 互动${snapshot.limited ? `（本次仅检查最近 ${snapshot.limit} 条记录）` : ''}。\n只统计明确的成员 @，不含指令、机器人、自我 @、@全体、引用和戳一戳；旧记录未保存的 @ 无法补算。`, true)
         return true
       }
+      const girlFile = new URL(`../resources/girls/${girlImages[randomInt(girlImages.length)]}`, import.meta.url)
+      const [avatars, girlBuffer] = await Promise.all([loadAtGraphAvatars(graph), readFile(girlFile)])
+      // 本地固定素材转成 data URI，保持模板不开放 file: 图片读取的边界。
+      const girlImage = `data:image/webp;base64,${girlBuffer.toString('base64')}`
       // 同群已有并发互斥；分群复用模板文件，避免串图或每次请求遗留一份 HTML。
       const img = await render(e, 'chatgpt-plugin', 'atGraph/index', {
-        ...graph, saveId: `at-${createHash('sha256').update(gid).digest('hex').slice(0, 16)}`
+        ...graph, avatars, girlImage, saveId: `at-${createHash('sha256').update(gid).digest('hex').slice(0, 16)}`
       }, { retType: 'base64' })
       if (!img) throw new Error('渲染器未返回图片')
       // 读取和截图期间可能关闭群采集；发送前再次检查实时授权。

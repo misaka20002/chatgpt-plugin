@@ -17,6 +17,7 @@ mock.module('../../../lib/plugins/plugin.js', { defaultExport: class { construct
 let renderResult
 let renderCalls
 mock.module('../utils/common.js', { namedExports: { render: async (...args) => { renderCalls.push(args); return renderResult(...args) } } })
+mock.module('../utils/atGraphAvatars.js', { namedExports: { loadAtGraphAvatars: async () => ({}) } })
 mock.module('../utils/tts.js', { namedExports: { speakers: [], vits_emotion_map: [] } })
 mock.module('../utils/tts/microsoft-azure.js', { namedExports: { supportConfigurations: [] } })
 // capture 的单例在模块加载时保存 Redis 引用；本套件不调用采集入口。
@@ -107,6 +108,20 @@ test('好感度在本地计算：主动频次与双向均衡加分，纯被动�
   }
   const result = graph(rows)
   assert.deepEqual(result.affectionRank.map(p => [p.id, p.score]), [['10002', 91], ['10003', 61], ['10004', 0]])
+})
+
+test('互动越多离中心越近，密集、同分与悬殊频次下头像和昵称区域不相交', () => {
+  for (const counts of [[61, 21, 8, 2, 2, 1], Array(18).fill(1), [1000, ...Array(17).fill(1)]]) {
+    const rows = counts.flatMap((count, i) => Array.from({ length: count }, () => row('10001', [String(20000 + i)])))
+    const result = graph(rows)
+    const positions = result.nodes.map(n => ({ left: n.x - 106, right: n.x + 106, top: n.y - 50, bottom: n.y + 138 }))
+    for (let i = 0; i < positions.length; i++) {
+      const a = positions[i]
+      assert.ok(a.left >= 0 && a.right <= result.layout.width && a.top >= 0 && a.bottom <= result.layout.height)
+      if (i && result.nodes[i].total < result.nodes[i - 1].total) assert.ok(result.nodes[i].radius > result.nodes[i - 1].radius)
+      for (const b of positions.slice(i + 1)) assert.equal(a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top, false)
+    }
+  }
 })
 
 test('存储查询有上限、按最新时间倒序、分批读取，并跳过已过期原文', async () => {
@@ -205,6 +220,7 @@ test('指令默认自己，兼容嵌套 @ 段、数字目标和 @Bot；只渲染
     assert.equal(data.target.id, target)
     assert.equal(data.groupId, '100')
     assert.equal(data.rows, undefined)
+    assert.match(data.girlImage, /^data:image\/webp;base64,/)
     assert.equal(options.retType, 'base64')
   }
 })

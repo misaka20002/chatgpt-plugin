@@ -29,6 +29,8 @@
 
 ## 预览、跨平台验证与字体排障
 
+- **AT 图谱**：采用蓝紫、青绿、暖金的分类配色（参考 [ColorBrewer](https://colorbrewer2.org/learnmore/schemes_full.html)）；布局参考径向定位与碰撞约束的思路（[D3 radial](https://d3js.org/d3-force/position#forceRadial)、[D3 collide](https://d3js.org/d3-force/collide)），实际位置在 Node 中确定性计算，不引入浏览器模拟或新依赖。昵称排版由模板自身的本地脚本在字体加载后测量，用户昵称始终作为转义文本。Ubuntu 缺少 🥝 等 emoji 时安装 `fonts-noto-color-emoji`，中文用 `fonts-noto-cjk`，执行 `fc-cache -fv` 后重启云崽及截图 Chromium；若在容器中运行，应装到容器内。用 `fc-match ':charset=1f95d'` 检查猕猴桃字符的字体回退，正常应能找到 Noto Color Emoji（[Ubuntu 软件包](https://packages.ubuntu.com/noble/fonts-noto-color-emoji)、[Noto Emoji 字体说明](https://github.com/googlefonts/noto-emoji)）。
+
 - **本地预渲染模板改动的做法**（改 `resources/**/index.html` 时不必启动 Yunzai 就能看出图、量尺寸）：用一次性脚本（放系统临时目录或即用即删）——
   1. `import template from 'art-template'`，把模板 `template.render(html, data)` 出来；**不要图省事用字符串替换代替 art-template**——`{{markdown}}` 这类插值默认做 HTML 转义（`>` → `&#62;`），而裸替换会让浏览器先把 markdown 里的原生 HTML 标签解析进隐藏容器，`innerText` 再取出来时标签已被吃掉、`<br>` 已变成换行。实测这会让"行内 HTML 不渲染""表格被 `<br/>` 截断"等**只在 harness 里存在的假象**出现（忠实渲染下均不存在），据此改模板就是白改；
   2. **落到 `<repo>/temp/html/<pluginKey>/<htmlPath>/<saveId>.html`**（例如 `temp/html/chatgpt-plugin/memeList/index/index.html`）——必须对齐 `Renderer.dealTpl()` 的目录层级，否则模板里的 `{{pluResPath}}`（= 5 层 `../` + `plugins/<key>/resources/`）会解析错、字体/图片全 404。**只有在沿用模板默认 `pluResPath` 时才需要这套层级**；若像下一条那样自己把 `pluResPath` 传成资源目录的绝对 file URL，HTML 直接写系统临时目录即可（两条路选一条，别混用）；

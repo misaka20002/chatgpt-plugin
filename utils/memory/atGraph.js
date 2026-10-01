@@ -1,18 +1,13 @@
 // 图谱只消费原文中的结构化 @ 字段；统计、排行和坐标全部在本地计算。
 const STYLES = {
-  mutual: { color: '#d66c91', label: '双向互动' },
-  outgoing: { color: '#9280cd', label: '仅主动 @' },
-  incoming: { color: '#53aaa9', label: '仅收到 @' }
+  mutual: { color: '#8965cc', label: '双向互动' },
+  outgoing: { color: '#438dcc', label: '仅主动 @' },
+  incoming: { color: '#269f91', label: '仅收到 @' }
 }
 const MAX_NODES = 18
 
 function label(value, fallback = '') {
-  return String(value || fallback).replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ').trim().slice(0, 80)
-}
-
-function shortName(value, max = 8) {
-  const chars = Array.from(value)
-  return chars.length > max ? chars.slice(0, max).join('') + '…' : value
+  return Array.from(String(value || fallback).replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ').trim()).slice(0, 80).join('')
 }
 
 function initials(value) {
@@ -31,6 +26,55 @@ function byTotal(a, b) {
 function ranking(partners, key) {
   const sorted = partners.filter(p => p[key] > 0).sort((a, b) => b[key] - a[key] || byTotal(a, b)).slice(0, 5)
   return sorted.map((p, index) => ({ ...p, rank: index + 1, count: p[key], bar: Math.max(2, p[key] / sorted[0][key] * 100) }))
+}
+
+function graphLayout(people) {
+  const width = 1376
+  // 矩形同时包含头像、次数角标和完整昵称，为缩放字体预留固定高度。
+  const box = (x, y) => ({ left: x - 114, right: x + 114, top: y - 58, bottom: y + 148 })
+  const overlap = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+  for (let height = people.length > 10 ? 1360 : 1120; height <= 1920; height += 200) {
+    const center = { x: width / 2, y: height / 2 - 40 }
+    const occupied = [{ left: center.x - 150, right: center.x + 150, top: center.y - 102, bottom: center.y + 192 }]
+    const nodes = []
+    let previousRadius = 0
+    for (let index = 0; index < people.length; index++) {
+      const person = people[index]
+      const desired = 250 + 180 * (1 - Math.log1p(person.total) / Math.log1p(people[0].total))
+      const minimum = Math.max(desired, previousRadius + (index && person.total < people[index - 1].total ? 3 : 0))
+      let position
+      for (let radius = minimum; radius < Math.hypot(width / 2, height / 2) && !position; radius += 8) {
+        let best
+        for (let step = 0; step < 180; step++) {
+          const angle = -Math.PI / 2 + step * Math.PI / 90
+          const x = center.x + radius * Math.cos(angle)
+          const y = center.y + radius * Math.sin(angle)
+          const bounds = box(x, y)
+          if (bounds.left < 20 || bounds.right > width - 20 || bounds.top < 20 || bounds.bottom > height - 20) continue
+          if (occupied.some(other => overlap(bounds, other))) continue
+          const separation = nodes.length ? Math.min(...nodes.map(n => Math.hypot(n.x - x, n.y - y))) : -step
+          if (!best || separation > best.separation) best = { x, y, radius, bounds, separation }
+        }
+        position = best
+      }
+      if (!position) break
+      previousRadius = position.radius
+      occupied.push(position.bounds)
+      const dx = position.x - center.x
+      const dy = position.y - center.y
+      const distance = position.radius
+      const start = { x: center.x + dx / distance * 104, y: center.y + dy / distance * 104 }
+      const end = { x: position.x - dx / distance * 59, y: position.y - dy / distance * 59 }
+      const bend = index % 2 ? -22 : 22
+      const cx = (start.x + end.x) / 2 - dy / distance * bend
+      const cy = (start.y + end.y) / 2 + dx / distance * bend
+      nodes.push({ ...person, x: position.x, y: position.y, radius: distance,
+        path: `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`,
+        width: +(1.8 + 4.2 * Math.sqrt(person.total / people[0].total)).toFixed(2) })
+    }
+    if (nodes.length === people.length) return { nodes, width, height, center }
+  }
+  throw new Error('AT图谱布局空间不足，无法避免成员重叠')
 }
 
 /** 只返回绘图需要的聚合数据，不把聊天正文交给模板或任何模型。 */
@@ -75,7 +119,7 @@ export function buildAtGraph({ rows, groupId, targetId, botId = '', targetName =
   const partners = [...pairs.values()].map(p => {
     const name = names.get(p.id)?.name || p.id
     const kind = p.outgoing && p.incoming ? 'mutual' : p.outgoing ? 'outgoing' : 'incoming'
-    return { ...p, name, shortName: shortName(name), initials: initials(name), kind, ...STYLES[kind], total: p.outgoing + p.incoming }
+    return { ...p, name, initials: initials(name), kind, ...STYLES[kind], total: p.outgoing + p.incoming }
   }).sort(byTotal)
   const outgoing = partners.reduce((sum, p) => sum + p.outgoing, 0)
   const incoming = partners.reduce((sum, p) => sum + p.incoming, 0)
@@ -87,29 +131,8 @@ export function buildAtGraph({ rows, groupId, targetId, botId = '', targetName =
     ...p,
     score: Math.round(70 * (1 - Math.exp(-p.outgoing / 20)) + 30 * (2 * Math.min(p.outgoing, p.incoming) / p.total))
   })).sort((a, b) => b.score - a.score || byTotal(a, b)).slice(0, 5).map((p, index) => ({ ...p, rank: index + 1 }))
-  const displayed = partners.slice(0, MAX_NODES)
-  const center = { x: 688, y: 480 }
-  const innerCount = Math.min(displayed.length, 6)
-  const nodes = displayed.map((p, index) => {
-    const inner = index < innerCount
-    const count = inner ? innerCount : displayed.length - innerCount
-    const slot = inner ? index : index - innerCount
-    const angle = -Math.PI / 2 + 2 * Math.PI * slot / count + (inner ? 0 : Math.PI / count)
-    const rx = inner ? 255 : 540
-    const ry = inner ? 226 : 420
-    const x = Math.round(center.x + rx * Math.cos(angle))
-    const y = Math.round(center.y + ry * Math.sin(angle))
-    const dx = x - center.x
-    const dy = y - center.y
-    const distance = Math.hypot(dx, dy)
-    const start = { x: center.x + dx / distance * 92, y: center.y + dy / distance * 92 }
-    const end = { x: x - dx / distance * 48, y: y - dy / distance * 48 }
-    const bend = index % 2 === 0 ? 28 : -28
-    const cx = (start.x + end.x) / 2 - dy / distance * bend
-    const cy = (start.y + end.y) / 2 + dx / distance * bend
-    const path = `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`
-    return { ...p, x, y, path, width: +(1.8 + 4.2 * Math.sqrt(p.total / displayed[0].total)).toFixed(2), rank: index + 1 }
-  })
+  const layout = graphLayout(partners.slice(0, MAX_NODES))
+  const nodes = layout.nodes
   const name = label(targetName, names.get(target)?.name || target)
   return {
     target: { id: target, name, initials: initials(name) },
@@ -120,7 +143,7 @@ export function buildAtGraph({ rows, groupId, targetId, botId = '', targetName =
     mutualCount: mutual.length,
     mutualPercent: partners.length ? Math.round(mutual.length / partners.length * 100) : 0,
     affectionRank,
-    nodes, hiddenCount: partners.length - nodes.length,
+    nodes, layout: { width: layout.width, height: layout.height, center: layout.center }, hiddenCount: partners.length - nodes.length,
     outgoingRank: ranking(partners, 'outgoing'), incomingRank: ranking(partners, 'incoming'),
     mutualRank: mutual.slice(0, 3),
     composition: Object.entries(STYLES).map(([kind, style]) => {

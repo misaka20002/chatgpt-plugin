@@ -12,6 +12,7 @@
   - `test/memoryV2.test.js`：V2 核心单元/回归测试，覆盖存储、提取、召回、每日提炼、采集与 Memory_Tool 等核心逻辑。
   - `test/memoryApps.test.mjs`：apps 层契约测试，通过 `mock.module()` 隔离 TRSS 插件基类与重依赖，覆盖观察器 `rule` 匹配（必须能匹配多行文本）、管理指令的展示编号与按序号删除的一致性（全序比较器不能被删）。**只 mock 边界，被测的排序/编号/正则匹配必须执行真实生产代码**——把业务逻辑写进 mock 等于自己验证自己。
   - `test/atGraph.test.mjs`：@ 图谱聚合、好感度规则、读取上限、指令权限/参数、并发及发送前授权复查；模板实际布局另用 `node test/render/atGraph.check.mjs [--shot]` 检查。
+  - `test/atGraphAvatars.test.mjs`：固定头像来源、缓存、图片解码、响应大小/类型/重定向及正文超时的失败降级；只 mock 网络边界，不请求真实头像。浏览器图谱检查还覆盖完整昵称、emoji、次数角标和头像解码。
   - 历史上出现过的 `chain.test.mjs` / `chain2.test.mjs` / `chain3.test.mjs` / `chain5.test.mjs` **不属于当前测试体系，不要引用、恢复、补建或假定它们存在**（`chain5` 已于 2026-09-20 删除）。测试报告只以当前 `package.json` 的 `test:memory` 实际列出的文件为准，**不要写死用例数**，读数以当次 Node 输出为准。
   - 本测试不依赖真实 Redis、真实模型或完整 TRSS 运行环境。
 - 图谱 Redis 协议兼容专项：`node --test test/atGraph.redis.test.mjs`，需要本机 `redis-server` 与 Unix socket；测试自行启动独立临时实例，禁用持久化，不连接云崽 Redis。用于确认服务端命令兼容、倒序时间边界、过期原文和读取条数上限；不加入日常无 Redis 依赖的 `test:memory`。
