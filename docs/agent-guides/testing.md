@@ -18,7 +18,7 @@
 - 图谱 Redis 协议兼容专项：`node --test test/atGraph.redis.test.mjs`，需要本机 `redis-server` 与 Unix socket；测试自行启动独立临时实例，禁用持久化，不连接云崽 Redis。用于确认服务端命令兼容、倒序时间边界、过期原文和读取条数上限；不加入日常无 Redis 依赖的 `test:memory`。
 - 工具相关：`npm run test:tools`（GithubTool 行为 + `test/opencodeWebSearchTool.test.js`：OpenCode 联网搜索的两家响应形态、凭证位置、失败识别（含 Exa 以 200 普通结果返回的限流提示）与失败换另一家，fetch 桩按实测形状构造 + 工具鉴权上下文合并与参数日志脱敏（`test/toolArgRedaction.test.js`） + `test/htmlTool.check.mjs`：`generate_html` 的源码提取、可执行标签与 `<meta>`/`<link>` 清洗与落盘文件名的纯函数 + `test/render/htmlRender.template.check.mjs`：htmlRender 模板脚本的宽容/上限逻辑，无浏览器 + `test/htmlToolSend.test.mjs`：`generate_html` 的 `send_html_file` 分支——默认只发图、开启时补发与渲染同源的清洗后 `.html`、适配器无 `segment.file` 时如实回填"未发送"、只有布尔 `true` 才开启；渲染与子模型用 `mock.module` 隔离，落盘写真实文件）。
 - 媒体识别相关：`npm run test:media`（SubLLM 多模态载荷、按需内容识别的来源选择与失败语义、不可信媒体地址与下载字节边界；用 `mock.module` + `--experimental-test-module-mocks`）。
-- 配置系统：`npm run test:config`（`test/configArrayMerge.test.js`：加载配置时数组整体采用用户的值、嵌套对象仍按键深合并、未保存过的默认数组原地修改后能写盘；每次加载起一个子进程并把 cwd 指到临时目录，走真实的加载与保存代码）。
+- 配置系统：`npm run test:config`（`test/configArrayMerge.test.js`：加载配置时数组整体采用用户的值、嵌套对象仍按键深合并、未保存过的默认数组原地修改后能写盘；`test/configBaseUrl.test.js`：四家 provider 地址的加载、直接赋值、锅巴保存与显示一致，保留路径和空值；每次加载起一个子进程并把 cwd 指到临时目录，走真实的加载与保存代码，锅巴测试仅 mock 无关语音依赖与 Redis）。
 - meme 日常回归：优先 `npm run test:meme:fast`；完整慢测试 `npm run test:meme`；`npm run test:meme:mutants` **仅专项使用，不作为普通修改的完成条件**。
 - `test/` 随仓库入库，但仍属**本地辅助验证**（仓库没有 CI）：不得把"本地测试全绿"等同于仓库具有 CI 回归保障；不要求为了本地测试体系完整而扩大当前任务；测试缺失时按当前改动选择可执行的最小验证，不需要先重建整套测试环境。
 

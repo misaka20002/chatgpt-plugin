@@ -420,7 +420,18 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
 function useWholeArray(objValue, srcValue) {
   if (Array.isArray(srcValue)) return lodash.cloneDeep(srcValue)
 }
+
+// 加载和保存共用规范化，覆盖直接赋值及锅巴通过 getConfig() 批量修改的入口。
+function normalizeProviderBaseUrls(target) {
+  for (const key of ['openAiBaseUrl', 'responsesApiBaseUrl', 'claudeApiBaseUrl', 'geminiBaseUrl']) {
+    if (typeof target[key] === 'string') {
+      target[key] = target[key].trim().replace(/\/+$/, '')
+    }
+  }
+}
+
 config = lodash.mergeWith({}, defaultConfig, config, useWholeArray)
+normalizeProviderBaseUrls(config)
 config.version = defaultConfig.version
 
 // V2 记忆迁移：旧版 memoryMinImportance 为 1-10 语义，V2 中 importance 为 0-1，归一化防止注入被全部过滤
@@ -469,6 +480,7 @@ function saveDiff(target) {
   }
 
   try {
+    normalizeProviderBaseUrls(target)
     const nestedChange = deepDiff(target, defaultConfig);
     fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(nestedChange, null, 2), { flag: 'w' })
     return true
