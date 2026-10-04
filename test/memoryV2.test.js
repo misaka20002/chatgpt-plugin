@@ -974,6 +974,146 @@ test('固定阈值 0.7 边界：MemoryTool 拒绝 0.69、接受 0.70（P2-2 回�
   assert.match(atBoundary, /成功 1 条/, `0.70 是闭区间下界，应被接受: ${atBoundary}`)
 })
 
+test('Memory_Tool：主人撤回指定成员的个人事实，只影响目标用户与当前群', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const fact = { factKey: 'profile.height', factValue: '180cm', text: '用户自述身高为180厘米', kind: 'identity', confidence: 0.9, importance: 0.8 }
+  for (const [userId, groupId, scope] of [['10001', '100', 'user'], ['10002', '100', 'user'], ['10002', '100', 'user_group'], ['10002', '200', 'user_group']]) {
+    const { res } = await writeFact(store, groupId, { ...fact, scope }, [{ messageId: `${userId}-${groupId}-${scope}`, senderId: userId }])
+    assert.equal(res.ok, true)
+  }
+  const e = { user_id: '10001', group_id: '100', message_id: 'master-retract', isMaster: true, sender: { role: 'member' } }
+  Config.getConfig().allowMemberDeleteOwnMemory = false
+  try {
+    const tool = new MemoryTool()
+    const candidates = ['user', 'user_group'].map(scope => ({ operation: 'retract', scope, subjectId: '10002', factKey: fact.factKey, factValue: fact.factValue }))
+    const ret = await tool.func({ candidates }, e)
+    assert.match(ret, /成功 2 条/)
+    assert.equal((await store.listByScope({ scope: 'user', ownerId: '10001' })).length, 1, '不能误删发令主人的同槽记忆')
+    assert.equal((await store.listRecallCandidates('10002', '100')).length, 0, '指定成员的两条事实应被撤回')
+    assert.equal((await store.listByScope({ scope: 'user_group', ownerId: '10002', groupId: '200' })).length, 1, '不能误删其他群的事实')
+    const repeated = await tool.func({ candidates }, e)
+    assert.match(repeated, /^Error:/)
+    assert.match(repeated, /无可撤回目标/)
+    assert.doesNotMatch(repeated, /成功|记忆已更新/)
+  } finally {
+    resetConfig()
+  }
+})
+
+test('Memory_Tool：撤回未命中、值不匹配或手工记忆不能报告成功', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const base = { scope: 'user', factKey: 'profile.height', factValue: '180', text: '用户自述身高为180厘米', kind: 'identity', confidence: 0.9, importance: 0.8 }
+  await writeFact(store, '100', base, [{ messageId: 'height', senderId: '10002' }])
+  await writeFact(store, '100', { ...base, factKey: 'profile.age', factValue: '18', source: 'manual' }, [{ messageId: 'age', senderId: '10002' }])
+  const e = { user_id: '10002', group_id: '100', message_id: 'retract', isMaster: true }
+  const tool = new MemoryTool()
+  const candidates = [
+    { operation: 'retract', scope: 'user', factKey: 'profile.height', factValue: '180cm' },
+    { operation: 'retract', scope: 'user', factKey: 'profile.age', factValue: '18' },
+  ]
+  const ret = await tool.func({ candidates }, e)
+  assert.match(ret, /^Error:/)
+  assert.doesNotMatch(ret, /成功|记忆已更新/)
+  assert.match(ret, /profile.height/)
+  assert.match(ret, /profile.age/)
+  assert.match(ret, /手工确认记忆/)
+  assert.equal((await store.listRecallCandidates('10002', '100')).length, 2)
+  const mixed = await tool.func({ candidates: [{ ...candidates[0], factValue: '180' }, candidates[1]] }, e)
+  assert.match(mixed, /成功 1 条/)
+  assert.match(mixed, /未更新 1 条/)
+  assert.equal((await store.listRecallCandidates('10002', '100')).length, 1)
+})
+
+test('Memory_Tool：群管理与伪造主人参数不能撤回他人，主人也不能替他人新增自述', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const fact = { scope: 'user', factKey: 'profile.height', factValue: '180cm', text: '用户自述身高为180厘米', kind: 'identity', confidence: 0.9, importance: 0.8 }
+  for (const senderId of ['10001', '10002']) {
+    await writeFact(store, '100', fact, [{ messageId: senderId, senderId }])
+  }
+  const before = structuredClone(mockRedis.data)
+  const tool = new MemoryTool()
+  const e = { user_id: '10001', group_id: '100', message_id: 'forged', isMaster: false, sender: { role: 'admin' } }
+  const ret = await tool.func({
+    isMaster: true, isBotMaster: true,
+    candidates: [{ ...fact, operation: 'retract', subjectId: '10002', speakerId: '10002', evidenceMessageIds: ['10002'], isBotMaster: true }],
+  }, e)
+  assert.match(ret, /仅 Bot 主人可撤回他人的个人记忆/)
+  assert.deepEqual(mockRedis.data, before, '拒绝他人撤回时也不能误删自己的记忆')
+  const addRet = await tool.func({ candidates: [{ ...fact, subjectId: '10002', factValue: '190cm' }] }, { ...e, isMaster: true })
+  assert.match(addRet, /新增.*本人/)
+  assert.deepEqual(mockRedis.data, before, '主人管理撤回不能放宽个人事实的新增证据归属')
+})
+
+test('Memory_Tool：重复证据的幂等跳过不报告已更新', async () => {
+  await clearStore()
+  resetConfig()
+  const tool = new MemoryTool()
+  const opts = { candidates: [{ scope: 'user', factKey: 'profile.height', factValue: '180cm', text: '用户自述身高为180厘米', kind: 'identity', confidence: 0.9, importance: 0.8 }] }
+  const e = { user_id: '10002', group_id: '100', message_id: 'same-evidence' }
+  assert.match(await tool.func(opts, e), /成功 1 条/)
+  const before = structuredClone(mockRedis.data)
+  const repeated = await tool.func(opts, e)
+  assert.match(repeated, /幂等跳过/)
+  assert.doesNotMatch(repeated, /记忆已更新|成功/)
+  assert.deepEqual(mockRedis.data, before)
+})
+
+test('主人管理撤回的证据边界：离线与伪造标志不放行，可信主人也不能代写个人事实', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  const fact = { scope: 'user', subjectId: '10002', factKey: 'profile.height', factValue: '180cm', text: '用户自述身高为180厘米', kind: 'identity', confidence: 0.9, importance: 0.8 }
+  await writeFact(store, '100', fact, [{ messageId: 'original', senderId: '10002' }])
+  const evidenceMap = mkEvidenceMap('100', [{ messageId: 'master', senderId: '10001' }])
+  const candidate = { ...fact, operation: 'retract', speakerId: '10001', evidenceMessageIds: ['master'], isBotMaster: true }
+  const ctx = { groupId: '100', evidenceMap }
+  const cases = [
+    { candidate, ctx },
+    { candidate: { ...candidate, operation: 'add', factValue: '190cm' }, ctx: { ...ctx, isBotMaster: true } },
+    { candidate: { ...candidate, evidenceMessageIds: ['missing'] }, ctx: { ...ctx, isBotMaster: true } },
+    { candidate: { ...candidate, speakerId: '10002' }, ctx: { ...ctx, isBotMaster: true } },
+  ]
+  const before = structuredClone(mockRedis.data)
+  for (const entry of cases) {
+    assert.equal(validateEvidence(entry.candidate, evidenceMap, entry.ctx).ok, false)
+    assert.equal((await store.applyFact(entry.candidate, entry.ctx)).ok, false)
+    assert.deepEqual(mockRedis.data, before)
+  }
+  assert.equal(validateEvidence(candidate, evidenceMap, { isBotMaster: true }).ok, true)
+  assert.equal((await store.applyFact(candidate, { ...ctx, isBotMaster: true })).action, 'retracted')
+  assert.equal((await store.listRecallCandidates('10002', '100')).length, 0)
+})
+
+test('Memory_Tool：复用召回及画像的完整定位字段可撤回同键值的不同作用域记忆', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  for (const scope of ['user', 'user_group']) {
+    await writeFact(store, '100', { scope, factKey: 'profile.height', factValue: '180', text: '用户自述身高为180厘米', kind: 'identity', confidence: 0.9, importance: 0.8 }, [{ messageId: scope, senderId: '10002' }])
+  }
+  const e = { user_id: '10001', group_id: '100', message_id: 'remove-height', isMaster: true, isGroup: true, message: [{ type: 'at', qq: '10002' }] }
+  const prompt = await buildMemoryPrompt(e, '删除他的身高记忆', { store })
+  const profile = await new UserProfileTool().func({ target_id: '10002' }, e)
+  assert.match(prompt, /不可信数据/)
+  assert.match(profile, /不可信数据/)
+  // 直接使用生产输出里的定位对象，确认模型无需从“180厘米”反推存储值或猜作用域。
+  const locators = [...profile.matchAll(/^- (\{[^\n]+?\}) /gm)].map(match => JSON.parse(match[1]))
+  assert.equal(locators.length, 2, '同键值的 user 与 user_group 不能合并丢失')
+  for (const locator of locators) {
+    assert.equal(locator.subjectId, '10002')
+    assert.equal(locator.factValue, '180')
+    assert.ok(prompt.includes(JSON.stringify(locator)), '召回和画像应给出一致的定位对象')
+  }
+  const ret = await new MemoryTool().func({ candidates: locators.map(locator => ({ ...locator, operation: 'retract' })) }, e)
+  assert.match(ret, /成功 2 条/)
+  assert.equal((await store.listRecallCandidates('10002', '100')).length, 0)
+})
+
 test('成员自助删除关闭：非主人 retract 被拒且既有记忆不受影响（不能靠对话删自己）', async () => {
   await clearStore()
   resetConfig()

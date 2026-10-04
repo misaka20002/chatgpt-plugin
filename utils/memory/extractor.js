@@ -73,7 +73,7 @@ export function partitionRowsByTokens(rows, tokenLimit = 30000) {
  * 证据归属校验（模型输出不可信，服务端复检）
  * @param {Object} candidate 候选（含 subjectId/speakerId/scope/evidenceMessageIds）
  * @param {Object} evidenceMap { messageId: {groupId, senderId, senderName, role, time} }
- * @param {Object} [ctx] 服务端可信上下文，`{ isBotMaster }`：Bot 主人等同群主/管理员。
+ * @param {Object} [ctx] 服务端可信上下文，`{ isBotMaster }`：主人可发布群事实，也可管理撤回个人事实。
  *        只能由调用方从事件上下文（`e.isMaster`）传入，**绝不来自模型 candidate**；
  *        这是"谁传谁授权"的字段，新增调用点必须先确认来源可信。离线每日提炼不传该字段。
  * @returns {{ok: boolean, reason: string}}
@@ -89,6 +89,12 @@ export function validateEvidence(candidate, evidenceMap = {}, ctx = {}) {
   if (candidate.scope === 'user' || candidate.scope === 'user_group') {
     const subjectId = String(candidate.subjectId || '')
     if (!subjectId) return { ok: false, reason: '个人记忆缺少 subjectId' }
+    // 主人管理撤回以主人的当前消息为依据，不冒充目标本人；新增仍要求本人自述。
+    if (candidate.operation === 'retract' && ctx.isBotMaster === true) {
+      return senders.has(String(candidate.speakerId || ''))
+        ? { ok: true, reason: '' }
+        : { ok: false, reason: '主人撤回缺少实际发话人的消息证据' }
+    }
     // 个人事实必须有本人消息作为证据
     if (!senders.has(subjectId)) return { ok: false, reason: `subjectId ${subjectId} 不是任何证据消息的发送者（他人转述/伪造）` }
     // 若给出 speakerId，必须等于 subjectId
