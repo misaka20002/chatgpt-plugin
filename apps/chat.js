@@ -38,6 +38,7 @@ import {
 } from '../utils/paimonFuction.js'
 import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
+import { groupReply } from '../utils/groupReply.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -671,6 +672,7 @@ export class chatgpt extends plugin {
         return false
       }
       if (e.user_id == getUin(e)) return false
+      if (!groupReply.markHandled(e)) return false
       prompt = isTrss ? processCQMessage(e.raw_message, getUin(e)) : msg.trim()
       try {
         if (e.isGroup && !isTrss) {
@@ -742,8 +744,8 @@ export class chatgpt extends plugin {
   /**
    * bot现在可以对「包含第一人称的句子」回复
    */
-  async chatgpt_for_firstperson_call(e) {
-    if (!Config.chat_for_First_person) {
+  async chatgpt_for_firstperson_call(e, { automatic = false } = {}) {
+    if (!automatic && !Config.chat_for_First_person) {
       logger.info('[chatgpt] AI回应第一人称呼叫已关闭，不予理会')
       return false
     }
@@ -756,6 +758,7 @@ export class chatgpt extends plugin {
       logger.info('[chatgpt] 机器人自己发出来的消息，不予理会')
       return false
     }
+    if (!automatic && !groupReply.markHandled(e)) return false
     // let ats = e.message.filter(m => m.type === 'at')
     // if (!(e.atme || e.atBot) && ats.length > 0) {
     //   if (Config.debug) {
@@ -779,7 +782,7 @@ export class chatgpt extends plugin {
     }
     if (!(await this.canGPT_blackAndWhitelist(e))) return false
 
-    await this.abstractChat(e, prompt, use)
+    await this.abstractChat(e, prompt, use, false, { automatic })
   }
 
   /** 黑白名单过滤及速率限制后可进行对话 */
@@ -889,12 +892,14 @@ export class chatgpt extends plugin {
     return true;
   }
 
-  async abstractChat(e, prompt, use, forcePictureMode = false) {
+  async abstractChat(e, prompt, use, forcePictureMode = false, { automatic = false } = {}) {
+    if (!automatic && !groupReply.markHandled(e)) return false
     /** 检查用户是否被拉黑 class BlockUserTool extends AbstractTool */
     if (!e.isMaster) {
       const blockKey = `CHATGPT:blockUser:${e.sender.user_id}`
       const blockData = await redis.get(blockKey)
       if (blockData) {
+        if (automatic) return false
         try {
           const data = JSON.parse(blockData)
           const remainingTime = Math.ceil((data.blockedAt + data.duration * 1000 - Date.now()) / 60000)
@@ -1103,7 +1108,7 @@ export class chatgpt extends plugin {
       // 适配器发送“正在输入”状态
       if (e.send_typing) e.send_typing();
 
-      let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e)
+      let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e, { disableTools: automatic })
       if (chatMessage?.noMsg) {
         return false
       }

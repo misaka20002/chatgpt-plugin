@@ -20,6 +20,14 @@
 - **`loadPlugin()` 的顺序是 `new p()` → `await init.init()` → `new p()` 再 push 进 `priority`**：init() 执行期间本插件还没注册，此处的动态注册会「找不到条目」——不用补救，随后构造的注册实例会按当时的模块级状态生成 `rule`（这也是 `keyMap` 作为模块级变量在加载期可用的原因）。
 - **TRSS loader 的定时任务 `task.fnc` 必须传函数引用**（如 `this.runDaily.bind(this)`），不能传方法名字符串：`loader.collectTask` 只校验 `i.cron && i.fnc` 后原样入队，`startTask` 直接 `await i.fnc()`，字符串会被当作函数调用报 `TypeError: i.fnc is not a function`。注册方式参考 `apps/ScheduleTaskPlugin.js` 等：把 `task` 放在构造函数体内（`super()` 之后赋值 `this.task`，此时才能 `bind(this)`），而不是塞进 `super({...})` 配置。注意消息路由的 `rule[].fnc` 仍是字符串（loader 用 `plugin[v.fnc](e)` 按名解析），二者约定不同，勿混淆。
 
+## 群聊自主回复
+
+- `apps/groupReply.js` 以 -1010 优先级观察并放行消息，`utils/groupReply.js` 按 Bot + 群隔离短期窗口和定时器。配置入口为锅巴 `groupReply`，群表格仅借用记忆采集的 GSubForm 写法，与记忆 V2 完全独立；旧 bym 插件、命令和面板入口已移除。
+- 每条普通群消息更新窗口，默认静默 10 秒合并判断一次（0 为不等待）；窗口默认 50 条，允许 20–500 条，每条文本上限 2000 字符，媒体仅提供类型。同群判断与回复串行；只从本批次候选中选择真实事件，一批最多回复一次。记录仅从启用后采集，不足时使用实际条数；内存窗口闲置 30 分钟后清理，关闭群开关的缓存最多一分钟内释放。
+- 判断通过无 tools 的 `SubLLM` 执行；正式回复复用 `chatgpt_for_firstperson_call(e, { automatic: true })`，独立于第一人称开关，保留普通模式选择、黑白名单、闭嘴与速率限制。`Core.sendMessage` 的 `disableTools` 按次关闭本地及 provider 内置工具，不修改全局智能模式。
+- 直接呼叫在进入普通对话时取消待判断窗口、作废正在运行的判断；同一消息的原事件、快照与窗口内重复事件共享回复归属。自主回复首次发送前同步占用归属，晚到的直接入口必须检查 `markHandled` 返回值并跳过；自主回复尚未发送时仍由直接呼叫优先接管。判断和每次实际发送前重新检查群开关与闭嘴状态。判断失败、非法 JSON 或越界消息编号只记日志，不触发回复。
+- 本地验证：`npm run test:group-reply`；配置及锅巴持久化验证：`npm run test:config`。真实 QQ 发送与锅巴页面交互仍需运行环境验证。
+
 ## 废弃接口
 
 - **`utils/SydneyAIClient.js`（Bing / Sydney 接口）已废弃，以后都不要碰**：该接口已不可用，这个类在全仓库**没有任何实例化入口**（`apps/management.js:16` 里那行 `import SydneyAIClient from '../utils/SydneyAIClient.js'` 是未使用的，实际走 `client/CopilotAIClient.js` 的 `BingAIClient`）。它内部的 `Config.sydneyFirstMessageTimeout`（配置项已注释掉，值为 `undefined`）、`timeout` / `firstMessageTimeout` 等常量都属于历史遗留，**不要给它补超时、加功能、做重构，也不要因为审查它而改动**；那行未使用的 import 是有意留的，别顺手删。真要清理或删除这个类属于单独议题，先问用户。

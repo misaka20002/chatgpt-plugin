@@ -1,4 +1,5 @@
 import { Config } from './utils/config.js'
+import { normalizeGroupReplyConfig } from './utils/groupReplyConfig.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/mcpServersGuoba.js'
@@ -52,7 +53,7 @@ export function supportGuoba() {
         {
           field: 'tts_First_person',
           label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫；重启生效',
+          bottomHelpMessage: '全局 AI 名称，用于 API 模式身份、群聊自主回复判断、戳一戳文案和第一人称呼叫；修改呼叫名称后需重启',
           component: 'Input'
         },
         {
@@ -2389,83 +2390,69 @@ export function supportGuoba() {
           }
         },
         {
-          label: '伪人',
+          label: '群聊自主回复',
           component: 'Divider'
         },
         {
-          field: 'assistantLabel',
-          label: 'AI名字',
-          bottomHelpMessage: 'AI认为的自己的名字，在api模式时，你问他你是谁是他会回答这里的名字；也用于伪人模式的触发',
-          component: 'Input'
-        },
-        {
-          field: 'enableBYM',
-          label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复；此开关重启生效；（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
+          field: 'groupReply.enabled',
+          label: '开启群聊自主回复',
+          bottomHelpMessage: '仅在下方授权群采集并判断消息；与记忆采集独立。判断需要回复后沿用第一人称呼叫的普通对话流程，判断和自动回复均不调用 tools。直接 @ 或第一人称呼叫仍按原设置即时回复；首次安装需重启加载入口，之后配置即时生效',
           component: 'Switch'
         },
         {
-          field: 'bymRate',
-          label: '伪人模式触发概率，单位为%',
-          component: 'InputNumber',
+          field: 'groupReply.groups',
+          label: '授权采集群（自主回复）',
+          bottomHelpMessage: '由 Bot 主人显式授权，每群独立开关。仅从开启后采集，最近记录暂存在内存，重启清空；关闭停止采集和待发回复，缓存最多一分钟内清理，不读取或修改记忆 V2 的授权与数据',
+          component: 'GSubForm',
           componentProps: {
-            min: 0,
-            max: 100
-          }
-        },
-        {
-          field: 'bymDisableGroup',
-          label: '伪人禁用群',
-          bottomHelpMessage: '设置在该群禁用伪人模式',
-          component: "GTags",
-          componentProps: {
-            placeholder: '请输入群号',
-            allowAdd: true,
-            allowDel: true,
-            valueParser: ((value) => value.split(',') || []),
-          },
-        },
-        {
-          field: 'bymMode',
-          label: '伪人模型',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: 'Gemini（推荐）', value: 'gemini' },
-              { label: 'OpenAI Chat API', value: 'api' },
-              { label: 'Claude', value: 'claude' }
+            multiple: true,
+            schemas: [
+              { field: 'groupId', label: '群号', component: 'Input', required: true },
+              { field: 'switchOn', label: '开启采集与回复', component: 'Switch' }
             ]
           }
         },
         {
-          field: 'bymPreset',
-          label: '伪人模式的额外预设',
-          component: 'Input'
+          field: 'groupReply.historyCount',
+          label: '判断输入的群聊记录条数',
+          bottomHelpMessage: '最近记录上限，至少 20 条、默认 50 条、最多 500 条；不足时使用实际已采集条数。每条最多 2000 字符，图片/语音等仅提供类型标记',
+          component: 'InputNumber',
+          componentProps: { min: 20, max: 500, step: 1 }
         },
         {
-          field: 'bymFuckPrompt',
-          label: '伪人模式骂人反击的设定词',
-          component: 'Input'
+          field: 'groupReply.debounceSeconds',
+          label: '群聊判断防抖时间（秒）',
+          bottomHelpMessage: '默认 10 秒，每群独立计时：连续静默达到该时间后合并判断一次，一批最多回复一次。0 表示不等待；同一群的判断和自动回复串行执行',
+          component: 'InputNumber',
+          componentProps: { min: 0, max: 300, step: 1 }
         },
         {
-          field: 'bymFuckList',
-          label: '伪人模式反击的触发词',
-          bottomHelpMessage: '请输入用于伪人模式下骂人反击的触发词，每个词组将被单独处理',
-          component: 'GTags',
+          field: 'groupReply.provider',
+          label: '判断模型来源',
+          component: 'Select',
           componentProps: {
-            placeholder: '请输入反击触发词',
-            allowAdd: true,
-            allowDel: true,
-            showPrompt: true,
-            promptProps: {
-              content: '添加新的反击触发词',
-              okText: '添加',
-              rules: [
-                { required: true, message: '触发词不能为空' }
-              ]
-            },
-            valueParser: (value) => value.split(',') || []
-          }
+            options: [
+              { label: '跟随全局对话模式', value: 'current' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
+              { label: 'Claude', value: 'claude' },
+              { label: 'Gemini', value: 'gemini' }
+            ]
+          },
+          bottomHelpMessage: '复用所选来源的地址和密钥，仅用于是否回复的判断；正式回复继续使用发言用户的普通对话模型。不支持的全局模式会跳过判断并记录错误'
+        },
+        {
+          field: 'groupReply.model',
+          label: '判断模型名称',
+          bottomHelpMessage: '可填同一来源下更省 token 费用的小模型；留空使用该来源已配置的模型',
+          component: 'Input'
+        },
+        {
+          field: 'groupReply.systemPrompt',
+          label: '回复判断系统提示词',
+          bottomHelpMessage: '独立于正式聊天人设；已内置默认提示词，清空后恢复默认。输出契约：{"reply":false} 或 {"reply":true,"messageId":"candidateIds 中的编号"}。判断失败或格式不合法时不回复',
+          component: 'InputTextArea',
+          componentProps: { rows: 12 }
         },
         {
           label: '主动打招呼',
@@ -2647,6 +2634,7 @@ export function supportGuoba() {
           const content = (t.content || '').replace(/\[CQ:[^\]]+\]/g, '').trim()
           return `${t.user_id} | ${t.group_id || '私聊'} | [${t.taskId}] | ${t.cronExpression} | ${content}`
         })
+        configObj.groupReply = normalizeGroupReplyConfig(configObj.groupReply)
         configObj.mcpServers = formatMcpServersForGuoba(configObj.mcpServers)
 
         // For api_default_USE
@@ -2696,7 +2684,7 @@ export function supportGuoba() {
               return acc
             }, [])
           }
-          // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr' || keyPath === 'bymDisableGroup') {
+          // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr') {
           //   value = value.map(item => item.trim()).filter(item => item !== '')
           // }
 
@@ -2747,6 +2735,8 @@ export function supportGuoba() {
         assignFirstElementIfExists(Config.getConfig(), data, 'gemini_fallbackModel');
         assignFirstElementIfExists(Config.getConfig(), data, 'gemini_vqa_model');
         assignFirstElementIfExists(Config.getConfig(), data, 'geminiSearchModel');
+
+        Config.getConfig().groupReply = normalizeGroupReplyConfig(Config.getConfig().groupReply)
 
         // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
         Config.save();

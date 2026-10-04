@@ -265,19 +265,8 @@ export class ChatgptManagement extends plugin {
           permission: 'master'
         },
         {
-
-          reg: '^#chatgpt(开启|关闭)(伪人|bym)$',
-          fnc: 'switchBYM',
-          permission: 'master'
-        },
-        {
           reg: '^#chatgpt(开启|关闭)gemini(搜索|代码执行)$',
           fnc: 'geminiOpenSearchCE',
-          permission: 'master'
-        },
-        {
-          reg: '^#chatgpt(伪人|bym)切换',
-          fnc: 'switchBYMModel',
           permission: 'master'
         },
         {
@@ -1569,8 +1558,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     config.push(`当前模式：${use}`)
     config.push(`\n当前API模型：${Config.model}`)
     config.push(`\n当前开启API流式输出：${Config.apiStream}`)
-    config.push(`\n当前开启BYM模式：${Config.enableBYM}`)
-    config.push(`\n当前BYM模式：${Config.bymMode}`)
+    config.push(`\n群聊自主回复：${Config.groupReply.enabled}`)
     config.push(`\n当前智能模式：${Config.smartMode}`)
     if (e.isPrivate) {
       config.push(`\n当前APIKey：${Config.apiKey}`)
@@ -1624,37 +1612,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       await stopServer()
       await this.reply('好的，已经关闭工具箱')
     }
-  }
-
-  async switchBYM(e) {
-    if (e.msg.includes('开启')) {
-      if (Config.enableBYM) {
-        await this.reply('已经开启了')
-        return
-      }
-      Config.enableBYM = true
-      await this.reply('开启中', true)
-      await this.reply('好的，已经打开bym模式')
-    } else {
-      if (!Config.enableBYM) {
-        await this.reply('已经是关闭的了')
-        return
-      }
-      Config.enableBYM = false
-      await this.reply('好的，已经关闭bym模式')
-    }
-  }
-
-  async switchBYMModel(e) {
-    let model = e.msg.replace(/^#chatgpt(伪人|bym)切换/, '')
-    if (['api', 'Api', 'API'].includes(model)) {
-      Config.bymMode = 'api'
-    } else if (['gemini', '双子星'].includes(model.toLowerCase())) {
-      Config.bymMode = 'gemini'
-    } else if (['claude', '克劳德'].includes(model.toLowerCase())) {
-      Config.bymMode = 'claude'
-    }
-    await this.reply('切换成功')
   }
 
   async copilotSetting(e) {

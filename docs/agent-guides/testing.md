@@ -8,6 +8,8 @@
 
 ## 现有测试
 
+- 群聊自主回复：`npm run test:group-reply`，覆盖观察器、防抖、候选窗口、并发与关闭后停止回复，以及 Core/SubLLM 四家 provider 的无工具请求；配置与锅巴保存/重载由 `test/configGroupReply.test.js` 纳入 `npm run test:config`。
+
 - 记忆系统：`npm run test:memory`
   - `test/memoryV2.test.js`：V2 核心单元/回归测试，覆盖存储、提取、召回、每日提炼、采集与 Memory_Tool 等核心逻辑。
   - `test/memoryApps.test.mjs`：apps 层契约测试，通过 `mock.module()` 隔离 TRSS 插件基类与重依赖，覆盖观察器 `rule` 匹配（必须能匹配多行文本）、管理指令的展示编号与按序号删除的一致性（全序比较器不能被删）。**只 mock 边界，被测的排序/编号/正则匹配必须执行真实生产代码**——把业务逻辑写进 mock 等于自己验证自己。
