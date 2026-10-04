@@ -31,7 +31,7 @@ export class MemoryTool extends AbstractTool {
             scope: {
               type: 'string',
               enum: ['user', 'user_group', 'group'],
-              description: 'user：跨群个人事实；user_group：仅当前群有效的个人事实；group：群规则、共同计划或公共事实。'
+              description: 'user：私聊与群聊共用的个人事实，私聊仅可使用此作用域；user_group：仅当前群有效的个人事实；group：群规则、共同计划或公共事实。'
             },
             subjectId: {
               type: 'string',
@@ -77,6 +77,9 @@ export class MemoryTool extends AbstractTool {
   description = '新增、更新或撤回长期原子记忆。适用于用户明确自述的身份信息、家庭与关系、工作与单位、居住场所、长期偏好、重要计划、经历和事件，以及对既有事实的明确纠正或否定。Bot 主人可明确要求撤回他人的错误记忆，须填写目标 subjectId，并从历史记忆或 userProfile 查询结果复用定位字段；未命中不能声称已删除。保留用户给出的具体信息（单位、地点、称谓、时间），不要泛化成笼统结论。每条只记录一个事实；只记录有直接证据的内容；不要保存聊天摘要、人格推测、低置信度信息，以及密码、验证码、Token/API Key、Cookie 这类登录凭证。'
 
   func = async function (opts, e) {
+    if (!Config.enableMemory) {
+      return 'Error: 记忆系统未启用'
+    }
     const { candidates } = opts
     if (!Array.isArray(candidates) || candidates.length === 0) {
       return 'Error: candidates 数组不能为空'

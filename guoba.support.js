@@ -1676,7 +1676,7 @@ export function supportGuoba() {
         {
           field: 'enableMemory',
           label: '启用记忆系统',
-          bottomHelpMessage: '智能模式 V2 记忆系统唯一总开关；开启后同时开放 Memory_Tool 与 userProfile 工具，userProfile 仅查看已存画像；群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助',
+          bottomHelpMessage: 'V2 记忆系统唯一总开关；开启后私聊可召回个人记忆、使用 #我的记忆 和 #清空我的记忆（受自助删除开关控制），智能模式下可记录、更新、撤回个人事实及查询已存画像。个人事实在私聊与群聊间共用；私聊无需授权群，也不采集原文做每日提炼。群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助',
           component: 'Switch'
         },
         {

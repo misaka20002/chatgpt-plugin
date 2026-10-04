@@ -2006,6 +2006,79 @@ test('群事实证据规则：单成员非管理证据必须被拒（与主人�
 
 /* ================= 画像只读已存记忆 ================= */
 
+test('私聊记忆：总开关开启后可写入、召回、查询画像、更新和撤回个人事实', async () => {
+  await clearStore()
+  resetConfig()
+  Config.getConfig().memoryGroupCapture.groups = []
+  const store = new MemoryStore(mockRedis)
+  const e = { user_id: '10001', isGroup: false, message_id: 'private-add', sender: { nickname: '玉玉' } }
+  const tool = new MemoryTool()
+  const fact = { scope: 'user', factKey: 'identity.nickname', factValue: '玉玉', text: '用户希望被称为玉玉', kind: 'identity', confidence: 0.9, importance: 0.8 }
+  assert.match(await tool.func({ candidates: [fact] }, e), /成功 1 条/)
+  const stored = await store.listRecallCandidates(e.user_id, '')
+  assert.equal(stored.length, 1)
+  assert.equal(stored[0].groupId, '')
+  assert.equal(stored[0].scope, 'user')
+  assert.match(await buildMemoryPrompt(e, '我叫什么', { store }), /玉玉/)
+  assert.match(await buildMemoryPrompt({ ...e, isGroup: true, group_id: '100' }, '我叫什么', { store }), /玉玉/, '个人事实在私聊和群聊之间共用')
+
+  const before = structuredClone(mockRedis.data)
+  assert.match(await new UserProfileTool().func({ target_id: e.user_id }, e), /玉玉/)
+  const profile = await extractUserProfile(e, e.user_id, { store })
+  assert.equal(profile.profile.groupId, '', '私聊不能把缺失群号转换成字符串 undefined')
+  assert.deepEqual(mockRedis.data, before, '私聊画像查询只读已存事实')
+
+  const updated = { ...fact, factValue: '小玉', text: '用户希望被称为小玉' }
+  assert.match(await tool.func({ candidates: [updated] }, { ...e, message_id: 'private-update' }), /成功 1 条/)
+  assert.deepEqual((await store.listRecallCandidates(e.user_id, '')).map(m => m.factValue), ['小玉'])
+  const retract = { operation: 'retract', scope: 'user', factKey: fact.factKey, factValue: updated.factValue }
+  Config.getConfig().allowMemberDeleteOwnMemory = false
+  assert.match(await tool.func({ candidates: [retract] }, { ...e, message_id: 'private-denied' }), /自助删除记忆已关闭/)
+  assert.equal((await store.listRecallCandidates(e.user_id, '')).length, 1)
+  Config.getConfig().allowMemberDeleteOwnMemory = true
+  assert.match(await tool.func({ candidates: [retract] }, { ...e, message_id: 'private-retract' }), /成功 1 条/)
+  assert.equal(await buildMemoryPrompt(e, '我叫什么', { store }), '')
+  resetConfig()
+})
+
+test('私聊画像：普通用户限本人，主人可查他人，均不读取群内个人事实', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const fact = { scope: 'user', factKey: 'identity.nickname', factValue: '小鱼', text: '用户昵称小鱼', kind: 'identity', confidence: 0.9, importance: 0.8 }
+  await writeFact(store, '100', fact, [{ messageId: 'profile-user', senderId: '10002' }])
+  await writeFact(store, '100', { ...fact, scope: 'user_group', factKey: 'group_role.release', factValue: 'weekly', text: '用户负责本群每周发版' }, [{ messageId: 'profile-group', senderId: '10002' }])
+  const tool = new UserProfileTool()
+  const before = structuredClone(mockRedis.data)
+  const e = { user_id: '10001', isGroup: false, isMaster: false }
+  assert.match(await tool.func({ target_id: '10002', isMaster: true }, e), /只能分析自己的画像/)
+  for (const caller of [{ ...e, user_id: '10002' }, { ...e, isMaster: true }]) {
+    const result = await tool.func({ target_id: '10002' }, caller)
+    assert.match(result, /小鱼/)
+    assert.doesNotMatch(result, /每周发版/)
+  }
+  assert.match(await tool.func({ target_id: '10001' }, { ...e, isGroup: true, group_id: '200' }), /本群未开启记忆采集/, '放开私聊不能绕过群授权')
+  assert.deepEqual(mockRedis.data, before)
+})
+
+test('私聊记忆：总开关关闭时已有工具实例也拒绝读写', async () => {
+  await clearStore()
+  resetConfig()
+  const e = { user_id: '10001', isGroup: false, message_id: 'private-off', isMaster: true }
+  const candidates = [{ scope: 'user', factKey: 'identity.nickname', factValue: '小玉', text: '用户昵称小玉', kind: 'identity', confidence: 0.9, importance: 0.8 }]
+  const memoryTool = new MemoryTool()
+  const profileTool = new UserProfileTool()
+  const before = structuredClone(mockRedis.data)
+  Config.getConfig().enableMemory = false
+  try {
+    assert.match(await memoryTool.func({ candidates }, e), /^Error:.*未启用/)
+    assert.match(await profileTool.func({ target_id: e.user_id }, e), /^Error:.*未启用/)
+    assert.deepEqual(mockRedis.data, before)
+  } finally {
+    resetConfig()
+  }
+})
+
 /**
  * 群 stub：画像查询不能调用 `getChatHistory`，已有事实只能从 V2 读取。
  */

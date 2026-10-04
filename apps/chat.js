@@ -1081,7 +1081,7 @@ export class chatgpt extends plugin {
         })
         if (memoryPrompt) {
           prompt = memoryPrompt + '\n\n' + prompt
-          logger.info(`[Memory] 为用户 ${e.user_id} 召回了 ${memoryPrompt.split('\n').filter(l => l.startsWith('- [')).length} 条相关记忆`)
+          logger.info(`[Memory] 为用户 ${e.user_id} 召回了 ${memoryPrompt.split('\n').filter(l => l.startsWith('- {')).length} 条相关记忆`)
         }
       } catch (err) {
         logger.error('[Memory] 加载记忆失败:', err)

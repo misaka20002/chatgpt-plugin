@@ -236,7 +236,7 @@ test('锅巴图谱开关读写后立即控制同一个指令实例，面板移�
   const panel = supportGuoba().configInfo
   const field = panel.schemas.find(item => item.field === 'enableAtGraph')
   assert.equal(field.component, 'Switch')
-  assert.match(field.bottomHelpMessage, /#at图谱\[At\]/)
+  assert.match(field.bottomHelpMessage, /#at图谱\[At群友\]/)
   assert.equal(panel.schemas.some(item => item.field === 'enableUserProfileHistoryScan'), false)
   assert.equal((await panel.getConfigData()).enableAtGraph, true)
   const Result = { ok: () => true, error: message => { throw new Error(message) } }

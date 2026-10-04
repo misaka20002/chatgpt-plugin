@@ -43,13 +43,16 @@ mock.module('../utils/common.js', {
 })
 
 /** store 工厂 stub：listRecallCandidates 按队列吐数据，用于模拟 Redis Set 的不稳定顺序 */
-const storeCalls = { deleted: [], cleared: [] }
+const storeCalls = { listed: [], deleted: [], cleared: [] }
 let recallQueue = []
 let hasMemories = true
 mock.module('../utils/memory/v2.js', {
   namedExports: {
     getStore: () => ({
-      listRecallCandidates: async () => recallQueue.shift() ?? [],
+      listRecallCandidates: async (...args) => {
+        storeCalls.listed.push(args)
+        return recallQueue.shift() ?? []
+      },
       hasUserMemories: async () => hasMemories,
       clearUser: async (id) => {
         storeCalls.cleared.push(id)
@@ -218,6 +221,21 @@ test('成员自助删除开启：非主人可清空自己的记忆', async () =>
     const e = mkEvent('#清空我的记忆')
     await new memoryManage(e).clearMyMemories(e)
     assert.deepEqual(storeCalls.cleared, ['10001'], '默认开启时非主人应能清空自己')
+  })
+})
+
+test('私聊记忆指令：可查看个人记忆，并在确认后清空本人记忆', async () => {
+  await withMemberDelete(true, async () => {
+    const e = mkEvent('#我的记忆', { isGroup: false, group_id: undefined })
+    const saved = memory('private-memory', 1000, '小玉')
+    recallQueue = [[saved]]
+    storeCalls.listed.length = 0
+    forwards.length = 0
+    await new memoryManage(e).myMemories(e)
+    assert.deepEqual(storeCalls.listed, [['10001', '']])
+    assert.deepEqual(idsOf(forwards.at(-1)), [saved.id])
+    await new memoryManage(e).clearMyMemories({ ...e, msg: '#清空我的记忆' })
+    assert.deepEqual(storeCalls.cleared, ['10001'])
   })
 })
 

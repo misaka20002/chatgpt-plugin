@@ -29,19 +29,19 @@ const PREFERENCE_LABELS = {
 
 /**
  * 读取目标用户的已存 V2 画像
- * @param {Object} e 云崽事件（群聊）
+ * @param {Object} e 云崽事件（私聊或群聊）
  * @param {string} targetId
  * @param {Object} [options] { store } 可注入 V2 存储
  * @returns {Promise<{ok: boolean, message: string, profile?: Object}>}
  */
 export async function extractUserProfile(e, targetId, options = {}) {
-  const gid = String(e.group_id)
+  const gid = e.group_id ? String(e.group_id) : ''
   const tid = String(targetId)
 
   const store = options.store || new MemoryStore()
   const profile = await buildProfileView(tid, gid, store)
   if (profile.facts.length === 0) {
-    return { ok: false, message: `用户 ${tid} 暂无已存画像记忆，可在群记忆提炼积累事实后再查看。` }
+    return { ok: false, message: `用户 ${tid} 暂无已存画像记忆，可在智能对话中告知并记录个人事实后再查看。` }
   }
   return { ok: true, message: `返回用户 ${tid} 的已存画像。`, profile }
 }
