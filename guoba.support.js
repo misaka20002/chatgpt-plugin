@@ -1874,6 +1874,117 @@ export function supportGuoba() {
           },
         },
         {
+          label: '主动触发',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          label: '群聊自主回复',
+          component: 'Divider'
+        },
+        {
+          field: 'groupReply.enabled',
+          label: '开启群聊自主回复',
+          bottomHelpMessage: '仅在下方授权群采集并判断是否 群聊自主回复。判断时无工具调用，回复时支持智能模式',
+          component: 'Switch'
+        },
+        {
+          field: 'groupReply.groups',
+          label: '自主回复群',
+          bottomHelpMessage: '仅从开启后采集，最近记录暂存在内存，重启清空；关闭停止采集和待发回复，缓存最多一分钟内清理，不读取或修改记忆 V2 的授权与数据；可用指令： #群聊自主回复[开启|关闭]',
+          component: 'GSubForm',
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: 'groupId', label: '群号', component: 'Input', required: true },
+              { field: 'switchOn', label: '开启采集与回复', component: 'Switch' },
+              {
+                field: 'debounceSeconds',
+                label: '每隔多久判断是否回复（秒）',
+                bottomHelpMessage: '每隔多久判断是否回复（秒）；但如果群里还在聊天，就等最后一条消息过去 10 秒钟再判断。没有新消息不判断。每群独立，留空默认 60 秒',
+                component: 'InputNumber',
+                componentProps: { min: 0, step: 1, placeholder: '留空为 60 秒' }
+              },
+              {
+                field: 'enthusiasm',
+                label: '热情度（%）',
+                bottomHelpMessage: '填写 1～100，单位为 %；越低越安静，越高越爱接话；由LLM结合上下文对是否接话做评分，评分为 0 始终不回复。热情度不是随机回复概率。',
+                component: 'InputNumber',
+                componentProps: { min: 1, max: 100, step: 1, placeholder: '默认 40%' }
+              }
+            ]
+          }
+        },
+        {
+          field: 'groupReply.historyCount',
+          label: '判断输入的群聊记录条数',
+          bottomHelpMessage: '最近记录上限，至少 20 条、默认 50 条、最多 500 条；不足时使用实际已采集条数。每条最多 2000 字符，图片/语音等仅提供类型标记',
+          component: 'InputNumber',
+          componentProps: { min: 20, max: 500, step: 1 }
+        },
+        {
+          field: 'groupReply.provider',
+          label: '判断模型来源',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '跟随全局对话模式', value: 'current' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
+              { label: 'Claude', value: 'claude' },
+              { label: 'Gemini', value: 'gemini' }
+            ]
+          },
+          bottomHelpMessage: '复用所选来源的地址和密钥，仅用于是否回复的判断；正式回复继续使用发言用户的普通对话模型。不支持的全局模式会跳过判断并记录错误'
+        },
+        {
+          field: 'groupReply.model',
+          label: '判断模型名称',
+          bottomHelpMessage: '可填同一来源下更省 token 费用的小模型；留空使用该来源已配置的模型',
+          component: 'Input'
+        },
+        {
+          field: 'groupReply.decisionPrompt',
+          label: '回复判断系统提示词',
+          bottomHelpMessage: '让模型为最适合接话的消息打分，无需被点名；程序再按每群热情度判断是否回复。清空后恢复新版默认提示词。输出格式：{"confidence":0.65,"messageId":"candidateIds 中的编号"}，confidence 为 0～1 的数字；格式错误不回复',
+          component: 'InputTextArea',
+          componentProps: { rows: 12 }
+        },
+        {
+          label: '主动打招呼',
+          component: 'Divider'
+        },
+        {
+          field: 'initiativeChatGroups',
+          label: '主动发起聊天群聊的群号',
+          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛:"经测试喵崽无法使用"，推荐使用 sf插件 的自动打招呼 https://github.com/AIGC-Yunzai/siliconflow-plugin',
+          component: 'Input'
+        },
+        {
+          field: 'helloPrompt',
+          label: '打招呼prompt',
+          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
+          component: 'Input'
+        },
+        {
+          field: 'helloInterval',
+          label: '打招呼间隔(小时)',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 24
+          }
+        },
+        {
+          field: 'helloProbability',
+          label: '打招呼的触发概率(%)',
+          bottomHelpMessage: '设置为100则每次经过间隔时间必定触发主动打招呼事件。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 100
+          }
+        },
+        {
           label: '小功能',
           component: 'SOFT_GROUP_BEGIN'
         },
@@ -2387,106 +2498,6 @@ export function supportGuoba() {
           component: 'InputPassword',
           componentProps: {
             placeholder: 'APPID:密钥'
-          }
-        },
-        {
-          label: '群聊自主回复',
-          component: 'Divider'
-        },
-        {
-          field: 'groupReply.enabled',
-          label: '开启群聊自主回复',
-          bottomHelpMessage: '仅在下方授权群采集并判断消息；与记忆采集独立。判断需要回复后沿用第一人称呼叫的普通对话流程，判断和自动回复均不调用 tools。直接 @ 或第一人称呼叫仍按原设置即时回复；首次安装需重启加载入口，之后配置即时生效',
-          component: 'Switch'
-        },
-        {
-          field: 'groupReply.groups',
-          label: '授权采集群（自主回复）',
-          bottomHelpMessage: '由 Bot 主人显式授权，每群独立开关。仅从开启后采集，最近记录暂存在内存，重启清空；关闭停止采集和待发回复，缓存最多一分钟内清理，不读取或修改记忆 V2 的授权与数据',
-          component: 'GSubForm',
-          componentProps: {
-            multiple: true,
-            schemas: [
-              { field: 'groupId', label: '群号', component: 'Input', required: true },
-              { field: 'switchOn', label: '开启采集与回复', component: 'Switch' }
-            ]
-          }
-        },
-        {
-          field: 'groupReply.historyCount',
-          label: '判断输入的群聊记录条数',
-          bottomHelpMessage: '最近记录上限，至少 20 条、默认 50 条、最多 500 条；不足时使用实际已采集条数。每条最多 2000 字符，图片/语音等仅提供类型标记',
-          component: 'InputNumber',
-          componentProps: { min: 20, max: 500, step: 1 }
-        },
-        {
-          field: 'groupReply.debounceSeconds',
-          label: '群聊判断防抖时间（秒）',
-          bottomHelpMessage: '默认 10 秒，每群独立计时：连续静默达到该时间后合并判断一次，一批最多回复一次。0 表示不等待；同一群的判断和自动回复串行执行',
-          component: 'InputNumber',
-          componentProps: { min: 0, max: 300, step: 1 }
-        },
-        {
-          field: 'groupReply.provider',
-          label: '判断模型来源',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: '跟随全局对话模式', value: 'current' },
-              { label: 'OpenAI Chat API', value: 'api' },
-              { label: 'OpenAI Responses API', value: 'responses' },
-              { label: 'Claude', value: 'claude' },
-              { label: 'Gemini', value: 'gemini' }
-            ]
-          },
-          bottomHelpMessage: '复用所选来源的地址和密钥，仅用于是否回复的判断；正式回复继续使用发言用户的普通对话模型。不支持的全局模式会跳过判断并记录错误'
-        },
-        {
-          field: 'groupReply.model',
-          label: '判断模型名称',
-          bottomHelpMessage: '可填同一来源下更省 token 费用的小模型；留空使用该来源已配置的模型',
-          component: 'Input'
-        },
-        {
-          field: 'groupReply.systemPrompt',
-          label: '回复判断系统提示词',
-          bottomHelpMessage: '独立于正式聊天人设；已内置默认提示词，清空后恢复默认。输出契约：{"reply":false} 或 {"reply":true,"messageId":"candidateIds 中的编号"}。判断失败或格式不合法时不回复',
-          component: 'InputTextArea',
-          componentProps: { rows: 12 }
-        },
-        {
-          label: '主动打招呼',
-          component: 'Divider'
-        },
-        {
-          field: 'initiativeChatGroups',
-          label: '主动发起聊天群聊的群号',
-          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛:"经测试喵崽无法使用"，推荐使用 sf插件 的自动打招呼 https://github.com/AIGC-Yunzai/siliconflow-plugin',
-          component: 'Input'
-        },
-        {
-          field: 'helloPrompt',
-          label: '打招呼prompt',
-          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
-          component: 'Input'
-        },
-        {
-          field: 'helloInterval',
-          label: '打招呼间隔(小时)',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            max: 24
-          }
-        },
-        {
-          field: 'helloProbability',
-          label: '打招呼的触发概率(%)',
-          bottomHelpMessage: '设置为100则每次经过间隔时间必定触发主动打招呼事件。',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 100
           }
         },
         // {

@@ -47,7 +47,7 @@ const { SubLLM } = await import('../model/SubLLM.js')
 const event = { isGroup: true, group_id: '100', self_id: '999', user_id: '123', sender: { user_id: '123', role: 'member' }, reply() {} }
 
 for (const provider of ['api', 'responses', 'claude', 'gemini']) {
-  test(`${provider} 自动回复禁用本地和内置 tools，保留普通提示词与模型参数`, async () => {
+  test(`${provider} 显式禁用本地和内置 tools，保留普通提示词与模型参数`, async () => {
     const result = await core.sendMessage('问题', {}, provider, event, { disableTools: true })
     assert.equal(result.text, '正常回复')
     const request = requests.at(-1)
@@ -71,7 +71,7 @@ for (const provider of ['api', 'responses', 'claude', 'gemini']) {
   })
 }
 
-test('自动回复后，普通对话仍可使用原有 provider 内置工具', async () => {
+test('显式禁用工具后，正常调用仍可使用原有 provider 内置工具', async () => {
   for (const provider of ['responses', 'claude', 'gemini']) {
     await core.sendMessage('问题', {}, provider, event, { enableSmart: false })
     const request = requests.at(-1)

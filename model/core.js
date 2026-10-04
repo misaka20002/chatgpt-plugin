@@ -219,7 +219,7 @@ class Core {
         ...opt.settings
       }
     }
-    // 自主回复按次禁用工具，不能临时修改全局配置而影响并发普通对话。
+    // 调用方可按次禁用工具，不能临时修改全局配置而影响并发普通对话。
     if (opt.disableTools) opt.enableSmart = false
     use = normalizeChatMode(use)
     // 兜底 null：调用方总是传对象，超时由下面各分支自行决定
