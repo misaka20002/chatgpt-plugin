@@ -1108,7 +1108,11 @@ export class chatgpt extends plugin {
       // 适配器发送“正在输入”状态
       if (e.send_typing) e.send_typing();
 
-      let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e)
+      // 自主回复可能选中较早的消息：引用身份保留在 e，回答上下文另从群内最新记录读取。
+      const options = automatic && e.isGroup
+        ? { settings: { enableGroupContext: true, groupContextFromLatest: true } }
+        : {}
+      let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e, options)
       if (chatMessage?.noMsg) {
         return false
       }

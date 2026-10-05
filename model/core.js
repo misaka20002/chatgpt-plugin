@@ -132,7 +132,7 @@ async function handleSystem(e, system, settings) {
         opt.masterName = e.bot.getFriendList().get(parseInt(master))?.nickname
       }
       const groupContextLength = settings.groupContextLength ?? Config.groupContextLength
-      let chats = await msgHistoryMgr.getGroupHistoryContext(e, groupContextLength)
+      let chats = await msgHistoryMgr.getGroupHistoryContext(e, groupContextLength, { fromLatest: settings.groupContextFromLatest })
       opt.chats = chats
       const namePlaceholder = '[name]'
       const defaultBotName = 'ChatGPT'
@@ -282,7 +282,7 @@ class Core {
           client.addTools(claudeTools)
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
-          let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
+          let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength, { fromLatest: opt.settings.groupContextFromLatest })
           const namePlaceholder = '[name]'
           const defaultBotName = 'Claude'
           const groupContextTip = Config.groupContextTip
@@ -396,7 +396,7 @@ class Core {
       system = mergeSystemPrompt(system, e, { replyTimestamps: conversation.replyTimestamps })
 
       if (opt.settings.enableGroupContext && e.isGroup) {
-        let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
+        let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength, { fromLatest: opt.settings.groupContextFromLatest })
         const namePlaceholder = '[name]'
         const defaultBotName = 'GeminiPro'
         const groupContextTip = Config.groupContextTip

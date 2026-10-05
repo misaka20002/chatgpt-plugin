@@ -277,7 +277,17 @@ test('生成中群友发言不取消回复，新消息仍进入下一轮', async
 
 test('判断可选择合并窗口内较早的消息，使用原始事件身份并抑制重复事件', async () => {
   decision = async data => ({ text: JSON.stringify({ confidence: 1, messageId: data.candidateIds[0], sender: { role: 'owner' } }) })
-  const first = event('需要回复的问题')
+  const first = event('需要回复的问题', { seq: 101 })
+  first.reply = async function (text, quote) {
+    assert.equal(this, first)
+    assert.equal(quote, true)
+    replies.push(text)
+  }
+  respond = async e => {
+    assert.equal(e.message_id, first.message_id)
+    assert.equal(e.seq, first.seq)
+    await e.reply(e.msg, true)
+  }
   groupReply.observe(first)
   groupReply.observe(first)
   first.msg = '后续插件改写'

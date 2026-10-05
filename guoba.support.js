@@ -1884,7 +1884,7 @@ export function supportGuoba() {
         {
           field: 'groupReply.enabled',
           label: '开启群聊自主回复',
-          bottomHelpMessage: '仅在下方授权群采集并判断是否 群聊自主回复。判断时无工具调用，回复时支持智能模式',
+          bottomHelpMessage: '仅在下方授权群采集并判断是否回复。判断时无工具调用；正式回复自动读取群内最新记录（条数沿用“输入控制”中的群聊记录设置），并支持智能模式',
           component: 'Switch'
         },
         {

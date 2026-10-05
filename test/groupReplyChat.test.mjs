@@ -28,7 +28,7 @@ mock.module('../model/core.js', { defaultExport: {
   async sendMessage(...args) { requests.push(args); return { noMsg: true } }
 } })
 mock.module('../utils/groupReply.js', { namedExports: { groupReply: { markHandled() { throw new Error('自主回复不能接管自己的批次') } } } })
-const Config = { chat_for_First_person: false, smartMode: true, whitelist: [], blacklist: [], promptBlockWords: [] }
+const Config = { chat_for_First_person: false, smartMode: true, enableGroupContext: false, whitelist: [], blacklist: [], promptBlockWords: [] }
 mock.module('../utils/config.js', { namedExports: { Config } })
 globalThis.Bot = { uin: [] }
 globalThis.redis = { get: async () => null }
@@ -38,7 +38,8 @@ const { chatgpt } = await import('../apps/chat.js')
 test('自主回复复用正常聊天入口和用户模式，不传禁用工具参数，仍受黑名单约束', async () => {
   const e = {
     isGroup: true, group_id: '100', group: { group_id: '100' }, self_id: '999', user_id: '123',
-    sender: { user_id: '123', role: 'member' }, msg: '开放话题', raw_message: '开放话题', message: []
+    sender: { user_id: '123', role: 'member' }, msg: '开放话题', raw_message: '开放话题', message: [],
+    message_id: 'selected-message', seq: 101
   }
   const chat = Object.create(chatgpt.prototype)
   chat.e = e
@@ -48,6 +49,10 @@ test('自主回复复用正常聊天入口和用户模式，不传禁用工具�
   assert.equal(prompt, '开放话题')
   assert.equal(use, 'responses')
   assert.equal(target, e)
+  assert.equal(target.message_id, 'selected-message')
+  assert.equal(target.seq, 101)
+  assert.deepEqual(options.settings, { enableGroupContext: true, groupContextFromLatest: true })
+  assert.equal(Config.enableGroupContext, false)
   assert.equal(options?.disableTools, undefined)
   assert.equal(options?.enableSmart, undefined)
   assert.equal(Config.smartMode, true)
