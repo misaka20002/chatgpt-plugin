@@ -1,7 +1,7 @@
 import { test, mock, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { setImmediate, setTimeout as delay } from 'node:timers/promises'
-import { normalizeGroupReplyConfig } from '../utils/groupReplyConfig.js'
+import { defaultGroupReplyDecisionPrompt, normalizeGroupReplyConfig } from '../utils/groupReplyConfig.js'
 
 const Config = { groupReply: {}, tts_First_person: '派蒙' }
 Config.getConfig = () => Config
@@ -107,16 +107,15 @@ test('字符串、越界、非有限数值和旧布尔协议均不触发回复',
   assert.equal(replies.length, 0)
 })
 
-test('热情度空值使用40，越界值收敛至1到100，新提示词不继承旧键', () => {
+test('热情度空值使用40，越界值收敛至1到100，旧提示词配置被移除', () => {
   const config = normalizeGroupReplyConfig({
     systemPrompt: '旧版提示词',
     groups: [undefined, null, '', '坏值', 0, -20, 150, 81.9].map((enthusiasm, i) => ({ groupId: String(i + 1), enthusiasm }))
   })
   assert.deepEqual(config.groups.map(g => g.enthusiasm), [40, 40, 40, 40, 1, 1, 100, 81])
   assert.equal(config.systemPrompt, undefined)
-  assert.match(config.decisionPrompt, /confidence/)
-  assert.ok(!config.decisionPrompt.includes('旧版提示词'))
-  assert.equal(normalizeGroupReplyConfig({ decisionPrompt: '新自定义' }).decisionPrompt, '新自定义')
+  assert.equal(config.decisionPrompt, undefined)
+  assert.equal(normalizeGroupReplyConfig({ decisionPrompt: '新自定义' }).decisionPrompt, undefined)
 })
 
 test('各群独立等待，超过旧上限和缓存清理时间仍可判断', async () => {
@@ -492,4 +491,103 @@ test('自身回显与群友新消息均不取消自主回复的后续分段', as
   groupReply.observe(event('开放话题'))
   await tick(60000)
   assert.deepEqual(replies, ['第一段', '第二段', '第三段'])
+})
+
+test('@机器人仅保留上下文并更新安静时间，不作为候选；@其他人仍可评估', async () => {
+  for (const patch of [
+    { atme: true }, { atBot: true }, { at: 999 },
+    { message: [{ type: 'at', qq: 999 }] },
+    { self_id: 999, message: [{ type: 'at', data: { qq: '999' } }] }
+  ]) groupReply.observe(event('找机器人', patch))
+  await tick(60000)
+  assert.equal(requests.length, 0, '仅有 @机器人消息时不调用判断模型')
+  groupReply.observe(event('大家晚上吃什么', { message: [{ type: 'at', qq: '456' }, { type: 'text', text: '大家晚上吃什么' }] }))
+  await tick(9000)
+  groupReply.observe(event('再次找机器人', { atme: true }))
+  await tick(1000)
+  assert.equal(requests.length, 0, '@机器人消息也更新安静时间')
+  await tick(9000)
+  assert.equal(requests.length, 1)
+  const { history, candidateIds } = requests[0].data
+  assert.equal(history.length, 7)
+  assert.equal(candidateIds.length, 1)
+  assert.match(history.find(m => m.id === candidateIds[0]).text, /大家晚上吃什么/)
+})
+
+test('判断模型不能选中仅作上下文的 @机器人消息', async () => {
+  decision = async data => ({ text: JSON.stringify({ confidence: 1, messageId: data.history[0].id }) })
+  groupReply.observe(event('找机器人', { atme: true }))
+  groupReply.observe(event('普通群聊'))
+  await tick(60000)
+  assert.equal(replies.length, 0)
+  assert.match(errors[0], /本批次之外/)
+})
+
+
+test('判断模型统一使用内置提示词，旧配置无法覆盖', async () => {
+  Config.groupReply.decisionPrompt = '旧自定义判断提示词'
+  Config.groupReply.systemPrompt = '更早的自定义提示词'
+  groupReply.observe(event('普通群聊'))
+  await tick(60000)
+  assert.equal(requests.length, 1)
+  const prompt = requests[0].options.systemPrompt
+  assert.ok(prompt.startsWith(defaultGroupReplyDecisionPrompt))
+  assert.ok(!prompt.includes(Config.groupReply.decisionPrompt))
+  assert.ok(!prompt.includes(Config.groupReply.systemPrompt))
+})
+
+test('限额预筛保留超限用户上下文，只选择其他用户；额度恢复后可再次参与', async t => {
+  Config.rateLimiting = 3
+  t.after(() => { delete Config.rateLimiting })
+  const counts = new Map([['123', 3], ['456', 2]])
+  const reads = []
+  const get = redis.get
+  t.mock.method(redis, 'get', async key => {
+    if (!key.startsWith('CHATGPT:rateLimit_fifteen:')) return get(key)
+    const userId = key.split(':').at(-1)
+    reads.push(userId)
+    return counts.get(userId)?.toString() ?? null
+  })
+  decision = async data => ({ text: JSON.stringify({ confidence: 1, messageId: data.candidateIds[0] }) })
+  groupReply.observe(event('超限用户的问题'))
+  groupReply.observe(event('超限用户补充'))
+  groupReply.observe(event('另一个人的接话', { user_id: '456', sender: { user_id: '456', role: 'member' } }))
+  await tick(60000)
+  assert.deepEqual(reads, ['123', '456'], '同一用户每批只读取一次，不递增计数')
+  assert.equal(counts.get('456'), 2)
+  assert.deepEqual(replies, ['另一个人的接话'])
+  assert.equal(requests[0].data.history.length, 3)
+  assert.equal(requests[0].data.candidateIds.length, 1)
+  groupReply.observe(event('全部超限时'))
+  await tick(60000)
+  assert.equal(requests.length, 1, '没有可用候选不调用判断模型')
+  counts.delete('123')
+  groupReply.observe(event('窗口过期后的接话'))
+  await tick(60000)
+  assert.deepEqual(replies, ['另一个人的接话', '窗口过期后的接话'])
+})
+
+test('主人豁免和关闭限流不读取候选额度，Redis故障记录错误后沿用放行策略', async t => {
+  Config.rateLimiting = 1
+  t.after(() => { delete Config.rateLimiting })
+  const get = redis.get
+  let rateReads = 0
+  t.mock.method(redis, 'get', async key => {
+    if (!key.startsWith('CHATGPT:rateLimit_fifteen:')) return get(key)
+    rateReads++
+    throw new Error('Redis不可用')
+  })
+  decision = async data => ({ text: JSON.stringify({ confidence: 1, messageId: data.candidateIds[0] }) })
+  groupReply.observe(event('主人消息', { isMaster: true }))
+  await tick(60000)
+  Config.rateLimiting = 0
+  groupReply.observe(event('关闭限流'))
+  await tick(60000)
+  assert.equal(rateReads, 0)
+  Config.rateLimiting = 1
+  groupReply.observe(event('读取故障'))
+  await tick(60000)
+  assert.equal(rateReads, 1)
+  assert.deepEqual(replies, ['主人消息', '关闭限流', '读取故障'])
+  assert.match(errors[0], /群 100 限额预筛失败：Redis不可用/)
 })

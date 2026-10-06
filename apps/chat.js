@@ -722,6 +722,8 @@ export class chatgpt extends plugin {
       if (prompt.length === 0) {
         return false
       }
+      // 命令呼叫也在限流前接管，避免拒绝后仍由待判断批次补答。
+      if (!groupReply.markHandled(e)) return false
     }
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
@@ -866,7 +868,7 @@ export class chatgpt extends plugin {
       return false
     }
 
-    // 速率限制检查
+    // 直接呼叫与自主回复共用发送者限额；正式调用前计数，防止判断期间额度被其他请求用完。
     if (!e.isMaster && Config.rateLimiting && Config.rateLimiting > 0) {
       try {
         const redisKey = `CHATGPT:rateLimit_fifteen:${userId}`

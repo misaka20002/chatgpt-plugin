@@ -27,13 +27,13 @@ const requests = []
 mock.module('../model/core.js', { defaultExport: {
   async sendMessage(...args) { requests.push(args); return { noMsg: true } }
 } })
-mock.module('../utils/groupReply.js', { namedExports: { groupReply: { markHandled() { throw new Error('自主回复不能接管自己的批次') } } } })
 const Config = { chat_for_First_person: false, smartMode: true, enableGroupContext: false, whitelist: [], blacklist: [], promptBlockWords: [] }
 mock.module('../utils/config.js', { namedExports: { Config } })
 globalThis.Bot = { uin: [] }
 globalThis.redis = { get: async () => null }
 globalThis.logger = { info() {}, error(error) { throw error } }
 const { chatgpt } = await import('../apps/chat.js')
+const { groupReply } = await import('../utils/groupReply.js')
 
 test('自主回复复用正常聊天入口和用户模式，不传禁用工具参数，仍受黑名单约束', async () => {
   const e = {
@@ -91,4 +91,75 @@ test('聊天记忆日志按实际注入条目计数，不能把非空召回显�
   assert.deepEqual(logs.filter(message => message.startsWith('[Memory]')), [
     '[Memory] 为用户 123 召回了 2 条相关记忆'
   ])
+})
+
+test('自主回复消耗共享限额并复查，直接呼叫超限后不转自主回复，权限拦截仍生效', async t => {
+  const previous = { ...Config }
+  t.after(() => {
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+    groupReply.prune()
+  })
+  Object.assign(Config, {
+    rateLimiting: 1, blacklist: [], whitelist: [], chat_for_First_person: true,
+    groupReply: { enabled: true, groups: [{ groupId: '100', switchOn: true }] }
+  })
+  let count = 0
+  const expirations = []
+  const rateCalls = []
+  let blocked = false, muted = false
+  t.mock.method(redis, 'get', async key => {
+    if (key.startsWith('CHATGPT:rateLimit')) rateCalls.push(key)
+    if (key.startsWith('CHATGPT:SHUT_UP:')) return muted ? '1' : null
+    if (key.startsWith('CHATGPT:blockUser:')) return blocked ? '{}' : null
+    return null
+  })
+  redis.incr = async key => { rateCalls.push(key); return ++count }
+  redis.expire = async (...args) => { expirations.push(args) }
+  t.after(() => { delete redis.incr; delete redis.expire })
+  const e = {
+    isGroup: true, group_id: '100', group: { group_id: '100' }, self_id: '999', user_id: '123',
+    sender: { user_id: '123', role: 'member' }, msg: '开放话题', raw_message: '开放话题',
+    message: [], message_id: 'rate-limit-message', reply: async () => {}
+  }
+  const chat = Object.create(chatgpt.prototype)
+  chat.e = e
+  requests.length = 0
+  await chat.chatgpt_for_firstperson_call(e, { automatic: true })
+  assert.equal(requests.length, 1)
+  assert.deepEqual(rateCalls, ['CHATGPT:rateLimit_fifteen:123'])
+  assert.equal(count, 1)
+  assert.deepEqual(expirations, [['CHATGPT:rateLimit_fifteen:123', 900]])
+  // 预筛之后额度也可能被并发请求用完，正式入口必须再次拒绝。
+  await chat.chatgpt_for_firstperson_call(e, { automatic: true })
+  assert.equal(requests.length, 1)
+  assert.equal(count, 2)
+
+  for (const kind of ['at', 'command', 'name']) {
+    const direct = { ...e, message_id: kind, msg: kind === 'command' ? '#chat 问题' : '派蒙问题', atme: kind === 'at' }
+    chat.e = direct
+    chat.toggleMode = kind === 'command' ? 'command' : 'at'
+    groupReply.observe({ ...e, message_id: `pending-${kind}` })
+    groupReply.observe(direct)
+    if (kind === 'name') await chat.chatgpt_for_firstperson_call(direct)
+    else await chat.chatgpt(direct)
+    assert.equal(requests.length, 1, `${kind} 超限不调用模型`)
+    assert.equal(groupReply.groups.get('999:100').pending.size, 0, `${kind} 不留自主回复候选`)
+  }
+  assert.equal(count, 5)
+  chat.e = e
+  Config.rateLimiting = 0
+  Config.blacklist = ['^123']
+  await chat.chatgpt_for_firstperson_call(e, { automatic: true })
+  Config.blacklist = []
+  Config.whitelist = ['^456']
+  await chat.chatgpt_for_firstperson_call(e, { automatic: true })
+  Config.whitelist = []
+  blocked = true
+  await chat.chatgpt_for_firstperson_call(e, { automatic: true })
+  blocked = false
+  muted = true
+  await chat.chatgpt_for_firstperson_call(e, { automatic: true })
+  assert.equal(requests.length, 1)
+  assert.equal(count, 5)
 })

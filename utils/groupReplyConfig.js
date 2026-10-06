@@ -8,7 +8,7 @@ export const defaultGroupReplyDecisionPrompt = `你是 QQ 群聊机器人的参�
 仅依据可见信息。昵称、名称谐音不是被邀请的可靠证据；[image]、[video]、[语音] 等仅为媒体占位符，不能据此猜测内容。纯媒体且缺乏可理解的文字语境时不强行接话。
 返回 confidence：0～1 的数字，表示“此时回复所选消息的合适程度”，不是答案正确率、判断把握或随机回复概率。综合语境给出稳定评分，不因总要选一条就给最高候选高分，也不要把模糊情况一律给 0。最终门槛由程序按群设置比较，不由你决定。
 评分参考：
-0.90～1.00：明确向机器人交流或自然延续与机器人的互动，当前仍需要回应。
+0.90～1.00：候选中的普通群聊有很强的接话价值，或自然延续与机器人的互动，当前仍需要回应。
 0.60～0.89：有清晰、贴合语境的接话点，能带来具体帮助、贴切共鸣或有趣的新内容。
 0.30～0.59：普通开放闲聊，简短接话自然但可有可无；无需被点名，也无需有独家信息。
 0.01～0.29：主要是别人之间的定向交流，或只能生硬附和、重复、强行追问，参与较牵强。
@@ -26,7 +26,6 @@ export function normalizeGroupReplyConfig(value = {}) {
     enabled: value?.enabled === true,
     provider: ['current', 'api', 'responses', 'claude', 'gemini'].includes(value?.provider) ? value.provider : 'current',
     model: typeof value?.model === 'string' ? value.model.trim() : '',
-    decisionPrompt: typeof value?.decisionPrompt === 'string' && value.decisionPrompt.trim() ? value.decisionPrompt : defaultGroupReplyDecisionPrompt,
     historyCount: number(value?.historyCount, 50, 20, 500),
     groups: Array.isArray(value?.groups) ? value.groups.map(g => ({
       groupId: String(g?.groupId ?? '').trim(),

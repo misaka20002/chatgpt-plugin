@@ -7,13 +7,13 @@ import path from 'node:path'
 
 const moduleUrl = relative => new URL(relative, import.meta.url).href
 
-test('锅巴群聊判断表格、默认提示词、数值边界与保存后重载一致，旧伪人入口失效', t => {
+test('锅巴群聊判断表格、内置提示词、数值边界与保存后重载一致，旧伪人入口失效', t => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'chatgpt-group-reply-'))
   t.after(() => fs.rmSync(cwd, { recursive: true, force: true }))
   const configDir = path.join(cwd, 'plugins/chatgpt-plugin/config')
   fs.mkdirSync(configDir, { recursive: true })
   const file = path.join(configDir, 'config.json')
-  fs.writeFileSync(file, JSON.stringify({ enableBYM: true, bymRate: 100, assistantLabel: '旧名字', tts_First_person: '测试称呼', groupReply: { systemPrompt: '旧版只在被点名时回复' } }))
+  fs.writeFileSync(file, JSON.stringify({ enableBYM: true, bymRate: 100, assistantLabel: '旧名字', tts_First_person: '测试称呼', groupReply: { systemPrompt: '旧版只在被点名时回复', decisionPrompt: '旧自定义提示词' } }))
   const run = action => JSON.parse(execFileSync(process.execPath, ['--experimental-test-module-mocks', '--input-type=module', '-e', `
     import { mock } from 'node:test'
     import assert from 'node:assert/strict'
@@ -33,9 +33,9 @@ test('锅巴群聊判断表格、默认提示词、数值边界与保存后重�
     assert.equal(initial.groupReply.enabled, false)
     assert.equal(initial.groupReply.historyCount, 50)
     assert.equal(initial.groupReply.debounceSeconds, undefined)
-    assert.match(initial.groupReply.decisionPrompt, /confidence/)
+    assert.equal(initial.groupReply.decisionPrompt, undefined)
     assert.equal(initial.groupReply.systemPrompt, undefined)
-    assert.ok(!initial.groupReply.decisionPrompt.includes('旧版只在被点名时回复'))
+    assert.ok(!guoba.schemas.some(s => s.field === 'groupReply.decisionPrompt'))
     assert.ok(!guoba.schemas.some(s => s.field === 'groupReply.systemPrompt'))
     assert.equal(initial.enableBYM, undefined)
     assert.equal(initial.assistantLabel, undefined)
@@ -78,7 +78,9 @@ test('锅巴群聊判断表格、默认提示词、数值边界与保存后重�
   assert.deepEqual(saved.groupReply.groups, [{ groupId: '100', switchOn: true, debounceSeconds: 0, enthusiasm: 1 }, { groupId: '200', switchOn: false, debounceSeconds: 3600, enthusiasm: 100 }])
   assert.equal(saved.groupReply.historyCount, 20)
   assert.equal(saved.groupReply.debounceSeconds, undefined)
-  assert.equal(saved.groupReply.decisionPrompt, '仅被点名时才回复')
+  assert.equal(saved.groupReply.decisionPrompt, undefined)
+  assert.equal(JSON.parse(fs.readFileSync(file)).groupReply.decisionPrompt, undefined)
+  assert.equal(JSON.parse(fs.readFileSync(file)).groupReply.systemPrompt, undefined)
   assert.equal(saved.groupReply.model, 'small-model')
   assert.equal(JSON.parse(fs.readFileSync(file)).enableBYM, undefined)
   const toggled = run(`
@@ -110,7 +112,7 @@ test('锅巴群聊判断表格、默认提示词、数值边界与保存后重�
     await guoba.setConfigData({ 'groupReply.groups': [], 'groupReply.decisionPrompt': '', 'groupReply.historyCount': '坏值' }, { Result: { ok() {} } })
   `)
   assert.deepEqual(cleared.groupReply.groups, [])
-  assert.match(cleared.groupReply.decisionPrompt, /QQ 群聊/)
+  assert.equal(cleared.groupReply.decisionPrompt, undefined)
   assert.equal(cleared.groupReply.historyCount, 50)
   assert.equal(cleared.groupReply.debounceSeconds, undefined)
 })

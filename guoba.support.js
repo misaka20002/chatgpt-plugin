@@ -107,7 +107,7 @@ export function supportGuoba() {
         {
           field: 'rateLimiting',
           label: '对话速率限制',
-          bottomHelpMessage: '在15分钟内某用户与AI超过这个次数限制后将拒绝对话；主人不受限制；设置为0关闭。',
+          bottomHelpMessage: '每用户15分钟内对话次数上限，直接呼叫与自主回复共用，跨群共享；主人不受限，0关闭。超限用户的消息仅作自主判断上下文，不作候选；不影响其他用户。',
           helpMessage: '单位：次',
           component: 'InputNumber',
           componentProps: {
@@ -1884,7 +1884,7 @@ export function supportGuoba() {
         {
           field: 'groupReply.enabled',
           label: '开启群聊自主回复',
-          bottomHelpMessage: '仅在下方授权群采集并判断是否回复。判断时无工具调用；正式回复自动读取群内最新记录（条数沿用“输入控制”中的群聊记录设置），并支持智能模式',
+          bottomHelpMessage: '仅在下方授权群采集并判断是否回复。判断时无工具调用；正式回复自动读取群内最新记录（条数沿用“输入控制”中的群聊记录设置），并支持智能模式。自主接话由群检查间隔、安静时间和评分门槛控制，与直接呼叫共用用户对话限额；超限用户及 @机器人消息仅作上下文，不作回复候选。黑白名单、Bot拉黑、闭嘴及群授权仍生效',
           component: 'Switch'
         },
         {
@@ -1941,13 +1941,6 @@ export function supportGuoba() {
           label: '判断模型名称',
           bottomHelpMessage: '可填同一来源下更省 token 费用的小模型；留空使用该来源已配置的模型',
           component: 'Input'
-        },
-        {
-          field: 'groupReply.decisionPrompt',
-          label: '回复判断系统提示词',
-          bottomHelpMessage: '让模型为最适合接话的消息打分，无需被点名；程序再按每群热情度判断是否回复。清空后恢复新版默认提示词。输出格式：{"confidence":0.65,"messageId":"candidateIds 中的编号"}，confidence 为 0～1 的数字；格式错误不回复',
-          component: 'InputTextArea',
-          componentProps: { rows: 12 }
         },
         {
           label: '主动打招呼',
