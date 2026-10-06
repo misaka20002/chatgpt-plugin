@@ -1907,7 +1907,7 @@ export function supportGuoba() {
               {
                 field: 'enthusiasm',
                 label: '热情度（%）',
-                bottomHelpMessage: '填写 1～100，单位为 %；越低越安静，越高越爱接话；由LLM结合上下文对是否接话做评分，评分为 0 始终不回复。热情度不是随机回复概率。',
+                bottomHelpMessage: '填写 1～100，单位为 %；越低越安静，越高越爱接话；由LLM结合上下文对是否接话做评分。热情度不是随机回复概率。',
                 component: 'InputNumber',
                 componentProps: { min: 1, max: 100, step: 1, placeholder: '默认 40%' }
               }
