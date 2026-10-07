@@ -11,6 +11,40 @@ import { McpTool } from './tools/McpTool.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pluginRoot = path.resolve(__dirname, '..');
 
+/**
+ * 将配置中的 headers 对象转换为 MCP SDK transport 的 requestInit 选项。
+ *
+ * MCP SDK 的 StreamableHTTPClientTransport / SSEClientTransport 均支持通过
+ * `opts.requestInit.headers` 为每个请求附加自定义请求头（如 Authorization）。
+ * 未配置 headers 时返回 undefined，保持与旧版本完全一致的行为。
+ *
+ * @param {object|undefined} headers 形如 { Authorization: 'Bearer xxx' } 的对象
+ * @param {string} logTag 日志前缀
+ * @param {string} serverName 服务器名称（用于日志）
+ * @returns {{ requestInit: { headers: object } } | undefined}
+ */
+function buildRequestInit(headers, logTag, serverName) {
+  if (!headers || typeof headers !== 'object' || Array.isArray(headers)) {
+    return undefined
+  }
+
+  const normalized = {}
+  for (const [key, value] of Object.entries(headers)) {
+    const headerName = `${key}`.trim()
+    if (!headerName || value === undefined || value === null) {
+      continue
+    }
+    normalized[headerName] = `${value}`
+  }
+
+  if (Object.keys(normalized).length === 0) {
+    return undefined
+  }
+
+  logger.info(`${logTag} 服务器 [${serverName}] 已启用自定义请求头: ${Object.keys(normalized).join(', ')}`)
+  return { requestInit: { headers: normalized } }
+}
+
 class McpManager {
   clients = new Map()       // serverName -> Client instance
   transports = new Map()    // serverName -> Transport instance
@@ -75,14 +109,14 @@ class McpManager {
             continue
           }
           logger.info(`[Chatgpt][mcp] 服务器 [${name}] 使用 Streamable HTTP 协议，连接地址: ${serverConfig.url}`)
-          transport = new StreamableHTTPClientTransport(new URL(serverConfig.url))
+          transport = new StreamableHTTPClientTransport(new URL(serverConfig.url), buildRequestInit(serverConfig.headers, '[Chatgpt][mcp]', name))
         } else if (transportType === 'sse') {
           if (!serverConfig.url) {
             logger.warn(`[Chatgpt][mcp] 服务器 [${name}] SSE 配置无效，必须包含 url`)
             continue
           }
           logger.info(`[Chatgpt][mcp] 服务器 [${name}] 使用 SSE 协议，连接地址: ${serverConfig.url}`)
-          transport = new SSEClientTransport(new URL(serverConfig.url))
+          transport = new SSEClientTransport(new URL(serverConfig.url), buildRequestInit(serverConfig.headers, '[Chatgpt][mcp]', name))
         } else if (transportType === 'stdio') {
           if (!serverConfig.command) {
             logger.warn(`[Chatgpt][mcp] 服务器 [${name}] Stdio 配置无效，必须包含 command`)

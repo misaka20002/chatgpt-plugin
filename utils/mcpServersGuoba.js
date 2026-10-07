@@ -41,6 +41,9 @@ export function formatMcpServersForGuoba(value) {
     const env = config.env && typeof config.env === 'object' && !Array.isArray(config.env)
       ? Object.entries(config.env).map(([key, envValue]) => `${key}=${envValue ?? ''}`).join('\n')
       : ''
+    const headers = config.headers && typeof config.headers === 'object' && !Array.isArray(config.headers)
+      ? Object.entries(config.headers).map(([key, headerValue]) => `${key}=${headerValue ?? ''}`).join('\n')
+      : ''
 
     return {
       enabled: config.enabled !== false,
@@ -49,7 +52,8 @@ export function formatMcpServersForGuoba(value) {
       command: config.command || '',
       url: config.url || '',
       args: Array.isArray(config.args) ? config.args.map(arg => `${arg}`).join('\n') : '',
-      env
+      env,
+      headers
     }
   })
 }
@@ -64,7 +68,15 @@ function splitLines(value) {
   return `${value}`.split(/\r?\n/).map(item => item.trim()).filter(Boolean)
 }
 
-function parseMcpEnv(value, rowNumber) {
+/**
+ * 解析面板中「每行一个 KEY=value」的文本，用于 env 与 headers。
+ *
+ * @param {string|object|undefined} value 面板提交的文本或对象
+ * @param {number} rowNumber 行号（用于错误提示）
+ * @param {string} fieldName 字段名（用于错误提示，如 'env' / 'headers'）
+ * @returns {object}
+ */
+function parseKeyValueLines(value, rowNumber, fieldName = 'env') {
   if (!value) {
     return {}
   }
@@ -72,28 +84,28 @@ function parseMcpEnv(value, rowNumber) {
     return Object.fromEntries(Object.entries(value).filter(([key]) => `${key}`.trim()))
   }
 
-  const env = {}
+  const result = {}
   for (const line of splitLines(value)) {
     const separatorIndex = line.indexOf('=')
     if (separatorIndex <= 0) {
-      throw new Error(`MCP row ${rowNumber}: env must use KEY=value format`)
+      throw new Error(`MCP row ${rowNumber}: ${fieldName} must use KEY=value format`)
     }
 
     const key = line.slice(0, separatorIndex).trim()
     if (!key) {
-      throw new Error(`MCP row ${rowNumber}: env key cannot be empty`)
+      throw new Error(`MCP row ${rowNumber}: ${fieldName} key cannot be empty`)
     }
-    env[key] = line.slice(separatorIndex + 1)
+    result[key] = line.slice(separatorIndex + 1)
   }
 
-  return env
+  return result
 }
 
 function isEmptyMcpServerRow(row) {
   if (!row || typeof row !== 'object') {
     return true
   }
-  return ['name', 'command', 'url', 'args', 'env'].every(key => !`${row[key] ?? ''}`.trim())
+  return ['name', 'command', 'url', 'args', 'env', 'headers'].every(key => !`${row[key] ?? ''}`.trim())
 }
 
 export function stringifyMcpServersFromGuoba(rows) {
@@ -147,7 +159,7 @@ export function stringifyMcpServersFromGuoba(rows) {
         serverConfig.args = args
       }
 
-      const env = parseMcpEnv(row.env, rowNumber)
+      const env = parseKeyValueLines(row.env, rowNumber, 'env')
       if (Object.keys(env).length) {
         serverConfig.env = env
       }
@@ -157,6 +169,11 @@ export function stringifyMcpServersFromGuoba(rows) {
         throw new Error(`MCP row ${rowNumber}: url is required for ${type}`)
       }
       serverConfig.url = url
+
+      const headers = parseKeyValueLines(row.headers, rowNumber, 'headers')
+      if (Object.keys(headers).length) {
+        serverConfig.headers = headers
+      }
     }
 
     mcpServers[name] = serverConfig
