@@ -112,7 +112,9 @@ export function formatMemoryPrompt(memories, options = {}) {
   for (const m of memories) {
     const label = SCOPE_LABELS[m.scope] || m.scope
     const scopeNote = m.scope !== 'user' && groupId ? `（${label}，群 ${groupId}）` : `（${label}）`
-    lines.push(`- [${m.factKey}] ${m.text} ${scopeNote}`)
+    // 给工具提供实际定位值，避免模型从自然语言猜主体、槽位或单位导致撤回落空。
+    const locator = { scope: m.scope, subjectId: m.scope === 'group' ? undefined : m.ownerId, factKey: m.factKey, factValue: m.factValue }
+    lines.push(`- ${JSON.stringify(locator)} ${m.text} ${scopeNote}`)
   }
 
   let content = lines.join('\n')

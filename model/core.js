@@ -133,7 +133,7 @@ async function handleSystem(e, system, settings) {
         opt.masterName = e.bot.getFriendList().get(parseInt(master))?.nickname
       }
       const groupContextLength = settings.groupContextLength ?? Config.groupContextLength
-      let chats = await msgHistoryMgr.getGroupHistoryContext(e, groupContextLength)
+      let chats = await msgHistoryMgr.getGroupHistoryContext(e, groupContextLength, { fromLatest: settings.groupContextFromLatest })
       opt.chats = chats
       const namePlaceholder = '[name]'
       const defaultBotName = 'ChatGPT'
@@ -202,20 +202,26 @@ function mergeSystemPrompt(systemPrompt, e, opt = {}) {
 }
 
 class Core {
-  async sendMessage(prompt, conversation = {}, use, e, opt = {
-    enableSmart: Config.smartMode,
-    system: {
-      api: Config.promptPrefixOverride,
-      responses: Config.responsesSystemPrompt,
-      claude: Config.claudeSystemPrompt,
-      gemini: Config.geminiPrompt
-    },
-    settings: {
-      replyPureTextCallback: undefined,
-      enableGroupContext: Config.enableGroupContext,
-      forceTool: false
+  async sendMessage(prompt, conversation = {}, use, e, opt = {}) {
+    opt = {
+      enableSmart: Config.smartMode,
+      ...opt,
+      system: {
+        api: Config.promptPrefixOverride,
+        responses: Config.responsesSystemPrompt,
+        claude: Config.claudeSystemPrompt,
+        gemini: Config.geminiPrompt,
+        ...opt.system
+      },
+      settings: {
+        replyPureTextCallback: undefined,
+        enableGroupContext: Config.enableGroupContext,
+        forceTool: false,
+        ...opt.settings
+      }
     }
-  }) {
+    // 调用方可按次禁用工具，不能临时修改全局配置而影响并发普通对话。
+    if (opt.disableTools) opt.enableSmart = false
     use = normalizeChatMode(use)
     // 兜底 null：调用方总是传对象，超时由下面各分支自行决定
     conversation = conversation || {}
@@ -267,7 +273,7 @@ class Core {
         }
 
         // 托管内置工具（服务商云端执行），不依赖智能模式
-        const hostedClaudeTools = getEnabledHostedBuiltinTools('claude')
+        const hostedClaudeTools = opt.disableTools ? [] : getEnabledHostedBuiltinTools('claude')
         if (hostedClaudeTools.length > 0) {
           // 避免与本地搜索工具重名（如 misaka_WebSearchTool 的 name 也是 web_search）
           claudeTools = claudeTools.filter(tool => tool.name !== 'web_search')
@@ -277,7 +283,7 @@ class Core {
           client.addTools(claudeTools)
         }
         if (opt.settings.enableGroupContext && e.isGroup) {
-          let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
+          let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength, { fromLatest: opt.settings.groupContextFromLatest })
           const namePlaceholder = '[name]'
           const defaultBotName = 'Claude'
           const groupContextTip = Config.groupContextTip
@@ -359,8 +365,8 @@ class Core {
         },
         parentMessageId: conversation.parentMessageId,
         conversationId: conversation.conversationId,
-        search: Config.geminiEnableGoogleSearch, // Gemini 原生搜索，开启后无法使用智能模式，默认关闭
-        codeExecution: Config.geminiEnableCodeExecution, // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
+        search: !opt.disableTools && Config.geminiEnableGoogleSearch, // Gemini 原生搜索，开启后无法使用智能模式，默认关闭
+        codeExecution: !opt.disableTools && Config.geminiEnableCodeExecution, // Gemini 原生代码执行，开启后无法使用智能模式，默认关闭
         paimon_globalInnerOs: Config.paimon_globalInnerOs,
         thinkingLevel: Config.geminiThinkingLevel || ''
       }
@@ -392,7 +398,7 @@ class Core {
       system = mergeSystemPrompt(system, e, { replyTimestamps: conversation.replyTimestamps })
 
       if (opt.settings.enableGroupContext && e.isGroup) {
-        let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength)
+        let chats = await msgHistoryMgr.getGroupHistoryContext(e, Config.groupContextLength, { fromLatest: opt.settings.groupContextFromLatest })
         const namePlaceholder = '[name]'
         const defaultBotName = 'GeminiPro'
         const groupContextTip = Config.groupContextTip
@@ -510,7 +516,7 @@ class Core {
       }
 
       // 托管内置工具（服务商云端执行），不依赖智能模式
-      const hostedResponsesTools = getEnabledHostedBuiltinTools('responses')
+      const hostedResponsesTools = opt.disableTools ? [] : getEnabledHostedBuiltinTools('responses')
       if (hostedResponsesTools.length > 0) {
         completionParams.tools = [
           ...(Array.isArray(completionParams.tools) ? completionParams.tools : []),
@@ -602,7 +608,7 @@ class Core {
         completionParams.reasoning_effort = Config.reasoningEffort
       }
       const currentDate = new Date().toISOString().split('T')[0]
-      let promptPrefix = `You are ${Config.assistantLabel} ${useCast?.api || opt.system.api || defaultPropmtPrefix}
+      let promptPrefix = `You are ${Config.tts_First_person} ${useCast?.api || opt.system.api || defaultPropmtPrefix}
         Current date: ${currentDate}`
       // let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
@@ -629,7 +635,6 @@ class Core {
         getMessageById,
         systemMessage: system,
         completionParams,
-        assistantLabel: Config.assistantLabel,
         fetch: newFetch,
         maxModelTokens: Config.maxModelTokens,
         maxResponseTokens: Config.apiMaxToken,

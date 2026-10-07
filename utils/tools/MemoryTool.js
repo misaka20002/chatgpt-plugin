@@ -8,7 +8,7 @@ import { Config } from '../config.js'
  * Tool: 记忆写入/撤回工具（V2）
  *
  * 批量原子事实接口：每条候选只表达一个可独立更新的事实。
- * 当前消息 ID、用户 ID、群 ID 与证据由服务端补充，模型不能伪造证据。
+ * 当前消息 ID、发话人、群 ID 与证据由服务端补充；仅主人撤回可指定他人主体。
  * 服务端重新校验：作用域、证据归属、factKey/factValue 规范、置信度、
  * 候选形状与同批重复候选（内容层不做敏感/凭证过滤，见 AGENTS.md）。
  */
@@ -26,12 +26,16 @@ export class MemoryTool extends AbstractTool {
             operation: {
               type: 'string',
               enum: ['add', 'retract'],
-              description: 'add 新增或更新事实；retract 撤回用户明确否定或纠正的事实。默认 add。'
+              description: 'add 新增或更新本人事实；retract 撤回本人明确否定或纠正的事实，或按 Bot 主人的明确要求撤回他人事实。默认 add。'
             },
             scope: {
               type: 'string',
               enum: ['user', 'user_group', 'group'],
-              description: 'user：跨群个人事实；user_group：仅当前群有效的个人事实；group：群规则、共同计划或公共事实。'
+              description: 'user：私聊与群聊共用的个人事实，私聊仅可使用此作用域；user_group：仅当前群有效的个人事实；group：群规则、共同计划或公共事实。'
+            },
+            subjectId: {
+              type: 'string',
+              description: '个人记忆所属用户 ID（QQ号），省略或留空表示当前发话人。撤回他人时必须明确填写目标 ID，仅 Bot 主人可用；新增只能记录本人。group 忽略此字段。不要把“他”默认当作当前发话人，无法确定目标时先询问。'
             },
             factKey: {
               type: 'string',
@@ -39,7 +43,7 @@ export class MemoryTool extends AbstractTool {
             },
             factValue: {
               type: 'string',
-              description: '简短规范值，用于去重和更新。如 25、software_engineer、raiden_shogun。'
+              description: '简短规范值，用于去重和更新。如 25、software_engineer、raiden_shogun。撤回须复用已存记忆的 scope、factKey、factValue，不猜键名或改写单位；只有明确撤回整个槽位时才将 factValue 留空。'
             },
             text: {
               type: 'string',
@@ -70,9 +74,12 @@ export class MemoryTool extends AbstractTool {
     required: ['candidates']
   }
 
-  description = '新增、更新或撤回长期原子记忆。适用于用户明确自述的身份信息、家庭与关系、工作与单位、居住场所、长期偏好、重要计划、经历和事件，以及对既有事实的明确纠正或否定。保留用户给出的具体信息（单位、地点、称谓、时间），不要泛化成笼统结论。每条只记录一个事实；只记录有直接证据的内容；不要保存聊天摘要、人格推测、低置信度信息，以及密码、验证码、Token/API Key、Cookie 这类登录凭证。'
+  description = '新增、更新或撤回长期原子记忆。适用于用户明确自述的身份信息、家庭与关系、工作与单位、居住场所、长期偏好、重要计划、经历和事件，以及对既有事实的明确纠正或否定。Bot 主人可明确要求撤回他人的错误记忆，须填写目标 subjectId，并从历史记忆或 userProfile 查询结果复用定位字段；未命中不能声称已删除。保留用户给出的具体信息（单位、地点、称谓、时间），不要泛化成笼统结论。每条只记录一个事实；只记录有直接证据的内容；不要保存聊天摘要、人格推测、低置信度信息，以及密码、验证码、Token/API Key、Cookie 这类登录凭证。'
 
   func = async function (opts, e) {
+    if (!Config.enableMemory) {
+      return 'Error: 记忆系统未启用'
+    }
     const { candidates } = opts
     if (!Array.isArray(candidates) || candidates.length === 0) {
       return 'Error: candidates 数组不能为空'
@@ -114,11 +121,29 @@ export class MemoryTool extends AbstractTool {
         continue
       }
 
-      // 强制服务端归属：subjectId/speakerId/evidenceMessageIds 由服务端补充
+      let subjectId = userId
+      if (raw?.scope !== 'group' && raw?.subjectId !== undefined && raw?.subjectId !== null && raw?.subjectId !== '') {
+        if (typeof raw.subjectId !== 'string' || !raw.subjectId.trim()) {
+          output.push({ ok: false, candidate: { factKey: raw?.factKey, scope: raw?.scope }, reason: 'subjectId 必须是非空用户 ID 字符串' })
+          continue
+        }
+        subjectId = raw.subjectId.trim()
+      }
+      if (subjectId !== userId) {
+        const reason = rawOperation !== 'retract'
+          ? '个人事实新增或更新仅限本人，不能替他人记录自述'
+          : !isBotMaster ? '仅 Bot 主人可撤回他人的个人记忆' : ''
+        if (reason) {
+          output.push({ ok: false, candidate: { factKey: raw?.factKey, scope: raw?.scope }, reason })
+          continue
+        }
+      }
+
+      // 主体可由主人指定，但发话人与证据始终是当前事件，不能伪装成目标本人发言。
       const candidate = {
         ...raw,
         operation: rawOperation === 'retract' ? 'retract' : 'add',
-        subjectId: userId,
+        subjectId,
         speakerId: userId,
         evidenceMessageIds: [messageId],
       }
@@ -160,20 +185,21 @@ export class MemoryTool extends AbstractTool {
         maxMemoriesPerUser: Number(Config.maxMemoriesPerUser) || 100,
         eventRetentionDays: Number(Config.memoryGroupCapture?.eventRetentionDays) || 90,
       })
-      output.push(result)
+      output.push({ ...result, candidate: { subjectId, scope: candidate.scope, factKey: candidate.factKey } })
     }
 
-    const accepted = output.filter(r => r.ok).length
-    const detail = output
-      .filter(r => !r.ok)
-      .map(r => `${r.candidate?.factKey || ''}: ${r.reason}`)
+    // ignored（无撤回目标）和 skipped（重复证据）没有修改存储，不能计作“已更新”。
+    const unchanged = output.filter(r => !r.ok || r.action === 'ignored' || r.action === 'skipped')
+    const accepted = output.length - unchanged.length
+    const detail = unchanged
+      .map(r => `${r.candidate?.subjectId ? `用户 ${r.candidate.subjectId} ` : ''}${r.candidate?.scope || ''}/${r.candidate?.factKey || ''}: ${r.reason}`)
       .join('；')
 
     logger.info(`[MemoryV2] Memory_Tool 写入 ${output.length} 条候选，成功 ${accepted} 条: ${detail}`)
 
     if (accepted === 0) {
-      return `Memory write rejected: ${detail || '所有候选均未通过校验'}`
+      return `Error: 记忆未更新：${detail || '所有候选均未通过校验'}`
     }
-    return `记忆已更新：成功 ${accepted} 条。${detail ? `被拒绝 ${output.length - accepted} 条（${detail}）` : ''}`
+    return `记忆已更新：成功 ${accepted} 条。${detail ? `未更新 ${unchanged.length} 条（${detail}）` : ''}`
   }
 }

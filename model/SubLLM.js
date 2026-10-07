@@ -179,7 +179,6 @@ export class SubLLM {
       debug: this.debug,
       systemMessage: systemPrompt || undefined,
       completionParams,
-      assistantLabel: 'SubLLM',
       fetch: newFetch,
       maxModelTokens: Config.maxModelTokens,
       maxResponseTokens: this.maxTokens || Config.apiMaxToken,

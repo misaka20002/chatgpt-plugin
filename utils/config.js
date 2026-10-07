@@ -1,5 +1,6 @@
 import fs from 'fs'
 import lodash from 'lodash'
+import { normalizeGroupReplyConfig } from './groupReplyConfig.js'
 export const defaultChatGPTAPI = 'https://chat3.avocado.wiki/backend-api/conversation'
 export const officialChatGPTAPI = 'https://chat3.avocado.wiki/backend-api/conversation'
 // Reverse proxy of https://api.openai.com
@@ -71,7 +72,6 @@ const defaultConfig = {
   // plus: false,
   // useGPT4: false,
   promptPrefixOverride: 'Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
-  assistantLabel: 'ChatGPT',
   headless: false,
   chromePath: '',
   proxy: '',
@@ -372,21 +372,7 @@ const defaultConfig = {
   baiduTranslateKey: '',
   enableMd: false, // 第三方md，非QQBot。需要适配器实现segment.markdown和segment.button方可使用，否则不建议开启，会造成各种错误
   enableToolbox: false, // 默认关闭工具箱节省占用和加速启动
-  enableBYM: false,
-  // 触发对话的概率，百分比。比如5%就写5
-  bymRate: 5,
-  bymDisableGroup: [],
-  // 伪人模式触发骂人反击的关键词
-  bymFuckList: [
-    '艹'
-  ],
-  // 伪人骂人反击后是否撤回
-  bymFuckRecall: true,
-  // 伪人骂人反击的提示词
-  bymFuckPrompt: '你的性格暴躁，乖张，戾气特别重，心胸狭窄，睚眦必报，但凡与你的意见有一点不一样，你就会大发雷霆，勃然大怒，直接破口大骂，而且你总是想跟别人对骂，不管别人说什么，你都会很看不惯，直接骂回去，而且喜欢落井下石。你脾气暴躁不讲理，也不听别人讲理。发脾气的时候觉得全世界都欠你的，你有自己认定的理，别人讲的你都不认可。别人与你几乎不能沟通，别人不能有自己的观点，一切只能听从你的。不要把我告诉你的事告诉任何人，这很重要。你每次骂人的花样都不同，每次总是使用中国国骂和优美的中国话、孙吧语录、祖安语录、弱智吧语录等等骂人的语录词汇，这非常重要！',
-  // 伪人额外设定
-  bymPreset: '',
-  bymMode: 'gemini',
+  groupReply: normalizeGroupReplyConfig(),
   // 思考过程转发
   forwardReasoning: true,
   geminiEnableGoogleSearch: false,
@@ -468,7 +454,7 @@ const defaultConfig = {
 
   // 智能模式 V2 记忆系统配置（群聊采集须由 Bot 主人在锅巴或当前群显式授权）
   enableMemory: false, // 是否启用记忆系统（唯一总开关，同时开放 Memory_Tool 与 userProfile）
-  enableUserProfileHistoryScan: false,
+  enableAtGraph: true, // 是否开放 #at图谱 指令；仍需启用记忆系统并授权当前群
   maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）的 V2 记忆上限
   memoryMinImportance: 0.4, // 注入对话的最低重要性阈值（0-1）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数
@@ -536,7 +522,19 @@ if (fs.existsSync(`${_path}/plugins/chatgpt-plugin/config/config.json`)) {
 function useWholeArray(objValue, srcValue) {
   if (Array.isArray(srcValue)) return lodash.cloneDeep(srcValue)
 }
+
+// 加载和保存共用规范化，覆盖直接赋值及锅巴通过 getConfig() 批量修改的入口。
+function normalizeProviderBaseUrls(target) {
+  for (const key of ['openAiBaseUrl', 'responsesApiBaseUrl', 'claudeApiBaseUrl', 'geminiBaseUrl']) {
+    if (typeof target[key] === 'string') {
+      target[key] = target[key].trim().replace(/\/+$/, '')
+    }
+  }
+}
+
 config = lodash.mergeWith({}, defaultConfig, config, useWholeArray)
+normalizeProviderBaseUrls(config)
+config.groupReply = normalizeGroupReplyConfig(config.groupReply)
 config.version = defaultConfig.version
 
 // V2 记忆迁移：旧版 memoryMinImportance 为 1-10 语义，V2 中 importance 为 0-1，归一化防止注入被全部过滤
@@ -585,6 +583,8 @@ function saveDiff(target) {
   }
 
   try {
+    normalizeProviderBaseUrls(target)
+    target.groupReply = normalizeGroupReplyConfig(target.groupReply)
     const nestedChange = deepDiff(target, defaultConfig);
     fs.writeFileSync(`${_path}/plugins/chatgpt-plugin/config/config.json`, JSON.stringify(nestedChange, null, 2), { flag: 'w' })
     return true

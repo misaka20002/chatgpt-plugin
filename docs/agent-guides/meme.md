@@ -1,0 +1,97 @@
+# 派蒙 meme
+
+[返回仓库指南](../../AGENTS.md)。只在任务涉及本主题时阅读；工程与验证规则以主指南为准。
+
+本文代码路径均相对仓库根目录。历史用例编号、数据规模和平台现象用于解释约束，不是每次修改都要执行的检查清单；当前命令以 `package.json` 为准，环境现象需在当前机器核实。
+
+## 派蒙meme（`apps/派蒙meme.js`）
+
+`meme` 系列命令是**运行期动态注册**的：规则来自远端 `keyMap`（关键词 → meme key），不是写死的 `rule` 数组。
+
+> **本节以及全文中出现的 `R3`/`R25`/`P8`/`Q组`/`I1` 等编号，是历史回归测试的索引**，用来解释这些约束当初为什么存在；它们**不代表你改到附近代码时就该去跑对应测试或变异**。当前任务该验证什么，一律按 [主指南的验证规则](../../AGENTS.md#最小充分验证) 决定。
+
+- 规则来源统一为 `getRules()` = `baseRules()`（列表/随机/帮助/搜索/更新）+ `memeKeyRules()`（按 keyMap 生成，`reg` 已是 `RegExp`）。构造函数与 `init()` 都走这一套，勿再手写第二份拼装逻辑。
+- `init(force = false)`：
+  - `force = true`：**跳过本地缓存**强制拉远端，手动 `#表情包更新` 与定时任务都用它；
+  - `force = false`：仅插件加载时用（优先本地缓存，避免启动被远端拖慢）；
+  - 返回 `{ refreshed, keys, fallback, persisted }`（`persisted` = 本次该落盘的东西是否写成功；写盘失败**不回滚运行期数据**，但重启后会回旧数据，所以 `#表情包更新` 要据此提示）。强制刷新拿不到可用数据（`keyMap` 或 `infos` 为空）时**回退到更新前的 `keyMap`/`infos`** 并 `fallback: true`——否则 `memes()` 里 `infos[targetCode]` 取空直接报错，同时规则会被清空。
+- **刷新链路（`init()` = 串行队列，真正干活的是 `doRefresh()`）**，动这块之前先读完这段：
+  - **`init()` 只是队列**：`refreshChain` 是模块级变量（必须和 `keyMap`/`infos` 同作用域），并发调用**排队执行**。没有它时两次刷新同时跑，后一次手里握的是**启动时的旧快照**，一旦走回退分支就把前一次刚提交的新数据覆盖回旧版本，还会把旧规则写回 loader——手动 `#表情包更新` 撞凌晨定时任务即可复现。这里刻意用"排队"而不是"并发时复用同一次结果"：复用会吃掉 force 语义，手动更新会拿到一次"其实没拉远端"的结果而误报失败。
+  - **缓存是单文件 `data/memes/dataset.json`**（内含 `v`/`savedAt`/`infos`/`keyMap`），不再分 `infos.json` + `keyMap.json`。跨代缓存（infos 新、keyMap 旧）是这对数据最现实的事故源：两个独立 `writeFileSync` 之间进程退出就会产生，而两份都非空时会绕过拉取、又在校验阶段被整批丢弃，插件只剩基础命令。合成一个文件后这种组合在结构上不可能出现。
+  - **`validateMemeDataset()` 三道关，缺一不可**：①正向——keyMap 的每个目标都是真实存在的 meme，**而且这个关键词必须真的在那个 meme 的 `keywords` 里**（`infos[target].keywords.includes(keyword)`）；②**反向只查存在性**——infos 里每个 meme 的**每个**关键词都必须能在 keyMap 里找到条目；③`params_type` schema（`badParamsType()`）。
+    ①只查"目标存在"是不够的：外部数据能塞一个 infos 里根本没有的额外触发词，而 `memeKeyRules()` 会把它**直接注册成命令**，等于凭空多一个消息路由入口（R16）。
+    **②绝不能写成 `keyMap[keyword] === memeKey`（回指自己）**——关键词**可以跨 meme 重复**，实测 971 个 meme 里有 **15 个**（「嗦」属于 suck + kou、「口」属于 oral_sex + kou、「跳舞」属于 stickman_dancing + tiaowu_mao……），而一个关键词在 keyMap 里只能有一个目标，必然有一方"回指不到自己"。曾经按严格 1:1 写过一版，**逐项重建出的合法数据被整批判死，`#表情包更新` 直接失败**（14 个关键词触发）。反向只要"存在性"就足以发现截断（971→100 的截断会让大量关键词缺失，R10 钉住），R25 专门钉住"共享关键词必须被接受"。
+  - `badParamsType()` 要**连 `args_type` 内部一起校验**（`args_type` 可为 null；非 null 时 `args_model.properties` 必须是普通对象、`parser_options` 若是数组才能用）。只守外层的话 `args_type: {}` 能过，等用户真触发才在 `Object.keys(argsModel.properties)` 处抛 TypeError（R11）。
+  - **static pair 不能只判"空不空"，拿到后要先校验**：两个 `/static/*.json` 都有值时先跑一次 `validateMemeDataset()`，不合法就**两个一起清空**再进逐项重建。只看 `length === 0` 的话，"都非空但彼此不一致"不会进重建分支，一路走到最后才发现不合法，冷启动直接空掉整套（R12）。
+  - **逐项重建（`rebuildFromKeys`）：并发 + 严格 + 404 放行**。用 `REBUILD_CONCURRENCY` 个 worker 分批跑（串行 971 次请求按平均 150ms 要 ~146s，全量并发又会打爆后端），单个 `/info` 带 `REBUILD_ITEM_RETRIES` 次重试；完整性要求"**除 404 之外全部成功**"——404 是**确定性答复**而非瞬时失败，把它算作失败的话，只要有一个 key 数据漂移，插件就永远无法更新。I1 仍用 500（瞬时失败）验证"不完整就整批丢弃"。
+  - **缓存写盘要原子，而且 `saveMemeDataset()` 会返回成功与否——调用方必须看**：先写 `dataset.json.tmp` 再 `rename`。直接 `writeFileSync` 到目标会**先截断**，写盘中途崩溃/断电就留下半个 JSON。返回值这个点尤其关键：旧缓存迁移是"写成功 → 才删旧文件、才报已迁移"，如果把写盘失败吞成正常返回就往下删，会变成「新缓存没落盘 + 旧缓存被删 + 下次启动远端又挂 = 无任何可用数据」（R15 相关的变异就靠这条）。
+  - **要迁移旧版双文件缓存**：`dataset.json` 不存在时读一次 `infos.json` + `keyMap.json`，校验通过就转成 `dataset.json`，**且只有写成功才删旧文件**（`migrateLegacyDataset()`）。否则**刚升级那一次远端恰好不可用**会把两份完好的旧缓存一起无视掉，meme 全不可用（R15 钉住）。
+  - **列表图缓存按 `meme_forceSharp` 分身份**：`render_list_sharp.jpg` / `render_list_plain.jpg`（`listCacheFile()`）。图上写着"要不要带 `#`"，配置一变图就必须换。只靠「24h 缓存 + 更新成功才清」是不够的——改配置重启后 dataset 走本地缓存（`refreshed=false`）不会触发清理，最长 24h 内列表图还在教用户发一个已经失效的格式。`clearRenderListCache()` 三种名字都删（含旧版固定名 `render_list.jpg`，R9 钉住）。
+  - 4xx（408/429 除外）在 `fetchJsonWithRetry` 里判永久失败、不重试：`/memes/static/*.json` 在纯上游必定 404，重试只换来 1s+2s 的退避白等（R3 钉住）。
+- 更新成功后清列表图缓存（`data/memes/render_list_{sharp|plain}.jpg`，**不再是固定名** —— 见上文 `listCacheFile()`），下次查看时重渲染。
+- `init()` 末尾必须调用 `registerRules()` 把最新规则同步回 loader，否则新增关键词要重启才生效（见 [运行时指南](runtime.md)）。
+- **`/memes/static/infos.json`、`keyMap.json` 是可选加速，不是上游 meme-generator 的接口**：上游 `app.py` 只有 `/memes/keys`、`/memes/<key>/info`、`/memes/render_list` 等，对上游直连这两个 URL 一律 404；只有少数部署额外加了这层聚合（如 qwqcc HF Space 的 `bootstrap.py` 用动态路由生成）。因此 `init()` 必须保留逐项重建兜底（`/memes/keys` + 逐个 `/memes/<key>/info`），否则 `meme_baseUrl` 配到纯上游时功能不可用。
+- 取图优先级：回复消息 → 本条消息附图 → @对象头像，按 `needImages = max(min_images, 1)` 的缺口**逐级补齐**。旧的 `if (回复) … else if (e.img) … else if (hasAt)` 只要这条是回复就彻底不看本条图与 @，"回复纯文字 + 自己带图"会退化成发送者头像。取回复图统一走 `getReplyImages(e)`，它用入参 `e` 而不是 `this.e`——`派蒙戳一戳.js` 是 `new memes().memes(e)` 直接调用的，那种场景没有 `this.e`。
+- 图片下载必须容错：带 `timeoutSignal(IMAGE_TIMEOUT)`、`try/catch` 单张失败只跳过、检查 `response.ok`、`content-type` 必须是 `image/`、先看 `Content-Length` 再决定读不读进内存。QQ CDN 超时、失效链接、404 的 HTML 都不该让整个命令 reject（旧代码的 fetch 在最终 try 之外）。
+- **图不够时必须告诉用户"要做什么"，别把残缺请求丢给远端**。两个失败点分开报：①**来源不够**（没带够图、也没 @ 人，而 `min_images >= 2` 时一张发送者头像填不上缺口）→「这个表情至少要 N 张图片：请发送图片，或 @ 需要出镜的人（会用 TA 的头像）」；②**来源够但下载失败** →「需要 N 张图片，其中 M 张下载失败，请重发图片或检查链接后重试」。旧版本是直接 POST 出去、由服务端回一句校验错，用户看不懂也照做不了（`#撅` = `do` 的 `min_images=2` 是最常踩的）。
+- **`memes(e)` 必须只用入参 `e`，并对 `e.message` 做防御**：`派蒙戳一戳.js` 是 `new memes().memes(e)` 直接调用（**不设 `.e`**），所以函数体里出现 `this.e.reply` 就会 `Cannot read properties of undefined`；`e.message` 也不保证是数组，且 at 段有 `{type:'at', qq}` 与 `{type:'at', data:{qq}}` 两种形态，只读 `atMsg.qq` 会把 undefined 喂进 `getUserDetailedInfo`（头像变成 `nk=undefined`）。
+- 出图请求（POST `/memes/<key>/` 与远端 `/memes/render_list`）用 `MEME_RENDER_TIMEOUT`(120s)：生成 GIF 天生慢，不能复用 JSON 的 15s 超时；但也不能不设——远端连接挂住时 `await fetch` 会无限 pending。另：`render_list` 回的是**图片**，`Accept` 别再写 `application/json`。
+- `recordMemeUsage()` 用 `redis.multi().incr().expire().exec()`：拆成两条命令时若中间断连，会留下**没有 TTL** 的计数 key。另外它是"3 天不活跃才清零的连续累计值"，**不是滚动 3 天窗口**（每 2 天用一次就会一直累加），别把「热」理解成"近 3 天 30 次"。
+- 外部数据进门一律先归一化（`normalizeKeywords` / `sanitizeInfos` / `sanitizeKeyMap`，三个入口：本地缓存、`/static/*.json`、逐项重建）：空关键词会生成 `cmdReg('')`，即 `/^#/`（forceSharp 开着）或 `/^#?/`（关着），**几乎匹配一切消息**——动态注册之后等于消息路由被劫持。R4 钉住这条。
+- **提交给上游的东西、以及日志出口，同样要守边界**：
+  - **没有文字时不要 append `texts`**：`''.split('/', n)` 得到的是 `['']`，服务端过滤空串后等于"显式传了个空文本"，会把上游 `default_texts` 顶掉——可选文本的模板渲染成**空文字版**，而不是详情页写的【默认文本】版（旧代码后面那个 nickname 兜底也因此是死逻辑）。R14 钉住。
+  - **出图响应要验 `content-type`**：200 也可能是反代 / WAF / 登录页的 HTML 错页。不验就会把 HTML 当图片发给用户，或把 HTML 正式写成 `render_list_{sharp|plain}.jpg` 缓存 24h。两个消费方都有测试：R17a 出图路径、R17b 远端 render_list 不落盘（后者副作用更持久：错页会被缓存 24h）。
+- **脏输入的边界要一路守到「本文件真正会解引用的节点」**，别停在容器类型上：
+  - `badParamsType()` 除容器外还要逐个查：`args_model.properties.<name>` 是对象、`parser_options[]` 每项是对象、`args`/`names` 若存在必须是数组。`properties.foo = null` 或 `parser_options = [null]` 都能过容器检查，而 `handleArgs()` 会直接 `propInfo.enum` / `opt.action?.type` 解引用（R19a/R19b）。
+  - **所有来自外部的 map 必须用 `Object.create(null)`**（`sanitizeInfos` / `sanitizeKeyMap`），且"存在性"判断一律 `Object.hasOwn(infos, target)`。普通 `{}` 上写 `__proto__` 会走原型 setter（原型污染入口）；`infos['toString']` 则会从 `Object.prototype` 取到 truthy 值、让下一句 `.keywords` 抛 TypeError——**那等于校验器被脏输入打崩**（R22 用 `toString` / `__proto__` 两种键钉住）。
+  - 图片大小三处同口径：网络下载的两条检查与 `checkFileSize()` 都用 `>`（文案是"最多支持 N MB"，恰好等于上限算合法）。`data:` / `base64://` 要**先按 base64 长度预估**再 `Buffer.from`，否则限流拦不住那次整块内存分配；`data:` 的 mime 也必须 `image/`（与 HTTP 下载同口径）。
+- `randomMemes()` 的候选必须排除 `keywords` 为空的条目：`normalizeKeywords()` 会有意留下这种 info（不丢整条目是为了别让 keyMap 失效），但随机抽中它会让 `e.msg = undefined`，下一层 `.replace` 直接炸（R20）。
+- `#` 只作为**第一个**分隔符切分（`indexOf('#')`，不是 `split('#')`）：裸参数本身要能含 `#`，比如 string 参数传 URL 的 fragment（R21）。
+- `doRefresh()` 的返回值多了 `persisted`：写盘失败**不回滚运行期数据**（数据本身是好的），但要透出去让 `#表情包更新` 提示"重启后会恢复旧数据"（R23）。取 `saveMemeDataset()` 的返回值，别看 `fetched` 就完事。
+- **meme 配置是"改完需重启"，锅巴上已逐项标注**：`meme_baseUrl` / `meme_reply` / `meme_forceSharp` / `meme_masterProtectDo` / `meme_maxFileSize` 在模块顶部是**加载时快照**（`const forceSharp = Config.meme_forceSharp` 这类），只有 `meme_CD` / `meme_turnOff` 是方法内实时读。其中 **`meme_forceSharp` 是半热的**：`listCacheFile()` 与模板读实时值，所以保存后列表图立刻换格式，但指令规则（`cmdReg` 走快照）要重启才变——从「需要 #」改成「不需要 #」时，重启前用户照着新列表裸发会触发不了。这个后果已写进锅巴的 `bottomHelpMessage`。想改成全静态（列表也等重启）就把那两处实时读换成模块顶部的 `forceSharp`。
+- **「新」判定要求时间落在 `(0, now]`**：只判 `now - createdTime < 阈值` 的话，上游给了**未来时间**（差值为负，当然小于阈值）也会被标成 new。本地列表图（`memeCategory.js`）与远端兜底（`buildMemeListWithLabels()`）两处都要带这个上界。远端兜底还必须复用 `MEME_LIST_NEW_DAYS` / `MEME_LIST_HOT_THRESHOLD`，别自己写 30/30——数值目前一样，改了顶部常量就会出两套 new/hot。
+  - **日志脱敏要覆盖所有错误出口**：`logger.error('[meme]请求失败:', error)` 传整个 Error 对象、裸 `console.error(await response.text())` 写服务端正文——两处都会泄露 URL/IP 或未脱敏正文，现已统一改成 `hidePrivacyInfo(...)`。加新的 error 日志时照着这里检查一遍。
+- meme CD 用 `redis.set(key, 1, { NX: true, EX: meme_CD })` 一步抢占，靠返回值 `null` 判断没抢到（见 [运行时指南](runtime.md)）。旧的 `GET`→`SET` 两步不原子，并发消息会一起通过。主人/戳一戳仍走 `SET EX` 刷新 CD。`meme_CD <= 0` 时不再写入新 CD，但**只 `GET` 不 `DEL`**——所以残留的 CD 不是"再拦一次"，而是在它原有 TTL 到期前**每次都拦**（名字叫残留，行为是继续生效）。
+- 参数（`args_type`）约定：语法是 `<关键词><文本>#<参数>`（`memes()` 里按**第一个** `#` 切分，不是 `split('#')`），**不是空格分隔**；`#关键词详情` 不能带 `#`，否则会被当成参数。解析时枚举用 `_.has(valueMap, arg)` 判断——**合法枚举值可能是 `0`**（左右、角度这类 schema 就是 0/1），用 `valueMap[arg] || default` 会把 0 吞掉退回默认值；数字用 `Number()` 解析（`number` 收小数与负数、`integer` 要求整数、空串不能当 0），并执行 schema 的 `minimum`/`maximum`（越界就不传该参数）；帮助文本（`generateSupportArgsText`）同样不能用 truthy 过滤枚举名。
+- **`#meme列表` 是本地模板渲染，不再依赖远端 `render_list`**：数据经 `utils/memeCategory.js` 的 `buildMemeListData()` 分组后交给模板渲染。渲染宽度 / JPEG 质量 / 分组方案 / **用哪套模板**都是本文件顶部的 `MEME_LIST_*` 常量——**图片宽度就等于 `#container` 的 CSS 宽度**（见 [渲染指南](rendering.md)），想要 2K / 4K 改 `MEME_LIST_WIDTH` 即可。图由渲染器按 `data.path` 直接落盘到 `data/memes/render_list_{sharp|plain}.jpg`（省一次 base64 往返）；**渲染前必须先删旧文件**，否则渲染静默失败时 `existsSync` 会把上一轮的旧图误判成本次产物。本地渲染失败（没装 Chromium 等）会退回远端 `renderMemeListRemote`，别删这条兜底。
+- 模板是 `resources/memeList/index.html`（糖果 / 暖色玻璃态：每组一个主题色、emoji + 组名 + 组内数量，配色走 CSS 变量 `--accent`）。**数据来源要分清**：`buildMemeListData()` 只产出 `groups` / `stats`（外加 `hotThreshold`、`isNew` 等视图字段），而 `width` / `forceSharp` / `pageClass` 是 `renderMemeListLocal()` 在调用渲染时补进去的——别指望数据层提供它们。换审美只改 `MEME_LIST_TEMPLATE`。
+- **图与日志都不要出现部署信息**：列表图的页脚只放指令帮助，**不放 `meme_baseUrl`、不放生成时间**——这张图会被转发和存档，`数据来源` 等于把部署机 IP 印到群里，生成时间对使用者也没有价值。因此模板数据里没有 `sourceHost` / `generatedAt`（原先用于它们的 `displayHost()` 已删除）。同理，**任何把网络错误 message 写进日志/回复的地方都必须包 `hidePrivacyInfo()`**：node-fetch 失败时 message 就是 `request to http://<ip>:<port>/… failed`，不处理等于直接把 IP 写进日志（`init()` 的总 catch 与 `fetchJsonWithRetry` 两处就是这么漏的）。
+- **视图层与分类层粒度不同，别顺手合并**：`buildMemeGroups()` 会在「其他作品」上挂 `subgroups`（44 个二级 IP，这是分类的事实），而 `buildMemeListData()` 只吐扁平的 `groups[].memes`——因为列表图不再显示二级 IP 标签。`subgroups` 的消费方目前只有分类层与 P7，但别删：`resolveOtherIp()` 是 `pickGroupName()` 判断"某条该不该进「其他作品」"的真实依据，二级 IP 只是它的副产品。
+- 徽标体系（模板按 `chip-new` / `badge-<kind>` / `swatch-<kind>` 挂样式，改名要同时改模板和样式）：
+  - 胶囊右侧所有标记统一走 `badges: [{ text, kind }]`，kind 共三种：`hot`（热）/ `img`（图）/ `text`（文）。输入需求不单开 `needLabel` 字段——模板因此只有一条 `{{each meme.badges}}` 渲染路径，也不必再 `{{if}}` 判空（判空漏掉过一次，971 个只吃图的表情每个都拖着一个空洞色块）。
+  - **输入需求只标「用户得主动做点什么」的两种情况，各一个字**：`图` = `min_images >= 2`（一张发送者头像填不上缺口，必须自己发图或 @ 人；`#撅` = `do` 就是这种），`文` = `min_texts > 0`（不填会拿昵称补，所以文案不能出现"必须"）。实测 55 / 177，**两者不重叠**，合计 232 个带标记、739 个不挂。
+  - **别把 `图` 放宽成 `min_images > 0`**：971 个里 762 个 `min_images` 就是 1，一张头像就够，放宽后等于**每颗胶囊都有徽标**（84%），白噪声。也别退回按 `max_*` 判——`max_*` 只表示"接受"，不是"要求"。R5/P8 钉住这条。
+  - **徽标配色一律走 CSS 变量**（`--badge-hot-bg/fg`、`--badge-img-*`、`--badge-text-*`），正文胶囊与顶部图例共用同一组值。图例和列表各写一份颜色是最容易出现的图例失真（"图例画一种、列表里是另一种"）。
+  - `文` 偏薰衣草、`图` 偏薄荷，都是低饱和马卡龙色，色相区分"要你打字"还是"要你给图"。
+  - `新` 表情**整颗胶囊翻成实心蓝灰**（`--new-fill: #5E72A4`，白字），**不挂「新」徽标**——整块实心色已经是最强信号，再挂个字是重复表达。数据层因此不产出 `kind: 'new'`，只保留 `isNew` 供模板决定胶囊样式；P8 专门钉住这点，谁把徽标加回来就会转红（模板已无 `.badge-new` 样式）。
+  - 蓝胶囊内部要反相，否则深色字、暖色分隔线压在蓝底上会糊：`#` 前缀改半透明白、别名改白 82% + 半透明白分隔线。**但不要连徽标一起覆盖**——`hot` / `img` / `text` 都自带不透明底色，压在蓝底上依然清楚；早期版本把它们抹成纯白文字，结果是"图/文/热"只剩字没有色、反而认不出来（用户明确反馈过）。
+  - 底色之所以从最初点名的 `#6b7fb3` 压到 `#5E72A4`：白字在 `#6b7fb3` 上只有 3.95:1，别名那档 19px 小字达不到 4.5:1；压深一成后 4.8:1，观感仍是同一支蓝灰。
+- 顶部 `.hints` 那行是"使用说明 + 图例"混排，顺序有讲究：先讲怎么发（`发送 #关键词`），然后是**图例**（`.swatch` 迷你胶囊：图 / 文 / 新，造型与正文胶囊同比例圆角，颜色引用正文同一组变量），最后才是补充说明（别名用 `·` 分隔）。图例一律**画出来**而不是用颜色词描述颜色（写"蓝底"这种话既是废话又会随改配色失效）。文案上用户要求过**简洁**，别再往里堆解释（比如"图从哪来"那条被点名删掉了），细节留给 `#关键词详情`。
+- **`args` 只支持"一个裸值"：单字段模板支持全部基础类型，多字段模板不完整支持（有意决定，别加 flag 语法）**：`#` 后只接受一个裸值（`#左` / `#20` / `#0.5` / `#奖状#2026年9月19日` / `#小丑#爷`）。
+  - **单字段模板（55 个）**：一个裸值没有歧义，所以 `enum` / `integer` / `number` / `string` / `boolean` **全部支持**。`boolean` 没有 enum，靠 `parser_options` 里 `action.type === 0` 的开关名关联——这类 option 的 `dest` 常为 null，但 `names` 里一定有 `--<字段名>`（如 `--person`/`爷`、`--circle`/`圆`）。**string/boolean 分支只在 `onlyField` 时开放**，否则 `note_for_leave` 的 `time` 和 `name` 会被同一个值同时灌满。
+  - **多字段模板（只有 5 个）**：不完整支持，只沿用旧行为把裸值交给 `enum`/`number` 字段——`ba_say`(character,position) 值写 `character`、`position` 走默认；`pjsk`(character,number) 两个字段拿到同一个值；`note_for_leave`/`abstinence`/`my_wife`（string+string）参数被丢弃。
+  - **开关名映射只定义在 `buildOptionValueMap()` 一份**：`handleArgs()`（实际解析）与 `generateSupportArgsText()`（`#关键词详情` 的帮助）都调它。两边各写一套的话识别结果迟早漂开——boolean 字段的 option `dest` 常为 null，只能靠 `names.includes('--<字段名>')` 关联，少一处这条规则就会漏。帮助文案必须覆盖 `handleArgs()` 支持的全部类型（enum/boolean 列开关名、数字给范围、string 给示例），**功能支持了但帮助不写等于没支持**——用户猜不出 `#万花筒#圆`（R18 钉住）。
+  - **为什么不上 flag**：2026-09-14 做过一版 argparse 式解析（`-t 值` / `--flag=值` / 裸开关名 / 裸值给第一个字段），按要求**已撤回**——那套写法用户记不住，为 5 个模板把参数协议搞复杂不划算。**别再提议加 flag**。完整判断依据在 `handleArgs()` 的 JSDoc 里。
+- **别再照搬 Apple / iOS 风格了（试过一版，用户选了糖果风）**：静态长图里能落地的只有 Apple 的*静态*部分——克制的中性色板、靠字号阶 + 字重 + 透明度建立的层级、大字号负字距 / 小字号正字距、8pt 间距网格、细分割线、语义色只留给「新/热」。而响应延迟、弹簧、可中断过渡、1:1 拖拽都依赖"会动"，`backdrop-filter` 依赖"背后有内容"，搬进长图只会变成假装饰。另外 HIG 的字号阶是给 390pt 手机屏定的，搬到 2560px 画布要按 ~1.9x 放大，否则小到看不清。
+- `forceSharp` 必须透传到模板：开了强制 `#` 却让图上写着裸关键词，用户照抄会一条都触发不了。`#` 用 `.force-sharp .chip-k::before` 伪元素画，**不要**去改 `keyMap` 里的原始关键词。
+- **分类不是"按 tags 分组"**：远端 971 个 meme 只有 283 个带 tags，纯 tag 分组会留下 71% 的「未分类」（实测另一个方案 `scheme='ip'` 就是这样，「其他」占 62.3%）。`utils/memeCategory.js` 用「tags + key 前缀 + 关键词语义」三条互补线索做**单层互斥**归类，命中顺序即优先级：题材（米哈游 / 鸣潮 / 蔚蓝档案 / 其他作品）→ 属性（成人向）→ 功能（节日祝福 / 特效工具 / 工具应用 / 生活日常 / 网络热梗 / 举牌写字 / 动作互动 / 情绪表情 / 动物萌宠）→ 兜底「其他」。当前实测 15 组、971/971 全覆盖、零重复，「其他」15.2%。加分组只需往规则表的 `tags`/`prefixes`/`words` 补词，**别改判定顺序**（顺序一变整批归属都会漂）。`猫猫虫` 与 `咖波` 是同一角色（猫猫虫咖波），远端两个 tag 并存，必须映射到同一个名字，否则同一批 meme 会按 tags 顺序被拆到两组。
+- 模块依赖约定：`utils/memeCategory.js` **零 import、纯函数**（不碰 logger/redis/Config），可脱离 Yunzai 运行时独立测试；`apps/派蒙meme.js` 里对 `utils/common.js`（`render`）用**惰性 `await import()`**——那是重依赖链（puppeteer / tts / pdfjs），meme 其它命令都不需要，测试套件也不该因此被迫加载框架。
+
+## 框架与渲染依赖
+
+动态规则、加载顺序与定时任务约定见 [运行时指南](runtime.md)；元素截图、字体与预览见 [渲染指南](rendering.md)。
+
+- **定时任务里"重读本地缓存"等于空转**：`init()` 开头会清空内存再读 `data/memes/*.json`，而缓存在进程存活期间一直存在 → 「数组为空才拉远端」的守卫永不成立，日更实际什么都没拉（旧代码 `this.init.bind(this)` 就是这个 bug）。任何"定时刷新远端资源"的路径都必须显式跳过本地缓存读（本项目用 `init(true)`）。
+
+## 本地测试与排障
+
+- 派蒙meme 测试套件：`npm run test:meme`（完整，含一条约 48s 的超时用例 K）/ `npm run test:meme:fast`（跳过 K，日常回归）/ `npm run test:meme:mutants`（跑变异矩阵，**专项使用**，不作为普通修改的完成条件）。实现放在 `test/meme/`——**`test/` 随仓库入库**（与 `test:memory` 同一约定）：
+  - `meme.test.mjs`：断言套件，离线可跑（不依赖真实 Yunzai/Redis/远端）。A–O 组覆盖规则注册 / 更新回退 / 取图 fallback / 图片下载容错 / CD 原子化 / 参数解析；**P 组覆盖 `#meme列表` 的分组分类**（互斥、全覆盖、题材与功能命中、展示字段、排序），**Q 组覆盖列表图渲染链路**（缓存命中直接发图、本地渲染不可用时退回远端并落盘）。做法是桩全局（`logger`/`redis`/`Bot`/`segment`）+ 本地 http 假 meme 服务端 + **真实** `lib/plugins/loader.js` 与插件模块，按 `PluginsLoader.deal()` 的匹配方式断言规则，直接调 `new memes().task.fnc`（等价 `loader.startTask`）验证定时任务真的请求远端，并用并发调用验证 CD 原子性。redis 桩必须实现真实的 `SET` 语义（`NX`/`EX` + 未抢到返回 `null`），否则原子性测不出来。注意**测试环境没有任何渲染后端**，所以本地列表图渲染必然失败、必然走远端兜底——这是 Q 组能确定性断言的前提。
+  - `run.mjs`：入口。上述链路要求 cwd 看起来像云崽根目录（`config/default_config/`、`package.json`、`renderers/`），所以它自动搭临时 cwd 再跑、跑完清理，测试产生的 `data/memes/*` 只落在临时目录。支持 `--skip-slow` / `--force-sharp=false` / `--mutant <kind>` / `--all-mutants` / `--keep`。
+  - `make-mutant.mjs`：15 个变异（每个对应一类断言）。`--mutant <kind>` 会生成变异 → 跑套件 → **在 finally 里删除副本**；变异副本落在 `apps/__mutant_meme.mjs`（相对 import 才能解析），以 `.mjs` 结尾所以不会被 loader 当成插件加载。预期是"只有目标断言转红"，全绿即说明断言没覆盖该行为。`timeout` 变异（去掉请求超时）的预期是**挂死**，只对慢用例 K 生效，因此 `--all-mutants` 会跳过它，需单独跑。**这是专项手段**：只在"高风险回归反复发生""关键安全/并发逻辑是否真被覆盖难以判断"或用户明确要求时跑，不要求新增断言后必须跑对应变异。
+
+- **`test:meme` 一行断言都不输出就直接退出码 1 时，先查 `es-toolkit` 能否解析**：根仓库的 `lodash` 是 pnpm 的 `link:lib/modules/lodash`，而该 shim 第一行就 `import 'es-toolkit/compat'`。若顶层链接缺失（包只躺在 `node_modules/.pnpm/` 里），`lib/config/config.js` 会在 **import 阶段**抛 `ERR_MODULE_NOT_FOUND: Cannot find package 'es-toolkit'`，表现为套件连 `# 被测文件: …` 都没打印出来——这与代码改动无关，别去改测试。补链接（pnpm 本该建的那个顶层软链）：
+  ```sh
+  node -e "require('fs').symlinkSync('<repo>/node_modules/.pnpm/es-toolkit@<ver>/node_modules/es-toolkit','<repo>/node_modules/es-toolkit','junction')"
+  ```
+  验证：`node -e "import('<repo>/lib/modules/lodash/index.js').then(()=>console.log('OK'))"`。

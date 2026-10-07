@@ -38,6 +38,7 @@ import {
 } from '../utils/paimonFuction.js'
 import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
+import { groupReply } from '../utils/groupReply.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -671,6 +672,7 @@ export class chatgpt extends plugin {
         return false
       }
       if (e.user_id == getUin(e)) return false
+      if (!groupReply.markHandled(e)) return false
       prompt = isTrss ? processCQMessage(e.raw_message, getUin(e)) : msg.trim()
       try {
         if (e.isGroup && !isTrss) {
@@ -720,6 +722,8 @@ export class chatgpt extends plugin {
       if (prompt.length === 0) {
         return false
       }
+      // 命令呼叫也在限流前接管，避免拒绝后仍由待判断批次补答。
+      if (!groupReply.markHandled(e)) return false
     }
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
@@ -742,8 +746,8 @@ export class chatgpt extends plugin {
   /**
    * bot现在可以对「包含第一人称的句子」回复
    */
-  async chatgpt_for_firstperson_call(e) {
-    if (!Config.chat_for_First_person) {
+  async chatgpt_for_firstperson_call(e, { automatic = false } = {}) {
+    if (!automatic && !Config.chat_for_First_person) {
       logger.info('[chatgpt] AI回应第一人称呼叫已关闭，不予理会')
       return false
     }
@@ -756,6 +760,7 @@ export class chatgpt extends plugin {
       logger.info('[chatgpt] 机器人自己发出来的消息，不予理会')
       return false
     }
+    if (!automatic && !groupReply.markHandled(e)) return false
     // let ats = e.message.filter(m => m.type === 'at')
     // if (!(e.atme || e.atBot) && ats.length > 0) {
     //   if (Config.debug) {
@@ -779,7 +784,7 @@ export class chatgpt extends plugin {
     }
     if (!(await this.canGPT_blackAndWhitelist(e))) return false
 
-    await this.abstractChat(e, prompt, use)
+    await this.abstractChat(e, prompt, use, false, { automatic })
   }
 
   /** 黑白名单过滤及速率限制后可进行对话 */
@@ -863,7 +868,7 @@ export class chatgpt extends plugin {
       return false
     }
 
-    // 速率限制检查
+    // 直接呼叫与自主回复共用发送者限额；正式调用前计数，防止判断期间额度被其他请求用完。
     if (!e.isMaster && Config.rateLimiting && Config.rateLimiting > 0) {
       try {
         const redisKey = `CHATGPT:rateLimit_fifteen:${userId}`
@@ -889,12 +894,14 @@ export class chatgpt extends plugin {
     return true;
   }
 
-  async abstractChat(e, prompt, use, forcePictureMode = false) {
+  async abstractChat(e, prompt, use, forcePictureMode = false, { automatic = false } = {}) {
+    if (!automatic && !groupReply.markHandled(e)) return false
     /** 检查用户是否被拉黑 class BlockUserTool extends AbstractTool */
     if (!e.isMaster) {
       const blockKey = `CHATGPT:blockUser:${e.sender.user_id}`
       const blockData = await redis.get(blockKey)
       if (blockData) {
+        if (automatic) return false
         try {
           const data = JSON.parse(blockData)
           const remainingTime = Math.ceil((data.blockedAt + data.duration * 1000 - Date.now()) / 60000)
@@ -1076,7 +1083,7 @@ export class chatgpt extends plugin {
         })
         if (memoryPrompt) {
           prompt = memoryPrompt + '\n\n' + prompt
-          logger.info(`[Memory] 为用户 ${e.user_id} 召回了 ${memoryPrompt.split('\n').filter(l => l.startsWith('- [')).length} 条相关记忆`)
+          logger.info(`[Memory] 为用户 ${e.user_id} 召回了 ${memoryPrompt.split('\n').filter(l => l.startsWith('- {')).length} 条相关记忆`)
         }
       } catch (err) {
         logger.error('[Memory] 加载记忆失败:', err)
@@ -1103,7 +1110,11 @@ export class chatgpt extends plugin {
       // 适配器发送“正在输入”状态
       if (e.send_typing) e.send_typing();
 
-      let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e)
+      // 自主回复可能选中较早的消息：引用身份保留在 e，回答上下文另从群内最新记录读取。
+      const options = automatic && e.isGroup
+        ? { settings: { enableGroupContext: true, groupContextFromLatest: true } }
+        : {}
+      let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, use, e, options)
       if (chatMessage?.noMsg) {
         return false
       }

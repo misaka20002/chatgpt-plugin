@@ -202,6 +202,7 @@ export class MemoryStore {
    * 其中 `ctx.isBotMaster: true` 表示"本次写入由 Bot 主人发起"，效果等同于群主/管理员：
    * 群作用域（scope: 'group'）的候选只要有它就能用单条消息放行
    * （见 validateEvidenceOwnership 的 group 分支）。
+   * 个人作用域仅 retract 可凭主人消息撤回他人事实；add 仍须本人证据，manual 保护不变。
    *
    * 因此这是"**谁传谁授权**"的字段：
    * - 新增任何调用 applyFact / applyCandidates 的地方，若要在 ctx 里带上它，
@@ -302,7 +303,10 @@ export class MemoryStore {
           await this._archive(t, 'retracted', now)
           archived++
         }
-        return { ok: true, action: archived > 0 ? 'retracted' : 'ignored', reason: archived > 0 ? '' : '无可撤回目标' }
+        const reason = archived > 0 ? '' : targets.some(isManualMemory)
+          ? '目标是手工确认记忆，不能通过模型撤回，请使用 #删除记忆 用户ID 记忆ID'
+          : '无可撤回目标，请核对 subjectId、scope、factKey 和 factValue（须与已存记忆一致）'
+        return { ok: true, action: archived > 0 ? 'retracted' : 'ignored', reason }
       }
 
       // ---- add ----
@@ -400,8 +404,8 @@ export class MemoryStore {
 
   /**
    * 证据归属校验（服务端不信任任何调用方）
-   * 个人事实必须有本人消息作为证据；群事实必须来自 Bot 主人、管理公告或至少两名成员
-   * @param {Object} [ctx] 服务端可信上下文，`{ isBotMaster }`：Bot 主人等同群主/管理员。
+   * 个人事实新增必须有本人证据；主人管理撤回可以使用主人消息；群事实需主人/管理公告或多人支持。
+   * @param {Object} [ctx] 服务端可信上下文，`{ isBotMaster }`：主人可发布群事实，也可管理撤回个人事实。
    *        只能由调用方从事件上下文（`e.isMaster`）传入，绝不来自模型 candidate；
    *        这是"谁传谁授权"的字段（授权语义与生产调用点见文件上方"ctx 可信字段约定"）。
    * @returns {{ok: boolean, reason: string}}
@@ -411,6 +415,11 @@ export class MemoryStore {
       const senders = new Set(evidence.map(ev => ev.s).filter(Boolean))
       const subjectId = String(c.subjectId || '')
       if (!subjectId) return { ok: false, reason: '个人记忆缺少 subjectId' }
+      if (c.operation === 'retract' && ctx.isBotMaster === true) {
+        return senders.has(String(c.speakerId || ''))
+          ? { ok: true, reason: '' }
+          : { ok: false, reason: '主人撤回缺少实际发话人的消息证据' }
+      }
       if (!senders.has(subjectId)) return { ok: false, reason: `个人事实必须有本人消息作为证据（subjectId ${subjectId} 不在证据发送者中，疑似转述/伪造）` }
       if (c.speakerId && String(c.speakerId) !== subjectId) return { ok: false, reason: 'speakerId 与 subjectId 不一致' }
       return { ok: true, reason: '' }
@@ -880,6 +889,32 @@ export class MemoryStore {
     }
     out.sort((a, b) => a.time - b.time)
     return out
+  }
+
+  /** 图谱只读最近的保留记录：限制扫描量并分批取值，避免大群一次出图拖住 Redis。 */
+  async getRecentRawMessages(groupId, endTime) {
+    const gid = String(groupId)
+    const limit = 20000
+    // ZRANGE BYSCORE REV 要求 Redis >= 6.2；宿主仍可能使用 6.0。
+    // node-redis v4 没有旧命令的快捷方法，用 sendCommand 保留同样的倒序、时间与条数边界。
+    const ids = await this.redis.sendCommand([
+      'ZREVRANGEBYSCORE', RAWIDX(gid), String(endTime), '-inf', 'LIMIT', '0', String(limit + 1)
+    ])
+    const rows = []
+    for (let offset = 0; offset < Math.min(ids.length, limit); offset += 200) {
+      const batch = ids.slice(offset, Math.min(offset + 200, limit))
+      const values = await this.redis.mGet(batch.map(mid => RAW(gid, mid)))
+      for (let i = 0; i < values.length; i++) {
+        // 索引的清理与原文 TTL 独立，过期的原文不能变成互动记录。
+        if (values[i] === null) continue
+        try {
+          rows.push(JSON.parse(values[i]))
+        } catch (err) {
+          throw new Error(`[MemoryV2] 读取群 ${gid} 的原文 ${batch[i]} 失败`, { cause: err })
+        }
+      }
+    }
+    return { rows, limited: ids.length > limit, limit }
   }
 
   /** 最近一条原文的时间（用于确定首日游标） */

@@ -66,7 +66,7 @@ export class voicechangehelp extends plugin {
                 },
                 {
                     reg: '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?',
-                    fnc: 'set_assistantLabel',
+                    fnc: 'set_firstPerson',
                     permission: 'master'
                 },
                 {
@@ -828,7 +828,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     }
 
     /** '^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?' */
-    async set_assistantLabel(e) {
+    async set_firstPerson(e) {
         let input_tts = e.msg.replace(/^#chatgpt设置(AI|ai)?第一人称(称谓)?(帮助)?/, '').trim()
         if (!input_tts) {
             let msg1 = `tts第一人称帮助：`

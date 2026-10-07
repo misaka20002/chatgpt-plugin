@@ -1,4 +1,5 @@
 import { Config } from './utils/config.js'
+import { normalizeGroupReplyConfig } from './utils/groupReplyConfig.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/mcpServersGuoba.js'
@@ -52,7 +53,7 @@ export function supportGuoba() {
         {
           field: 'tts_First_person',
           label: 'AI的第一人称',
-          bottomHelpMessage: '指定某些情况指定回复下AI的第一人称，用于戳一戳文案、AI回应第一人称呼叫；重启生效',
+          bottomHelpMessage: '全局 AI 名称，用于 API 模式身份、群聊自主回复判断、戳一戳文案和第一人称呼叫；修改呼叫名称后需重启',
           component: 'Input'
         },
         {
@@ -106,7 +107,7 @@ export function supportGuoba() {
         {
           field: 'rateLimiting',
           label: '对话速率限制',
-          bottomHelpMessage: '在15分钟内某用户与AI超过这个次数限制后将拒绝对话；主人不受限制；设置为0关闭。',
+          bottomHelpMessage: '每用户15分钟内对话次数上限，直接呼叫与自主回复共用，跨群共享；主人不受限，0关闭。超限用户的消息仅作自主判断上下文，不作候选；不影响其他用户。',
           helpMessage: '单位：次',
           component: 'InputNumber',
           componentProps: {
@@ -1311,10 +1312,10 @@ export function supportGuoba() {
               { label: 'B站视频搜索工具（推荐）', value: 'Bilibili_SearchVideoTool' },
               { label: 'QQ音乐搜索工具（推荐）', value: 'SendQQ_MusicTool' },
               { label: '网易云音乐搜索工具（推荐）', value: 'Send163_MusicTool' },
-              { label: 'OpenCode联网搜索（免Key）', value: 'opencode_WebSearchTool' },
               { label: '高德天气搜索（推荐）（需配置）', value: 'Weather_Tool' },
               { label: '百度AI搜索（推荐）（需配置）', value: 'BaiduAI_SearchTool' },
               { label: 'Gemini原生搜索（需配置）', value: 'geminiSearchTool' },
+              { label: 'OpenCode同款搜索（可配置）', value: 'opencode_WebSearchTool' },
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
@@ -1359,13 +1360,13 @@ export function supportGuoba() {
         {
           field: 'exaApiKey',
           label: 'Exa API Key',
-          bottomHelpMessage: '可选，用于 OpenCode联网搜索（与 OpenCode 使用 Zen 模型时内置的 websearch 相同，直连 Exa / Parallel 的公开托管搜索服务，免Key 可用；只填了一家的 Key 时优先用那家，否则按会话在两家之间分流，失败时自动换另一家）。不填走 Exa 免费额度（按服务器 IP 限流，很容易用完），填写后不受免费额度限制；前往 https://dashboard.exa.ai/api-keys 申请',
+          bottomHelpMessage: '可选，用于 OpenCode同款联网搜索 的 Exa 来源（与 OpenCode 使用 Zen 模型时内置的 websearch 相同，直连 Exa / Parallel 的公开托管搜索服务；只填了一家的 Key 时优先用那家，否则按会话在两家之间分流，失败时自动换另一家）；不填走免费额度（按服务器 IP 限流，很容易用完）；前往 https://dashboard.exa.ai/api-keys 申请',
           component: 'InputPassword'
         },
         {
           field: 'parallelApiKey',
           label: 'Parallel API Key',
-          bottomHelpMessage: '可选，用于 OpenCode联网搜索 的 Parallel 来源；不填走免费额度；前往 https://platform.parallel.ai 申请',
+          bottomHelpMessage: '可选，用于 OpenCode同款联网搜索 的 Parallel 来源；不填走免费额度；前往 https://platform.parallel.ai 申请',
           component: 'InputPassword'
         },
         {
@@ -1687,19 +1688,19 @@ export function supportGuoba() {
         {
           field: 'enableMemory',
           label: '启用记忆系统',
-          bottomHelpMessage: '智能模式 V2 记忆系统唯一总开关；开启后同时开放 Memory_Tool 与 userProfile 工具；群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助',
+          bottomHelpMessage: 'V2 记忆系统唯一总开关；开启后私聊可召回个人记忆、使用 #我的记忆 和 #清空我的记忆（受自助删除开关控制），智能模式下可记录、更新、撤回个人事实及查询已存画像。个人事实在私聊与群聊间共用；私聊无需授权群，也不采集原文做每日提炼。群聊采集需在下方"授权采集群"或群内使用 #群记忆开启 显式授权；可用指令：#记忆帮助',
+          component: 'Switch'
+        },
+        {
+          field: 'enableAtGraph',
+          label: '启用 AT 图谱',
+          bottomHelpMessage: '生成 @ 互动图谱，在授权群内可用指令： #at图谱[At群友]',
           component: 'Switch'
         },
         {
           field: 'allowMemberDeleteOwnMemory',
           label: '允许成员删除自己的记忆',
           bottomHelpMessage: '开启（默认）：成员可以主动用 #清空我的记忆 清空自己，也能在对话里让 Bot 撤回自己的个人记忆。关闭：成员不能通过实时指令或对话直接删除自己的个人记忆（#清空我的记忆 被拒、Memory_Tool 不再接受其个人事实的撤回），Bot 主人仍可用 #清空我的记忆 或 #清空他的记忆 @自己/@Bot 管理。注意：本开关只管"实时主动删除入口"——每日记忆提炼仍会根据后续聊天内容自动更新或撤回旧事实，群公共记忆的管理员维护也不受它影响',
-          component: 'Switch'
-        },
-        {
-          field: 'enableUserProfileHistoryScan',
-          label: '画像工具扫描群历史',
-          bottomHelpMessage: '是否允许查看用户画像 userProfile 工具从当前群历史中扫描目标用户最近的文本消息来补充画像；关闭后 userProfile 仅返回已存记忆画像，不再拉取群历史、不写入新事实；为提高ai回答速度，默认关闭',
           component: 'Switch'
         },
         {
@@ -1883,6 +1884,110 @@ export function supportGuoba() {
               }
             ]
           },
+        },
+        {
+          label: '主动触发',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          label: '群聊自主回复',
+          component: 'Divider'
+        },
+        {
+          field: 'groupReply.enabled',
+          label: '开启群聊自主回复',
+          bottomHelpMessage: '仅在下方授权群采集并判断是否回复。判断时无工具调用；正式回复自动读取群内最新记录（条数沿用“输入控制”中的群聊记录设置），并支持智能模式。自主接话由群检查间隔、安静时间和评分门槛控制，与直接呼叫共用用户对话限额；超限用户及 @机器人消息仅作上下文，不作回复候选。黑白名单、Bot拉黑、闭嘴及群授权仍生效',
+          component: 'Switch'
+        },
+        {
+          field: 'groupReply.groups',
+          label: '自主回复群',
+          bottomHelpMessage: '仅从开启后采集，最近记录暂存在内存，重启清空；关闭停止采集和待发回复，缓存最多一分钟内清理，不读取或修改记忆 V2 的授权与数据；可用指令： #群聊自主回复[开启|关闭]',
+          component: 'GSubForm',
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: 'groupId', label: '群号', component: 'Input', required: true },
+              { field: 'switchOn', label: '开启采集与回复', component: 'Switch' },
+              {
+                field: 'debounceSeconds',
+                label: '每隔多久判断是否回复（秒）',
+                bottomHelpMessage: '每隔多久判断是否回复（秒）；但如果群里还在聊天，就等最后一条消息过去 10 秒钟再判断。没有新消息不判断。每群独立，留空默认 60 秒',
+                component: 'InputNumber',
+                componentProps: { min: 0, step: 1, placeholder: '留空为 60 秒' }
+              },
+              {
+                field: 'enthusiasm',
+                label: '热情度（%）',
+                bottomHelpMessage: '填写 1～100，单位为 %；越低越安静，越高越爱接话；由LLM结合上下文对是否接话做评分。热情度不是随机回复概率。',
+                component: 'InputNumber',
+                componentProps: { min: 1, max: 100, step: 1, placeholder: '默认 40%' }
+              }
+            ]
+          }
+        },
+        {
+          field: 'groupReply.historyCount',
+          label: '判断输入的群聊记录条数',
+          bottomHelpMessage: '最近记录上限，至少 20 条、默认 50 条、最多 500 条；不足时使用实际已采集条数。每条最多 2000 字符，图片/语音等仅提供类型标记',
+          component: 'InputNumber',
+          componentProps: { min: 20, max: 500, step: 1 }
+        },
+        {
+          field: 'groupReply.provider',
+          label: '判断模型来源',
+          component: 'Select',
+          componentProps: {
+            options: [
+              { label: '跟随全局对话模式', value: 'current' },
+              { label: 'OpenAI Chat API', value: 'api' },
+              { label: 'OpenAI Responses API', value: 'responses' },
+              { label: 'Claude', value: 'claude' },
+              { label: 'Gemini', value: 'gemini' }
+            ]
+          },
+          bottomHelpMessage: '复用所选来源的地址和密钥，仅用于是否回复的判断；正式回复继续使用发言用户的普通对话模型。不支持的全局模式会跳过判断并记录错误'
+        },
+        {
+          field: 'groupReply.model',
+          label: '判断模型名称',
+          bottomHelpMessage: '可填同一来源下更省 token 费用的小模型；留空使用该来源已配置的模型',
+          component: 'Input'
+        },
+        {
+          label: '主动打招呼',
+          component: 'Divider'
+        },
+        {
+          field: 'initiativeChatGroups',
+          label: '主动发起聊天群聊的群号',
+          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛:"经测试喵崽无法使用"，推荐使用 sf插件 的自动打招呼 https://github.com/AIGC-Yunzai/siliconflow-plugin',
+          component: 'Input'
+        },
+        {
+          field: 'helloPrompt',
+          label: '打招呼prompt',
+          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
+          component: 'Input'
+        },
+        {
+          field: 'helloInterval',
+          label: '打招呼间隔(小时)',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 24
+          }
+        },
+        {
+          field: 'helloProbability',
+          label: '打招呼的触发概率(%)',
+          bottomHelpMessage: '设置为100则每次经过间隔时间必定触发主动打招呼事件。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0,
+            max: 100
+          }
         },
         {
           label: '小功能',
@@ -2532,120 +2637,6 @@ export function supportGuoba() {
             placeholder: 'APPID:密钥'
           }
         },
-        {
-          label: '伪人',
-          component: 'Divider'
-        },
-        {
-          field: 'assistantLabel',
-          label: 'AI名字',
-          bottomHelpMessage: 'AI认为的自己的名字，在api模式时，你问他你是谁是他会回答这里的名字；也用于伪人模式的触发',
-          component: 'Input'
-        },
-        {
-          field: 'enableBYM',
-          label: '开启伪人模式',
-          bottomHelpMessage: '开启后，将在群内随机发言，伪装成人。取消机器人前缀体验最佳。发言包括AI名字会必定触发回复；此开关重启生效；（推荐关闭伪人模式：伪人仅读取群聊上下文，无对话上下文，无法识图，推荐使用 小功能-AI回应第一人称呼叫）',
-          component: 'Switch'
-        },
-        {
-          field: 'bymRate',
-          label: '伪人模式触发概率，单位为%',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 100
-          }
-        },
-        {
-          field: 'bymDisableGroup',
-          label: '伪人禁用群',
-          bottomHelpMessage: '设置在该群禁用伪人模式',
-          component: "GTags",
-          componentProps: {
-            placeholder: '请输入群号',
-            allowAdd: true,
-            allowDel: true,
-            valueParser: ((value) => value.split(',') || []),
-          },
-        },
-        {
-          field: 'bymMode',
-          label: '伪人模型',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: 'Gemini（推荐）', value: 'gemini' },
-              { label: 'OpenAI Chat API', value: 'api' },
-              { label: 'Claude', value: 'claude' }
-            ]
-          }
-        },
-        {
-          field: 'bymPreset',
-          label: '伪人模式的额外预设',
-          component: 'Input'
-        },
-        {
-          field: 'bymFuckPrompt',
-          label: '伪人模式骂人反击的设定词',
-          component: 'Input'
-        },
-        {
-          field: 'bymFuckList',
-          label: '伪人模式反击的触发词',
-          bottomHelpMessage: '请输入用于伪人模式下骂人反击的触发词，每个词组将被单独处理',
-          component: 'GTags',
-          componentProps: {
-            placeholder: '请输入反击触发词',
-            allowAdd: true,
-            allowDel: true,
-            showPrompt: true,
-            promptProps: {
-              content: '添加新的反击触发词',
-              okText: '添加',
-              rules: [
-                { required: true, message: '触发词不能为空' }
-              ]
-            },
-            valueParser: (value) => value.split(',') || []
-          }
-        },
-        {
-          label: '主动打招呼',
-          component: 'Divider'
-        },
-        {
-          field: 'initiativeChatGroups',
-          label: '主动发起聊天群聊的群号',
-          bottomHelpMessage: '在这些群聊里会不定时主动说一些随机的打招呼的话，用英文逗号隔开。必须配置了OpenAI Key。呆毛:"经测试喵崽无法使用"，推荐使用 sf插件 的自动打招呼 https://github.com/AIGC-Yunzai/siliconflow-plugin',
-          component: 'Input'
-        },
-        {
-          field: 'helloPrompt',
-          label: '打招呼prompt',
-          bottomHelpMessage: '将会用这段文字询问ChatGPT，由ChatGPT给出随机的打招呼文字。呆毛版-已改为不需要openai key的硬编码文本',
-          component: 'Input'
-        },
-        {
-          field: 'helloInterval',
-          label: '打招呼间隔(小时)',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            max: 24
-          }
-        },
-        {
-          field: 'helloProbability',
-          label: '打招呼的触发概率(%)',
-          bottomHelpMessage: '设置为100则每次经过间隔时间必定触发主动打招呼事件。',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0,
-            max: 100
-          }
-        },
         // {
         //   field: 'sydneyFirstMessageTimeout',
         //   label: 'Sydney模式接受首条信息超时时间',
@@ -2791,6 +2782,7 @@ export function supportGuoba() {
           const content = (t.content || '').replace(/\[CQ:[^\]]+\]/g, '').trim()
           return `${t.user_id} | ${t.group_id || '私聊'} | [${t.taskId}] | ${t.cronExpression} | ${content}`
         })
+        configObj.groupReply = normalizeGroupReplyConfig(configObj.groupReply)
         configObj.mcpServers = formatMcpServersForGuoba(configObj.mcpServers)
 
         // For api_default_USE
@@ -2840,7 +2832,7 @@ export function supportGuoba() {
               return acc
             }, [])
           }
-          // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr' || keyPath === 'bymDisableGroup') {
+          // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr') {
           //   value = value.map(item => item.trim()).filter(item => item !== '')
           // }
 
@@ -2891,6 +2883,8 @@ export function supportGuoba() {
         assignFirstElementIfExists(Config.getConfig(), data, 'gemini_fallbackModel');
         assignFirstElementIfExists(Config.getConfig(), data, 'gemini_vqa_model');
         assignFirstElementIfExists(Config.getConfig(), data, 'geminiSearchModel');
+
+        Config.getConfig().groupReply = normalizeGroupReplyConfig(Config.getConfig().groupReply)
 
         // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
         Config.save();

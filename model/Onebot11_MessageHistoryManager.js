@@ -225,22 +225,26 @@ class MessageHistoryManager {
   /**
    * @description: 业务包装层：获取指定事件 e 的群历史消息上下文，并自动补全群员名片
    * @param {Object} e YunZai/Miao-Yunzai 的事件对象
-   * @param {Number} num 需要获取的总消息条数（包含当前这条 e）
+   * @param {Number} num 需要获取的总消息条数
+   * @param {Object} options fromLatest 为 true 时读取群内最新记录；否则以 e 为起点并包含 e
    * @return {Promise<Array>} 补全了发送者信息的历史消息数组（时间升序）
    */
-  async getGroupHistoryContext(e, num) {
+  async getGroupHistoryContext(e, num, { fromLatest = false } = {}) {
     if (!e.group) return [e];
 
     this._collectMessages(e.group_id, [e]);
 
-    const startSeq = e.seq || e.message_id;
+    const startSeq = fromLatest ? 0 : (e.seq || e.message_id);
 
-    let chats = await this.getChatHistorySafe(e.group, num - 1, startSeq);
+    let chats = await this.getChatHistorySafe(e.group, fromLatest ? num : num - 1, startSeq);
 
-    const seenIds = new Set(chats.map(msg => msg.message_id || msg.seq));
-    const currentId = e.message_id || e.seq;
-    if (!seenIds.has(currentId)) {
-      chats.push(e);
+    // 最新窗口不为旧引用消息预留位置；旧消息仍作为用户提问传入模型。
+    if (!fromLatest) {
+      const seenIds = new Set(chats.map(msg => msg.message_id || msg.seq));
+      const currentId = e.message_id || e.seq;
+      if (!seenIds.has(currentId)) {
+        chats.push(e);
+      }
     }
 
     chats.sort((a, b) => (a.time || 0) - (b.time || 0));
