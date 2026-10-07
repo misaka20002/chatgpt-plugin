@@ -254,9 +254,11 @@ async function getPttBuffer (file, ffmpeg = 'ffmpeg', transcoding = true) {
       buffer = buf
     } else {
       const tmpfile = path.join(TMP_DIR, (0, uuid)())
+      // 必须先落盘再取时长：顺序颠倒会让 getAudioTime 对不存在的文件调用ffmpeg，
+      // 产生一次必然失败的无用调用并打出误导性的转码错误日志
+      await fs.promises.writeFile(tmpfile, buf)
       let result = await getAudioTime(tmpfile, ffmpeg)
       if (result.code == 1) time = result.data
-      await fs.promises.writeFile(tmpfile, buf)
       buffer = await audioTrans(tmpfile, ffmpeg)
     }
   } else if (file.startsWith('http://') || file.startsWith('https://')) {
@@ -337,11 +339,29 @@ async function audioTrans (file, ffmpeg = 'ffmpeg') {
   return new Promise((resolve, reject) => {
     // 隐藏windows下调用ffmpeg的cmd弹窗
     const options = IS_WIN ? { windowsHide: true, stdio: 'ignore' } : {}
-    child_process.exec(cmd, options, async (error, stdout, stderr) => {
+child_process.exec(cmd, options, async (error, stdout, stderr) => {
+      // 三种失败原因需分别报告，否则排查时会被误导：
+      // 1) ffmpeg 自身执行失败（缺失、无法解码输入文件）
+      // 2) node-silk 原生模块不可用（未安装或与当前 Node ABI 不匹配）
+      // 3) 前两步都正常，但 pcm2slk 编码 silk 时出错
       try {
+        if (error) {
+          // ffmpeg 的真实失败原因只体现在 stderr 中，error.message 仅含退出码与命令；
+          // 记录 stderr 末段，否则无法区分输入格式不支持、文件缺失等各类原因
+          const stderrTail = String(stderr || '').trim().split('\n').slice(-3).join(' | ').slice(0, 300)
+          logger.warn(`[Chatgpt]音频转码失败：${stderrTail}`)
+          reject(buildApiRejection(ErrorCode.FFmpegPttTransError,
+            `音频转码到pcm失败，请确认你的ffmpeg可以处理此转换（${String(error.message || error).trim().slice(0, 200)}）`))
+          return
+        }
+        if (typeof pcm2slk !== 'function') {
+          reject(buildApiRejection(ErrorCode.FFmpegPttTransError,
+            '音频转码到pcm失败：node-silk 模块不可用（未安装，或其原生二进制与当前 Node 版本不匹配），请改用适配器自带转码'))
+          return
+        }
         resolve(pcm2slk(fs.readFileSync(tmpfile)))
       } catch {
-        reject(buildApiRejection(ErrorCode.FFmpegPttTransError, '音频转码到pcm失败，请确认你的ffmpeg可以处理此转换'))
+        reject(buildApiRejection(ErrorCode.FFmpegPttTransError, '音频转码到pcm失败：silk 编码阶段出错'))
       } finally {
         fs.unlink(tmpfile, NOOP)
       }
