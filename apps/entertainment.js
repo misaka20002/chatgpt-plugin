@@ -18,13 +18,6 @@ import {
   getMediaTargetUrl,
 } from '../utils/paimonFuction.js'
 
-let useSilk = false
-try {
-  await import('node-silk')
-  useSilk = true
-} catch (e) {
-  useSilk = false
-}
 export class Entertainment extends plugin {
   constructor(e) {
     super({
@@ -493,11 +486,7 @@ ${translateLangLabels}
                   break
                 }
               }
-              if (useSilk) {
-                await this.e.bot.sendGroupMsg(groupId, await uploadRecord(audio))
-              } else {
-                await this.e.bot.sendGroupMsg(groupId, segment.record(audio))
-              }
+              await this.e.bot.sendGroupMsg(groupId, await uploadRecord(audio))
             } else {
               await this.e.bot.sendGroupMsg(groupId, message)
             }

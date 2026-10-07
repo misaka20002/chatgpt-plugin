@@ -286,13 +286,6 @@
                 "data": "ttsMode",
                 "items": [ {   "label": "Vits",   "value": "vits-uma-genshin-honkai" }, {   "label": "微软Azure",   "value": "azure" }
                 ]
-              },
-              {
-                "type": "select",
-                "label": "云转码模式",
-                "data": "cloudMode",
-                "items": [ {   "label": "文件",   "value": "file" }, {   "label": "链接",   "value": "url" }
-                ]
               }
             ]
           },
@@ -618,7 +611,7 @@
       {
         "type": "url",
         "label": "云服务API地址",
-        "placeholder": "目前支持node-silk语音转码、云图片渲染和页面生成缓存",
+        "placeholder": "用于云图片渲染和 Web 服务代理；语音由适配器自动转码",
         "data": "cloudTranscode"
       },
       {

@@ -942,7 +942,6 @@ export async function generateAudio(e, pendingText, speakingEmotion, emotionDegr
   pendingText = removeCQCode(pendingText)
   let wav
   const speaker = getUserSpeaker(await getUserReplySetting(e))
-  let ignoreEncode = e.adapter === 'shamrock'
   try {
     if (Config.ttsMode === 'vits-uma-genshin-honkai' && Config.ttsSpace) {
       if (Config.autoJapanese && !noTranslate) {
@@ -955,37 +954,18 @@ export async function generateAudio(e, pendingText, speakingEmotion, emotionDegr
       }
       wav = await generateVitsAudio(pendingText, speaker, '中日混合（中文用[ZH][ZH]包裹起来，日文用[JA][JA]包裹起来）', undefined, undefined, undefined, { noTranslate })
     } else if (Config.ttsMode === 'azure' && Config.azureTTSKey) {
-      return await generateAzureAudio(pendingText, speaker, speakingEmotion, emotionDegree, ignoreEncode, { noTranslate })
+      return await generateAzureAudio(pendingText, speaker, speakingEmotion, emotionDegree, { noTranslate })
     }
   } catch (err) {
     logger.error(err)
     return false
   }
-  let sendable
   try {
-    try {
-      sendable = await uploadRecord(wav, Config.ttsMode, ignoreEncode)
-      if (!sendable) {
-        // 如果合成失败，尝试使用ffmpeg合成
-        sendable = segment.record(wav)
-      }
-    } catch (err) {
-      logger.error(err)
-      sendable = segment.record(wav)
-    }
+    return await uploadRecord(wav)
   } catch (err) {
     logger.error(err)
     return false
   }
-  if (Config.ttsMode === 'azure' && Config.azureTTSKey) {
-    // 清理文件
-    try {
-      fs.unlinkSync(wav)
-    } catch (err) {
-      logger.warn(err)
-    }
-  }
-  return sendable
 }
 
 /**
@@ -994,11 +974,10 @@ export async function generateAudio(e, pendingText, speakingEmotion, emotionDegr
  * @param role - 发言人
  * @param speakingEmotion - 发言人情绪
  * @param emotionDegree - 发言人情绪强度
- * @param ignoreEncode - 不在客户端处理编码
  * @param options.noTranslate - 是否跳过语音合成前的自动翻译
  * @returns {Promise<{file: string, type: string}|boolean>}
  */
-export async function generateAzureAudio(pendingText, role = '随机', speakingEmotion, emotionDegree = 1, ignoreEncode = false, options = {}) {
+export async function generateAzureAudio(pendingText, role = '随机', speakingEmotion, emotionDegree = 1, options = {}) {
   if (!Config.azureTTSKey) return false
   const { noTranslate = false } = options || {}
   pendingText = removeCQCode(pendingText)
@@ -1044,11 +1023,7 @@ export async function generateAzureAudio(pendingText, role = '随机', speakingE
     let record = await AzureTTS.generateAudio(pendingText, {
       speaker
     }, await ssml)
-    return await uploadRecord(
-      record
-      , Config.ttsMode,
-      ignoreEncode
-    )
+    return await uploadRecord(record)
   } catch (err) {
     logger.error(err)
     return false

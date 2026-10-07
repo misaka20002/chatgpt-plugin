@@ -39,7 +39,6 @@
     "@node-rs/jieba": "^1.6.2",
     "cycletls": "^1.0.21",
     "mammoth": "^1.6.0",
-    "node-silk": "^0.1.0",
     "nodejs-pptx": "^1.2.4",
     "pdfjs-dist": "^3.11.174",
     "xlsx": "^0.18.5"
@@ -60,7 +59,7 @@
     "test:config": "node --test test/configArrayMerge.test.js test/configBaseUrl.test.js test/configGroupReply.test.js",
     "test:tools": "node --test test/githubTool.test.js test/opencodeWebSearchTool.test.js test/toolContext.test.js test/toolArgRedaction.test.js && node test/htmlTool.check.mjs && node test/render/htmlRender.template.check.mjs && node --experimental-test-module-mocks --test test/htmlToolSend.test.mjs",
     "test:render": "node test/render/mathRender.check.mjs && node test/render/mathRender.security.check.mjs",
-    "test:media": "node --experimental-test-module-mocks --test test/subllmMedia.test.mjs test/recognitionMedia.test.mjs test/mediaUrlGuard.test.mjs",
+    "test:media": "node --experimental-test-module-mocks --test test/uploadRecord.test.mjs test/subllmMedia.test.mjs test/recognitionMedia.test.mjs test/mediaUrlGuard.test.mjs",
     "test:meme": "node test/meme/run.mjs",
     "test:meme:fast": "node test/meme/run.mjs --skip-slow",
     "test:meme:mutants": "node test/meme/run.mjs --all-mutants"

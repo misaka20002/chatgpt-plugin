@@ -56,6 +56,12 @@ function loadConfigIn(userConfig) {
 }
 
 const USER_CONFIG = {
+  cloudMode: 'file',
+  ttsHD: true,
+  focus_CloudTranscode: true,
+  tts_ffmpeg_path: '/旧转码程序',
+  cloudTranscode: 'https://media.example.com',
+
   enableAtGraph: false,
   // 比默认值短：取消勾选了大部分默认工具
   serpSourceArr: ['SerpImageTool_Baidu', 'GithubAPI'],
@@ -78,6 +84,15 @@ describe('配置加载：数组整体采用用户保存的值', () => {
 
   after(() => {
     for (const dir of tempDirs) fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('旧语音转码配置加载与保存时移除，共用云服务地址保留', () => {
+    for (const key of ['cloudMode', 'ttsHD', 'focus_CloudTranscode', 'tts_ffmpeg_path']) {
+      assert.equal(Object.hasOwn(custom.loaded, key), false)
+      assert.equal(Object.hasOwn(custom.written, key), false)
+    }
+    assert.equal(custom.loaded.cloudTranscode, USER_CONFIG.cloudTranscode)
+    assert.equal(custom.written.cloudTranscode, USER_CONFIG.cloudTranscode)
   })
 
   test('前提：这些默认数组都比用户保存的长，旧的按下标合并会补回尾部', () => {

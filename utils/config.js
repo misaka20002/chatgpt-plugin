@@ -143,7 +143,6 @@ const defaultConfig = {
   fish_base_url: "",
   fishApiKey: "",
   fish_reference_id: "efc1ce3726a64bbc947d53a1465204aa",
-  tts_ffmpeg_path: "/usr/local/bin/ffmpeg",
   meme_turnOff: false,
   meme_baseUrl: "https://qwqcc-meme.hf.space",
   meme_reply: true,
@@ -157,8 +156,6 @@ const defaultConfig = {
   gemini_vqa_model: "gemini-flash-lite-latest",
   geminiSearchModel: "gemini-flash-lite-latest",
   gemini_vqa_needMaster: true,
-  ttsHD: false,
-  focus_CloudTranscode: false,
   initiativeChatGroups: [],
   helloPrompt: '写一段话让大家来找我聊天。类似于“有人找我聊天吗？"这种风格，轻松随意一点控制在20个字以内',
   helloInterval: 3,
@@ -209,7 +206,6 @@ const defaultConfig = {
   // slackCozeSpecifiedChannel: '',
   cloudTranscode: 'https://silk.201666.xyz',
   cloudRender: false,
-  cloudMode: 'off',
   cloudDPR: 1,
   ttsMode: 'vits-uma-genshin-honkai', // or azure
   azureTTSKey: '',
@@ -441,9 +437,7 @@ function removeExtraKeys(target, base) {
 removeExtraKeys(config, defaultConfig);
 
 // ===================
-// 重启后强制设置的选项 // 启动时内存里的这两个配置变成了 false，但不会立刻写入硬盘的 config.json
-config.focus_CloudTranscode = false
-config.ttsHD = false
+// 重启后强制设置的选项，不会立刻写入硬盘的 config.json
 config.doNotCheckPaintPluginSuccess = true
 config.agent_LocalSandboxSwitch = false
 // ===================

@@ -739,44 +739,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'cloudTranscode',
-          label: '云转码API地址',
-          bottomHelpMessage: '目前只支持node-silk语音转码，可在本地node-silk无法使用时尝试使用云端资源转码',
-          component: 'Input'
-        },
-        {
-          field: 'cloudMode',
-          label: '云转码API发送数据模式',
-          bottomHelpMessage: 'vits选链接，本地vits服务/azure选文件（呆毛注：目前没有云转码服务了，选“关闭云转码”，不过 NapCat 适配器已内置转码，音质很棒）',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: '关闭云转码', value: 'off' },
-              { label: '文件', value: 'file' },
-              { label: '链接', value: 'url' },
-              // { label: '数据', value: 'buffer' }
-            ]
-          }
-        },
-        // {
-        //   field: 'focus_CloudTranscode',
-        //   label: '强制使用云转码',
-        //   bottomHelpMessage: '当ffmpeg错误时，可开启本选项，强制使用云转码，需要配置 云转码API地址；开启后优先级：[本地-2转码silk]>[云转码silk]>[本地pcm2slk转码]；（本地pcm2slk转码 效果最优）',
-        //   component: 'Switch'
-        // },
-        // {
-        //   field: 'tts_ffmpeg_path',
-        //   label: 'FFMPEG路径',
-        //   bottomHelpMessage: '仅当某些平台例如trss无配置ffmpeg时需要配置',
-        //   component: 'Input'
-        // },
-        // {
-        //   field: 'ttsHD',
-        //   label: '本地SILK转码方案2',
-        //   bottomHelpMessage: '开启本地SILK转码方案2，此方案只推荐在无法本地silk转码且服务器转码均失效时开启',
-        //   component: 'Switch'
-        // },
-        {
           label: '语音合成服务器设置',
           component: 'Divider'
         },
@@ -2551,6 +2513,12 @@ export function supportGuoba() {
           label: '云渲染',
           bottomHelpMessage: '是否使用云资源进行图片渲染，需要开放服务器端口后才能使用，不支持旧版本渲染',
           component: 'Switch'
+        },
+        {
+          field: 'cloudTranscode',
+          label: '云服务API地址',
+          bottomHelpMessage: '用于云图片渲染和 Web 服务代理；语音由适配器自动转码',
+          component: 'Input'
         },
         {
           field: 'chatViewBotName',

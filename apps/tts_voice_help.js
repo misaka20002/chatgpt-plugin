@@ -560,7 +560,6 @@ export class voicechangehelp extends plugin {
             ` #ttslength设置帮助\n` +
             ` #tts语音切片生成帮助\n` +
             ` #搜索fish发音人[名称]\n` +
-            ` #chatgpt(开启|关闭)本地SILK转码` +
             // ` （2024年1月4日备注：api更新了，目前只支持[角色_ZH]和中文语言语音，等待恢复）` +
             ''
         let msg1_1 = `情感设置：\n` +
@@ -572,7 +571,7 @@ export class voicechangehelp extends plugin {
             ''
         let msg2 = `必要锅巴设置：\n1. vits-uma-genshin-honkai语音转换API地址 填入：\n` +
             `https://bv2.firefly.matce.cn\n` +
-            `2. 云转码API发送数据模式 选择：[文件]/[url]都可以`
+            `语音由 NapCat 等适配器自动转码，无需配置插件转码服务`
         let msg3 = '感谢genshinvoice.top提供的api支持！'
 
         let msg1_isn_master = `tts语音帮助：\n` +

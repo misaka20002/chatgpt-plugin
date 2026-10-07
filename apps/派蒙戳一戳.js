@@ -873,29 +873,18 @@ async function send_msg_DailyEnglish(e) {
 }
 
 /**
- * @description: 使用插件内置的silk服务发送音频
+ * @description: 使用适配器发送音频
  * @param {*} tts_url
  * @param {*} e
  * @return {*} sendable - e.reply(await silk_tts(tts_url))
  */
 async function chuo_silk_voice(tts_url, e) {
-    let ignoreEncode = e.adapter === 'shamrock'
-    let sendable
     try {
-        sendable = await uploadRecord(tts_url, 'fromPaimonChuo', ignoreEncode)
-        if (!sendable) {
-            // 如果合成失败，尝试使用ffmpeg合成
-            sendable = segment.record(tts_url)
-        }
+        return await uploadRecord(tts_url)
     } catch (err) {
         logger.error(err)
-        sendable = segment.record(tts_url)
+        await e.reply('语音发送失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
     }
-    if (!sendable) {
-        await e.reply('silk云转码和ffmpeg都失败惹喵，呜呜人家的麦克风坏了', false, { recallMsg: 8 })
-        return
-    }
-    return sendable
 }
 
 /**
