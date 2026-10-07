@@ -269,6 +269,9 @@ const defaultConfig = {
   gemini_vqa_model: "gemini-flash-lite-latest",
   geminiSearchModel: "gemini-flash-lite-latest",
   gemini_vqa_needMaster: true,
+  // 回复中禁止出现的私密号码，多个以逗号分隔。命中即在发送前替换为掩码，
+  // 兜底提示词无法约束的变形输出。
+  redactPrivateNumbers: '',
   ttsHD: false,
   focus_CloudTranscode: false,
   initiativeChatGroups: [],

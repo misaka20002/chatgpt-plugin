@@ -651,6 +651,12 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'redactPrivateNumbers',
+          label: '回复脱敏号码',
+          bottomHelpMessage: 'Bot 回复里禁止出现的私密号码，多个用逗号分隔（如 123456789,987654321）。命中即在发送前替换为等长掩码，兜住提示词挡不住的变形输出（完整号码、尾号、空格/连字符分隔、内嵌更长数字等）。留空则不过滤',
+          component: 'Input'
+        },
+        {
           field: 'gemini_vqa_needMaster',
           label: '只有主人才能#识图',
           bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”；注意： #识图 指令不受“媒体识别容量限制”控制',

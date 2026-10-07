@@ -357,6 +357,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (this.debug) {
       logger.info("body: " + JSON.stringify(body, null, 2))
     }
+    const apiStartAt = Date.now()
     let result = await fetchWithConnectionRetry(newFetch, url, {
       method: 'POST',
       body: JSON.stringify(body),
@@ -369,6 +370,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         logger.warn(`[Chatgpt][Gemini] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
       }
     })
+    // 记录单次请求耗时，便于排查响应速度与重试累积的延迟。
+    // 使用 mark 而非 info：日志配置中 info 级别不落盘，仅输出到控制台
+    logger.mark(`[Chatgpt][Gemini] 模型[${this.model || '未知'}] 请求耗时 ${((Date.now() - apiStartAt) / 1000).toFixed(2)}秒, HTTP ${result.status}`)
 
     // 应用新的 executeRetry 处理错误
     if (result.status !== 200) {

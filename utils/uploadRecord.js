@@ -20,11 +20,30 @@ try {
       try {
         module = await import('icqq')
       } catch (err1) {
-        // 可能是go-cqhttp之类的
+        // 可能是go-cqhttp之类的：此时 core 与 Contactable 均不可用，
+        // 后续依赖二者的路径会退化为普通 Error，需明确记录以免问题被静默掩盖
+        logger.warn('[Chatgpt]未找到 oicq 系模块（oicq/@icqqjs/icqq/icqq），语音记录与错误码映射功能不可用')
       }
   }
 }
 let pcm2slk, core, Contactable
+
+/**
+ * 构造带错误码的错误对象。
+ *
+ * oicq 系模块全部缺失时 core 为 undefined（见上方加载逻辑），此时无法构造
+ * ApiRejection，退化为携带 code 的普通 Error，保证错误仍能正常抛出而不崩溃。
+ *
+ * @param {number} code 错误码
+ * @param {string} message 错误信息
+ * @returns {Error}
+ */
+function buildApiRejection (code, message) {
+  return (core && core.ApiRejection)
+    ? new core.ApiRejection(code, message)
+    : Object.assign(new Error(message), { code })
+}
+
 if (module) {
   core = module.core
   Contactable = module.default
@@ -322,7 +341,7 @@ async function audioTrans (file, ffmpeg = 'ffmpeg') {
       try {
         resolve(pcm2slk(fs.readFileSync(tmpfile)))
       } catch {
-        reject(new core.ApiRejection(ErrorCode.FFmpegPttTransError, '音频转码到pcm失败，请确认你的ffmpeg可以处理此转换'))
+        reject(buildApiRejection(ErrorCode.FFmpegPttTransError, '音频转码到pcm失败，请确认你的ffmpeg可以处理此转换'))
       } finally {
         fs.unlink(tmpfile, NOOP)
       }
@@ -411,7 +430,7 @@ const ErrorMessage = {
 }
 function drop (code, message) {
   if (!message || !message.length) { message = ErrorMessage[code] }
-  throw new core.ApiRejection(code, message)
+  throw buildApiRejection(code, message)
 }
 errors.drop = drop
 /** 登录时可能出现的错误，不在列的都属于未知错误，暂时无法解决 */

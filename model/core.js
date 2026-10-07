@@ -23,6 +23,7 @@ import { getMessageById, upsertMessage } from '../utils/history.js'
 import { v4 as uuid } from 'uuid'
 import fetch from 'node-fetch'
 import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
+import { createRedactor, parsePrivateNumbers } from '../utils/redactPrivateNumbers.js'
 import { QueryStarRailTool } from '../utils/tools/QueryStarRailTool.js'
 import { WebsiteTool } from '../utils/tools/WebsiteTool.js'
 import { SendPictureTool } from '../utils/tools/SendPictureTool.js'
@@ -285,6 +286,7 @@ class Core {
           system = system.replaceAll(namePlaceholder, botName || defaultBotName) +
             ((opt.settings.enableGroupContext && e.group_id) ? groupContextTip : '')
           system += 'Attention, you are currently chatting in a qq group, then one who asks you now is' + `${e.sender.card || e.sender.nickname}(${e.sender.user_id}).`
+          system += 'Use that QQ number to recognize who you are talking to. Never output it in your reply.'
           system += `the group name is ${e.group.name || e.group_name}, group id is ${e.group_id}.`
           system += `Your nickname is ${botName} in the group,`
           if (chats) {
@@ -409,13 +411,29 @@ class Core {
             })
             .join('\n')
         }
+      } else if (e.sender?.user_id) {
+        // 私聊不经过上面的群上下文分支，需在此注入当前对话者的关系判定。
+        // 只告知是否为提示词中定义的那位特定用户，不注入其 QQ 号与昵称：
+        // 号码留在服务端比对即可，无需进入模型上下文。
+        const isPrivateChatMaster = parsePrivateNumbers(Config.redactPrivateNumbers)
+          .includes(String(e.sender.user_id))
+        system += isPrivateChatMaster
+          ? 'Attention, the user you are talking to in this private chat is the one person you are especially close to.'
+          : 'Attention, the user you are talking to in this private chat is an ordinary group member, treat them like everyone else.'
+        system += ' Never output any QQ number in your reply.'
       }
       option.system = system
-      option.replyPureTextCallback = opt.settings.replyPureTextCallback || (async (msg) => {
+      const redactPrivateNumber = createRedactor(Config.redactPrivateNumbers)
+      const rawReplyPureText = opt.settings.replyPureTextCallback || (async (msg) => {
         if (msg) {
           await e.reply(msg, true)
         }
       })
+      option.replyPureTextCallback = async (msg) => {
+        // 脱敏置于最外层：调用方传入的 replyPureTextCallback 同样受约束，
+        // 否则替换回调实现即可绕过该过滤
+        return await rawReplyPureText(redactPrivateNumber(msg))
+      }
       const forceToolByKeyword = Config.enableForceToolKeywords !== false &&
         Config.geminiForceToolKeywords?.find(k => prompt?.includes(k))
       option.toolMode = (opt.settings.forceTool || forceToolByKeyword) ? 'ANY' : 'AUTO'
