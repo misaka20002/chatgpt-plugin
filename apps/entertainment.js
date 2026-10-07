@@ -494,7 +494,10 @@ ${translateLangLabels}
                 }
               }
               if (useSilk) {
-                await this.e.bot.sendGroupMsg(groupId, await uploadRecord(audio))
+                // uploadRecord 在缺少 oicq core（如 TRSS 环境的 stub）时返回 false，
+                // 此时需回退，否则会把 false 当作消息内容发送
+                const sendable = await uploadRecord(audio)
+                await this.e.bot.sendGroupMsg(groupId, sendable || segment.record(audio))
               } else {
                 await this.e.bot.sendGroupMsg(groupId, segment.record(audio))
               }

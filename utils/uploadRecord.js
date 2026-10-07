@@ -68,6 +68,13 @@ if (module) {
 let errors = {}
 
 async function uploadRecord(recordUrl, ttsMode = 'vits-uma-genshin-honkai', ignoreEncode = false) {
+  // 下方三条转码路径产出 silk 后统一经 core.pb 编码，以 protobuf:// 形式上传。
+  // TRSS 环境的 oicq 为本地 stub，仅导出 segment、不含 core，因此这些路径不可用。
+  // 此处提前返回 false，由调用方回退到 segment.record(recordUrl)，
+  // 避免走到一半才在 core.pb.encode 处抛错。
+  if (!core || !core.pb) {
+    return false
+  }
   // 派蒙戳一戳强制使用recordType = 'url'，不管是否Config.cloudMode === 'file'
   let fromPaimonChuo = false
   if (ttsMode === 'fromPaimonChuo') {
