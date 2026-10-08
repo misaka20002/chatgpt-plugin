@@ -3,12 +3,8 @@ import path from 'node:path'
 import { PROVIDER_FIELDS, emptyProviders, findProvider, normalizeProviders, migrateProviders } from './providerProfiles.js'
 import lodash from 'lodash'
 import { normalizeGroupReplyConfig } from './groupReplyConfig.js'
-export const defaultChatGPTAPI = 'https://chat3.avocado.wiki/backend-api/conversation'
-export const officialChatGPTAPI = 'https://chat3.avocado.wiki/backend-api/conversation'
 // Reverse proxy of https://api.openai.com
-export const defaultOpenAIReverseProxy = 'https://mondstadt.d201.eu.org/v1'
-// blocked in China Mainland
-export const defaultOpenAIAPI = 'https://api.openai.com/v1'
+export const defaultOpenAIReverseProxy = 'https://api.openai.com/v1'
 export const pureSydneyInstruction = 'You\'re an AI assistant named [name]. Answer using the same language as the user.'
 const defaultConfig = {
   blockWords: ['屏蔽词1', '屏蔽词b'],
@@ -95,7 +91,7 @@ const defaultConfig = {
   change_handleMsg_tool: true,
   nai3PluginToPaintPrefix: "artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:tsubasa_tsubasa],",
   sfPluginToPaintPrefix: "",
-  geminiModelsByFetch: [],
+  // geminiModelsByFetch: [], // 可用模型通过指令即时查询，不再缓存目录。
   draw_PluginCharactersList: '',
   doNotCheckPaintPluginSuccess: true,
   paimon_chuoyichuo_open: true,
@@ -235,7 +231,7 @@ const defaultConfig = {
   // geminiKeyArr: '',
   geminiPrompt: 'You are Gemini. Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
   // origin: https://generativelanguage.googleapis.com
-  geminiBaseUrl: 'https://gemini.ikechan8370.com',
+  geminiBaseUrl: 'https://gemini-proxy1.588686.xyz/',
   geminiTemperature: 0.9,
   geminiMaxOutputTokens: 65536,
   sunoSessToken: '',
@@ -244,7 +240,7 @@ const defaultConfig = {
   SunoModel: 'local',
 
   claudeApiKey: '',
-  claudeApiBaseUrl: 'http://claude-api.ikechan8370.com',
+  claudeApiBaseUrl: 'http://claude-api.xiaodaimao.com',
   claudeApiMaxToken: 65536,
   claudeApiTemperature: 0.8,
   claudeApiModel: '', // claude-3-opus-20240229 claude-3-sonnet-20240229
@@ -481,6 +477,7 @@ function saveDiff(target) {
     normalizeProviders(candidate, providerDefaults)
     const nestedChange = deepDiff(candidate, defaultConfig)
     // 版本与空表单必须显式持久化，不能被差量保存省略后再次触发旧配置迁移。
+    // TODO: 2个月后(2027年1月8日)移除 commit 5bb9f8a61d68982f97ac8d52afbca2979c9fbe11 及之前初代的配置文件迁移源码
     nestedChange.providerConfigVersion = 1
     nestedChange.modelProviders = candidate.modelProviders
     fs.mkdirSync(path.dirname(configPath), { recursive: true })
@@ -563,18 +560,6 @@ export const Config = new Proxy(config, {
           }
         }
         return { ...defaultJson, ...userJson };
-      }
-    }
-    else if (property === 'get_geminiModels') {
-      return function () {
-        const defaultArr = ['gemini-pro-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview']
-        try {
-          const fetchModels = [];
-          return lodash.uniq([...defaultArr, ...fetchModels]);
-        } catch (e) {
-          logger.warn(`[chatgpt]Failed to get Gemini models: ${e.message}`);
-          return defaultArr;
-        }
       }
     }
     else if (property === 'paimon_chou_Fighting_Back') {

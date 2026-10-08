@@ -9,7 +9,7 @@
 ### 多模型提供商
 
 - `modelProviders.api/responses/claude/gemini` 是四类完整条目数组；每条的稳定 `id` 用于引用，`name` 仅展示，同类名称不可重复。字段映射、归一化、引用校验见 `utils/providerProfiles.js`，请求解析及独占配置视图见 `utils/providers.js`。协议类型不能代替条目 ID。
-- 锅巴使用 `GSubForm`；保存并刷新页面后更新来源选项。`defaultProviderId` 是全局正式聊天来源，`fallbackProviderId` 空值表示不启用；非空备用必须存在、与主条目同协议且不是自身。系统引用未解除前不能删除条目。保存使用完整候选配置校验和原子文件替换，不能先改 Redis 再验证。
+- 锅巴使用 `GSubForm`；四类表单及各用途来源字段直接定义在 `guoba.support.js`，字段默认值沿用 `providerDefaults`，仅来源下拉选项根据当前条目生成。保存并刷新页面后更新来源选项。`defaultProviderId` 是全局正式聊天来源，`fallbackProviderId` 空值表示不启用；非空备用必须存在、与主条目同协议且不是自身。系统引用未解除前不能删除条目。保存使用完整候选配置校验和原子文件替换，不能先改 Redis 再验证。
 - 模型名称由用户填写。主人发送 `#chatgpt获取可用模型`，从四类已配置条目的数字菜单中选择一个，按该条目的账号和地址查询目录。只发送本次结果，不保存目录、不自动更换模型，也不每日拉取；长列表分批合并转发。Gemini 和 Claude 按接口游标分页，Chat API / Responses 共用 `/models`；接口不支持目录时如实提示失败。
 - 旧配置首次加载时备份后迁移落盘，四类各生成普通的“默认”条目。识别、搜索和固定群聊判断的不同模型拆成普通条目；跟随全局的判断保留跟随语义。旧 Gemini 失败回退只保留在备份，不生成条目。`providerConfigVersion` 和 `modelProviders` 必须显式写盘，不能被差量保存省略，否则清空后会重复迁移。
 - `CHATGPT:USE` 仅为旧配置迁移输入，运行时统一读 `defaultProviderId`。个人模型模式和临时协议聊天入口已移除。运行配置及迁移备份不入库。

@@ -2,8 +2,7 @@ import { resolveProvider, providerConfig } from '../utils/providers.js'
 import { PROMPT_FIELDS, KEY_FIELDS, providerLabel, connectionVersion } from '../utils/providerProfiles.js'
 import { createAttemptHistory, runProviderFallback } from '../utils/providerFallback.js'
 import {
-  Config,
-  // defaultOpenAIAPI
+  Config
 } from '../utils/config.js'
 import McpManager from '../utils/mcp.js'
 import {
@@ -646,20 +645,6 @@ class Core {
         maxResponseTokens: Config.apiMaxToken,
         chatgptBlockCount: Config.chatgptBlockCount,
       }
-
-      // if (!Config.openAiForceUseReverse) {
-      //   let openAIAccessible = (Config.proxy || !(await isCN())) // 配了代理或者服务器在国外，默认认为不需要反代
-      //   if (opts.apiBaseUrl !== defaultOpenAIAPI && openAIAccessible) {
-      //     // 如果配了proxy(或者不在国内)，而且有反代，但是没开启强制反代,将baseurl删掉
-      //     delete opts.apiBaseUrl
-      //   }
-      // }
-
-      // const client = new OpenAI({
-      //   apiKey: Config.apiKey,
-      //   baseURL: opts.apiBaseUrl,
-      //   fetch: newFetch
-      // })
 
       this.chatGPTApi = new ChatGPTAPI(opts)
       let option = {

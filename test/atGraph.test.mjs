@@ -11,7 +11,6 @@ const config = { enableMemory: true, enableAtGraph: true, memoryGroupCapture: { 
 let saves = 0
 Object.defineProperties(config, {
   getConfig: { value: () => config },
-  get_geminiModels: { value: () => [] },
   save: { value: () => { saves++; return true } }
 })
 mock.module('../utils/config.js', { namedExports: { Config: config } })
