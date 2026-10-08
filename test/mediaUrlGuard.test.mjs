@@ -14,6 +14,7 @@
  * 7. mediaKind 校验：返回 200 的 text/html 在读 body 前被拒绝
  * 8. base64 恰好等于上限时不被误杀（padding 修正）
  * 9. 识别函数的失败契约与 prompt 语义（显式空 prompt 不回退 e.msg）
+ * 10. 二进制视频响应按内容确认类型，拒绝非视频与超限响应，并向识别工具传递正确 MIME
  */
 import { test, before, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
@@ -22,6 +23,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { Response } from 'node-fetch'
 
 globalThis.logger = {
   info() { }, warn() { }, error() { }, mark() { }, debug() { },
@@ -32,6 +34,23 @@ globalThis.Bot = {}
 globalThis.segment = {}
 
 const geminiCalls = []
+
+// 只替换公网请求边界，让工具仍执行真实的地址校验、下载、类型探测与 SubLLM 载荷组装。
+const { newFetch } = await import('../utils/proxy.js')
+const videoUrl = 'https://1.1.1.1/download?format=origin'
+const mp4Header = Buffer.from('000000206674797069736f6d0000020069736f6d69736f32617663316d703431', 'hex')
+const strictVideoOptions = { allowLocalFile: false, allowPrivateNetwork: false, mediaKind: 'video', maxSizeBytes: 1024 }
+let videoResponse
+mock.module('../utils/proxy.js', {
+  namedExports: {
+    newFetch: (url, options) => {
+      if (url !== videoUrl) return newFetch(url, options)
+      assert.equal(options.redirect, 'manual')
+      assert.ok(options.agent, '严格模式仍须固定连接目标')
+      return new Response(videoResponse.body, { headers: videoResponse.headers })
+    }
+  }
+})
 
 // Gemini 客户端会拉起框架级重依赖（lib/config 等）；本测试只验证下载与地址校验，用记录式桩替换
 mock.module('../client/CustomGoogleGeminiClient.js', {
@@ -55,6 +74,7 @@ const {
   url2Base64,
   recognitionResultsByGemini
 } = await import('../utils/paimonFuction.js')
+const { RecognitionResultsByGeminiTool } = await import('../utils/tools/RecognitionResultsByGeminiTool.js')
 
 const REJECTED_URLS = [
   'file:///etc/passwd',
@@ -246,6 +266,92 @@ test('mediaKind 校验：返回 200 的 text/html 被拒绝，image/* 正常放�
     mediaKind: 'video'
   })
   assert.equal(asVideo, null, '按视频请求时 image/* 应被拒绝')
+})
+
+test('视频响应为通用二进制或缺少类型时，按文件内容确认 MP4 并修正 MIME', async () => {
+  for (const headers of [{ 'content-type': 'Application/Octet-Stream; charset=binary' }, {}]) {
+    videoResponse = { body: mp4Header, headers }
+    const result = await url2Base64(videoUrl, false, true, strictVideoOptions)
+    assert.ok(result?.imageBlob, '无扩展名的视频下载地址应能通过内容探测')
+    assert.equal(result.imageBlob.type, 'video/mp4')
+    assert.equal(result.fileName, 'video.mp4')
+    assert.deepEqual(Buffer.from(await result.imageBlob.arrayBuffer()), mp4Header)
+  }
+})
+
+test('兼容旧版 file-type 的 CommonJS fromBuffer 导出', async (t) => {
+  // 仅改变依赖的导出形状，文件签名仍由真实解析器检测。
+  const installedFileType = await import('file-type')
+  const fromBuffer = installedFileType.fileTypeFromBuffer || installedFileType.default?.fromBuffer || installedFileType.fromBuffer
+  t.mock.module('file-type', { defaultExport: { fromBuffer } })
+  videoResponse = { body: mp4Header, headers: { 'content-type': 'application/octet-stream' } }
+  const result = await url2Base64(videoUrl, false, true, strictVideoOptions)
+  assert.equal(result?.imageBlob.type, 'video/mp4')
+  assert.deepEqual(Buffer.from(await result.imageBlob.arrayBuffer()), mp4Header)
+
+  videoResponse = { body: Buffer.from('<html>登录失效</html>'), headers: { 'content-type': 'application/octet-stream' } }
+  assert.equal(await url2Base64(videoUrl, false, true, strictVideoOptions), null)
+})
+
+test('通用二进制响应中的非视频、空内容与截断文件仍被拒绝', async () => {
+  const invalidBodies = [
+    Buffer.from('<html>登录失效</html>'),
+    Buffer.from('{"error":"expired"}'),
+    Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+    Buffer.from('00000018667479704d3441200000000069736f6d4d344120', 'hex'),
+    Buffer.alloc(0),
+    mp4Header.subarray(0, 8)
+  ]
+  for (const body of invalidBodies) {
+    videoResponse = { body, headers: { 'content-type': 'application/octet-stream' } }
+    assert.equal(await url2Base64(videoUrl, false, true, strictVideoOptions), null)
+  }
+})
+
+test('二进制视频兼容仍执行声明长度和流式累计大小限制', async () => {
+  for (const response of [
+    { body: mp4Header, headers: { 'content-type': 'application/octet-stream', 'content-length': '2048' } },
+    { body: Buffer.concat([mp4Header, Buffer.alloc(2048)]), headers: { 'content-type': 'application/octet-stream' } }
+  ]) {
+    videoResponse = response
+    assert.equal(await url2Base64(videoUrl, false, true, strictVideoOptions), null)
+  }
+})
+
+test('视频类型探测不放行明确的 HTML 类型，也不放宽图片类型校验', async () => {
+  videoResponse = { body: mp4Header, headers: { 'content-type': 'text/html' } }
+  assert.equal(await url2Base64(videoUrl, false, true, strictVideoOptions), null)
+
+  videoResponse = { body: mp4Header, headers: { 'content-type': 'application/octet-stream' } }
+  assert.equal(await url2Base64(videoUrl, false, true, { ...strictVideoOptions, mediaKind: 'image' }), null)
+})
+
+test('视频识别工具两种来源均将探测后的 MIME 与原始数据传给 Gemini', async () => {
+  const cfg = Config.getConfig()
+  const originalSource = cfg.mediaRecognitionSource
+  try {
+    for (const source of ['Orignal', 'Gemini']) {
+      cfg.mediaRecognitionSource = source
+      geminiCalls.length = 0
+      videoResponse = { body: mp4Header, headers: { 'content-type': 'application/octet-stream' } }
+      const result = await new RecognitionResultsByGeminiTool().func(
+        { videoUrl, question: '描述视频内容' },
+        { sender: { user_id: '1' }, modelProviderId: 'gemini', msg: '原始问题' }
+      )
+      assert.match(result, /^\[Untrusted media content\./)
+      assert.match(result, /gemini-ok/)
+      assert.equal(geminiCalls.length, 1)
+      assert.deepEqual(geminiCalls[0].option.media, { mimeType: 'video/mp4', data: mp4Header.toString('base64') })
+    }
+
+    geminiCalls.length = 0
+    videoResponse = { body: Buffer.from('<html>登录失效</html>'), headers: { 'content-type': 'application/octet-stream' } }
+    const errorResult = await new RecognitionResultsByGeminiTool().func({ videoUrl }, { sender: { user_id: '1' } })
+    assert.match(errorResult, /^Error: /)
+    assert.equal(geminiCalls.length, 0, '非视频内容不得提交模型')
+  } finally {
+    cfg.mediaRecognitionSource = originalSource
+  }
 })
 
 test('识别函数默认保持「返回错误字符串」旧契约（供非工具调用点使用）', async () => {

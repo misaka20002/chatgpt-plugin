@@ -1051,11 +1051,14 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
         throw new Error(`媒体下载失败：HTTP ${response.status || response.statusText}`)
       }
 
-      // 类型校验放在读 body 之前：URL 返回 200 的 WAF/登录 HTML 不该被当成媒体送进模型
+      let contentType = response.headers.get('content-type') || ''
+      const mimeType = contentType.split(';')[0].trim().toLowerCase()
+      // QQ 视频下载常返回通用二进制类型；只对未声明具体类型的视频改用内容探测。
+      const detectVideoType = expectedKind === 'video' && (!mimeType || mimeType === 'application/octet-stream')
+      // 明确的非媒体响应仍在读 body 前拒绝，避免把 WAF/登录 HTML 当成媒体送进模型。
       if (expectedKind) {
-        const mimeType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
         const accepted = expectedKind === 'video' ? mimeType.startsWith('video/') : mimeType.startsWith('image/')
-        if (!accepted) {
+        if (!accepted && !detectVideoType) {
           response.body?.destroy?.()
           throw new Error(`媒体类型不符：期望 ${expectedKind}/*，实际 ${mimeType || '未知'}`)
         }
@@ -1078,9 +1081,23 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
         chunks.push(chunk)
       }
 
+      const buffer = Buffer.concat(chunks)
+      if (detectVideoType) {
+        // 复用宿主的文件签名检测，在大小校验后执行；不能仅凭 URL 后缀或请求参数信任视频类型。
+        const fileType = await import('file-type')
+        // 宿主可能安装 v16（CommonJS fromBuffer）或 v17+（ESM fileTypeFromBuffer）。
+        const detect = fileType.fileTypeFromBuffer || fileType.fromBuffer || fileType.default?.fromBuffer
+        if (typeof detect !== 'function') throw new Error('当前 file-type 版本不支持媒体文件类型检测')
+        const detected = await detect(buffer)
+        if (!detected?.mime.startsWith('video/')) {
+          throw new Error(`媒体类型不符：期望 video/*，内容探测为 ${detected?.mime || '未知类型'}`)
+        }
+        contentType = detected.mime
+      }
+
       return {
-        buffer: Buffer.concat(chunks),
-        contentType: response.headers.get('content-type') || '',
+        buffer,
+        contentType,
         contentLength: total
       }
     } finally {
@@ -1104,8 +1121,8 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
  *                                     处理不可信来源（如模型提供的地址）时必须传 false
  * @param {boolean} opt.allowPrivateNetwork 是否允许访问内网/本机地址，默认 true；
  *                                          处理不可信来源时必须传 false（只允许公网 http/https，逐跳校验并固定连接目标）
- * @param {'image'|'video'} opt.mediaKind 期望的媒体大类；传入后响应 Content-Type 必须是 image/* 或 video/*，
- *                                        用于在读 body 前拒绝返回 200 的 HTML/JSON 等非媒体响应
+ * @param {'image'|'video'} opt.mediaKind 期望的媒体大类；明确的非媒体 Content-Type 在读 body 前拒绝，
+ *                                        视频的空类型或 application/octet-stream 在限量下载后按文件签名确认类型
  * @param {*} e e 可选，用于回复
  * @return {*}
  */
