@@ -165,7 +165,8 @@ export class ResponsesAPI {
       return {
         id: response.id,
         role: 'assistant',
-        text: this._extractOutputText(response),
+        text: this._extractOutputText(response) || (response.output || []).flatMap(item => item.content || []).find(item => item.type === 'refusal')?.refusal || '',
+        refused: (response.output || []).some(item => item.content?.some(part => part.type === 'refusal')),
         thinking_text: this._extractReasoningText(response),
         originalContent: response.output,
         toolCalls,

@@ -1,3 +1,5 @@
+import { currentProviderType, resolveProvider, providerModel } from '../utils/providers.js'
+import { providerLabel } from '../utils/providerProfiles.js'
 import plugin from '../../../lib/plugins/plugin.js'
 import { exec } from 'child_process'
 import { Config } from '../utils/config.js'
@@ -654,39 +656,23 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveToken')
   }
 
-  async useOpenAIAPIBasedSolution(e) {
-    let use = await redis.get('CHATGPT:USE')
-    if (use !== 'api') {
-      await redis.set('CHATGPT:USE', 'api')
-      await this.reply('已切换到基于OpenAI API的解决方案，如果已经对话过建议执行`#结束对话`避免引起404错误')
-    } else {
-      await this.reply('当前已经是API模式了')
-    }
+  async useOpenAIAPIBasedSolution(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.switchProvider.call(Object.assign(Object.create(this), { choose: ProviderManagement.prototype.choose }), e)
   }
 
   async useChatGLMSolution(e) {
-    await redis.set('CHATGPT:USE', 'chatglm')
-    await this.reply('已切换到ChatGLM-6B解决方案，如果已经对话过建议执行`#结束对话`避免引起404错误')
+    await this.reply('旧 ChatGLM 模式已移除，请使用 #chatgpt切换模型')
   }
 
-  async useClaudeAPIBasedSolution() {
-    let use = await redis.get('CHATGPT:USE')
-    if (use !== 'claude') {
-      await redis.set('CHATGPT:USE', 'claude')
-      await this.reply('已切换到基于ClaudeAPI的解决方案')
-    } else {
-      await this.reply('当前已经是Claude模式了')
-    }
+  async useClaudeAPIBasedSolution(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.switchProvider.call(Object.assign(Object.create(this), { choose: ProviderManagement.prototype.choose }), e)
   }
 
-  async useGeminiSolution() {
-    let use = await redis.get('CHATGPT:USE')
-    if (use !== 'gemini') {
-      await redis.set('CHATGPT:USE', 'gemini')
-      await this.reply('已切换到基于Google Gemini的解决方案')
-    } else {
-      await this.reply('当前已经是gemini模式了')
-    }
+  async useGeminiSolution(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.switchProvider.call(Object.assign(Object.create(this), { choose: ProviderManagement.prototype.choose }), e)
   }
 
   async patchGemini() {
@@ -784,16 +770,8 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   }
 
   async modeHelp() {
-    let mode = normalizeChatMode(await redis.get('CHATGPT:USE'))
-    const modeMap = {
-      api: 'OpenAI Chat API',
-      responses: 'OpenAI Responses API',
-      claude: 'Claude',
-      gemini: 'Gemini'
-    }
-    let modeText = modeMap[mode || 'api']
-    let message = `请访问yunzai.chat查看文档。当前为 ${modeText} 模式。`
-    await this.reply(message)
+    const row = resolveProvider()
+    await this.reply(`当前提供商：${providerLabel(row)}\n主人发送 #chatgpt切换模型，依次通过数字列表选择主模型和同协议备用模型；所有用户跟随全局。新增条目请使用锅巴。`)
   }
 
   async shutUp(e) {
@@ -920,10 +898,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     }
   }
 
-  async setAPIKey(e) {
-    this.setContext('saveAPIKey')
-    await this.reply('请发送OpenAI API Key.', true)
-    return false
+  async setAPIKey(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveAPIKey() {
@@ -940,10 +917,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveAPIKey')
   }
 
-  async setClaudeKey(e) {
-    this.setContext('saveClaudeKey')
-    await this.reply('请发送Claude API Key。\n如果要设置多个key请用逗号隔开。\n此操作会覆盖当前配置，请谨慎操作', true)
-    return false
+  async setClaudeKey(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveClaudeKey() {
@@ -959,10 +935,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveClaudeKey')
   }
 
-  async setGeminiKey(e) {
-    this.setContext('saveGeminiKey')
-    await this.reply('请发送Gemini API Key，如果有多个用英文逗号隔开；获取地址：https://makersuite.google.com/app/apikey', true)
-    return false
+  async setGeminiKey(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveGeminiKey() {
@@ -974,10 +949,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveGeminiKey')
   }
 
-  async setAPIPromptPrefix(e) {
-    this.setContext('saveAPIPromptPrefix')
-    await this.reply('请发送用于API模式的设定', true)
-    return false
+  async setAPIPromptPrefix(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveAPIPromptPrefix(e) {
@@ -1201,9 +1175,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     } else {
       redisConfig.bingTokens = []
     }
-    if (await redis.exists('CHATGPT:USE') != 0) {
-      redisConfig.useMode = await redis.get('CHATGPT:USE')
-    }
     const filepath = path.join('plugins/chatgpt-plugin/resources/view', 'setting_view.json')
     const configView = JSON.parse(fs.readFileSync(filepath, 'utf8'))
     const configJson = JSON.stringify({
@@ -1211,7 +1182,6 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
       redisConfig,
       view: configView
     })
-    console.log(configJson)
     const buf = Buffer.from(configJson)
     e.friend.sendFile(buf, `ChatGPT-Plugin Config ${Date.now()}.json`)
     return true
@@ -1234,8 +1204,11 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
         try {
           let changeConfig = []
           const response = await fetch(fileUrl)
+          if (!response.ok) throw new Error(`下载配置失败：HTTP ${response.status}`)
           const data = await response.json()
           const chatdata = data.chatConfig || {}
+          if (chatdata.providerConfigVersion !== 1 || !chatdata.modelProviders) throw new Error('仅支持导入新版表单配置；旧版配置会在启动时自动迁移')
+          const candidate = structuredClone(Config.getConfig())
           for (let [keyPath, value] of Object.entries(chatdata)) {
             if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups') { value = value.toString().split(/[,，;；|]/) }
             if (Config[keyPath] != value) {
@@ -1245,9 +1218,11 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
                 old: typeof (Config[keyPath]) === 'object' ? JSON.stringify(Config[keyPath]) : Config[keyPath],
                 type: 'config'
               })
-              Config[keyPath] = value
+              candidate[keyPath] = value
             }
           }
+          // 条目和来源一起验证、保存，避免逐项赋值时留下部分导入的配置。
+          Config.commit(candidate)
           const redisConfig = data.redisConfig || {}
           if (redisConfig.bingTokens != null) {
             changeConfig.push({
@@ -1258,19 +1233,10 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
             })
             await redis.set('CHATGPT:BING_TOKENS', JSON.stringify(redisConfig.bingTokens))
           }
-          if (redisConfig.useMode != null) {
-            changeConfig.push({
-              item: 'useMode',
-              value: redisConfig.useMode,
-              old: await redis.get('CHATGPT:USE'),
-              type: 'redis'
-            })
-            await redis.set('CHATGPT:USE', redisConfig.useMode)
-          }
-          await this.reply(await makeForwardMsg(this.e, changeConfig.map(msg => `修改项:${msg.item}\n旧数据\n\n${msg.old}\n\n新数据\n ${msg.value}`)))
+          await this.reply(`配置导入完成，修改项：${changeConfig.map(msg => msg.item).join('、') || '无'}`)
         } catch (error) {
           console.error(error)
-          await this.reply('配置文件错误')
+          await this.reply(`配置导入失败：${error.message}`)
         }
       }
     } else {
@@ -1300,7 +1266,7 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   }
 
   async viewHostedBuiltinTools (e) {
-    const use = normalizeChatMode(await redis.get('CHATGPT:USE'))
+    const use = currentProviderType()
     const modeMap = {
       api: 'OpenAI Chat API',
       responses: 'OpenAI Responses API',
@@ -1478,10 +1444,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     await this.reply(makeForwardMsg(e, modelList, '模型列表'))
   }
 
-  async setAPIModel(e) {
-    this.setContext('saveAPIModel')
-    await this.reply('请发送API模型', true)
-    return false
+  async setAPIModel(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveAPIModel() {
@@ -1492,10 +1457,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveAPIModel')
   }
 
-  async setClaudeModel(e) {
-    this.setContext('saveClaudeModel')
-    await this.reply('请发送Claude模型，官方推荐模型：\nclaude-3-opus-20240229\nclaude-3-sonnet-20240229\nclaude-3-haiku-20240307', true)
-    return false
+  async setClaudeModel(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveClaudeModel() {
@@ -1506,10 +1470,9 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
     this.finish('saveClaudeModel')
   }
 
-  async setOpenAiBaseUrl(e) {
-    this.setContext('saveOpenAiBaseUrl')
-    await this.reply('请发送API反代', true)
-    return false
+  async setOpenAiBaseUrl(e = this.e) {
+    const { ProviderManagement } = await import('./providers.js')
+    return ProviderManagement.prototype.editProvider.call(this, e)
   }
 
   async saveOpenAiBaseUrl() {
@@ -1537,26 +1500,8 @@ azure语音：Azure 语音是微软 Azure 平台提供的一项语音服务，�
   }
 
   async queryConfig(e) {
-    let use = normalizeChatMode(await redis.get('CHATGPT:USE'))
-    let config = []
-    config.push(`当前模式：${use}`)
-    config.push(`\n当前API模型：${Config.model}`)
-    config.push(`\n当前开启API流式输出：${Config.apiStream}`)
-    config.push(`\n群聊自主回复：${Config.groupReply.enabled}`)
-    config.push(`\n当前智能模式：${Config.smartMode}`)
-    if (e.isPrivate) {
-      config.push(`\n当前APIKey：${Config.apiKey}`)
-      config.push(`\n当前API反代：${Config.openAiBaseUrl}`)
-      config.push(`\n当前必应反代：${Config.sydneyReverseProxy}`)
-      config.push(`\n当前Gemini API Key：${Config.geminiKey}`)
-      config.push(`\n当前Gemini反代：${Config.geminiBaseUrl}`)
-      config.push(`\n当前Claude API 反代：${Config.claudeApiBaseUrl}`)
-      config.push(`\n当前Claude API Key：${Config.claudeApiKey}`)
-      config.push(`\n当前开启工具箱：${Config.enableToolbox}`)
-    }
-    config.push(`\n当前Claude模型：${Config.claudeApiModel}`)
-    config.push(`\n当前Gemini模型：${Config.geminiModel}`)
-    this.reply(config)
+    const row = resolveProvider()
+    await this.reply(`当前模型提供商：${providerLabel(row)}\n模型：${providerModel(row)}\n失败回退：${Config.fallbackProviderId ? providerLabel(resolveProvider(Config.fallbackProviderId)) : '不启用'}\n智能模式：${Config.smartMode}`, true)
   }
 
   async switchStream(e) {

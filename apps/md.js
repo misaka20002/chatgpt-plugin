@@ -1,3 +1,5 @@
+import { resolveProvider, providerModel } from '../utils/providers.js'
+import { providerLabel } from '../utils/providerProfiles.js'
 import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 
@@ -26,11 +28,6 @@ export class ChatGPTMarkdownHandler extends plugin {
 }
 
 function transUse (use) {
-  let useMap = {
-    api: Config.model,
-    gemini: Config.geminiModel,
-    chat3: 'ChatGPT官网',
-    claude: Config.claudeApiModel
-  }
-  return useMap[use] || use
+  const row = resolveProvider()
+  return `${providerLabel(row)} / ${providerModel(row)}`
 }

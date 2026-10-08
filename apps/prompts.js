@@ -1,3 +1,4 @@
+import { currentProviderType } from '../utils/providers.js'
 import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 import { getMasterQQ, limitString, makeForwardMsg, maskQQ, getUin } from '../utils/common.js'
@@ -131,9 +132,10 @@ export class help extends plugin {
         }
       }
     }
-    let use = await redis.get('CHATGPT:USE') || 'api'
+    let use = currentProviderType()
     const keyMap = {
       api: 'promptPrefixOverride',
+      responses: 'responsesSystemPrompt',
       bing: 'sydney',
       claude: 'claudeSystemPrompt',
       gemini: 'geminiPrompt'
@@ -263,7 +265,7 @@ export class help extends plugin {
       // await this.reply('本机器人存在其他人正在上传设定，请稍后')
       // return
     }
-    let use = await redis.get('CHATGPT:USE') || 'api'
+    let use = currentProviderType()
     let currentUse = e.msg.replace(/^#(chatgpt|ChatGPT)(上传|分享|共享)设定/, '')
     if (!currentUse) {
       currentUse = await redis.get(`CHATGPT:PROMPT_USE_${use}`)

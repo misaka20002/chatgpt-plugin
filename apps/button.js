@@ -133,33 +133,6 @@ export class ChatGPTButtonHandler extends plugin {
         ]
       }
     ]
-    let buttons = [[], []]
-    if (Config.apiKey) {
-      buttons[0].push(createButtonBase('OpenAI', '#chat1', false))
-    }
-    // if (await redis.get('CHATGPT:TOKEN')) {
-    //   buttons[0].push(createButtonBase('ChatGPT', '#chat3', false))
-    // }
-    // if (await redis.get('CHATGPT:BING_TOKENS')) {
-    //   buttons[0].push(createButtonBase('Copilot', '#bing', false))
-    // }
-    if (Config.geminiKey.length) {
-      buttons[0].push(createButtonBase('Gemini', '#gemini', false))
-    }
-    // 两个claude只显示一个 优先API
-    if (Config.claudeApiKey) {
-      buttons[buttons[0].length >= 4 ? 1 : 0].push(createButtonBase('Claude', '#claude', false))
-    } else if (Config.claudeAISessionKey) {
-      buttons[buttons[0].length >= 4 ? 1 : 0].push(createButtonBase('Claude.ai', '#claude.ai', false))
-    }
-    rows.push({
-      buttons: buttons[0]
-    })
-    if (buttons[1].length > 0) {
-      rows.push({
-        buttons: buttons[1]
-      })
-    }
     if (options?.suggested) {
       rows.unshift({
         buttons: options.suggested.split('\n').map(s => {

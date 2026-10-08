@@ -24,8 +24,7 @@ export function normalizeGroupReplyConfig(value = {}) {
   }
   return {
     enabled: value?.enabled === true,
-    provider: ['current', 'api', 'responses', 'claude', 'gemini'].includes(value?.provider) ? value.provider : 'current',
-    model: typeof value?.model === 'string' ? value.model.trim() : '',
+    provider: typeof value?.provider === 'string' && value.provider ? value.provider : 'current',
     historyCount: number(value?.historyCount, 50, 20, 500),
     groups: Array.isArray(value?.groups) ? value.groups.map(g => ({
       groupId: String(g?.groupId ?? '').trim(),

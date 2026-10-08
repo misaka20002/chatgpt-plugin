@@ -1,3 +1,5 @@
+import { resolveProvider, providerConversationKey } from '../utils/providers.js'
+import { providerLabel } from '../utils/providerProfiles.js'
 import { getUin, getUserData, normalizeChatMode } from '../utils/common.js'
 import { Config } from '../utils/config.js'
 import { KeyvFile } from 'keyv-file'
@@ -93,145 +95,20 @@ function getCurrentModeCleanupTargets(use) {
 
 export class ConversationManager {
   async endConversation(e) {
-    const userData = await getUserData(e.user_id)
-    const match = e.msg.trim().match('^#?(.*)(结束|新开|摧毁|毁灭|完结)对话')
-    console.log(match[1])
-    let use
-    if (match[1] && match[1] != 'chatgpt') {
-      use = correspondingValues[originalValues.indexOf(match[1])]
-    } else {
-      use = normalizeChatMode((userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE'))
-    }
-    console.log(use)
-    await redis.del(`CHATGPT:WRONG_EMOTION:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`)
-    // fast implementation
-    if (use === 'claude') {
-      await redis.del(`CHATGPT:CONVERSATIONS_CLAUDE:${(e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id}`)
-      await this.reply('claude对话已结束')
-      return
-    }
-    let ats = e.message.filter(m => m.type === 'at')
-    const isAtMode = Config.toggleMode === 'at'
-    if (isAtMode) ats = ats.filter(item => item.qq !== getUin(e))
-    if (ats.length === 0) {
-      if (use === 'api') {
-        let c = await redis.get(`CHATGPT:CONVERSATIONS:${e.sender.user_id}`)
-        if (!c) {
-          await this.reply('当前没有开启对话', true)
-        } else {
-          await redis.del(`CHATGPT:CONVERSATIONS:${e.sender.user_id}`)
-          await this.reply('已结束当前对话，请@我进行聊天以开启新的对话', true)
-        }
-      } else if (use === 'responses') {
-        const scope = (e.isGroup && Config.groupMerge) ? e.group_id.toString() : e.sender.user_id
-        let c = await redis.get(`CHATGPT:CONVERSATIONS_RESPONSES:${scope}`)
-        if (!c) {
-          await this.reply('当前没有开启对话', true)
-        } else {
-          await redis.del(`CHATGPT:CONVERSATIONS_RESPONSES:${scope}`)
-          await this.reply('已结束当前对话，请@我进行聊天以开启新的对话', true)
-        }
-      } else if (use === 'gemini') {
-        let c = await redis.get(`CHATGPT:CONVERSATIONS_GEMINI:${e.sender.user_id}`)
-        if (!c) {
-          await this.reply('当前没有开启对话', true)
-        } else {
-          await redis.del(`CHATGPT:CONVERSATIONS_GEMINI:${e.sender.user_id}`)
-          await this.reply('已结束当前对话，请@我进行聊天以开启新的对话', true)
-        }
-      }
-    } else {
-      let at = ats[0]
-      let qq = at.qq
-      let atUser = _.trimStart(at.text, '@') || _.trimStart(at.name, '@')
-      if (use === 'api') {
-        let c = await redis.get(`CHATGPT:CONVERSATIONS:${qq}`)
-        if (!c) {
-          await this.reply(`当前${atUser}没有开启对话`, true)
-        } else {
-          await redis.del(`CHATGPT:CONVERSATIONS:${qq}`)
-          await this.reply(`已结束${atUser}的对话，TA仍可以@我进行聊天以开启新的对话`, true)
-        }
-      } else if (use === 'responses') {
-        let c = await redis.get(`CHATGPT:CONVERSATIONS_RESPONSES:${qq}`)
-        if (!c) {
-          await this.reply(`当前${atUser}没有开启对话`, true)
-        } else {
-          await redis.del(`CHATGPT:CONVERSATIONS_RESPONSES:${qq}`)
-          await this.reply(`已结束${atUser}的对话，TA仍可以@我进行聊天以开启新的对话`, true)
-        }
-      } else if (use === 'gemini') {
-        let c = await redis.get(`CHATGPT:CONVERSATIONS_GEMINI:${qq}`)
-        if (!c) {
-          await this.reply(`当前${atUser}没有开启对话`, true)
-        } else {
-          await redis.del(`CHATGPT:CONVERSATIONS_GEMINI:${qq}`)
-          await this.reply(`已结束${atUser}的对话，TA仍可以@我进行聊天以开启新的对话`, true)
-        }
-      }
-    }
+    const row = resolveProvider()
+    const ats = (e.message || []).filter(m => m.type === 'at' && String(m.qq) !== String(getUin(e)))
+    if (ats.length && !e.isMaster) { await this.reply('只有主人可以结束他人的对话'); return }
+    const scope = e.isGroup && Config.groupMerge ? String(e.group_id) : ats[0]?.qq || e.sender.user_id
+    await redis.del(providerConversationKey(row, scope))
+    await this.reply(`${providerLabel(row)} 对话已结束`, true)
   }
 
   async endAllConversations(e) {
-    const match = e.msg.trim().match(`^#?(${originalValues.join('|')})?(结束|新开|摧毁|毁灭|完结|清理)全部(模式|模型)?对话$`)
-
-    if (match?.[3]) {
-      const conversationPatterns = [
-        'CHATGPT:CONVERSATIONS:*',
-        'CHATGPT:CONVERSATIONS_RESPONSES:*',
-        'CHATGPT:QQ_CONVERSATION:*',
-        'CHATGPT:CONVERSATIONS_GEMINI:*',
-        'CHATGPT:CONVERSATIONS_CLAUDE:*',
-      ]
-      const historyPatterns = [
-        'CHATGPT:MESSAGE:*',
-        'CHATGPT:MESSAGE_Gemini:*',
-        'CHATGPT:MESSAGE_Claude:*',
-        'CHATGPT:QQ_MESSAGE:*'
-      ]
-      const metadataPatterns = [
-        'CHATGPT:WRONG_EMOTION:*',
-        'CHATGPT:CONVERSATION_LAST_MESSAGE_PROMPT:*',
-        'CHATGPT:CONVERSATION_LAST_MESSAGE_ID:*',
-        'CHATGPT:CONVERSATION_CREATER_ID:*',
-        'CHATGPT:CONVERSATION_CREATER_NICK_NAME:*'
-      ]
-
-      const [deletedConversations] = await Promise.all([
-        deleteRedisKeys(conversationPatterns, 'conversation'),
-        deleteRedisKeys(historyPatterns, 'history'),
-        deleteRedisKeys(metadataPatterns, 'conversation metadata')
-      ])
-
-      await clearKeyvNamespace(Config.toneStyle)
-      await clearKeyvNamespace('chatglm_6b')
-
-      await this.reply(`已按全模式清理，结束了${deletedConversations}个会话，并清空可识别的历史记录。`, false)
-      return
-    }
-
-    let use
-    if (match?.[1] && match[1] !== 'chatgpt') {
-      use = correspondingValues[originalValues.indexOf(match[1])]
-    } else {
-      use = await redis.get('CHATGPT:USE') || 'api'
-    }
-
-    const {
-      conversationPatterns = [],
-      historyPatterns = [],
-      metadataPatterns = [],
-      keyvNamespaces = []
-    } = getCurrentModeCleanupTargets(use)
-
-    const deletedConversations = await deleteRedisKeys(conversationPatterns, `${use} conversation`)
-    await deleteRedisKeys(historyPatterns, `${use} history`)
-    await deleteRedisKeys(metadataPatterns, `${use} metadata`)
-
-    for (const namespace of keyvNamespaces) {
-      await clearKeyvNamespace(namespace)
-    }
-
-    await this.reply(`已清理当前模式 ${use} 的数据，结束了${deletedConversations}个会话。`, false)
+    if (!e.isMaster) { await this.reply('只有主人可以结束全部会话'); return }
+    const all = /全部|所有|全模式/.test(e.msg)
+    const pattern = all ? 'CHATGPT:CONVERSATIONS_V2:*' : `CHATGPT:CONVERSATIONS_V2:${resolveProvider().id}:*`
+    let count = 0
+    for await (const key of redis.scanIterator({ MATCH: pattern })) count += await redis.del(key)
+    await this.reply(`已结束 ${count} 个会话`, false)
   }
 }

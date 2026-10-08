@@ -74,6 +74,11 @@ mock.module('../utils/proxy.js', {
   }
 })
 
+const { Config, providerDefaults } = await import('../utils/config.js')
+Object.assign(Config.getConfig(), {
+  modelProviders: Object.fromEntries(Object.entries(providerDefaults).map(([type, fields]) => [type, [{ ...fields, id: type, name: type, claudeApiKey: 'test-key', geminiKey: 'test-key', apiKey: 'test-key', responsesApiKey: 'test-key' }]])),
+  defaultProviderId: 'api'
+})
 const { SubLLM } = await import('../model/SubLLM.js')
 
 const media = { mimeType: 'image/png', data: 'QUJD' }

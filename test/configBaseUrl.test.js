@@ -32,6 +32,14 @@ function runConfig(t, userConfig, action) {
     const { supportGuoba } = await import(${JSON.stringify(moduleUrl('../guoba.support.js'))})
     const guoba = supportGuoba().configInfo
     const loaded = await guoba.getConfigData()
+    const fieldTypes = { openAiBaseUrl: 'api', promptPrefixOverride: 'api', responsesApiBaseUrl: 'responses', claudeApiBaseUrl: 'claude', geminiBaseUrl: 'gemini' }
+    const formValues = values => Object.fromEntries(Object.entries(values).map(([field, value]) => {
+      const type = fieldTypes[field]
+      if (!type) return [field, value]
+      const rows = structuredClone(Config.getConfig().modelProviders[type])
+      rows[0][field] = value
+      return ['modelProviders.' + type, rows]
+    }))
     ${action}
     process.stdout.write(JSON.stringify({ loaded, current: { ...Config }, displayed: await guoba.getConfigData() }))
     process.exit(0)
@@ -39,7 +47,9 @@ function runConfig(t, userConfig, action) {
   const stdout = execFileSync(process.execPath, ['--experimental-test-module-mocks', '--input-type=module', '-e', script], {
     cwd, encoding: 'utf8', timeout: 15000
   })
-  return { ...JSON.parse(stdout), written: JSON.parse(fs.readFileSync(configFile, 'utf8')) }
+  const flatten = config => Object.assign({}, config, ...Object.values(config.modelProviders || {}).map(rows => rows[0]))
+  const result = JSON.parse(stdout)
+  return { loaded: flatten(result.loaded), current: flatten(result.current), displayed: flatten(result.displayed), written: flatten(JSON.parse(fs.readFileSync(configFile, 'utf8'))) }
 }
 
 const input = {
@@ -68,7 +78,7 @@ test('锅巴保存四家 provider 的地址后，面板读取与磁盘存储一�
   const values = Object.fromEntries(['openAiBaseUrl', 'responsesApiBaseUrl', 'claudeApiBaseUrl', 'geminiBaseUrl']
     .map(key => [key, 'http://47.106.94.157:18080/']))
   const result = runConfig(t, {}, `
-    await guoba.setConfigData(${JSON.stringify(values)}, {
+    await guoba.setConfigData(formValues(${JSON.stringify(values)}), {
       Result: { ok() {}, error(message) { throw new Error(message) } }
     })
   `)
@@ -79,7 +89,10 @@ test('锅巴保存四家 provider 的地址后，面板读取与磁盘存储一�
 
 test('直接给 Config 赋值也会同步规范地址并保存', t => {
   const result = runConfig(t, {}, `
-    for (const [key, value] of Object.entries(${JSON.stringify(input)})) Config[key] = value
+    for (const [key, value] of Object.entries(${JSON.stringify(input)})) {
+      if (fieldTypes[key]) Config.defaultProviderId = Config.getConfig().modelProviders[fieldTypes[key]][0].id
+      Config[key] = value
+    }
   `)
   for (const snapshot of [result.current, result.displayed, result.written]) {
     for (const [key, value] of Object.entries(expected)) assert.equal(snapshot[key], value, key)
@@ -89,11 +102,38 @@ test('直接给 Config 赋值也会同步规范地址并保存', t => {
 test('清空地址时保持空值，不转换为默认地址或文本 null', t => {
   const values = { openAiBaseUrl: '', responsesApiBaseUrl: null, claudeApiBaseUrl: '  ', geminiBaseUrl: '' }
   const result = runConfig(t, {}, `
-    await guoba.setConfigData(${JSON.stringify(values)}, {
+    await guoba.setConfigData(formValues(${JSON.stringify(values)}), {
       Result: { ok() {}, error(message) { throw new Error(message) } }
     })
   `)
   for (const snapshot of [result.current, result.displayed, result.written]) {
-    for (const [key, value] of Object.entries({ ...values, claudeApiBaseUrl: '' })) assert.equal(snapshot[key], value, key)
+    for (const [key, value] of Object.entries({ ...values, responsesApiBaseUrl: '', claudeApiBaseUrl: '' })) assert.equal(snapshot[key], value, key)
   }
+})
+
+test('锅巴新增条目后更新全部来源选项，重命名保留 ID，错误主备组合不部分保存', t => {
+  runConfig(t, {}, `
+    const rows = structuredClone(Config.getConfig().modelProviders.api)
+    rows.push({ ...rows[0], id: '', name: '我的账号', model: 'another-model', temperature: 0 })
+    const Result = { ok: () => true, error: message => ({ error: message }) }
+    assert.equal(await guoba.setConfigData({ 'modelProviders.api': rows }, { Result }), true)
+    const added = Config.getConfig().modelProviders.api[1]
+    assert.ok(added.id)
+    assert.equal(added.temperature, 0)
+    const refreshed = supportGuoba().configInfo
+    for (const field of ['defaultProviderId', 'fallbackProviderId', 'groupReply.provider', 'sandboxSubAgentProvider', 'translateSource', 'imageProviderId']) {
+      const option = refreshed.schemas.find(s => s.field === field).componentProps.options.find(o => o.value === added.id)
+      assert.equal(option.label, 'Chat API - 我的账号')
+    }
+    assert.equal(refreshed.schemas.find(s => s.field === 'modelProviders.api').component, 'GSubForm')
+    assert.ok(!refreshed.schemas.some(s => s.field === 'gemini_fallbackModel' || s.field === 'groupReply.model'))
+    const renamed = structuredClone(Config.getConfig().modelProviders.api)
+    renamed[1].name = '改名后'
+    assert.equal(await guoba.setConfigData({ 'modelProviders.api': renamed, fallbackProviderId: added.id }, { Result }), true)
+    assert.equal(Config.fallbackProviderId, added.id)
+    const before = structuredClone(Config.getConfig())
+    const result = await guoba.setConfigData({ defaultProviderId: before.modelProviders.gemini[0].id }, { Result })
+    assert.match(result.error, /同一协议/)
+    assert.deepEqual(Config.getConfig(), before)
+  `)
 })

@@ -1,3 +1,4 @@
+import { resolveProvider, providerConfig } from '../utils/providers.js'
 import { Config } from '../utils/config.js'
 import { ChatGPTAPI } from '../utils/openai/chatgpt-api.js'
 import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
@@ -10,32 +11,13 @@ import { v4 as uuid } from 'uuid'
 const SUPPORTED_PROVIDERS = ['openai', 'responses', 'gemini', 'claude']
 
 /**
- * 将 chat.js 中的 use 值映射为 SubLLM 支持的 provider
- * SubLLM 支持: openai, responses, gemini, claude
+ * 解析来源引用，保留具体提供商条目的身份。
  *
- * @param {string} use  chat.js 中的 use 值
- * @returns {string} SubLLM 支持的 provider
+ * @param {string} use 条目 ID 或 current
+ * @returns {string} 提供商条目 ID
  */
 export function useToProvider(use) {
-  const mapping = {
-    api: 'openai',
-    azure: 'openai',
-    responses: 'responses',
-    claude: 'claude',
-    gemini: 'gemini',
-    chatglm: 'openai',
-  }
-  return mapping[use] || 'openai'
-}
-
-function getConfiguredModel(provider) {
-  const models = {
-    openai: Config.model,
-    responses: Config.responsesModel,
-    gemini: Config.geminiModel,
-    claude: Config.claudeApiModel,
-  }
-  return models[provider] || ''
+  return resolveProvider(use).id
 }
 
 /**
@@ -87,7 +69,7 @@ function buildResponsesInput(prompt, media) {
  *
  * @example
  * // 基本用法
- * const subLLM = new SubLLM({ provider: 'openai', model: 'gpt-4o-mini', systemPrompt: '你是一个翻译助手' })
+ * const subLLM = new SubLLM({ provider: Config.defaultProviderId, systemPrompt: '你是一个翻译助手' })
  * const result = await subLLM.chat('把这句话翻译成英文：你好世界')
  * console.log(result.text) // "Hello World"
  *
@@ -99,11 +81,11 @@ function buildResponsesInput(prompt, media) {
 export class SubLLM {
   /**
    * @param {object} options
-   * @param {'openai'|'responses'|'gemini'|'claude'|'api'|'azure'|'chatglm'} options.provider  LLM来源，也支持传入 use 值自动映射，默认 openai
-   * @param {string}  [options.model]           模型名，留空则用各provider的默认值
+   * @param {string}  [options.provider]       提供商条目 ID 或 current，默认全局主条目
+   * @param {string}  [options.model]           内部调用的模型覆盖，留空则用条目的主模型
    * @param {string}  [options.systemPrompt]    系统提示词
-   * @param {string}  [options.apiKey]          API Key，留空则用全局Config
-   * @param {string}  [options.apiBaseUrl]      API BaseUrl，留空则用全局Config
+   * @param {string}  [options.apiKey]          API Key，留空则用所选条目
+   * @param {string}  [options.apiBaseUrl]      API BaseUrl，留空则用所选条目
    * @param {number}  [options.temperature]     温度
    * @param {number}  [options.maxTokens]       最大输出token
    * @param {number}  [options.timeoutMs]       超时毫秒，默认 600000
@@ -112,16 +94,10 @@ export class SubLLM {
    *                                            OpenAI 走 image_url、Responses 走 input_image、Claude/Gemini 走 option.media
    */
   constructor(options = {}) {
-    // 支持直接传入 use 值（如 api/gemini 等），自动映射为 provider
-    let provider = options.provider || 'openai'
-    if (!SUPPORTED_PROVIDERS.includes(provider)) {
-      provider = useToProvider(provider)
-    }
-    this.provider = provider
-    if (!SUPPORTED_PROVIDERS.includes(this.provider)) {
-      throw new Error(`SubLLM: 不支持的provider "${this.provider}"，当前支持: ${SUPPORTED_PROVIDERS.join(', ')}`)
-    }
-    this.model = options.model || getConfiguredModel(this.provider)
+    const row = resolveProvider(options.providerId || options.provider || Config.defaultProviderId)
+    this.config = providerConfig(row)
+    this.provider = row.type === 'api' ? 'openai' : row.type
+    this.model = options.model || row[{ api: 'model', responses: 'responsesModel', gemini: 'geminiModel', claude: 'claudeApiModel' }[row.type]] || ''
     this.systemPrompt = options.systemPrompt || ''
     this.apiKey = options.apiKey || ''
     this.apiBaseUrl = options.apiBaseUrl || ''
@@ -168,8 +144,10 @@ export class SubLLM {
   /* ===================== 各 Provider 实现 ===================== */
 
   async _chatOpenAI(prompt, systemPrompt, conversation, media) {
+    const Config = this.config
     const completionParams = {}
     if (this.model) completionParams.model = this.model
+    if (Config.reasoningEffort) completionParams.reasoning_effort = Config.reasoningEffort
     if (this.temperature !== undefined) completionParams.temperature = this.temperature
     else if (typeof Config.temperature === 'number') completionParams.temperature = Config.temperature
 
@@ -206,6 +184,7 @@ export class SubLLM {
   }
 
   async _chatResponses(prompt, systemPrompt, media) {
+    const Config = this.config
     const completionParams = {}
     if (this.model || Config.responsesModel) completionParams.model = this.model || Config.responsesModel
     if (this.temperature !== undefined) completionParams.temperature = this.temperature
@@ -234,7 +213,9 @@ export class SubLLM {
   }
 
   async _chatGemini(prompt, systemPrompt, conversation, media) {
+    const Config = this.config
     const client = new CustomGoogleGeminiClient({
+      config: Config,
       key: this.apiKey || Config.getGeminiKey,
       model: this.model || Config.geminiModel,
       baseUrl: this.apiBaseUrl || Config.geminiBaseUrl,
@@ -254,7 +235,9 @@ export class SubLLM {
     // 与 api / responses / claude 三个分支对齐：不传就等于静默丢弃调用方给的上限
     // （CustomGoogleGeminiClient 只在收到 maxOutputTokens 时才用它，否则回落到它自己的默认值），
     // HTML 卡片这类长结构化输出会因此被截断成半张图。
-    if (this.maxTokens) option.maxOutputTokens = this.maxTokens
+    option.maxOutputTokens = this.maxTokens || Config.geminiMaxOutputTokens
+    option.thinkingLevel = Config.geminiThinkingLevel
+    if (option.temperature === undefined) option.temperature = Config.gemini_temperature
     // 记录点: opt.media —— Gemini 客户端按 { mimeType, data } 组装 inlineData
     if (media?.data) option.media = { mimeType: media.mimeType || 'image/jpeg', data: media.data }
 
@@ -268,6 +251,7 @@ export class SubLLM {
   }
 
   async _chatClaude(prompt, systemPrompt, conversation, media) {
+    const Config = this.config
     const keys = (this.apiKey || Config.claudeApiKey)?.split(/[,;]/).map(k => k.trim()).filter(k => k)
     if (!keys || keys.length === 0) {
       throw new Error('SubLLM: claude provider 未配置API Key')
@@ -285,6 +269,7 @@ export class SubLLM {
       stream: false,
       system: systemPrompt || undefined,
       max_tokens: this.maxTokens || Config.claudeApiMaxToken || 65536,
+      temperature: this.temperature ?? Config.claudeApiTemperature,
     }
     if (conversation.parentMessageId) option.parentMessageId = conversation.parentMessageId
     if (conversation.conversationId) option.conversationId = conversation.conversationId
@@ -306,17 +291,16 @@ export class SubLLM {
  * SubLLMTool —— 将子LLM封装为可被主LLM调用的工具
  *
  * 主LLM可以在智能模式下调用此工具，将子任务委派给另一个LLM处理。
- * 默认使用openai provider，可在构造时自定义。
+ * 默认使用全局主条目，可在构造时指定其他条目。
  *
  * @example
- * // 默认配置（使用全局openai配置）
+ * // 默认配置（使用全局主条目）
  * new SubLLMTool()
  *
  * @example
  * // 自定义provider和systemPrompt
  * new SubLLMTool({
- *   provider: 'gemini',
- *   model: 'gemini-flash-latest',
+ *   provider: Config.translateSource,
  *   systemPrompt: 'You are a professional translator.',
  *   toolName: 'call_translator',
  *   toolDescription: 'Call a translator sub-LLM to translate text.'
@@ -325,7 +309,7 @@ export class SubLLM {
 export class SubLLMTool extends AbstractTool {
   /**
    * @param {object} [options]
-   * @param {'openai'|'responses'|'gemini'|'claude'|'api'|'azure'|'chatglm'} [options.provider]
+   * @param {string} [options.provider] 提供商条目 ID 或 current
    * @param {string}  [options.model]
    * @param {string}  [options.systemPrompt]
    * @param {string}  [options.apiKey]
@@ -341,7 +325,7 @@ export class SubLLMTool extends AbstractTool {
     const {
       toolName = 'call_sub_llm',
       toolDescription,
-      provider = 'openai',
+      provider = Config.defaultProviderId,
       ...subLLMOptions
     } = options
 

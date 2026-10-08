@@ -1,3 +1,6 @@
+import { resolveProvider, providerConfig } from '../utils/providers.js'
+import { PROMPT_FIELDS, KEY_FIELDS, providerLabel, connectionVersion } from '../utils/providerProfiles.js'
+import { createAttemptHistory, runProviderFallback } from '../utils/providerFallback.js'
 import {
   Config,
   // defaultOpenAIAPI
@@ -202,6 +205,41 @@ function mergeSystemPrompt(systemPrompt, e, opt = {}) {
 
 class Core {
   async sendMessage(prompt, conversation = {}, use, e, opt = {}) {
+    const source = opt.providerSource || structuredClone(Config.getConfig())
+    const main = resolveProvider(use || source.defaultProviderId, source)
+    const backup = opt.allowFallback && source.fallbackProviderId ? resolveProvider(source.fallbackProviderId, source) : null
+    if (backup && (backup.type !== main.type || backup.id === main.id)) throw new Error('失败回退配置与主模型不匹配，请在锅巴重新选择')
+    const prepared = {}
+    const owner = this
+    return runProviderFallback(main, backup, async (row, state) => {
+      if (!String(row[KEY_FIELDS[row.type]] || '').split(/[,，;]/).some(key => key.trim())) throw new Error(`${providerLabel(row)} 尚未配置密钥`)
+      const cfg = providerConfig(row, source)
+      cfg[PROMPT_FIELDS[row.type]] = main[PROMPT_FIELDS[main.type]]
+      const history = createAttemptHistory(row.type, conversation.messages)
+      const nextConversation = { ...conversation, parentMessageId: history.parentMessageId,
+        previousResponseId: conversation.actualProviderId === row.id && conversation.actualProviderVersion === connectionVersion(row) ? conversation.previousResponseId : undefined }
+      const context = Object.create(owner)
+      context.reply = async (...args) => { state.irreversible = true; return owner.reply(...args) }
+      const event = Object.create(e)
+      event.modelProviderId = row.id
+      event.reply = async (...args) => { state.irreversible = true; return e.reply(...args) }
+      const request = async (...args) => {
+        const url = new URL(args[0])
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error('模型提供商地址需要使用 http 或 https')
+        state.requested = true
+        return newFetch(...args)
+      }
+      const result = await Core.prototype.sendWithProvider.call(context, prompt, nextConversation, row.type, event,
+        { ...opt, prepared, history, request, onToolStart: () => { state.irreversible = true } }, cfg)
+      if (result?.refused && !result.text) result.text = '模型拒绝回答'
+      if (result) { result.actualProviderId = row.id; result.actualProviderVersion = connectionVersion(row); result.actualStore = cfg.responsesStore === true }
+      return result
+    }, { enabled: opt.allowFallback === true, onRetry: (row, n) => logger.warn(`[ChatGPT] 模型请求失败，开始第 ${n + 1} 次尝试：${row.name}`) })
+  }
+
+  async sendWithProvider(prompt, conversation, use, e, opt, Config) {
+    const { getMessageById, upsertMessage } = opt.history
+
     opt = {
       enableSmart: Config.smartMode,
       ...opt,
@@ -235,9 +273,10 @@ class Core {
       let choiceIndex = Math.floor(Math.random() * keys.length)
       let key = keys[choiceIndex]
       logger.info(`使用API Key：${maskSecret(key)}`)
-      while (keys.length >= 0) {
+      {
         let errorMessage = ''
         const client = new ClaudeAPIClient({
+          config: Config, fetch: opt.request, onToolStart: opt.onToolStart, ...opt.history,
           key,
           model: Config.claudeApiModel || 'claude-3-sonnet-20240229',
           debug: Config.debug,
@@ -272,7 +311,7 @@ class Core {
         }
 
         // 托管内置工具（服务商云端执行），不依赖智能模式
-        const hostedClaudeTools = opt.disableTools ? [] : getEnabledHostedBuiltinTools('claude')
+        const hostedClaudeTools = opt.disableTools ? [] : getEnabledHostedBuiltinTools('claude', Config)
         if (hostedClaudeTools.length > 0) {
           // 避免与本地搜索工具重名（如 misaka_WebSearchTool 的 name 也是 web_search）
           claudeTools = claudeTools.filter(tool => tool.name !== 'web_search')
@@ -317,36 +356,12 @@ class Core {
             }
           }
         }
-        try {
-          let rsp = await client.sendMessage(promptForClaude, option)
-          return rsp
-        } catch (err) {
-          errorMessage = err.message
-          switch (err.message) {
-            case 'rate_limit_error': {
-              // api没钱了或者当月/日/时/分额度耗尽
-              // throw new Error('claude API额度耗尽或触发速率限制')
-              break
-            }
-            case 'authentication_error': {
-              // 无效的key
-              // throw new Error('claude API key无效')
-              break
-            }
-            default:
-          }
-          logger.warn(`claude api 错误：[${maskSecret(key)}] ${errorMessage}`)
-        }
-        if (keys.length === 0) {
-          throw new Error(errorMessage)
-        }
-        keys.splice(choiceIndex, 1)
-        choiceIndex = Math.floor(Math.random() * keys.length)
-        key = keys[choiceIndex]
-        logger.info(`使用API Key：${maskSecret(key)}`)
+        option.system = opt.prepared.system ??= option.system
+        return await client.sendMessage(promptForClaude, option)
       }
     } else if (use === 'gemini') { // 使用接口 ##############################
       let client = new CustomGoogleGeminiClient({
+        config: Config, fetch: opt.request, onToolStart: opt.onToolStart, ...opt.history,
         e,
         userId: e.sender.user_id,
         key: Config.getGeminiKey,
@@ -431,6 +446,7 @@ class Core {
       option.sf_markdownPic = Config.sf_markdownPic
       option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
+      option.system = opt.prepared.system ??= option.system
       return await client.sendMessage(prompt, option)
     } else if (use === 'responses') { // OpenAI Responses API ##############################
       const completionParams = {}
@@ -453,7 +469,7 @@ class Core {
         apiBaseUrl: Config.responsesApiBaseUrl,
         apiKey: Config.responsesApiKey,
         debug: false,
-        fetch: newFetch,
+        fetch: opt.request,
         maxResponseTokens: Config.responsesApiMaxToken,
         maxModelTokens: Config.responsesMaxModelTokens
       })
@@ -498,7 +514,7 @@ class Core {
       }
 
       // 托管内置工具（服务商云端执行），不依赖智能模式
-      const hostedResponsesTools = opt.disableTools ? [] : getEnabledHostedBuiltinTools('responses')
+      const hostedResponsesTools = opt.disableTools ? [] : getEnabledHostedBuiltinTools('responses', Config)
       if (hostedResponsesTools.length > 0) {
         completionParams.tools = [
           ...(Array.isArray(completionParams.tools) ? completionParams.tools : []),
@@ -506,7 +522,7 @@ class Core {
         ]
       }
 
-      const initialInput = imageDataUrl
+      let initialInput = imageDataUrl
         ? [{
           role: 'user',
           content: [
@@ -515,17 +531,23 @@ class Core {
           ]
         }]
         : prompt
+      const currentInput = Array.isArray(initialInput) ? initialInput : [{ role: 'user', content: initialInput }]
+      if (!Config.responsesStore || !conversation.previousResponseId) initialInput = [...(conversation.messages || []).filter(m => ['user', 'assistant'].includes(m.role)), ...currentInput]
+      instructions = opt.prepared.system ??= instructions
       const statelessToolInput = Array.isArray(initialInput)
         ? [...initialInput]
         : [{ role: 'user', content: initialInput }]
 
       const sendResponsesWithContextFallback = async (input, sendOptions) => {
-        const retryLengths = opt.settings.enableGroupContext
+        const retryLengths = !opt.allowFallback && opt.settings.enableGroupContext
           ? getRetryGroupContextLengths(Config.groupContextLength)
           : []
         for (let i = 0; i <= retryLengths.length; i++) {
           try {
-            return await client.sendMessage(input, sendOptions)
+            const result = await client.sendMessage(input, sendOptions)
+            // 官网已执行的内置工具同样不能随整轮重试重复执行。
+            if (result.responseOutput?.some(item => item.type !== 'function_call' && item.type?.endsWith('_call'))) opt.onToolStart()
+            return result
           } catch (err) {
             const isContextExceeded = err.message?.includes('context_length_exceeded')
             if (!isContextExceeded || i >= retryLengths.length) throw err
@@ -550,6 +572,7 @@ class Core {
         const maxToolRounds = Config.llm_maxToolRounds
 
         while (msg.toolCalls?.length > 0 && toolRoundCount < maxToolRounds) {
+          opt.onToolStart()
           toolRoundCount++
           if (msg.text) await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
 
@@ -572,7 +595,7 @@ class Core {
         }
         return msg
       } catch (err) {
-        if (err.message?.includes('context_length_exceeded')) {
+        if (!opt.allowFallback && err.message?.includes('context_length_exceeded')) {
           logger.warn(err)
           await this.reply('字数超限啦，将为您自动结束本次对话。')
           return null
@@ -583,6 +606,7 @@ class Core {
     } else { // 使用接口 ##############################
       // openai api
       let completionParams = {}
+      if (typeof Config.temperature === 'number') completionParams.temperature = Config.temperature
       if (Config.model) {
         completionParams.model = Config.model
       }
@@ -617,7 +641,7 @@ class Core {
         getMessageById,
         systemMessage: system,
         completionParams,
-        fetch: newFetch,
+        fetch: opt.request,
         maxModelTokens: Config.maxModelTokens,
         maxResponseTokens: Config.apiMaxToken,
         chatgptBlockCount: Config.chatgptBlockCount,
@@ -660,7 +684,7 @@ class Core {
 
       /** 定义OpenAI格式请求 */
       const sendOpenAIWithContextFallback = async (messageContent, sendOption) => {
-        const retryLengths = opt.settings.enableGroupContext
+        const retryLengths = !opt.allowFallback && opt.settings.enableGroupContext
           ? getRetryGroupContextLengths(Config.groupContextLength)
           : []
 
@@ -668,6 +692,7 @@ class Core {
           try {
             // logger.mark(`messageContent:\n` + JSON.stringify(messageContent, null, 2))
             // logger.mark(`sendOption:\n` + JSON.stringify(sendOption, null, 2))
+            sendOption.systemMessage = opt.prepared.system ??= sendOption.systemMessage
             return await this.chatGPTApi.sendMessage(messageContent, sendOption)
           } catch (err) {
             const isContextExceeded = err.message?.indexOf('context_length_exceeded') > 0
@@ -749,6 +774,7 @@ class Core {
           const maxToolRounds = Config.llm_maxToolRounds
           // 只要模型返回了需要调用工具，且没有超过最大轮次，就继续循环
           while ((msg.functionCall || (msg.toolCalls && msg.toolCalls.length > 0)) && toolRoundCount < maxToolRounds) {
+            opt.onToolStart()
             toolRoundCount++
 
             if (msg.text) {
@@ -871,7 +897,7 @@ class Core {
             upsertMessage(msg).catch(err => logger.warn('[chatgpt] 清理存储中的工具调用记录失败', err))
           }
         } catch (err) {
-          if (err.message?.indexOf('context_length_exceeded') > 0) {
+          if (!opt.allowFallback && err.message?.indexOf('context_length_exceeded') > 0) {
             logger.warn(err)
             await redis.del(`CHATGPT:CONVERSATIONS:${e.sender.user_id}`)
             await redis.del(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -879,7 +905,7 @@ class Core {
             return null
           } else {
             logger.error(err)
-            throw new Error(err)
+            throw err
           }
         }
         return msg
@@ -895,7 +921,7 @@ class Core {
           }
           msg = await sendOpenAIWithContextFallback(messageContent, option)
         } catch (err) {
-          if (err.message?.indexOf('context_length_exceeded') > 0) {
+          if (!opt.allowFallback && err.message?.indexOf('context_length_exceeded') > 0) {
             logger.warn(err)
             await redis.del(`CHATGPT:CONVERSATIONS:${e.sender.user_id}`)
             await redis.del(`CHATGPT:WRONG_EMOTION:${e.sender.user_id}`)
@@ -903,7 +929,7 @@ class Core {
             return null
           } else {
             logger.error(err)
-            throw new Error(err)
+            throw err
           }
         }
         return msg

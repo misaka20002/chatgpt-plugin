@@ -222,19 +222,7 @@ ${translateLangLabels}
   }
 
   translateSource(e) {
-    let command = e.msg
-    if (command.includes('openai')) {
-      Config.translateSource = 'openai'
-    } else if (command.includes('responses')) {
-      Config.translateSource = 'responses'
-    } else if (command.includes('gemini')) {
-      Config.translateSource = 'gemini'
-    } else if (command.includes('百度翻译') || command.includes('baidu')) {
-      Config.translateSource = 'baidu'
-    } else {
-      this.reply('暂不支持该翻译源')
-    }
-    this.reply('√成功设置翻译源为' + Config.translateSource)
+    return this.reply('请使用 #chatgpt设置翻译来源，通过数字列表选择提供商')
   }
 
   async wordcloud(e) {
@@ -608,11 +596,6 @@ ${translateLangLabels}
     // 只有主人才可以用识图功能
     if (Config.gemini_vqa_needMaster && !e.isMaster) return false
 
-    if (!Config.geminiKey.length) {
-      e.reply('需要配置Gemini密钥以使用识图')
-      return
-    }
-
     // 1. 获取图片源
     let img = await parseSourceImg(e)
 
@@ -626,46 +609,11 @@ ${translateLangLabels}
       return false
     }
 
-    let client = new CustomGoogleGeminiClient({
-      e,
-      userId: e.sender.user_id,
-      key: Config.getGeminiKey,
-      model: Config.gemini_vqa_model,
-      baseUrl: Config.geminiBaseUrl,
-      debug: Config.debug
-    })
-
     try {
-
-      let { targetUrl, isVideo } = getMediaTargetUrl(e);
-
-      // 下载媒体资源
-      const response = await fetch(targetUrl)
-      if (!response.ok) throw new Error('下载媒体资源失败')
-
-      const buffer = await response.arrayBuffer()
-      const base64Data = Buffer.from(buffer).toString('base64')
-
-      // 获取 Content-Type，如果获取不到则根据类型给默认值
-      let mimeType = response.headers.get('content-type')
-      if (!mimeType || mimeType === 'application/octet-stream') {
-        mimeType = isVideo ? 'video/mp4' : 'image/jpeg'
-      }
-
-      // 处理提示词
-      let msg = e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '') ||
-        (isVideo ? 'describe this video in Simplified Chinese' : 'describe this image in Simplified Chinese')
-
-      // 发送请求，使用 media 参数
-      let res = await client.sendMessage(msg, {
-        // 记录点: opt.media
-        media: {
-          mimeType: mimeType,
-          data: base64Data
-        }
+      const result = await recognitionResultsByGemini(e, img || [], videoUrl ? [videoUrl] : [], undefined, {
+        prompt: e.msg.replace(/#(识图|图片识别|VQA|vqa)/, '').trim(), throwOnError: true
       })
-
-      await e.reply(res.text, true)
+      await e.reply(result, true)
     } catch (err) {
       await e.reply('❌识别失败：' + hidePrivacyInfo(err.message), true)
     }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { setImmediate, setTimeout as delay } from 'node:timers/promises'
 import { defaultGroupReplyDecisionPrompt, normalizeGroupReplyConfig } from '../utils/groupReplyConfig.js'
 
-const Config = { groupReply: {}, tts_First_person: '派蒙' }
+const Config = { groupReply: {}, tts_First_person: '派蒙', defaultProviderId: 'api', modelProviders: { api: [{ id: 'api', name: '默认' }], responses: [{ id: 'responses', name: '默认' }], gemini: [{ id: 'gemini', name: '默认' }], claude: [{ id: 'claude', name: '默认' }] } }
 Config.getConfig = () => Config
 Config.save = () => true
 const requests = [], replies = [], errors = [], infos = []

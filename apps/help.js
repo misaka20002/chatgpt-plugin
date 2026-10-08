@@ -13,8 +13,8 @@ let helpData = [
       },
       {
         icon: 'chat',
-        title: '#chat1/#chatglm/#claude/#gemini',
-        desc: '分别使用API/ChatGLM/Claude/Gemini模式与机器人聊天，无论主人设定了何种全局模式'
+        title: '#chatgpt切换模型',
+        desc: '主人通过数字列表依次选择主模型和同协议备用模型；两步完成后生效。所有用户跟随全局选择。'
       },
       {
         icon: 'chat-private',
@@ -44,12 +44,12 @@ let helpData = [
       {
         icon: 'confirm',
         title: '#chatgpt(导出)聊天记录',
-        desc: '图片形式导出聊天记录，目前仅支持Bing下的Sydney和自定义'
+        desc: '图片形式导出当前提供商的聊天记录'
       },
       {
         icon: 'smiley-wink',
-        title: '#claude开启新对话+设定名',
-        desc: '结束之前的对话，并开启一个新的Claude对话，如果设定名不为空的话，会使用这个设定。设定必须是设定列表中有的设定。'
+        title: '#chatgpt设置模型 / #chatgpt设置Key / #chatgpt设置地址',
+        desc: '主人修改当前提供商；新增、删除条目请使用锅巴。'
       },
       {
         icon: 'list',

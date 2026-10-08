@@ -6,6 +6,9 @@
 
 ## Redis 约定
 
+- 多提供商版本的模型选择在配置文件中统一保存，`CHATGPT:USE` 仅在首次迁移读取。新会话使用 `CHATGPT:CONVERSATIONS_V2:<条目ID>:<连接版本>:<作用域>`，升级前记录不迁移或续接。具体约定见[配置指南](configuration.md#多模型提供商)。
+- QQ 模型切换由 `apps/providers.js` 管理，仅主人可用；主用、备用两个数字菜单完成后一起保存，取消／60 秒超时不改变配置。菜单以发出时的条目 ID 解析序号，提交时重新校验；修改配置同样锁定最初条目，不能在第二次消息到达时改用新全局条目。
+
 - 业务态前缀 `CHATGPT:`：`CHATGPT:CONVERSATIONS:*`（会话）、`CHATGPT:USE`（当前模型）、`CHATGPT:MESSAGE*` 等。
 - 记忆 V2 前缀 `CHATGPT:MEMORY:V2:`：`item:{id}`（记忆本体）、`idx:*/slot:*/grp:*`（索引）、`evd:{id}`（证据集）、`raw:*/rawIdx:*`（原文）、`task:{gid}:{day}`（提炼任务）、`policy:{gid}`（游标）。
 - 旧记忆 Hash `CHATGPT:MEMORY:USER:*`：**只读用于清理**，首次 V2 写入即删，不要读取/展示其内容。

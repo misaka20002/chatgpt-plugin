@@ -1,3 +1,4 @@
+import { Config } from '../config.js'
 import path from 'node:path'
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { AbstractTool } from './AbstractTool.js'
@@ -32,18 +33,7 @@ const MAP_SYSTEM_PROMPT = `你是人物思维框架的证据提取器。只能�
 const SYNTHESIS_SYSTEM_PROMPT = `你是 Nuwa 风格的人物视角蒸馏器。目标是提炼 HOW they think，而不是堆砌原话。严格执行跨话题复现、生成力、区别度三重验证，保留矛盾和局限，只输出 JSON。`
 
 async function resolveCurrentUse(e) {
-  try {
-    const userData = await getUserData(e.user_id)
-    const selected = userData?.mode === 'default' ? null : userData?.mode
-    if (selected) return selected
-  } catch (err) {
-    globalThis.logger?.warn?.(`[GroupMemberSkillTool] 读取用户模型模式失败: ${err.message || err}`)
-  }
-  try {
-    return await globalThis.redis?.get?.('CHATGPT:USE') || 'api'
-  } catch {
-    return 'api'
-  }
+  return e.modelProviderId || Config.defaultProviderId
 }
 
 async function resolveGroupMember(e, targetId) {

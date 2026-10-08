@@ -101,6 +101,9 @@ export const HarmBlockThreshold = {
 export class CustomGoogleGeminiClient extends GoogleGeminiClient {
   constructor(props) {
     super(props)
+    this.config = props.config || Config
+    this.fetch = props.fetch || newFetch
+    this.onToolStart = props.onToolStart || (() => {})
     this.model = props.model
     this.baseUrl = props.baseUrl || BASEURL
     this.supportFunction = true
@@ -127,42 +130,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     toolMode: 'AUTO' | 'ANY' | 'NONE'
    *     search: boolean,
    *     codeExecution: boolean,
-   *     retryConfig: {origRetry?: number, fallbackModel?: string, fallbackRetry?: number, isFallback?: boolean},
    * }} opt
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
    */
   async sendMessage(text, opt = {}) {
-    /** 重试配置 */
-    const retryConfig = {
-      origRetry: 3,
-      fallbackModel: Config.gemini_fallbackModel || 'gemini-2.5-flash',
-      fallbackRetry: 3,
-      isFallback: false,
-      ...opt.retryConfig // 允许外部覆盖默认值，并在递归中透传状态
-    };
-
-    const executeRetry = async (logMsg, terminalAction) => {
-      const nextOpt = { ...opt, retryConfig };
-      if (!retryConfig.isFallback) {
-        if (retryConfig.origRetry > 0) {
-          retryConfig.origRetry--;
-          logger.warn(`[chatgpt] ${logMsg} 。模型[${this.model}]重试剩余 ${retryConfig.origRetry} 次`);
-          return this.sendMessage(text, nextOpt);
-        } else {
-          logger.warn(`[chatgpt][备用模型] 切换至模型[${retryConfig.fallbackModel}]`);
-          retryConfig.isFallback = true;
-          return this.sendMessage(text, nextOpt);
-        }
-      } else {
-        if (retryConfig.fallbackRetry > 0) {
-          retryConfig.fallbackRetry--;
-          logger.warn(`[chatgpt][备用模型] ${logMsg} 。模型[${retryConfig.fallbackModel}]重试剩余 ${retryConfig.fallbackRetry} 次`);
-          return this.sendMessage(text, nextOpt);
-        } else {
-          return terminalAction();
-        }
-      }
-    };
+    const Config = this.config
+    const failResponse = async (message, terminalAction) => terminalAction()
 
     if (!opt.toolChain) {
       opt.toolChain = {
@@ -281,7 +254,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     }
 
     // retryConfig 根据是否处于备用模式决定使用的模型名称
-    const modelToUse = retryConfig.isFallback ? retryConfig.fallbackModel : this.model;
+    const modelToUse = this.model;
     let url = `${this.baseUrl}/v1beta/models/${modelToUse}:generateContent`
 
     let body = {
@@ -299,7 +272,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       ],
       generationConfig: {
         maxOutputTokens: opt.maxOutputTokens || Config.geminiMaxOutputTokens || 65536,
-        temperature: opt.temperature || 0.9,
+        temperature: opt.temperature ?? Config.gemini_temperature ?? 0.9,
         topP: opt.topP || 0.95,
         topK: opt.tokK || 16
       },
@@ -357,7 +330,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     if (this.debug) {
       logger.info("body: " + JSON.stringify(body, null, 2))
     }
-    let result = await fetchWithConnectionRetry(newFetch, url, {
+    let result = await fetchWithConnectionRetry(this.fetch, url, {
       method: 'POST',
       body: JSON.stringify(body),
       headers: {
@@ -370,10 +343,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     })
 
-    // 应用新的 executeRetry 处理错误
+    // 应用新的 failResponse 处理错误
     if (result.status !== 200) {
       const errorText = await result.text()
-      return await executeRetry(`Gemini API 错误 (${result.status}), 错误信息: ${errorText}`, () => {
+      return await failResponse(`Gemini API 错误 (${result.status}), 错误信息: ${errorText}`, () => {
         throw new Error(errorText)
       });
     }
@@ -391,7 +364,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
     // 检查响应中是否包含错误
     if (response.error) {
-      return await executeRetry(`Gemini API 返回错误: ${JSON.stringify(response.error)}`, () => {
+      return await failResponse(`Gemini API 返回错误: ${JSON.stringify(response.error)}`, () => {
         throw new Error(JSON.stringify(response.error))
       });
     }
@@ -427,10 +400,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       logger.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
     }
 
+    if (response.promptFeedback?.blockReason) throw Object.assign(new Error(`模型拒绝回答：${response.promptFeedback.blockReason}`), { noRetry: true })
+
     // 检查 candidates 是否存在
     if (!response.candidates || response.candidates.length === 0) {
-      return await executeRetry(`API 返回的 candidates 为空`, () => {
-        throw new Error('API 返回的 candidates 为空,重试次数已用完')
+      return await failResponse(`API 返回的 candidates 为空`, () => {
+        throw new Error('API 返回的 candidates 为空')
       });
     }
 
@@ -438,36 +413,32 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     responseContent = candidate.content
     let groundingMetadata = candidate.groundingMetadata
     const finishReason = candidate.finishReason || 'UNKNOWN'
+    if (groundingMetadata?.webSearchQueries?.length || groundingMetadata?.groundingChunks?.length || responseContent?.parts?.some(part => part.executableCode || part.codeExecutionResult)) this.onToolStart()
+    const blockedReasons = ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'OTHER']
+    if (blockedReasons.includes(finishReason)) throw Object.assign(new Error(`模型拒绝回答：${finishReason}`), { noRetry: true })
 
     // 当模型没按要求写对参数时
     if (finishReason === 'MALFORMED_FUNCTION_CALL') {
-      return await executeRetry(`遇到 MALFORMED_FUNCTION_CALL 错误`, () => {
-        throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误,重试次数已用完')
+      return await failResponse(`遇到 MALFORMED_FUNCTION_CALL 错误`, () => {
+        throw new Error('遇到 MALFORMED_FUNCTION_CALL 错误')
       });
     }
 
     // 检查 responseContent 是否为空
     if (!responseContent || !responseContent.parts || responseContent.parts.length === 0) {
-      // 检查是否因为策略拦截导致内容为空
-      const blockedReasons = ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'OTHER']
-      if (blockedReasons.includes(finishReason)) {
-        return await executeRetry(`API返回内容被拦截 (finishReason: ${finishReason})`, () => {
-          throw new Error(`API返回内容被拦截 (finishReason: ${finishReason}),重试次数已用完`)
-        });
-      }
-
       if (finishReason === 'STOP') {
         // 模型正常生成结束，但返回了空内容，赋一个默认空文本以防止后续解构报错
         responseContent = { role: 'model', parts: [{ text: '' }] }
       } else {
         // 其他未知中断情况
-        return await executeRetry(`responseContent.parts 为空 (finishReason: ${finishReason})`, () => {
-          throw new Error(`responseContent.parts 为空 (finishReason: ${finishReason}),重试次数已用完\n详情: ${JSON.stringify(candidate)}`)
+        return await failResponse(`responseContent.parts 为空 (finishReason: ${finishReason})`, () => {
+          throw new Error(`responseContent.parts 为空 (finishReason: ${finishReason})\n详情: ${JSON.stringify(candidate)}`)
         });
       }
     }
     // todo 空回复也可以重试
     if (responseContent?.parts?.filter(i => i.functionCall).length > 0) {
+      this.onToolStart()
       const toolNames = responseContent.parts.filter(i => i.functionCall).map(i => i.functionCall.name);
       /** 工具调用最大轮次数 */
       const maxToolRounds = Config.llm_maxToolRounds
@@ -615,7 +586,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       })
       await this.upsertMessage(respMessage)
 
-      // 函数调用产生的下一次对话不再传带有降级进度的 opt.retryConfig，重新应用默认的初始重试配置
+      // 工具结果仅在当前请求的历史缓冲中续接。
       return await this.sendMessage('', responseOpt)
     }
     if (responseContent) {

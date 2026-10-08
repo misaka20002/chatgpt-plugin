@@ -1,4 +1,5 @@
-import { Config } from './utils/config.js'
+import { providerSchemas } from './utils/providerGuoba.js'
+import { Config, providerDefaults } from './utils/config.js'
 import { normalizeGroupReplyConfig } from './utils/groupReplyConfig.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
@@ -7,7 +8,7 @@ import lodash from "lodash";
 
 // 支持锅巴
 export function supportGuoba() {
-  return {
+  const result = {
     // 插件信息，将会显示在前端页面
     // 如果你的插件没有在插件库里，那么需要填上补充信息
     // 如果存在的话，那么填不填就无所谓了，填了就以你的信息为准
@@ -654,7 +655,7 @@ export function supportGuoba() {
         {
           field: 'gemini_vqa_needMaster',
           label: '只有主人才能#识图',
-          bottomHelpMessage: '只有主人才能使用gemini的#识图 但不影响“对话中图片识别-gemini”；注意： #识图 指令不受“媒体识别容量限制”控制',
+          bottomHelpMessage: '只限制独立 #识图 指令，不影响对话中的图片识别。识图与对话识别统一遵循下方媒体大小限制。',
           component: 'Switch'
         },
         {
@@ -2609,111 +2610,77 @@ export function supportGuoba() {
         configObj.groupReply = normalizeGroupReplyConfig(configObj.groupReply)
         configObj.mcpServers = formatMcpServersForGuoba(configObj.mcpServers)
 
-        // For api_default_USE
-        let currentUse = await redis.get('CHATGPT:USE')
-        configObj.api_default_USE = currentUse || ''
-
         return configObj
       },
       // 设置配置的方法（前端点确定后调用的方法）
       async setConfigData(data, { Result }) {
-        // For api_default_USE
-        if (data.api_default_USE) {
-          await redis.set('CHATGPT:USE', data.api_default_USE)
-          delete data.api_default_USE
-        }
-
-        for (let [keyPath, value] of Object.entries(data)) {
-          // 处理循环任务标签删除同步
-          if (keyPath === 'ScheduleTask_CronTasks_Display') {
-            const remainingIds = value.map(tag => {
-              const m = tag.match(/\[([^\]]+)\]/)
-              return m ? m[1] : null
-            }).filter(Boolean)
-            const tasks = Config.ScheduleTask_CronTasks || []
-            lodash.set(Config.getConfig(), 'ScheduleTask_CronTasks', tasks.filter(t => remainingIds.includes(t.taskId)))
-            continue
-          }
-          if (keyPath === 'mcpServers') {
-            try {
-              value = stringifyMcpServersFromGuoba(value)
-            } catch (err) {
-              return Result.error(`MCP 服务器配置保存失败: ${err.message}`)
+        const candidate = lodash.cloneDeep(Config.getConfig())
+        try {
+          for (let [keyPath, value] of Object.entries(data)) {
+            // 处理循环任务标签删除同步
+            if (keyPath === 'ScheduleTask_CronTasks_Display') {
+              const remainingIds = value.map(tag => {
+                const m = tag.match(/\[([^\]]+)\]/)
+                return m ? m[1] : null
+              }).filter(Boolean)
+              const tasks = Config.ScheduleTask_CronTasks || []
+              lodash.set(candidate, 'ScheduleTask_CronTasks', tasks.filter(t => remainingIds.includes(t.taskId)))
+              continue
             }
-          }
-          // 处理黑名单
-          if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
-            value = value.toString().split(/[,，;；\|]/)
-          }
-          else if (keyPath === 'blacklist' || keyPath === 'whitelist') {
-            const inputSet = new Set()
-            value = value.toString().split(/[,，;；|\s]/).reduce((acc, item) => {
-              item = item.trim()
-              if (item && !inputSet.has(item)) {
-                inputSet.add(item)
-                acc.push(item)
+            if (keyPath === 'mcpServers') {
+              try {
+                value = stringifyMcpServersFromGuoba(value)
+              } catch (err) {
+                return Result.error(`MCP 服务器配置保存失败: ${err.message}`)
               }
-              return acc
-            }, [])
-          }
-          // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr') {
-          //   value = value.map(item => item.trim()).filter(item => item !== '')
-          // }
-
-          // 使用 lodash 处理锅巴传入的 点分隔 keyPath
-          lodash.set(Config.getConfig(), keyPath, value)
-        }
-
-        // 正确储存azureRoleSelect结果
-        const azureSpeaker = azureRoleList.find(config => {
-          let i = config.roleInfo || config.code
-          if (i === data.azureTTSSpeaker) {
-            return config
-          } else {
-            return false
-          }
-        })
-        if (typeof azureSpeaker === 'object' && azureSpeaker !== null) {
-          Config.getConfig().azureTTSSpeaker = azureSpeaker.code
-        }
-
-        /**
-         * @description: 转换 config.{} component: 'Select' 的 mode: 'tags'
-         * @param {*} targetObj config
-         * @param {*} sourceObj data
-         * @param {*} path data[''] 中的点路径字符串值
-         * @return {*}
-         */
-        const assignFirstElementIfExists = (targetObj, sourceObj, path) => {
-          const sourceData = sourceObj[path];
-          if (sourceData == null) return;
-          const firstElement = Array.isArray(sourceData) ? sourceData[0] : sourceData;
-          if (firstElement != null) {
-            const assignPath = path.startsWith('config.') ? path.slice(7) : path;
-            const keys = assignPath.split('.');
-            let current = targetObj;
-            for (let i = 0; i < keys.length - 1; i++) {
-              const key = keys[i];
-              if (current[key] == null) {
-                current[key] = {};
-              }
-              current = current[key];
             }
-            const lastKey = keys[keys.length - 1];
-            current[lastKey] = firstElement;
+            // 处理黑名单
+            if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
+              value = value.toString().split(/[,，;；\|]/)
+            }
+            else if (keyPath === 'blacklist' || keyPath === 'whitelist') {
+              const inputSet = new Set()
+              value = value.toString().split(/[,，;；|\s]/).reduce((acc, item) => {
+                item = item.trim()
+                if (item && !inputSet.has(item)) {
+                  inputSet.add(item)
+                  acc.push(item)
+                }
+                return acc
+              }, [])
+            }
+            // else if (keyPath === 'autoEmoticons.allowGroups' || keyPath === 'autoEmoticons.getBotByQQ_targetQQArr') {
+            //   value = value.map(item => item.trim()).filter(item => item !== '')
+            // }
+
+            // 使用 lodash 处理锅巴传入的 点分隔 keyPath
+            lodash.set(candidate, keyPath, value)
           }
-        };
-        assignFirstElementIfExists(Config.getConfig(), data, 'geminiModel');
-        assignFirstElementIfExists(Config.getConfig(), data, 'gemini_fallbackModel');
-        assignFirstElementIfExists(Config.getConfig(), data, 'gemini_vqa_model');
-        assignFirstElementIfExists(Config.getConfig(), data, 'geminiSearchModel');
 
-        Config.getConfig().groupReply = normalizeGroupReplyConfig(Config.getConfig().groupReply)
+          // 正确储存azureRoleSelect结果
+          const azureSpeaker = azureRoleList.find(config => {
+            let i = config.roleInfo || config.code
+            if (i === data.azureTTSSpeaker) {
+              return config
+            } else {
+              return false
+            }
+          })
+          if (typeof azureSpeaker === 'object' && azureSpeaker !== null) {
+            candidate.azureTTSSpeaker = azureSpeaker.code
+          }
 
-        // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
-        Config.save();
-        return Result.ok({}, '保存成功~')
+          candidate.groupReply = normalizeGroupReplyConfig(candidate.groupReply)
+
+          // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
+          Config.commit(candidate)
+          return Result.ok({}, '保存成功~')
+        } catch (err) {
+          return Result.error(`配置保存失败：${err.message}`)
+        }
       }
     }
   }
+  result.configInfo.schemas = providerSchemas(result.configInfo.schemas, Config.getConfig(), providerDefaults)
+  return result
 }

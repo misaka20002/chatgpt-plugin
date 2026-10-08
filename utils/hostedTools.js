@@ -22,6 +22,7 @@ const probeResultCache = new Map()
 const probeCacheKey = (provider, config = Config) => {
   return [
     provider,
+    config.id || config.defaultProviderId || '',
     config.responsesApiBaseUrl || '',
     config.responsesModel || '',
     config.claudeApiBaseUrl || '',

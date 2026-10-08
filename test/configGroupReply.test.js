@@ -66,7 +66,7 @@ test('锅巴群聊判断表格、内置提示词、数值边界与保存后重�
       'groupReply.enabled': true,
       'groupReply.groups': [{ groupId: ' 100 ', switchOn: true, debounceSeconds: 0, enthusiasm: 0 }, { groupId: '200', switchOn: false, debounceSeconds: 3600, enthusiasm: 150 }],
       'groupReply.historyCount': 5,
-      'groupReply.provider': 'responses',
+      'groupReply.provider': initial.modelProviders.responses[0].id,
       'groupReply.model': ' small-model ',
       'groupReply.decisionPrompt': '仅被点名时才回复'
     }, { Result: { ok() {}, error(message) { throw new Error(message) } } })
@@ -81,7 +81,7 @@ test('锅巴群聊判断表格、内置提示词、数值边界与保存后重�
   assert.equal(saved.groupReply.decisionPrompt, undefined)
   assert.equal(JSON.parse(fs.readFileSync(file)).groupReply.decisionPrompt, undefined)
   assert.equal(JSON.parse(fs.readFileSync(file)).groupReply.systemPrompt, undefined)
-  assert.equal(saved.groupReply.model, 'small-model')
+  assert.equal(saved.groupReply.model, undefined)
   assert.equal(JSON.parse(fs.readFileSync(file)).enableBYM, undefined)
   const toggled = run(`
     mock.module(${JSON.stringify(moduleUrl('../../../lib/plugins/plugin.js'))}, { defaultExport: class {} })

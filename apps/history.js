@@ -1,3 +1,4 @@
+import { resolveProvider, providerConversationKey } from '../utils/providers.js'
 import plugin from '../../../lib/plugins/plugin.js'
 import { render, getUin } from '../utils/common.js'
 import { Config } from '../utils/config.js'
@@ -30,7 +31,7 @@ export class history extends plugin {
   }
 
   async history (e) {
-    let use = await redis.get('CHATGPT:USE') || 'api'
+    let use = Config.defaultProviderId
     let chat = []
     let filtered = e.message.filter(m => m.type === 'at').filter(m => m.qq !== getUin(e))
     let queryUser = e.sender.user_id
@@ -39,12 +40,10 @@ export class history extends plugin {
       queryUser = filtered[0].qq
       user = (await e.group.getMemberMap()).get(queryUser)
     }
-    switch (use) {
-      case 'api': {
-        await e.reply('还不支持API模式呢')
-        return true
-      }
-    }
+    const key = providerConversationKey(resolveProvider(), e.isGroup && Config.groupMerge ? e.group_id : queryUser)
+    const raw = await redis.get(key)
+    const messages = raw ? JSON.parse(raw).messages || [] : []
+    for (let i = 0; i + 1 < messages.length; i += 2) chat.push({ prompt: messages[i].content, response: messages[i + 1].content })
     if (chat.length === 0) {
       await e.reply('无聊天记录', e.isGroup)
       return true

@@ -68,6 +68,8 @@ export class ClaudeAPIClient extends BaseClient {
       }
     }
     super(props)
+    this.fetch = props.fetch || newFetch
+    this.onToolStart = props.onToolStart || (() => {})
     this.model = props.model
     this.key = props.key
     if (!this.key) {
@@ -153,7 +155,7 @@ export class ClaudeAPIClient extends BaseClient {
       console.log(`sendMessage (${messages.length} messages)`, body)
     }
     let url = `${this.baseUrl}/v1/messages`
-    let result = await newFetch(url, {
+    let result = await this.fetch(url, {
       headers: {
         'anthropic-version': '2023-06-01',
         'x-api-key': this.key,
@@ -285,6 +287,7 @@ export class ClaudeAPIClient extends BaseClient {
     while (true) {
       const messages = history.map(h => { return { role: h.role, content: h.content } })
       const response = await this._createMessage(messages, opt, toolMode)
+      if (response.content?.some(item => item.type === 'server_tool_use' || item.type?.endsWith('_tool_result'))) this.onToolStart()
       const idModel = crypto.randomUUID()
       const respMessage = Object.assign(response, {
         id: idModel,
@@ -299,6 +302,7 @@ export class ClaudeAPIClient extends BaseClient {
         await this.upsertMessage(respMessage)
         return {
           text: responseText,
+          refused: response.stop_reason === 'refusal',
           thinking_text: thinkingText,
           conversationId: '',
           parentMessageId: pendingUserMessage.id,
@@ -324,6 +328,7 @@ export class ClaudeAPIClient extends BaseClient {
         }
       }
 
+      this.onToolStart()
       toolRoundCount++
       await this.upsertMessage(pendingUserMessage)
       await this.upsertMessage(respMessage)

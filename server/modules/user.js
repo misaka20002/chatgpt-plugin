@@ -105,7 +105,7 @@ async function User (fastify, options) {
     const userData = await getUserData(user.user)
     reply.send({
       chat: userData.chat || [],
-      mode: userData.mode || '',
+      mode: '',
       cast: userData.cast || {
         api: '', // API设定
         bing: '', // 必应设定

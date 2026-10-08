@@ -56,12 +56,13 @@
   "scripts": {
     "test:group-reply": "node --experimental-test-module-mocks --test test/groupReply.test.mjs test/groupReplyCore.test.mjs test/groupReplyChat.test.mjs",
     "test:memory": "node --experimental-test-module-mocks --test test/memoryV2.test.js test/memoryApps.test.mjs test/atGraph.test.mjs test/atGraphAvatars.test.mjs",
-    "test:config": "node --test test/configArrayMerge.test.js test/configBaseUrl.test.js test/configGroupReply.test.js",
+    "test:config": "node --test test/configArrayMerge.test.js test/configBaseUrl.test.js test/configGroupReply.test.js test/providerConfig.test.js",
     "test:tools": "node --test test/githubTool.test.js test/opencodeWebSearchTool.test.js test/toolContext.test.js test/toolArgRedaction.test.js && node test/htmlTool.check.mjs && node test/render/htmlRender.template.check.mjs && node --experimental-test-module-mocks --test test/htmlToolSend.test.mjs",
     "test:render": "node test/render/mathRender.check.mjs && node test/render/mathRender.security.check.mjs",
     "test:media": "node --experimental-test-module-mocks --test test/uploadRecord.test.mjs test/subllmMedia.test.mjs test/recognitionMedia.test.mjs test/mediaUrlGuard.test.mjs",
     "test:meme": "node test/meme/run.mjs",
     "test:meme:fast": "node test/meme/run.mjs --skip-slow",
-    "test:meme:mutants": "node test/meme/run.mjs --all-mutants"
+    "test:meme:mutants": "node test/meme/run.mjs --all-mutants",
+    "test:providers": "node --experimental-test-module-mocks --test test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs"
   }
 }

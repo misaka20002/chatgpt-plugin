@@ -351,6 +351,7 @@ export class ChatGPTAPI {
                             }
                             if (response.choices?.length) {
                                 const delta = response.choices[0].delta;
+                                if (delta.refusal || response.choices[0].finish_reason === 'content_filter') { result.refused = true; result.text += delta.refusal || ''; }
                                 if (delta.function_call && delta.function_call !== null) {
                                     if (delta.function_call.name) {
                                         result.functionCall = {
@@ -443,6 +444,7 @@ export class ChatGPTAPI {
                     }
                     if (response?.choices?.length) {
                         const message = response.choices[0].message;
+                        if (message.refusal || response.choices[0].finish_reason === 'content_filter') { result.refused = true; result.text = message.refusal || '模型拒绝回答'; }
                         if (message.content) {
                             result.text = extractTextContent(message.content);
                             result.originalContent = message.content;

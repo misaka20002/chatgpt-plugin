@@ -1,9 +1,7 @@
+import { SubLLM } from '../model/SubLLM.js'
 import md5 from 'md5'
 import { Config } from './config.js'
-import { ChatGPTAPI } from './openai/chatgpt-api.js'
 import { newFetch } from './proxy.js'
-import { CustomGoogleGeminiClient } from '../client/CustomGoogleGeminiClient.js'
-import { ResponsesAPI } from './openai/responses-api.js'
 
 // 代码参考：https://github.com/yeyang52/yenai-plugin/blob/b50b11338adfa5a4ef93912eefd2f1f704e8b990/model/api/funApi.js#L25
 export const translateLangSupports = [
@@ -131,7 +129,7 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
     }
     if (!lang) return `未找到翻译的语种，支持的语言为：\n${translateLangSupports.map(item => item.abbr).join('，')}\n`
     // if ai is not in the list, throw error
-    if (!['openai', 'responses', 'gemini', 'baidu'].includes(ai)) throw new Error('ai来源错误')
+
     if (ai === 'baidu') return await translateOld(msg, to)
     let system = `You will be provided with a sentence in the language with language code [${from}], and your task is to translate it into [${lang}]. Just print the result without any other words.`
     if (Array.isArray(msg)) {
@@ -143,61 +141,9 @@ export async function translate (msg, to = 'auto', from = 'auto', ai = Config.tr
       }
       return result
     }
-    switch (ai) {
-      case 'openai': {
-        let api = new ChatGPTAPI({
-          apiBaseUrl: Config.openAiBaseUrl,
-          apiKey: Config.apiKey,
-          fetch: newFetch
-        })
-        const res = await api.sendMessage(msg, {
-          systemMessage: system,
-          completionParams: {
-            model: Config.model
-          }
-        })
-        return res.text
-      }
-      case 'responses': {
-        const completionParams = {}
-        if (Config.responsesModel) completionParams.model = Config.responsesModel
-        if (typeof Config.responsesTemperature === 'number') completionParams.temperature = Config.responsesTemperature
-        if (Config.responsesReasoningEffort) completionParams.reasoning_effort = Config.responsesReasoningEffort
-        const api = new ResponsesAPI({
-          apiBaseUrl: Config.responsesApiBaseUrl,
-          apiKey: Config.responsesApiKey,
-          fetch: newFetch,
-          maxResponseTokens: Config.responsesApiMaxToken,
-          maxModelTokens: Config.responsesMaxModelTokens
-        })
-        const res = await api.sendMessage(msg, {
-          instructions: system,
-          completionParams,
-          store: false,
-          timeoutMs: 600000
-        })
-        return res.text
-      }
-      case 'gemini': {
-        let client = new CustomGoogleGeminiClient({
-          key: Config.getGeminiKey,
-          model: Config.gemini_vqa_model,
-          baseUrl: Config.geminiBaseUrl,
-          debug: Config.debug
-        })
-        let option = {
-          stream: false,
-          onProgress: (data) => {
-            if (Config.debug) {
-              logger.info(data)
-            }
-          },
-          system
-        }
-        let res = await client.sendMessage(msg, option)
-        return res.text
-      }
-    }
+    const llm = new SubLLM({ provider: ai, systemPrompt: system })
+    return (await llm.chat(msg)).text
+
   } catch (e) {
     logger.error(e)
     logger.info('基于LLM的翻译失败，转用老版翻译')

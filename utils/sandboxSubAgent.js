@@ -150,8 +150,7 @@ export function validateSandboxSubAgentPlan (kind, output) {
 export async function resolveSandboxSubAgentProvider (e) {
   const configuredProvider = Config.sandboxSubAgentProvider || 'current'
   if (configuredProvider !== 'current') return configuredProvider
-  const userData = e?.user_id ? await getUserData(e.user_id) : {}
-  return (userData?.mode === 'default' ? '' : userData?.mode) || await redis.get('CHATGPT:USE') || 'api'
+  return e?.modelProviderId || Config.defaultProviderId
 }
 
 export async function buildSandboxSubAgentPlan (kind, task, e) {

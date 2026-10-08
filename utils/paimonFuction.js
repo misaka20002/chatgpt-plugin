@@ -1,3 +1,4 @@
+import { resolveProvider, providerConfig } from './providers.js'
 import { Config } from '../utils/config.js'
 // import { parseSourceImg } from '../utils/common.js'
 import fetch from 'node-fetch'
@@ -32,8 +33,6 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
     return '识别出错：' + message
   }
 
-  if (!Config.geminiKey)
-    return fail('请先配置Gemini对话接口')
 
   // 确定目标 URL 和类型
   let targetUrl = null
@@ -54,14 +53,11 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
 
   if (!targetUrl) return fail('请传入要识别的媒体链接');
 
-  let client = new CustomGoogleGeminiClient({
-    e,
-    userId: e.sender.user_id,
-    key: Config.getGeminiKey,
-    model: Config.gemini_vqa_model,
-    baseUrl: Config.geminiBaseUrl,
-    debug: Config.debug
-  })
+  let provider
+  try {
+    provider = resolveProvider(isVideo ? Config.videoProviderId : Config.imageProviderId)
+    if (isVideo && provider.type !== 'gemini') return fail('视频识别只能使用 Gemini 配置')
+  } catch (err) { return fail(err.message) }
 
   const limitMB = Config.mediaMaxSizeInMB || 10;
   const maxSizeInBytes = limitMB * 1024 * 1024;
@@ -99,8 +95,9 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
       : (e?.msg || '').replace(reg_chatgpt_for_firstperson_call, '').trim()
     let msg = promptText || 'describe this content in Simplified Chinese'
 
-    let res = await client.sendMessage(msg, {
-      system: systemPrompt,
+    const { SubLLM } = await import('../model/SubLLM.js')
+    const client = new SubLLM({ provider: provider.id, systemPrompt })
+    let res = await client.chat(msg, {
       // 记录点: opt.media
       media: {
         mimeType: mimeType,
@@ -121,24 +118,12 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
 
 /**
  * @description: 解析当前对话使用的模型提供商（apps/chat.js 中 use 的语义）
- * 与沙箱规划子代理（utils/sandboxSubAgent.js）的 current 语义一致：用户自定义模式 > 全局 CHATGPT:USE > api
+ * 与沙箱规划子代理（utils/sandboxSubAgent.js）的 current 语义一致：本轮提供商快照 > 全局 defaultProviderId
  * @param {*} e 事件对象
- * @return {Promise<string>} 如 api / responses / claude / gemini，可直接交给 SubLLM 使用
+ * @return {Promise<string>} 具体提供商条目 ID，可直接交给 SubLLM 使用
  */
 export async function resolveCurrentChatProvider(e) {
-  let mode = ''
-  try {
-    const userId = e?.sender?.user_id || e?.user_id
-    if (userId) {
-      // common.js 反向依赖本文件，惰性引入以避免循环导入
-      const { getUserData } = await import('./common.js')
-      const userData = await getUserData(userId)
-      mode = userData?.mode === 'default' ? '' : (userData?.mode || '')
-    }
-  } catch (err) {
-    logger.warn(`[resolveCurrentChatProvider] 读取用户对话模式失败，改用全局模式: ${err.message || err}`)
-  }
-  return mode || await redis.get('CHATGPT:USE') || 'api'
+  return e?.modelProviderId || Config.defaultProviderId
 }
 
 /** 当前模型识别只支持这些对话模式；其余模式（如 chatglm/azure）在 SubLLM 里会落到普通 OpenAI 配置，语义错位，应交给 Gemini 回退 */
@@ -178,7 +163,7 @@ export async function recognitionResultsByCurrentModel(e, img = [], video = [], 
 
   // 先判定模式：不支持的模式没必要先去下载媒体
   const provider = await resolveCurrentChatProvider(e)
-  if (!MEDIA_SUPPORTED_USES.includes(provider)) {
+  if (!MEDIA_SUPPORTED_USES.includes(resolveProvider(provider).type) || isVideo && resolveProvider(provider).type !== 'gemini') {
     throw new Error(`当前对话模式(${provider})不支持媒体识别`)
   }
 
@@ -336,7 +321,14 @@ export function convertSentenceToArray(inputArr) {
  * @param {string} geminiBaseUrl - Google AI API基础URL
  * @return {Promise<Array>} 返回可用模型的数组
  */
-export async function getGeminiModelsByFetch(apiKey = Config.getGeminiKey, geminiBaseUrl = Config.geminiBaseUrl) {
+export async function getGeminiModelsByFetch(apiKey, geminiBaseUrl) {
+  if (apiKey === undefined) {
+    const row = resolveProvider()
+    if (row.type !== 'gemini') throw new Error('请先切换到 Gemini 模型提供商')
+    const config = providerConfig(row)
+    apiKey = config.getGeminiKey
+    geminiBaseUrl = config.geminiBaseUrl
+  }
   // 构建请求URL（考虑自定义baseUrl的情况）
   const baseUrl = geminiBaseUrl || 'https://generativelanguage.googleapis.com';
   const endpoint = baseUrl.endsWith('/') ?

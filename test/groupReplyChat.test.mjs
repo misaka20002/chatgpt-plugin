@@ -13,21 +13,23 @@ mock.module('../utils/common.js', { namedExports: {
 } })
 mock.module('../utils/conversation.js', { namedExports: { deleteConversation() {}, getConversations() {}, getLatestMessageIdByConversationId() {} } })
 mock.module('../utils/tts.js', { namedExports: { convertSpeaker() {}, speakers: [] } })
-mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode() {} } })
+mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode: text => [text] } })
 mock.module('../model/conversation.js', { namedExports: { ConversationManager: class {}, originalValues: {} } })
 mock.module('../utils/proxy.js', { namedExports: { getProxy() {} } })
 mock.module('../utils/chat.js', { namedExports: { generateSuggestedResponse() {} } })
-mock.module('../utils/postprocessors/BasicProcessor.js', { namedExports: { collectProcessors() {} } })
+mock.module('../utils/postprocessors/BasicProcessor.js', { namedExports: { collectProcessors: () => [] } })
 mock.module('../utils/paimonFuction.js', { namedExports: {
   hidePrivacyInfo: text => text, removeCQCode() {}, recognitionResultsByGemini() {},
   convertSentenceToArray() {}, extractCharacterName() {}, splitString_Enter() {}, processCQMessage: text => text
 } })
 mock.module('../utils/chatCooldown.js', { defaultExport: { check: async () => ({ canChat: true }), end() {} } })
 const requests = []
+let scriptedResponse
 mock.module('../model/core.js', { defaultExport: {
-  async sendMessage(...args) { requests.push(args); return { noMsg: true } }
+  async sendMessage(...args) { requests.push(args); return scriptedResponse ? scriptedResponse(...args) : { noMsg: true } }
 } })
-const Config = { chat_for_First_person: false, smartMode: true, enableGroupContext: false, whitelist: [], blacklist: [], promptBlockWords: [] }
+const Config = { defaultProviderId: 'responses', modelProviders: { api: [], responses: [{ id: 'responses', name: '默认' }], gemini: [], claude: [] }, chat_for_First_person: false, smartMode: true, enableGroupContext: false, whitelist: [], blacklist: [], promptBlockWords: [] }
+Config.getConfig = () => Object.fromEntries(Object.entries(Config).filter(([, value]) => typeof value !== 'function'))
 mock.module('../utils/config.js', { namedExports: { Config } })
 globalThis.Bot = { uin: [] }
 globalThis.redis = { get: async () => null }
@@ -35,7 +37,7 @@ globalThis.logger = { info() {}, error(error) { throw error } }
 const { chatgpt } = await import('../apps/chat.js')
 const { groupReply } = await import('../utils/groupReply.js')
 
-test('自主回复复用正常聊天入口和用户模式，不传禁用工具参数，仍受黑名单约束', async () => {
+test('自主回复复用正常聊天入口和全局提供商，不传禁用工具参数，仍受黑名单约束', async () => {
   const e = {
     isGroup: true, group_id: '100', group: { group_id: '100' }, self_id: '999', user_id: '123',
     sender: { user_id: '123', role: 'member' }, msg: '开放话题', raw_message: '开放话题', message: [],
@@ -162,4 +164,68 @@ test('自主回复消耗共享限额并复查，直接呼叫超限后不转自�
   await chat.chatgpt_for_firstperson_call(e, { automatic: true })
   assert.equal(requests.length, 1)
   assert.equal(count, 5)
+})
+
+test('备用成功写入主会话，下轮携带正文仍选主模型；连接修改及失败不覆盖历史', async t => {
+  const { providerConversationKey, resolveProvider } = await import('../utils/providers.js')
+  const { connectionVersion } = await import('../utils/providerProfiles.js')
+  const previous = { ...Config }
+  const saved = new Map()
+  const writes = []
+  t.mock.method(redis, 'get', async key => saved.get(key) || null)
+  redis.set = async (key, value) => { writes.push(key); saved.set(key, value) }
+  t.after(() => {
+    delete redis.set
+    scriptedResponse = undefined
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+  })
+  Object.assign(Config, {
+    defaultProviderId: 'main', fallbackProviderId: 'backup', enableMemory: false,
+    modelProviders: { api: [], gemini: [], claude: [], responses: [
+      { id: 'main', name: '主', responsesModel: 'main-model', responsesStore: false },
+      { id: 'backup', name: '备用', responsesModel: 'backup-model', responsesStore: true }
+    ] }, blockWords: [], promptBlockWords: []
+  })
+  const e = { user_id: '123', sender: { user_id: '123' }, msg: '第一问', message: [], isMaster: true }
+  const chat = Object.create(chatgpt.prototype)
+  const replies = []
+  chat.e = e
+  chat.reply = async value => replies.push(value)
+  const key = providerConversationKey(resolveProvider(), '123')
+  scriptedResponse = async () => ({ text: '备用回答', id: 'remote-backup', actualProviderId: 'backup', actualProviderVersion: connectionVersion(resolveProvider('backup')), actualStore: true })
+  await chat.abstractChat(e, e.msg, undefined, false, { automatic: true })
+  let history = JSON.parse(saved.get(key))
+  assert.deepEqual(history.messages, [{ role: 'user', content: '第一问' }, { role: 'assistant', content: '备用回答' }])
+  assert.equal(history.actualProviderId, 'backup')
+  assert.equal(history.previousResponseId, 'remote-backup')
+  assert.deepEqual(replies.at(-1), ['备用回答'])
+
+  scriptedResponse = async (prompt, conversation, id) => {
+    assert.equal(id, 'main')
+    assert.deepEqual(conversation.messages, history.messages)
+    return { text: '主回答', actualProviderId: 'main', actualProviderVersion: connectionVersion(resolveProvider()), actualStore: false }
+  }
+  await chat.abstractChat(e, '第二问', undefined, false, { automatic: true })
+  history = JSON.parse(saved.get(key))
+  assert.equal(history.messages.length, 4)
+  assert.equal(history.actualProviderId, 'main')
+  assert.equal(history.previousResponseId, undefined)
+
+  const completed = saved.get(key)
+  scriptedResponse = async () => {
+    Config.modelProviders.responses[0].responsesModel = 'changed-model'
+    return { text: '旧请求迟到', actualProviderId: 'main' }
+  }
+  await chat.abstractChat(e, '第三问', undefined, false, { automatic: true })
+  assert.equal(saved.get(key), completed)
+  assert.equal(saved.has(providerConversationKey(resolveProvider(), '123')), false)
+  assert.equal(writes.length, 2)
+
+  scriptedResponse = async () => { throw new Error('全部尝试失败') }
+  // 允许入口正常处理模型错误，其他断言仍执行真实持久化路径。
+  t.mock.method(logger, 'error', () => {})
+  await chat.abstractChat(e, '失败问题', undefined, false, { automatic: true })
+  assert.equal(writes.length, 2)
+  assert.match(replies.at(-1), /全部尝试失败/)
 })

@@ -45,7 +45,10 @@ mock.module('../client/CustomGoogleGeminiClient.js', {
   }
 })
 
-const { Config } = await import('../utils/config.js')
+mock.module('../utils/openai/chatgpt-api.js', { namedExports: { ChatGPTAPI: class {} } })
+mock.module('../client/ClaudeAPIClient.js', { namedExports: { ClaudeAPIClient: class {} } })
+const { Config, providerDefaults } = await import('../utils/config.js')
+Object.assign(Config.getConfig(), { modelProviders: { api: [], responses: [], claude: [], gemini: [{ ...providerDefaults.gemini, id: 'gemini', name: '默认', geminiKey: 'test-key' }] }, defaultProviderId: 'gemini', imageProviderId: 'gemini', videoProviderId: 'gemini' })
 const {
   assertSafeRemoteMediaUrl,
   resolveSafeRemoteMediaUrl,

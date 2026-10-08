@@ -1,3 +1,4 @@
+import { Config } from '../config.js'
 /**
  * 记忆提取器：模型调用 + 服务端校验
  *
@@ -191,10 +192,10 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
           text = result.text
         } else {
           if (!llmClient) {
-            const { SubLLM, useToProvider } = await import('../../model/SubLLM.js')
-            const use = cfg.use || (await redis.get('CHATGPT:USE')) || 'api'
+            const { SubLLM } = await import('../../model/SubLLM.js')
+            const use = cfg.use || Config.defaultProviderId
             llmClient = new SubLLM({
-              provider: useToProvider(use),
+              provider: use,
               systemPrompt: EXTRACTOR_SYSTEM,
               temperature: 0.2,
               timeoutMs: 180000,

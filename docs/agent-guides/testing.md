@@ -8,6 +8,8 @@
 
 ## 现有测试
 
+- 多模型提供商：`npm run test:providers` 验证 QQ 主备两步提交、数字／权限／取消／并发配置变化、各用途来源选择、回退次数，以及真实协议客户端的拒绝和内置工具边界；`npm run test:config` 包含 `test/providerConfig.test.js` 的备份迁移、引用、重启幂等、显式空表单及磁盘失败。四协议备用连接和历史的请求组装由 `test/groupReplyCore.test.mjs` 覆盖，实际聊天保存与连接修改隔离由 `test/groupReplyChat.test.mjs` 覆盖。Web 不纳入本次验证。
+
 - 群聊自主回复：`npm run test:group-reply`，覆盖观察器、防抖、候选窗口、并发与关闭后停止回复，以及 Core/SubLLM 四家 provider 的无工具请求；配置与锅巴保存/重载由 `test/configGroupReply.test.js` 纳入 `npm run test:config`。
 
 - 记忆系统：`npm run test:memory`

@@ -133,7 +133,7 @@ export class ScheduleTaskPlugin extends plugin {
                 continue;
             }
             const userData = await getUserData(mockE.user_id)
-            const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+            const use = Config.defaultProviderId
 
             // 关闭私聊通道后不回复
             if (!mockE.isMaster && mockE.isPrivate && !Config.enablePrivateChat) {
@@ -204,7 +204,7 @@ export class ScheduleTaskPlugin extends plugin {
                 continue;
             }
             const userData = await getUserData(mockE.user_id)
-            const use = (userData.mode === 'default' ? null : userData.mode) || await redis.get('CHATGPT:USE') || 'api'
+            const use = Config.defaultProviderId
 
             if (!mockE.isMaster && mockE.isPrivate && !Config.enablePrivateChat) continue;
             if (!(await chatgptTask.canGPT_blackAndWhitelist(mockE))) continue;
