@@ -63,6 +63,6 @@
     "test:meme": "node test/meme/run.mjs",
     "test:meme:fast": "node test/meme/run.mjs --skip-slow",
     "test:meme:mutants": "node test/meme/run.mjs --all-mutants",
-    "test:providers": "node --experimental-test-module-mocks --test test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs"
+    "test:providers": "node --experimental-test-module-mocks --test test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs test/providerContext.test.mjs test/providerModels.test.mjs"
   }
 }

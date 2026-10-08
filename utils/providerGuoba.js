@@ -26,7 +26,7 @@ export function providerSchemas(schemas, config, defaults) {
                 if (key === 'geminiModel') {
                   item.component = 'Input'
                   delete item.componentProps
-                  item.bottomHelpMessage = '填写此条目使用的模型名称；各用途均使用这个主模型。'
+                  item.bottomHelpMessage = '填写此条目使用的模型名称；可发送 #chatgpt获取可用模型，按数字选择提供商后获取名称。各用途均使用这个主模型。'
                 }
                 if (key === 'responsesStore') item.bottomHelpMessage = '默认关闭，使用插件本地历史续聊；开启后使用官网会话 ID，同账号内续聊。'
                 return item

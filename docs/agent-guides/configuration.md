@@ -10,12 +10,14 @@
 
 - `modelProviders.api/responses/claude/gemini` 是四类完整条目数组；每条的稳定 `id` 用于引用，`name` 仅展示，同类名称不可重复。字段映射、归一化、引用校验见 `utils/providerProfiles.js`，请求解析及独占配置视图见 `utils/providers.js`。协议类型不能代替条目 ID。
 - 锅巴使用 `GSubForm`；保存并刷新页面后更新来源选项。`defaultProviderId` 是全局正式聊天来源，`fallbackProviderId` 空值表示不启用；非空备用必须存在、与主条目同协议且不是自身。系统引用未解除前不能删除条目。保存使用完整候选配置校验和原子文件替换，不能先改 Redis 再验证。
+- 模型名称由用户填写。主人发送 `#chatgpt获取可用模型`，从四类已配置条目的数字菜单中选择一个，按该条目的账号和地址查询目录。只发送本次结果，不保存目录、不自动更换模型，也不每日拉取；长列表分批合并转发。Gemini 和 Claude 按接口游标分页，Chat API / Responses 共用 `/models`；接口不支持目录时如实提示失败。
 - 旧配置首次加载时备份后迁移落盘，四类各生成普通的“默认”条目。识别、搜索和固定群聊判断的不同模型拆成普通条目；跟随全局的判断保留跟随语义。旧 Gemini 失败回退只保留在备份，不生成条目。`providerConfigVersion` 和 `modelProviders` 必须显式写盘，不能被差量保存省略，否则清空后会重复迁移。
 - `CHATGPT:USE` 仅为旧配置迁移输入，运行时统一读 `defaultProviderId`。个人模型模式和临时协议聊天入口已移除。运行配置及迁移备份不入库。
 - QQ 导出包含完整新表单和来源引用；导入仅接受新格式，整体验证后保存，不逐字段提交。旧格式由启动迁移处理，导入拒绝时保留现有配置。
 - 每条只有一个主模型；图片识别、视频、Gemini 原生搜索、翻译、判断、子代理选择条目，各用其主模型。视频和 Gemini 原生搜索只允许 Gemini。Responses `responsesStore` 默认 **false**，本地历史负责关闭官网保存时的续聊；用户显式开启仍保留。
 - Gemini 客户端不再有私有模型回退。全局回退仅用于正式聊天：主条目最多两次业务尝试，备用一次，保留底层连接重试；已经输出生成内容或开始工具执行后禁止重试整轮。明确拒绝、取消、本地配置和权限错误不触发。备用沿用主会话提示词及历史，只替换连接、模型和生成参数；下一轮仍先主条目。
 - 本地会话按条目 ID、连接版本和原用户／群作用域隔离，升级前历史留存但不续接。成功轮次正文用于重建请求，跨条目不传服务端 ID 或思考签名；服务端续聊 ID 同时绑定实际完成条目与连接版本。地址、密钥、主模型修改后开启新会话，旧请求不能写回新版本。
+- Gemini 请求的 `contents` 只包含 `role`、`parts`；序列化时构造新对象，不原地删除本地历史的 `id` / `parentMessageId`，否则工具回填时会截断历史链。`test/providerClients.test.mjs` 验证真实请求体与工具回填，`test/groupReplyChat.test.mjs` 验证旧历史不续接及保留时长、条数。
 - 新验证入口 `npm run test:providers` 覆盖 QQ 两步菜单与回退边界；迁移、空表单及失败原子性纳入 `npm run test:config`。Web 仅保留聊天，配置能力停用，本次按用户要求不做 Web 测试。
 
 - `utils/config.js` 单例（Proxy；`getConfig()` 返回原始对象供测试直接改；`Config.save()` 写 `config/config.json`）。

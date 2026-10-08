@@ -18,7 +18,6 @@ import fs from 'fs'
 import fetch from 'node-fetch'
 import cfg from '../../../lib/config/config.js'
 import {
-    getGeminiModelsByFetch,
     recognitionResultsByGemini,
     url2Base64,
 } from '../utils/paimonFuction.js'
@@ -1136,19 +1135,6 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         //     logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已开启，将在fish.audio达到配额后自动关闭`)
         // }
 
-        // 更新 gemini model
-        try {
-            const geminiModels = await getGeminiModelsByFetch();
-            logger.info('[sf插件自动任务] 成功更新 Gemini 模型列表');
-            if (e?.reply) {
-                e.reply('[派蒙chatgpt自动任务] 成功更新 Gemini 模型列表，请刷新锅巴');
-                await this.replyGeminiModelList(e, geminiModels);
-            }
-        } catch (err) {
-            logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
-            if (e?.reply) e.reply('[派蒙chatgpt自动任务] 每日获取Gemini模型错误')
-        }
-
         return true
     }
 
@@ -1211,12 +1197,7 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
     }
 
     async paimon_tts_test(e) {
-        // 更新 gemini model
-        try {
-            const geminiModels = await getGeminiModelsByFetch();
-        } catch (err) {
-            logger.error(`[派蒙chatgpt自动任务]每日获取Gemini模型错误:\n` + err)
-        }
+        return e.reply('获取模型列表请使用 #chatgpt获取可用模型，再按数字选择提供商。', true)
     }
 
     /** ^#删除所有(gemini|Gemini)(对话|会话)记录$ */

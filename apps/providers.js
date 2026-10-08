@@ -2,6 +2,7 @@ import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 import { listProviders, providerLabel, MODEL_FIELDS, KEY_FIELDS, URL_FIELDS, PROMPT_FIELDS } from '../utils/providerProfiles.js'
 import { resolveProvider, updateProvider } from '../utils/providers.js'
+import { fetchProviderModels } from '../utils/providerModels.js'
 
 export class ProviderManagement extends plugin {
   constructor() {
@@ -9,8 +10,42 @@ export class ProviderManagement extends plugin {
       { reg: /^#chatgpt切换(?:模型(?:提供商|api|gemini|claude|responses)?|提供商|api|gemini|claude|responses)$/i, fnc: 'switchProvider', permission: 'master' },
       { reg: /^#chatgpt设置(api|gemini|claude|responses)?(key|模型|地址|反代|设定)$/i, fnc: 'editProvider', permission: 'master' },
       { reg: /^#chatgpt(开启|关闭)(api流|gemini搜索|gemini代码执行)$/i, fnc: 'toggleProvider', permission: 'master' },
-      { reg: /^#chatgpt设置翻译来源.*$/i, fnc: 'translationProvider', permission: 'master' }
+      { reg: /^#chatgpt设置翻译来源.*$/i, fnc: 'translationProvider', permission: 'master' },
+      { reg: /^#chatgpt获取可用模型$/i, fnc: 'availableModels', permission: 'master' }
     ] })
+  }
+
+  async availableModels(e) {
+    if (!e.isMaster) return true
+    try {
+      const rows = listProviders(Config.getConfig())
+      if (!rows.length) throw new Error('请先在锅巴新增模型提供商')
+      const id = await this.choose(e, rows, '请选择要获取可用模型的提供商')
+      // 按菜单中的稳定 ID 重新解析，避免等待期间重排或删除条目后查询错账号。
+      const row = resolveProvider(id)
+      await e.reply(`正在获取 ${providerLabel(row)} 的可用模型……`, true)
+      const models = await fetchProviderModels(row)
+      const title = `${providerLabel(row)} 可用模型（${models.length} 个）`
+      const hint = '请复制需要的模型名称，填入锅巴中此提供商的模型字段。列表由接口返回，实际调用权限以服务商为准。'
+      const chunks = []
+      let chunk = ''
+      for (const model of models) {
+        if (chunk.length + model.length + 1 > 1800) { chunks.push(chunk); chunk = '' }
+        chunk += `${model}\n`
+      }
+      if (chunk) chunks.push(chunk.trimEnd())
+      if (chunks.length === 1) await e.reply(`${title}\n${chunks[0]}\n${hint}`, true)
+      else {
+        const { makeForwardMsg } = await import('../utils/common.js')
+        // 多个模型合并为一个节点，按批发送完整列表，避免逐模型节点触及 QQ 上限。
+        for (let i = 0; i < chunks.length; i += 80) {
+          await e.reply(await makeForwardMsg(e, [title, ...chunks.slice(i, i + 80), hint], title))
+        }
+      }
+    } catch (err) {
+      await e.reply(`获取可用模型未完成：${err.message}`, true)
+    }
+    return true
   }
 
   async choose(e, rows, title, allowNone = false) {

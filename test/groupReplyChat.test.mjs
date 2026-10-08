@@ -229,3 +229,52 @@ test('备用成功写入主会话，下轮携带正文仍选主模型；连接�
   assert.equal(writes.length, 2)
   assert.match(replies.at(-1), /全部尝试失败/)
 })
+
+for (const type of ['api', 'responses', 'claude', 'gemini']) {
+test(`${type} 不续接升级前历史，成功问答按 3600 秒和 50 条写入新会话`, async t => {
+  const { resolveProvider, providerConversationKey } = await import('../utils/providers.js')
+  const { connectionVersion, MODEL_FIELDS, KEY_FIELDS } = await import('../utils/providerProfiles.js')
+  const previous = { ...Config }
+  const oldKey = type === 'api' ? 'CHATGPT:CONVERSATIONS:123' : `CHATGPT:CONVERSATIONS_${type.toUpperCase()}:123`
+  const saved = new Map([[oldKey, JSON.stringify({ parentMessageId: 'old-message', messages: [{ role: 'user', content: '升级前的问题' }] })]])
+  const reads = [], writes = []
+  t.mock.method(redis, 'get', async key => { reads.push(key); return saved.get(key) || null })
+  redis.set = async (key, value, options) => { writes.push({ key, options }); saved.set(key, value) }
+  t.after(() => {
+    delete redis.set
+    scriptedResponse = undefined
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+  })
+  Object.assign(Config, {
+    defaultProviderId: `${type}-main`, fallbackProviderId: '', enableMemory: false, enableGroupContext: false,
+    conversationPreserveTime: 3600, chatgptBlockCount: 50, blockWords: [], promptBlockWords: [],
+    modelProviders: { api: [], responses: [], claude: [], gemini: [], [type]: [{ id: `${type}-main`, name: '默认', [MODEL_FIELDS[type]]: 'fixture-model', [KEY_FIELDS[type]]: 'fixture-key' }] }
+  })
+  const e = { user_id: '123', sender: { user_id: '123' }, message: [], isMaster: true }
+  const chat = Object.create(chatgpt.prototype)
+  chat.e = e
+  chat.reply = async () => {}
+  const row = resolveProvider()
+  const key = providerConversationKey(row, '123')
+  let turn = 0
+  scriptedResponse = async (prompt, conversation, id) => {
+    assert.equal(id, row.id)
+    assert.equal(conversation.messages.filter(m => ['user', 'assistant'].includes(m.role)).length, Math.min(turn * 2, 50))
+    if (turn === 0) assert.equal(conversation.parentMessageId, undefined)
+    else assert.equal(conversation.messages.at(-1).content, `回答${turn - 1}`)
+    return { text: `回答${turn}`, id: `reply-${turn}`, actualProviderId: row.id, actualProviderVersion: connectionVersion(row) }
+  }
+  for (; turn < 27; turn++) {
+    e.msg = `问题${turn}`
+    await chat.abstractChat(e, e.msg, undefined, false, { automatic: true })
+  }
+  assert.equal(reads.includes(oldKey), false)
+  assert.equal(writes.length, 27)
+  assert.ok(writes.every(write => write.key === key && write.options.EX === 3600))
+  const messages = JSON.parse(saved.get(key)).messages
+  assert.equal(messages.length, 50)
+  assert.equal(messages[0].content, '问题2')
+  assert.equal(messages.at(-1).content, '回答26')
+})
+}

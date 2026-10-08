@@ -262,7 +262,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       /**
        * @type Array<Content>
        */
-      contents: history,
+      // 本地缓存还有 text/content 和链指针；只发送 Gemini 协议字段，不能原地删除缓存的历史关联。
+      contents: history.map(({ role, parts }) => ({ role, parts })),
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.OFF },
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.OFF },
@@ -322,11 +323,6 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     //   delete body.tools
     //   delete body.tool_config
     // }
-    body.contents.forEach(content => {
-      delete content.id
-      delete content.parentMessageId
-      delete content.conversationId
-    })
     if (this.debug) {
       logger.info("body: " + JSON.stringify(body, null, 2))
     }

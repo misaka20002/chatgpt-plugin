@@ -72,3 +72,46 @@ test('Gemini 使用条目温度，显式 0 不被默认值覆盖', async () => {
   assert.equal(bodies[0].generationConfig.temperature, 0.3)
   assert.equal(bodies[1].generationConfig.temperature, 0)
 })
+
+test('Gemini 重建 50 条本地历史时仅发送协议字段，完整携带旧问答', async () => {
+  const messages = Array.from({ length: 50 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: `历史消息${i}` }))
+  const history = createAttemptHistory('gemini', messages)
+  let request
+  const client = new CustomGoogleGeminiClient({
+    key: 'fixture-key', model: 'fixture-model', config: { ...Config, chatgptBlockCount: 50 }, ...history,
+    fetch: async (url, options) => {
+      request = JSON.parse(options.body)
+      // Google Content 协议只接受 role、parts，不能混入插件自己的 text/content/链指针。
+      const invalid = request.contents.some(message => Object.keys(message).some(key => !['role', 'parts'].includes(key)))
+      if (invalid) return new Response('Unknown name in Content', { status: 400 })
+      return Response.json({ candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [{ text: '记得' }] } }] })
+    }
+  })
+  const result = await client.sendMessage('继续', { parentMessageId: history.parentMessageId })
+  assert.equal(result.text, '记得')
+  assert.deepEqual(request.contents.slice(0, -1), messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })))
+  assert.equal(request.contents.length, 51)
+})
+
+test('Gemini 工具回填保持完整历史链，不截断之前的用户上下文', async () => {
+  const messages = [{ role: 'user', content: '我叫小明' }, { role: 'assistant', content: '记住了' }, { role: 'user', content: '我喜欢蓝色' }, { role: 'assistant', content: '好的' }]
+  const history = createAttemptHistory('gemini', messages)
+  const requests = []
+  const client = new CustomGoogleGeminiClient({
+    key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
+    e: { user_id: '123', sender: { user_id: '123', role: 'member' }, reply: async () => {} },
+    fetch: async (url, options) => {
+      requests.push(JSON.parse(options.body))
+      const parts = requests.length === 1 ? [{ functionCall: { name: 'lookup', args: {} } }] : [{ text: '小明喜欢蓝色' }]
+      return Response.json({ candidates: [{ finishReason: 'STOP', content: { role: 'model', parts } }] })
+    }
+  })
+  let called = 0
+  client.addTools([{ name: 'lookup', function: () => ({ name: 'lookup', description: '查询', parameters: { type: 'object', properties: {} } }), func: async () => { called++; return '查询完成' } }])
+  const result = await client.sendMessage('查完后说出我的名字和喜好', { parentMessageId: history.parentMessageId })
+  assert.equal(result.text, '小明喜欢蓝色')
+  assert.equal(called, 1)
+  assert.equal(requests.length, 2)
+  for (const request of requests) assert.deepEqual(request.contents.slice(0, 4).map(message => message.parts[0].text), messages.map(message => message.content))
+  assert.ok((await history.getMessageById(history.parentMessageId)).parentMessageId)
+})
