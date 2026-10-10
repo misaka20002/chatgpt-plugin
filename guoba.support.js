@@ -1828,7 +1828,7 @@ export function supportGuoba() {
         {
           field: 'mcpServers',
           label: 'MCP 服务器配置',
-          bottomHelpMessage: '配置 MCP 服务器: stdio 使用 command/args/env，http 使用 Streamable HTTP，sse 使用旧版 SSE；修改后需要重启生效',
+          bottomHelpMessage: '配置 MCP 服务器: stdio 使用 command/args/env，http 使用 Streamable HTTP，sse 使用旧版 SSE；若服务器需要鉴权，可在「请求头」中填写 Authorization 等头（http/sse 适用）；修改后需要重启生效',
           component: 'GSubForm',
           componentProps: {
             multiple: true,
@@ -1899,6 +1899,15 @@ export function supportGuoba() {
                 component: 'InputTextArea',
                 componentProps: {
                   placeholder: 'NAMESPACE=default'
+                }
+              },
+              {
+                field: 'headers',
+                label: '请求头',
+                bottomHelpMessage: '若使用 http/sse 且服务器需要鉴权时填写，每行一个 KEY=value（value 中可包含 =）。例如 Anthropic 风格：Authorization=Bearer sk-xxx；自定义头：X-API-Key=your-token。仅支持字符串值；留空则不附加任何自定义请求头',
+                component: 'InputTextArea',
+                componentProps: {
+                  placeholder: 'Authorization=Bearer your-token-here'
                 }
               }
             ]
