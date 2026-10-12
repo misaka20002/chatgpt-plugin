@@ -24,6 +24,8 @@ Bot 主人可以在插件外用自己的 GPT Image 2 API 制作三张基础图�
 所有图片保持相同画布、人物位置、大小、姿势和纯白背景。透明 PNG 也能使用，但 **GPT Image 2 不直接请求透明背景**；不要传 background=transparent 或 input_fidelity。不同服务的图片编辑接口字段可能不同，参考图片需按所用服务的接口上传，下面是提示词而非固定 HTTP 请求格式。
 
 > 呆毛注： 推荐自己把图片改为透明背景 png
+> 
+> [参考图片地址](https://github.com/misaka20002/yunzai-LoliconAPI-paimonV2/tree/main/psign/Peraravatar)
 
 ### 正常图提示词 normal.png
 

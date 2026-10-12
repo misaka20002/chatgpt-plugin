@@ -364,7 +364,7 @@ export function supportGuoba() {
         {
           field: 'fallbackProviderId',
           label: '失败回退模型提供商',
-          bottomHelpMessage: '仅可选同协议的其他条目。回退沿用本轮提示词和历史，使用备用配置的账号、模型及生成参数；下一轮仍优先主模型。',
+          bottomHelpMessage: '仅可选同协议的其他条目。回退沿用本轮提示词和历史，使用备用配置的账号、模型及生成参数；该模型不需要系统提示词',
           component: 'Select',
           componentProps: {
             options: [{ label: '不启用', value: '' }, ...providerOptions]
@@ -373,7 +373,7 @@ export function supportGuoba() {
         {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
-          bottomHelpMessage: '模型内置优先使用当前对话模型，失败后转指定识别配置；专用识别直接使用下方所选配置。',
+          bottomHelpMessage: '模型内置优先使用当前对话模型，失败后转指定识别配置；专用识别直接使用下方所选配置；该模型不需要系统提示词，下同',
           component: 'Select',
           componentProps: {
             options: [
