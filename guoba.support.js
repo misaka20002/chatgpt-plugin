@@ -1,6 +1,8 @@
 import { listProviders, providerLabel } from './utils/providerProfiles.js'
 import { Config, providerDefaults } from './utils/config.js'
 import { normalizeGroupReplyConfig } from './utils/groupReplyConfig.js'
+import { normalizeAvatarReplyConfig, AVATAR_SIZES, AVATAR_DURATIONS, AVATAR_FPS } from './utils/avatar/config.js'
+import { avatarOptions } from './utils/avatar/catalog.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/mcpServersGuoba.js'
@@ -8,6 +10,7 @@ import lodash from "lodash";
 
 // 支持锅巴
 export function supportGuoba() {
+  const roleOptions = avatarOptions()
   const providers = listProviders(Config.getConfig())
   const providerOptions = providers.map(row => ({ label: providerLabel(row), value: row.id }))
   const geminiProviderOptions = providers.filter(row => row.type === 'gemini').map(row => ({ label: providerLabel(row), value: row.id }))
@@ -2512,6 +2515,32 @@ export function supportGuoba() {
         //   }
         // },
         {
+          label: '角色动图回复',
+          component: 'Divider'
+        },
+        {
+          field: 'avatarReply.groups',
+          label: '角色动图群',
+          bottomHelpMessage: '放置角色图片后使用 #chatgpt刷新角色文件夹 生成 JSON，再按 Bot＋群选择角色与档位。正式回复附带短气泡 GIF；每次增加一次辅助模型请求。使用说明：docs/avatar-reply-auto.md',
+          component: 'GSubForm',
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: 'botId', label: 'Bot QQ', component: 'Input', required: true },
+              { field: 'groupId', label: '群号', component: 'Input', required: true },
+              { field: 'switchOn', label: '自动附带角色动图', component: 'Switch' },
+              { field: 'avatarId', label: '角色文件夹', component: 'Select',
+                componentProps: { options: roleOptions } },
+              { field: 'size', label: 'GIF 分辨率', component: 'Select',
+                componentProps: { options: AVATAR_SIZES.map(value => ({ label: value.replace('x', '×'), value })) } },
+              { field: 'duration', label: 'GIF 时长', component: 'Select',
+                componentProps: { options: AVATAR_DURATIONS.map(value => ({ label: value + ' 秒', value })) } },
+              { field: 'fps', label: 'GIF 帧率', component: 'Select',
+                componentProps: { options: AVATAR_FPS.map(value => ({ label: value + ' FPS', value })) } }
+            ]
+          }
+        },
+        {
           label: 'emoji合成',
           component: 'Divider'
         },
@@ -2578,18 +2607,18 @@ export function supportGuoba() {
           bottomHelpMessage: '是否允许群获取后台地址，关闭后将只能私聊获取',
           component: 'Switch'
         },
-        {
-          field: 'live2d',
-          label: 'Live2D显示',
-          bottomHelpMessage: '开启Live2D显示',
-          component: 'Switch'
-        },
-        {
-          field: 'live2dModel',
-          label: 'Live2D模型',
-          bottomHelpMessage: '选择Live2D使用的模型',
-          component: 'Input'
-        },
+        // {
+        //   field: 'live2d',
+        //   label: 'Live2D显示',
+        //   bottomHelpMessage: '开启Live2D显示',
+        //   component: 'Switch'
+        // },
+        // {
+        //   field: 'live2dModel',
+        //   label: 'Live2D模型',
+        //   bottomHelpMessage: '选择Live2D使用的模型',
+        //   component: 'Input'
+        // },
         {
           label: '以下为Suno音乐合成的配置。',
           component: 'Divider'
@@ -2645,6 +2674,7 @@ export function supportGuoba() {
       ],
       // 获取配置数据方法（用于前端填充显示数据）
       async getConfigData() {
+        avatarOptions()
         // 生成循环任务展示标签
         const cronTasks = Config.ScheduleTask_CronTasks || []
         const configObj = Object.assign({}, Config)
@@ -2653,6 +2683,7 @@ export function supportGuoba() {
           return `${t.user_id} | ${t.group_id || '私聊'} | [${t.taskId}] | ${t.cronExpression} | ${content}`
         })
         configObj.groupReply = normalizeGroupReplyConfig(configObj.groupReply)
+        configObj.avatarReply = normalizeAvatarReplyConfig(configObj.avatarReply)
         configObj.mcpServers = formatMcpServersForGuoba(configObj.mcpServers)
 
         return configObj
@@ -2716,6 +2747,7 @@ export function supportGuoba() {
           }
 
           candidate.groupReply = normalizeGroupReplyConfig(candidate.groupReply)
+          candidate.avatarReply = normalizeAvatarReplyConfig(candidate.avatarReply)
 
           // 对于 config 中对象/对象数组 的修改 Proxy 对象不会执行 set() 所以要手动保存
           Config.commit(candidate)

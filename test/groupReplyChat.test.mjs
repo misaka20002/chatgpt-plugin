@@ -36,6 +36,65 @@ globalThis.redis = { get: async () => null }
 globalThis.logger = { info() {}, error(error) { throw error } }
 const { chatgpt } = await import('../apps/chat.js')
 const { groupReply } = await import('../utils/groupReply.js')
+const { avatarReply } = await import('../utils/avatarReply.js')
+
+test('开启角色的正式回复先发一次完整正文再附图，辅助来源使用实际备用条目', async t => {
+  const previous = { ...Config }
+  requests.length = 0
+  redis.set = async () => {}
+  t.after(() => {
+    delete redis.set
+    requests.length = 0
+    scriptedResponse = undefined
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+  })
+  Object.assign(Config, {
+    defaultProviderId: 'main', enableMemory: false, blacklist: [], whitelist: [],
+    blockWords: [], promptBlockWords: [],
+    avatarReply: { groups: [{ botId: '999', groupId: '100', switchOn: true }] },
+    modelProviders: { api: [], gemini: [], claude: [], responses: [
+      { id: 'main', name: '主', responsesModel: 'main-model' },
+      { id: 'backup', name: '备用', responsesModel: 'backup-model' }
+    ] }
+  })
+  const e = { self_id: '999', group_id: '100', isGroup: true, isMaster: true,
+    user_id: '123', sender: { user_id: '123' }, message: [], reply: async () => {} }
+  const chat = Object.create(chatgpt.prototype)
+  chat.e = e
+  chat.cacheContent = async () => {}
+  const output = []
+  chat.reply = async value => output.push(['text', value])
+  t.mock.method(avatarReply, 'send', async (target, text, provider) => {
+    assert.equal(target, e)
+    output.push(['gif', text, provider])
+  })
+  scriptedResponse = async () => ({ text: '完整回答。第二句话。', actualProviderId: 'backup' })
+  await chat.abstractChat(e, '问题', undefined, false, { automatic: true })
+  assert.deepEqual(output, [
+    ['text', ['完整回答。第二句话。']],
+    ['gif', '完整回答。第二句话。', 'backup']
+  ])
+  output.length = 0
+  let converted = 0
+  e.runtime = { handler: {
+    has: name => name === 'chatgpt.markdown.convert',
+    call: async (_, target, value) => {
+      assert.equal(target, e)
+      assert.deepEqual(value.content, ['完整回答。第二句话。'])
+      converted++
+      return ['格式化正文']
+    }
+  } }
+  await chat.abstractChat(e, '格式化问题', undefined, false, { automatic: true })
+  assert.equal(converted, 1)
+  assert.deepEqual(output, [['text', ['格式化正文']], ['gif', '完整回答。第二句话。', 'backup']])
+  output.length = 0
+  delete e.runtime
+  Config.avatarReply.groups[0].switchOn = false
+  await chat.abstractChat(e, '第二问', undefined, false, { automatic: true })
+  assert.deepEqual(output, [['text', ['完整回答。第二句话。']]])
+})
 
 test('自主回复复用正常聊天入口和全局提供商，不传禁用工具参数，仍受黑名单约束', async () => {
   const e = {

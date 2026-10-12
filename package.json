@@ -18,6 +18,7 @@
     "eventsource-parser": "^1.0.0",
     "fastify": "^4.18.0",
     "form-data": "^4.0.0",
+    "gifenc": "^1.0.3",
     "https-proxy-agent": "7.0.1",
     "js-tiktoken": "^1.0.5",
     "jszip": "^3.10.1",
@@ -54,6 +55,7 @@
     }
   },
   "scripts": {
+    "test:avatar": "node --test test/avatarReply.test.mjs test/avatarFolders.test.mjs && node --experimental-test-module-mocks --test test/avatarReplyConfig.test.mjs",
     "test:group-reply": "node --experimental-test-module-mocks --test test/groupReply.test.mjs test/groupReplyCore.test.mjs test/groupReplyChat.test.mjs",
     "test:memory": "node --experimental-test-module-mocks --test test/memoryV2.test.js test/memoryApps.test.mjs test/atGraph.test.mjs test/atGraphAvatars.test.mjs",
     "test:config": "node --test test/configArrayMerge.test.js test/configBaseUrl.test.js test/configGroupReply.test.js test/providerConfig.test.js",

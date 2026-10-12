@@ -2833,3 +2833,8 @@ zod@3.25.28, "zod@^3.25 || ^4.0":
   version "3.25.28"
   resolved "https://registry.npmjs.org/zod/-/zod-3.25.28.tgz"
   integrity sha512-/nt/67WYKnr5by3YS7LroZJbtcCBurDKKPBPWWzaxvVCGuG/NOsiKkrjoOhI8mJ+SQUXEbUzeB3S+6XDUEEj7Q==
+
+gifenc@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.npmjs.org/gifenc/-/gifenc-1.0.3.tgz"
+  integrity sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw==
