@@ -26,6 +26,7 @@ export function normalizeGroupReplyConfig(value = {}) {
     enabled: value?.enabled === true,
     provider: typeof value?.provider === 'string' && value.provider ? value.provider : 'current',
     historyCount: number(value?.historyCount, 50, 20, 500),
+    extraSystemPrompt: typeof value?.extraSystemPrompt === 'string' ? value.extraSystemPrompt.trim() : '',
     groups: Array.isArray(value?.groups) ? value.groups.map(g => ({
       groupId: String(g?.groupId ?? '').trim(),
       switchOn: g?.switchOn === true,

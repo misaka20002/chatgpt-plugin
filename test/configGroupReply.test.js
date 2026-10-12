@@ -37,6 +37,10 @@ test('锅巴群聊判断表格、内置提示词、数值边界与保存后重�
     assert.equal(initial.groupReply.systemPrompt, undefined)
     assert.ok(!guoba.schemas.some(s => s.field === 'groupReply.decisionPrompt'))
     assert.ok(!guoba.schemas.some(s => s.field === 'groupReply.systemPrompt'))
+    assert.equal(initial.groupReply.extraSystemPrompt, '')
+    const extraPromptSchema = guoba.schemas.find(s => s.field === 'groupReply.extraSystemPrompt')
+    assert.equal(extraPromptSchema.component, 'InputTextArea')
+    assert.equal(extraPromptSchema.label, '补充系统提示词')
     assert.equal(initial.enableBYM, undefined)
     assert.equal(initial.assistantLabel, undefined)
     assert.equal(initial.tts_First_person, '测试称呼')
@@ -68,7 +72,8 @@ test('锅巴群聊判断表格、内置提示词、数值边界与保存后重�
       'groupReply.historyCount': 5,
       'groupReply.provider': initial.modelProviders.responses[0].id,
       'groupReply.model': ' small-model ',
-      'groupReply.decisionPrompt': '仅被点名时才回复'
+      'groupReply.decisionPrompt': '仅被点名时才回复',
+      'groupReply.extraSystemPrompt': '  仅补充：优先接梗，少总结。  '
     }, { Result: { ok() {}, error(message) { throw new Error(message) } } })
   `)
   const reloaded = run('')
@@ -77,6 +82,8 @@ test('锅巴群聊判断表格、内置提示词、数值边界与保存后重�
   assert.equal(JSON.parse(fs.readFileSync(file)).assistantLabel, undefined)
   assert.deepEqual(saved.groupReply.groups, [{ groupId: '100', switchOn: true, debounceSeconds: 0, enthusiasm: 1 }, { groupId: '200', switchOn: false, debounceSeconds: 3600, enthusiasm: 100 }])
   assert.equal(saved.groupReply.historyCount, 20)
+  assert.equal(saved.groupReply.extraSystemPrompt, '仅补充：优先接梗，少总结。')
+  assert.equal(JSON.parse(fs.readFileSync(file)).groupReply.extraSystemPrompt, '仅补充：优先接梗，少总结。')
   assert.equal(saved.groupReply.debounceSeconds, undefined)
   assert.equal(saved.groupReply.decisionPrompt, undefined)
   assert.equal(JSON.parse(fs.readFileSync(file)).groupReply.decisionPrompt, undefined)

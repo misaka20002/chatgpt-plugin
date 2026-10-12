@@ -115,7 +115,10 @@ test('热情度空值使用40，越界值收敛至1到100，旧提示词配置�
   assert.deepEqual(config.groups.map(g => g.enthusiasm), [40, 40, 40, 40, 1, 1, 100, 81])
   assert.equal(config.systemPrompt, undefined)
   assert.equal(config.decisionPrompt, undefined)
+  assert.equal(config.extraSystemPrompt, '')
   assert.equal(normalizeGroupReplyConfig({ decisionPrompt: '新自定义' }).decisionPrompt, undefined)
+  assert.equal(normalizeGroupReplyConfig({ extraSystemPrompt: '  补充规则  ' }).extraSystemPrompt, '补充规则')
+  assert.equal(normalizeGroupReplyConfig({ extraSystemPrompt: 123 }).extraSystemPrompt, '')
 })
 
 test('各群独立等待，超过旧上限和缓存清理时间仍可判断', async () => {
@@ -534,6 +537,26 @@ test('判断模型统一使用内置提示词，旧配置无法覆盖', async ()
   assert.ok(prompt.startsWith(defaultGroupReplyDecisionPrompt))
   assert.ok(!prompt.includes(Config.groupReply.decisionPrompt))
   assert.ok(!prompt.includes(Config.groupReply.systemPrompt))
+})
+
+test('补充系统提示词追加在内置正文之后、输出协议之前，留空与旧行为逐字节一致', async () => {
+  Config.groupReply.decisionPrompt = '旧自定义判断提示词'
+  Config.groupReply.systemPrompt = '更早的自定义提示词'
+  groupReply.observe(event('留空补充'))
+  await tick(60000)
+  const base = defaultGroupReplyDecisionPrompt
+  const empty = requests[0].options.systemPrompt
+  assert.equal(requests.length, 1)
+  assert.ok(empty.startsWith(base))
+  assert.ok(!empty.includes('旧自定义判断提示词'))
+  assert.ok(!empty.includes('更早的自定义提示词'))
+  Config.groupReply.extraSystemPrompt = '  补充规则：优先回应提问，少总结  '
+  groupReply.observe(event('带补充'))
+  await tick(60000)
+  assert.equal(requests.length, 2)
+  const filled = requests[1].options.systemPrompt
+  assert.equal(filled, `${base}\n\n补充规则：优先回应提问，少总结${empty.slice(base.length)}`)
+  assert.ok(filled.indexOf('固定输出协议') > filled.indexOf('补充规则'))
 })
 
 test('限额预筛保留超限用户上下文，只选择其他用户；额度恢复后可再次参与', async t => {

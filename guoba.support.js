@@ -1965,6 +1965,15 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'groupReply.extraSystemPrompt',
+          label: '补充系统提示词',
+          bottomHelpMessage: '在内置判断提示词正文之后、固定输出协议之前追加自定义内容，只补充、不覆盖内置规则；可定义不接话的句子或必须接话的句子',
+          component: 'InputTextArea',
+          componentProps: {
+            placeholder: '留空则不补充'
+          }
+        },
+        {
           label: '主动打招呼',
           component: 'Divider'
         },
