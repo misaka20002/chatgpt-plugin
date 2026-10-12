@@ -179,7 +179,10 @@ test('特色表情过渡三阶段：正常段、溶解段、特色段闪回闭�
   }
   assert.ok(dissolve[0].overlayOpacity < dissolve[1].overlayOpacity
     && dissolve[1].overlayOpacity < dissolve[2].overlayOpacity)
-  assert.notEqual(dissolve[2].y, 0)
+  // 溶解段同样只播基础运动：反应动作在过渡完成点才从基础位移缓入。
+  for (const frame of dissolve) assert.equal(frame.y, 0)
+  assert.equal(avatarFrame(resource, cue, 1850, 3000, options).y, 0)
+  assert.notEqual(avatarFrame(resource, cue, 2500, 3000, options).y, 0)
   // 特色段：保持特色立绘；眨眼窗口闪回闭眼帧；溶解与特色段都不出现张嘴帧（2）。
   const featureFrame = avatarFrame(resource, cue, 1900, 3000, options)
   assert.equal(featureFrame.pictureIndex, 3)
@@ -188,6 +191,24 @@ test('特色表情过渡三阶段：正常段、溶解段、特色段闪回闭�
   for (let time = 1500; time <= 3000; time += 50) {
     assert.notEqual(avatarFrame(resource, cue, time, 3000, options).pictureIndex, 2)
   }
+})
+
+test('过渡把反应动作延后到特色段：正常段与溶解段不提前抖动', async () => {
+  const resource = await parseAvatarResource(JSON.stringify(await websiteConfig(2)))
+  const options = { transition: true }
+  // 模型同时给出 shake 动作时，正常段与溶解段仍只播基础运动。
+  const shakeCue = { caption: '你好', action: 'shake', expressionId: 'expression_0' }
+  assert.equal(avatarFrame(resource, shakeCue, 200, 3000, options).x, 0)
+  assert.equal(avatarFrame(resource, shakeCue, 1700, 3000, options).x, 0)
+  // 特色段从过渡完成点以 0 幅度缓入，之后才出现完整抖动。
+  assert.equal(avatarFrame(resource, shakeCue, 1850, 3000, options).x, 0)
+  assert.notEqual(avatarFrame(resource, shakeCue, 2500, 3000, options).x, 0)
+  // 表情自带动画（expression_1 为 shake）同样延后。
+  const animationCue = { caption: '你好', action: 'idle', expressionId: 'expression_1' }
+  assert.equal(avatarFrame(resource, animationCue, 1700, 3000, options).x, 0)
+  assert.notEqual(avatarFrame(resource, animationCue, 2500, 3000, options).x, 0)
+  // 关闭过渡时维持旧行为：动作整段生效。
+  assert.notEqual(avatarFrame(resource, shakeCue, 200, 3000).x, 0)
 })
 
 test('过渡开关作用于 GIF：开启首帧正常、末帧特色；关闭或缺省时整段特色立绘', async () => {
@@ -250,11 +271,50 @@ test('实际 GIF 解码为 30 帧/3秒/循环，像素证明正常、张嘴、�
   assert.equal(meta.loop, 0)
   const pixel = async page => [...await sharp(output, { page }).extract({ left: 256, top: 250, width: 1, height: 1 })
     .removeAlpha().raw().toBuffer()]
-  // 有序抖动会让颜色有 ±10 左右的偏移，这里断言主色通道而不是精确值。
+  // 调色板量化与逐帧映射可能带来轻微偏移，这里断言主色通道而不是精确值。
   const [red, blue, green] = [await pixel(0), await pixel(2), await pixel(20)]
   assert.ok(red[0] > 200 && red[1] < 40 && red[2] < 40, '第 0 帧应为正常图（红）')
   assert.ok(blue[2] > 200 && blue[0] < 40 && blue[1] < 40, '第 2 帧应为张嘴图（蓝）')
   assert.ok(green[1] > 200 && green[0] < 40 && green[2] < 40, '第 20 帧应为闭眼图（绿）')
+})
+
+test('逐帧稳定：渐变素材在轻微位移下不产生大面积跳变（色斑闪烁回归）', async () => {
+  const W = 96, H = 96
+  const raw = Buffer.alloc(W * H * 4)
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4
+      raw[i] = 40 + Math.round(x / (W - 1) * 200)
+      raw[i + 1] = 90 + Math.round(y / (H - 1) * 120)
+      raw[i + 2] = 160 + Math.round((x + y) / (W + H - 2) * 80)
+      raw[i + 3] = 255
+    }
+  }
+  const ref = 'data:image/png;base64,' + (await sharp(raw, { raw: { width: W, height: H, channels: 4 } })
+    .png().toBuffer()).toString('base64')
+  const resource = await parseAvatarResource(JSON.stringify({
+    schema: 2, imageMode: 'images',
+    images: { normal: { ref }, close: { ref } },
+    mouthTiers: [{ threshold: 5, images: [{ ref }] }],
+    customExpressions: [],
+    motion: { swayAmpX: 1.5, swayPeriod: 5200, breathAmpY: 2, breathPeriod: 3800, talkTiltMaxDeg: 0 },
+    blinkMin: 30000, blinkMax: 30000, blinkDuration: 150
+  }))
+  const gif = await renderAvatarGif(resource, { caption: '测试', action: 'idle', expressionId: null },
+    { size: '512x640', duration: 2, fps: 10 })
+  const frames = []
+  for (let page = 0; page < 20; page++) frames.push(await sharp(gif, { page }).ensureAlpha().raw().toBuffer())
+  let jumps = 0
+  for (let i = 1; i < frames.length; i++) {
+    const a = frames[i - 1], b = frames[i]
+    for (let j = 0; j < a.length; j += 4) {
+      if (a[j + 3] === 0 && b[j + 3] === 0) continue
+      const delta = Math.max(Math.abs(a[j] - b[j]), Math.abs(a[j + 1] - b[j + 1]), Math.abs(a[j + 2] - b[j + 2]))
+      if (delta >= 16) jumps++
+    }
+  }
+  // 全屏抖动 + rgba4444 时期该夹具约 20600 次跳变；rgb565 + 索引滞回后约 5400，阈值留出跨环境余量。
+  assert.ok(jumps < 15000, '渐变画面相邻帧跳变过多，疑似色斑闪烁回归：' + jumps)
 })
 
 test('开心/困惑/生气/害羞/哭泣均按资源 ID 处理，选择后实际 GIF 使用特色图', async () => {
