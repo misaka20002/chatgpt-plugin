@@ -2521,7 +2521,7 @@ export function supportGuoba() {
         {
           field: 'avatarReply.provider',
           label: '短句模型来源',
-          bottomHelpMessage: '生成角色气泡短句与动作的子模型；默认跟随当前对话模型（本轮实际使用的条目），也可固定为某个条目。每次附图会额外产生一次该模型的请求',
+          bottomHelpMessage: '生成角色气泡短句与动作的子模型；该模型不需要系统提示词',
           component: 'Select',
           componentProps: {
             options: [{ label: '跟随当前对话模型', value: 'current' }, ...providerOptions]
@@ -2530,7 +2530,7 @@ export function supportGuoba() {
         {
           field: 'avatarReply.expressionTransition',
           label: '表情渐变过渡',
-          bottomHelpMessage: '开启后：辅助模型选中特色表情时，GIF 先播放正常眨眼／说话，再约 0.35 秒交叉溶解到特色立绘并保持到结束；特色段按原节奏短暂闭眼、不张嘴。关闭后整段播放特色立绘（原行为）。默认开启',
+          bottomHelpMessage: '开启后：辅助模型选中特色表情时，GIF 先播放正常眨眼／说话，再约 0.35 秒交叉溶解到特色立绘并保持到结束；特色段按原节奏短暂闭眼、不张嘴；默认开启',
           component: 'Switch'
         },
         {
@@ -2542,16 +2542,24 @@ export function supportGuoba() {
             multiple: true,
             schemas: [
               { field: 'botId', label: 'Bot QQ', component: 'Input', required: true },
-              { field: 'groupId', label: '群号', component: 'Input', required: true },
+              { field: 'groupId', label: '群号', bottomHelpMessage: "可用群号 8888 指代私聊", component: 'Input', required: true },
               { field: 'switchOn', label: '开启角色动图', component: 'Switch' },
-              { field: 'avatarId', label: '角色文件夹', component: 'Select',
-                componentProps: { options: roleOptions } },
-              { field: 'size', label: 'GIF 分辨率', component: 'Select',
-                componentProps: { options: AVATAR_SIZES.map(value => ({ label: value.replace('x', '×'), value })) } },
-              { field: 'duration', label: 'GIF 时长', component: 'Select',
-                componentProps: { options: AVATAR_DURATIONS.map(value => ({ label: value + ' 秒', value })) } },
-              { field: 'fps', label: 'GIF 帧率', component: 'Select',
-                componentProps: { options: AVATAR_FPS.map(value => ({ label: value + ' FPS', value })) } }
+              {
+                field: 'avatarId', label: '角色文件夹', bottomHelpMessage: "放置角色图片 data/chatgpt/avatars/[文件夹名]/ 后使用 #chatgpt刷新角色文件夹 生成", component: 'Select',
+                componentProps: { options: roleOptions }
+              },
+              {
+                field: 'size', label: 'GIF 分辨率', bottomHelpMessage: "推荐768*768", component: 'Select',
+                componentProps: { options: AVATAR_SIZES.map(value => ({ label: value.replace('x', '×'), value })) }
+              },
+              {
+                field: 'duration', label: 'GIF 时长', bottomHelpMessage: "推荐3秒", component: 'Select',
+                componentProps: { options: AVATAR_DURATIONS.map(value => ({ label: value + ' 秒', value })) }
+              },
+              {
+                field: 'fps', label: 'GIF 帧率', bottomHelpMessage: "推荐10FPS", component: 'Select',
+                componentProps: { options: AVATAR_FPS.map(value => ({ label: value + ' FPS', value })) }
+              }
             ]
           }
         },
