@@ -40,6 +40,7 @@ test('旧配置备份落盘、专用模型拆分、重启稳定；旧失败回�
   assert.equal(first.fallbackProviderId, '')
   assert.equal(first.groupReply.provider, 'current')
   assert.equal(first.groupReply.model, undefined)
+  assert.equal(first.avatarReply.provider, 'current')
   assert.equal(first.geminiKey, undefined)
   const backups = fs.readdirSync(f.dir).filter(name => name.includes('providers-backup'))
   assert.equal(backups.length, 1)
@@ -107,4 +108,17 @@ test('已有表单但缺少版本时不补回旧来源或默认条目，显式�
   assert.deepEqual(first.modelProviders.gemini, [])
   assert.equal(first.modelProviders.responses[0].responsesStore, true)
   assert.deepEqual(f.run(), first)
+})
+
+test('角色动图引用的提供商未解除前不能删除', t => {
+  const f = fixture(t, {})
+  const state = f.run(`
+    const candidate = structuredClone(Config.getConfig())
+    candidate.avatarReply = { ...candidate.avatarReply, provider: candidate.modelProviders.claude[0].id }
+    Config.commit(candidate)
+    const removed = structuredClone(candidate)
+    removed.modelProviders.claude = []
+    assert.throws(() => Config.commit(removed), /角色动图引用的模型提供商不存在/)
+  `)
+  assert.equal(state.avatarReply.provider, state.modelProviders.claude[0].id)
 })

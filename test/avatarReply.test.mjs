@@ -36,7 +36,7 @@ async function fixture(t, count = 0) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'avatar-test-'))
   t.after(() => fs.rm(root, { recursive: true, force: true }))
   const store = new AvatarResourceStore(root, () => {})
-  const filename = store.filename('999')
+  const filename = store.filename('999', '999')
   await fs.mkdir(path.dirname(filename), { recursive: true })
   const config = await websiteConfig(count)
   await fs.writeFile(filename, JSON.stringify(config))
@@ -78,24 +78,27 @@ test('拒绝外链、格式伪装、过大像素、额外档位与不支持模�
   await assert.rejects(parseAvatarResource(' '.repeat(32 * 1024 * 1024 + 1)), /32 MiB/)
 })
 
-test('资源按 Bot 隔离，更新失败保留旧角色、恢复后更新，重启重读', async t => {
+test('资源按角色目录读取并跨 Bot 共享，更新失败保留旧角色、恢复后更新，重启重读', async t => {
   const { root, store, filename, config } = await fixture(t)
-  const first = await store.load('999')
-  assert.equal(await store.load('999'), first)
-  await assert.rejects(store.load('888'), /读取失败/)
+  const first = await store.load('999', '999')
+  assert.equal(await store.load('999', '999'), first)
+  assert.equal(await store.load('888', '999'), first)
+  await assert.rejects(store.load('999', '不存在'), /读取失败/)
   await fs.writeFile(filename, '{半写')
-  assert.equal(await store.load('999'), first)
-  assert.match(store.error('999'), /读取失败/)
+  assert.equal(await store.load('999', '999'), first)
+  assert.match(store.error('999', '999'), /读取失败/)
   config.images.normal.place = { dx: 2 }
   await fs.writeFile(filename, JSON.stringify(config))
-  const next = await store.load('999')
+  const next = await store.load('999', '999')
   assert.notEqual(next.version, first.version)
-  assert.equal(store.error('999'), '')
-  assert.equal((await new AvatarResourceStore(root).load('999')).version, next.version)
-  await assert.rejects(store.load('../999'), /Bot QQ/)
+  assert.equal(store.error('999', '999'), '')
+  assert.equal((await new AvatarResourceStore(root).load('999', '999')).version, next.version)
+  await assert.rejects(store.load('../999', '999'), /Bot QQ/)
+  await assert.rejects(store.load('999'), /角色目录名无效/)
+  await assert.rejects(store.load('999', ''), /角色目录名无效/)
 })
 
-test('群开关严格按 Bot/群和布尔值生效，空默认与未知事件不影响聊天', () => {
+test('群/私聊开关严格按 Bot/渠道和布尔值生效，空默认与未知事件不影响聊天', () => {
   const config = normalizeAvatarReplyConfig({ groups: [
     { botId: ' 999 ', groupId: '100', switchOn: true },
     { botId: '999', groupId: '100', switchOn: false },
@@ -108,7 +111,17 @@ test('群开关严格按 Bot/群和布尔值生效，空默认与未知事件不
   assert.equal(avatarEnabled({ isGroup: true, self_id: 999, group_id: 200 }, config), false)
   assert.equal(avatarEnabled({ isGroup: true }, {}), false)
   assert.equal(avatarEnabled({ self_id: 999, group_id: 100 }, config), false)
-  assert.deepEqual(normalizeAvatarReplyConfig(), { groups: [] })
+  // 私聊按 8888 行判断：开关开 → true；开关关 / 其他 Bot / 群通道 → false
+  const privateOn = normalizeAvatarReplyConfig({ groups: [{ botId: '999', groupId: '8888', switchOn: true }] })
+  assert.equal(avatarEnabled({ self_id: 999 }, privateOn), true)
+  assert.equal(avatarEnabled({ isGroup: false, self_id: 999, user_id: 12345 }, privateOn), true)
+  assert.equal(avatarEnabled({ self_id: 888 }, privateOn), false)
+  assert.equal(avatarEnabled({ isGroup: true, self_id: 999, group_id: 100 }, privateOn), false)
+  const privateOff = normalizeAvatarReplyConfig({ groups: [{ botId: '999', groupId: '8888', switchOn: false }] })
+  assert.equal(avatarEnabled({ self_id: 999 }, privateOff), false)
+  assert.deepEqual(normalizeAvatarReplyConfig(), { provider: 'current', groups: [] })
+  assert.equal(normalizeAvatarReplyConfig({ provider: 'provider-1', groups: [] }).provider, 'provider-1')
+  assert.equal(normalizeAvatarReplyConfig({ provider: '', groups: [] }).provider, 'current')
 })
 
 test('短句只接受限定动作/真实表情 ID，使用实际 provider，清理 CQ 并限制可见字符', async () => {
@@ -152,9 +165,11 @@ test('实际 GIF 解码为 30 帧/3秒/循环，像素证明正常、张嘴、�
   assert.equal(meta.loop, 0)
   const pixel = async page => [...await sharp(output, { page }).extract({ left: 256, top: 250, width: 1, height: 1 })
     .removeAlpha().raw().toBuffer()]
-  assert.deepEqual(await pixel(0), [255, 0, 0])
-  assert.deepEqual(await pixel(2), [0, 0, 255])
-  assert.deepEqual(await pixel(20), [0, 255, 0])
+  // 有序抖动会让颜色有 ±10 左右的偏移，这里断言主色通道而不是精确值。
+  const [red, blue, green] = [await pixel(0), await pixel(2), await pixel(20)]
+  assert.ok(red[0] > 200 && red[1] < 40 && red[2] < 40, '第 0 帧应为正常图（红）')
+  assert.ok(blue[2] > 200 && blue[0] < 40 && blue[1] < 40, '第 2 帧应为张嘴图（蓝）')
+  assert.ok(green[1] > 200 && green[0] < 40 && green[2] < 40, '第 20 帧应为闭眼图（绿）')
 })
 
 test('开心/困惑/生气/害羞/哭泣均按资源 ID 处理，选择后实际 GIF 使用特色图', async () => {
@@ -169,9 +184,9 @@ test('开心/困惑/生气/害羞/哭泣均按资源 ID 处理，选择后实际
     })
     const gif = await renderAvatarGif(resource, cue)
     for (const page of [0, 20]) {
-      const pixel = await sharp(gif, { page }).extract({ left: 256, top: 250, width: 1, height: 1 })
-        .removeAlpha().raw().toBuffer()
-      assert.deepEqual([...pixel], [255, 255, 0], label + '必须使用特色图，而非正常或闭眼图')
+      const pixel = [...await sharp(gif, { page }).extract({ left: 256, top: 250, width: 1, height: 1 })
+        .removeAlpha().raw().toBuffer()]
+      assert.ok(pixel[0] > 200 && pixel[1] > 200 && pixel[2] < 40, label + '必须使用特色图，而非正常或闭眼图')
     }
   }
 })
@@ -203,7 +218,7 @@ test('工作线程超时会拒绝任务，不发送假成功或自动重试降�
 
 test('回复服务模型失败降级、每事件一次，发送后清理临时文件，上传失败保留正文', async t => {
   const { root } = await fixture(t)
-  const config = { groups: [{ botId: '999', groupId: '100', switchOn: true }] }
+  const config = { groups: [{ botId: '999', groupId: '100', switchOn: true, avatarId: '999' }] }
   const logs = [], files = [], cues = []
   const service = new AvatarReplyService({
     root, getConfig: () => config, warn: message => logs.push(message),
@@ -225,7 +240,7 @@ test('回复服务模型失败降级、每事件一次，发送后清理临时�
 
 test('生成期间关闭并重新开启也取消旧任务，文件换版后不发送旧图', async t => {
   const { root, filename, config: source } = await fixture(t)
-  const config = { groups: [{ botId: '999', groupId: '100', switchOn: true }] }
+  const config = { groups: [{ botId: '999', groupId: '100', switchOn: true, avatarId: '999' }] }
   let sent = 0
   const e = { isGroup: true, self_id: '999', group_id: '100' }
   const service = new AvatarReplyService({
@@ -246,5 +261,133 @@ test('生成期间关闭并重新开启也取消旧任务，文件换版后不�
     return Buffer.from('gif')
   } }
   assert.equal(await service.send({ ...e }, '回答', 'main'), false)
+  assert.equal(sent, 0)
+})
+
+test('私聊用群号 8888 行取角色与档位，未配置时为空并回落默认档位', async t => {
+  const { root } = await fixture(t)
+  const service = new AvatarReplyService({ root, warn() {}, getConfig: () => normalizeAvatarReplyConfig({
+    provider: 'fixed',
+    groups: [
+      { botId: '999', groupId: '100', switchOn: true, avatarId: '甲', size: '1024x1024', duration: 5, fps: 20 },
+      { botId: '999', groupId: '8888', switchOn: false, avatarId: '乙', size: '768x768', duration: 2, fps: 15 }
+    ]
+  }) })
+  assert.deepEqual(service.selection({ isGroup: true, self_id: '999', group_id: '100' }),
+    { avatarId: '甲', size: '1024x1024', duration: 5, fps: 20 })
+  assert.deepEqual(service.selection({ isGroup: false, self_id: '999' }),
+    { avatarId: '乙', size: '768x768', duration: 2, fps: 15 })
+  assert.deepEqual(service.selection({ isGroup: false, self_id: '999' }, '呆毛'),
+    { avatarId: '呆毛', size: '768x768', duration: 2, fps: 15 })
+  const empty = new AvatarReplyService({ root, warn() {},
+    getConfig: () => normalizeAvatarReplyConfig({ groups: [] }) })
+  assert.deepEqual(empty.selection({ isGroup: false, self_id: '999' }),
+    { avatarId: '', size: '512x640', duration: 3, fps: 10 })
+})
+
+test('未选择角色文件夹时不渲染、不发送并给出日志', async t => {
+  const { root } = await fixture(t)
+  const logs = []
+  const service = new AvatarReplyService({
+    root,
+    getConfig: () => ({ groups: [{ botId: '999', groupId: '100', switchOn: true }] }),
+    warn: message => logs.push(message),
+    generate: async () => { throw new Error('不应调用模型') },
+    queue: { async render() { throw new Error('不应渲染') } },
+    sendImage: async () => {}
+  })
+  assert.equal(await service.send({ isGroup: true, self_id: '999', group_id: '100' }, '回答', 'main'), false)
+  assert.ok(logs.some(message => /未选择角色文件夹/.test(message)))
+})
+
+test('短句模型来源：current 跟随本轮条目，固定值覆盖', async t => {
+  const { root } = await fixture(t)
+  const config = normalizeAvatarReplyConfig({
+    provider: 'fixed-provider',
+    groups: [{ botId: '999', groupId: '100', switchOn: true, avatarId: '999' }]
+  })
+  const seen = []
+  const service = new AvatarReplyService({
+    root, getConfig: () => config, warn() {},
+    generate: async args => { seen.push(args.providerId); return '{"caption":"好","action":"idle","expressionId":null}' },
+    queue: { async render() { return Buffer.from('gif') } },
+    sendImage: async () => {}
+  })
+  assert.equal(await service.send({ isGroup: true, self_id: '999', group_id: '100' }, '回答', 'chat-provider'), true)
+  config.provider = 'current'
+  assert.equal(await service.send({ isGroup: true, self_id: '999', group_id: '100' }, '回答', 'chat-provider'), true)
+  assert.deepEqual(seen, ['fixed-provider', 'chat-provider'])
+})
+
+test('透明背景 GIF：透明与近透明像素保持透明，帧间清屏不产生不透明底色', async () => {
+  const raw = Buffer.alloc(96 * 96 * 4)
+  for (let y = 0; y < 96; y++) {
+    for (let x = 0; x < 96; x++) {
+      const i = (y * 96 + x) * 4
+      const inner = x >= 24 && x < 72 && y >= 24 && y < 72
+      raw[i] = 255
+      raw[i + 1] = inner ? 0 : 255
+      raw[i + 2] = inner ? 0 : 255
+      raw[i + 3] = inner ? 255 : 10
+    }
+  }
+  const png = await sharp(raw, { raw: { width: 96, height: 96, channels: 4 } }).png().toBuffer()
+  const ref = { ref: 'data:image/png;base64,' + png.toString('base64') }
+  const resource = await parseAvatarResource(JSON.stringify({
+    schema: 2, imageMode: 'images', mouthMode: 'volume',
+    images: { normal: ref, close: ref },
+    mouthTiers: [{ threshold: 5, images: [ref] }],
+    customExpressions: [],
+    motion: { breathAmpY: 0, swayAmpX: 0, talkTiltMaxDeg: 0 },
+    blinkMin: 2000, blinkMax: 5000, blinkDuration: 150
+  }))
+  const gif = await renderAvatarGif(resource, { caption: '透明', action: 'idle', expressionId: null })
+  const pixel = async (page, left, top) => [...await sharp(gif, { page })
+    .extract({ left, top, width: 1, height: 1 }).ensureAlpha().raw().toBuffer()]
+  for (const page of [0, 10, 29]) {
+    assert.equal((await pixel(page, 5, 5))[3], 0, '帧 ' + page + ' 的画布角落必须保持透明')
+  }
+  const center = await pixel(0, 256, 250)
+  assert.equal(center[3], 255, '角色中心必须是不透明像素')
+  assert.ok(center[0] > 200 && center[1] < 40 && center[2] < 40, '角色中心应为红色块')
+  assert.equal((await pixel(0, 100, 250))[3], 0, 'alpha=10 的近透明像素不得变成不透明白色光晕')
+})
+
+test('私聊按 8888 行开关自动附图，关闭后不发送', async t => {
+  const { root } = await fixture(t)
+  const config = normalizeAvatarReplyConfig({ groups: [
+    { botId: '999', groupId: '8888', switchOn: true, avatarId: '999' }
+  ] })
+  let sent = 0
+  const service = new AvatarReplyService({
+    root, getConfig: () => config, warn() {},
+    generate: async () => '{"caption":"你好","action":"idle","expressionId":null}',
+    queue: { async render() { return Buffer.from('gif') } },
+    sendImage: async () => { sent++ }
+  })
+  assert.equal(await service.send({ isGroup: false, self_id: '999' }, '回答', 'main'), true)
+  assert.equal(sent, 1)
+  config.groups[0].switchOn = false
+  assert.equal(await service.send({ isGroup: false, self_id: '999' }, '回答', 'main'), false)
+  assert.equal(sent, 1)
+})
+
+test('私聊任务在配置提交换行后取消，不发送旧图', async t => {
+  const { root } = await fixture(t)
+  const config = normalizeAvatarReplyConfig({ groups: [
+    { botId: '999', groupId: '8888', switchOn: true, avatarId: '999' }
+  ] })
+  let sent = 0
+  const service = new AvatarReplyService({
+    root, getConfig: () => config, warn() {},
+    generate: async () => '{"caption":"你好","action":"idle","expressionId":null}',
+    queue: { async render() {
+      // 模拟生成期间锅巴保存：整行被替换为新对象，旧任务必须取消
+      config.groups = config.groups.map(row => ({ ...row }))
+      return Buffer.from('gif')
+    } },
+    sendImage: async () => { sent++ }
+  })
+  assert.equal(await service.send({ isGroup: false, self_id: '999' }, '回答', 'main'), false)
   assert.equal(sent, 0)
 })

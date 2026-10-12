@@ -2519,9 +2519,18 @@ export function supportGuoba() {
           component: 'Divider'
         },
         {
+          field: 'avatarReply.provider',
+          label: '短句模型来源',
+          bottomHelpMessage: '生成角色气泡短句与动作的子模型；默认跟随当前对话模型（本轮实际使用的条目），也可固定为某个条目。每次附图会额外产生一次该模型的请求',
+          component: 'Select',
+          componentProps: {
+            options: [{ label: '跟随当前对话模型', value: 'current' }, ...providerOptions]
+          }
+        },
+        {
           field: 'avatarReply.groups',
           label: '角色动图群',
-          bottomHelpMessage: '放置角色图片后使用 #chatgpt刷新角色文件夹 生成 JSON，再按 Bot＋群选择角色与档位。正式回复附带短气泡 GIF；每次增加一次辅助模型请求。使用说明：docs/avatar-reply-auto.md',
+          bottomHelpMessage: '放置角色图片后使用 #chatgpt刷新角色文件夹 生成 JSON，再按 Bot＋群选择角色与档位；可用群号 8888 指代私聊。正式回复附带短气泡 GIF；每次增加一次辅助模型请求。使用说明：docs/avatar-reply-auto.md',
           component: 'GSubForm',
           componentProps: {
             multiple: true,

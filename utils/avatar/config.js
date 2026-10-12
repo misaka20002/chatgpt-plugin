@@ -2,6 +2,8 @@ export const AVATAR_ACTIONS = ['idle', 'bounce', 'shake', 'wobble', 'nod', 'head
 export const AVATAR_SIZES = ['512x640', '768x768', '1024x1024']
 export const AVATAR_DURATIONS = [2, 3, 5]
 export const AVATAR_FPS = [10, 15, 20]
+// 私聊在「角色动图群」表中用保留群号 8888 表示：开关控制私聊自动附图，角色与档位供私聊预览和附图使用。
+export const AVATAR_PRIVATE_GROUP_ID = '8888'
 
 export function validateAvatarId(value) {
   if (typeof value !== 'string' || !value || value.length > 80 || value.trim() !== value
@@ -36,19 +38,23 @@ export function normalizeAvatarReplyConfig(value = {}) {
     if (avatarId) validateAvatarId(avatarId)
     groups.push({ botId, groupId, switchOn: row.switchOn === true, avatarId, ...avatarRenderOptions(row) })
   }
-  return { groups }
+  return { provider: typeof value?.provider === 'string' && value.provider ? value.provider : 'current', groups }
 }
 
-export function avatarGroup(e, config) {
-  const { botId, groupId } = avatarIdentity(e)
-  return normalizeAvatarReplyConfig(config).groups.find(g => g.botId === botId && g.groupId === groupId)
+// 当前会话对应的渠道号：群聊按群号，私聊用保留群号 8888。
+export function avatarChannelId(e) {
+  return e?.isGroup ? String(e?.group_id ?? '') : AVATAR_PRIVATE_GROUP_ID
+}
+
+// 当前会话对应的配置行。
+export function avatarReplyRow(e, config) {
+  const { botId } = avatarIdentity(e)
+  return normalizeAvatarReplyConfig(config).groups.find(g => g.botId === botId && g.groupId === avatarChannelId(e))
 }
 
 export function avatarEnabled(e, config) {
-  if (!e?.isGroup || !/^\d{1,20}$/.test(String(e.self_id ?? ''))) return false
-  const { botId, groupId } = avatarIdentity(e)
-  return normalizeAvatarReplyConfig(config).groups.some(g =>
-    g.botId === botId && g.groupId === groupId && g.switchOn)
+  if (!/^\d{1,20}$/.test(String(e?.self_id ?? ''))) return false
+  return avatarReplyRow(e, config)?.switchOn === true
 }
 
 export function shortCaption(text) {

@@ -90,7 +90,7 @@ test('源文件记录优先于改过的表情名称，更新图片但不重置�
   assert.notEqual(next.customExpressions[0].image.ref, config.customExpressions[0].image.ref)
 })
 
-test('手工 JSON 模式兼容、角色下拉原地刷新和跨 Bot 资源缓存隔离', async t => {
+test('手工 JSON 模式可用、角色下拉原地刷新和跨 Bot 资源缓存共享', async t => {
   const { root, make } = await fixture(t)
   const a = await make('角色一', ['happy', 'angry', 'shy', 'crying'])
   await refreshAvatarFolders(root)
@@ -103,6 +103,7 @@ test('手工 JSON 模式兼容、角色下拉原地刷新和跨 Bot 资源缓存
   const b = await make('角色二', ['confused'])
   await refreshAvatarFolders(root)
   assert.ok(opts.some(o => o.value === '角色二'))
+  assert.ok(!opts.some(o => o.value === ''), '旧版默认角色选项必须移除')
   assert.equal((await refreshAvatarFolders(root)).find(x => x.avatarId === '手工角色').status, '手工 JSON，未重建')
   const store = new AvatarResourceStore(root)
   const first = await store.load('999', '手工角色')
@@ -110,8 +111,9 @@ test('手工 JSON 模式兼容、角色下拉原地刷新和跨 Bot 资源缓存
   assert.equal(await store.load('888', '手工角色'), first)
   assert.notEqual((await store.load('999', '角色二')).version, first.version)
   await fs.mkdir(path.join(avatarRoot(root), '999'))
-  await fs.copyFile(path.join(b, AVATAR_FILENAME), store.filename('999'))
-  assert.equal((await store.load('999')).expressions.length, 1)
+  await fs.copyFile(path.join(b, AVATAR_FILENAME), store.filename('999', '999'))
+  assert.equal((await store.load('999', '999')).expressions.length, 1)
+  await assert.rejects(store.load('999'), /角色目录名无效/)
 })
 
 test('非法路径、链接越界、图片名称冲突和损坏图片均不覆盖旧 JSON', async t => {

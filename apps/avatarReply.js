@@ -1,7 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 import { avatarReply } from '../utils/avatarReply.js'
-import { avatarIdentity, normalizeAvatarReplyConfig } from '../utils/avatar/config.js'
+import { avatarChannelId, avatarIdentity, normalizeAvatarReplyConfig } from '../utils/avatar/config.js'
 import { refreshAvatarFolders } from '../utils/avatar/refresh.js'
 
 export class avatarReplyManagement extends plugin {
@@ -27,31 +27,35 @@ export class avatarReplyManagement extends plugin {
   async manage(e) {
     if (!e.isMaster) return true
     try {
-      const { botId, groupId } = avatarIdentity(e)
+      const { botId } = avatarIdentity(e)
       const [, action, requested] = e.msg.match(/^#chatgpt角色(预览|开启|关闭|状态)(?:\s+(.+))?$/) || []
       if (requested && (e.isGroup || action !== '预览')) throw new Error('仅私聊角色预览可附加角色目录名')
       const selection = avatarReply.selection(e, requested?.trim())
+      const missingSelection = e.isGroup ? '请先在锅巴为本群选择角色文件夹' : '请先在锅巴为群号 8888 配置私聊角色'
       if (action === '开启' || action === '关闭') {
-        if (!e.isGroup) throw new Error('请在需要配置的群内使用开启或关闭命令')
+        if (action === '开启' && !selection.avatarId) throw new Error(missingSelection)
         if (action === '开启') await avatarReply.store.load(botId, selection.avatarId)
+        const channelId = avatarChannelId(e)
         const candidate = structuredClone(Config.getConfig())
         candidate.avatarReply = normalizeAvatarReplyConfig(candidate.avatarReply)
         const groups = candidate.avatarReply.groups
-        const row = groups.find(g => g.botId === botId && g.groupId === groupId)
+        const row = groups.find(g => g.botId === botId && g.groupId === channelId)
         if (row) row.switchOn = action === '开启'
-        else groups.push({ botId, groupId, switchOn: action === '开启' })
+        else groups.push({ botId, groupId: channelId, switchOn: action === '开启' })
         Config.commit(candidate)
         avatarReply.changed(e)
-        await e.reply('本群角色动图已' + action, true)
+        await e.reply((e.isGroup ? '本群' : '私聊') + '角色动图已' + action, true)
       } else if (action === '预览') {
+        if (!selection.avatarId) throw new Error(missingSelection)
         await avatarReply.send(e, '你好呀，我准备好啦！', undefined, true, requested?.trim())
       } else {
+        if (!selection.avatarId) throw new Error(missingSelection)
         let resource
         let error
         try { resource = await avatarReply.store.load(botId, selection.avatarId) } catch (err) { error = err.message }
         await e.reply('角色文件：' + avatarReply.store.filename(botId, selection.avatarId)
           + '\n输出：' + selection.size + '，' + selection.duration + ' 秒，' + selection.fps + ' FPS'
-          + '\n当前群：' + (avatarReply.enabled(e) ? '已开启' : '未开启')
+          + '\n' + (e.isGroup ? '当前群：' : '私聊：') + (avatarReply.enabled(e) ? '已开启' : '未开启')
           + '\n资源：' + (resource ? resource.pictures.length + ' 张图片' : '未加载')
           + '\n特色表情：' + (resource?.expressions.map(x => x.label).join('、') || '无')
           + ((error || avatarReply.store.error(botId, selection.avatarId))

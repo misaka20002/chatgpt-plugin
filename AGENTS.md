@@ -16,6 +16,16 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 | 插件注册、动态规则、priority、定时任务、Redis 操作、遗留接口 | [运行时](docs/agent-guides/runtime.md) |
 | 选择/编写测试、mock、临时探针、测试环境排障 | [测试](docs/agent-guides/testing.md) |
 
+## Agent skills
+
+### Issue tracker
+
+Issues, specs, and tickets live as markdown files under `.scratch/<feature>/` in this repo. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/agents/domain.md`.
+
 ## 工程规则
 
 - 先读相关源码和数据流，再改动。现有代码是系统现状的证据，不自动等于期望标准；冲突时保留必需行为、遵守工程规则、说明偏差，只做必要的最小重构。

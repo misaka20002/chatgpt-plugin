@@ -10,7 +10,7 @@ export function avatarOptions(root = process.cwd()) {
   const key = avatarRoot(root)
   if (!optionsByRoot.has(key)) optionsByRoot.set(key, [])
   const options = optionsByRoot.get(key)
-  const rows = [{ label: '旧版 Bot 默认角色', value: '' }]
+  const rows = []
   try {
     const base = fs.realpathSync(key)
     for (const entry of fs.readdirSync(base, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {

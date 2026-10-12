@@ -106,15 +106,15 @@ export class AvatarResourceStore {
     this.pending = new Map()
   }
 
-  filename(botId, avatarId = '') {
+  filename(botId, avatarId) {
     if (!/^\d{1,20}$/.test(String(botId))) throw new Error('Bot QQ 格式无效')
-    return path.join(avatarRoot(this.root), validateAvatarId(avatarId || String(botId)), AVATAR_FILENAME)
+    return path.join(avatarRoot(this.root), validateAvatarId(avatarId), AVATAR_FILENAME)
   }
 
-  async load(botId, avatarId = '') {
+  async load(botId, avatarId) {
     const key = this.filename(botId, avatarId)
     if (this.pending.has(key)) return this.pending.get(key)
-    const pending = this.read(key, avatarId || String(botId))
+    const pending = this.read(key, avatarId)
     this.pending.set(key, pending)
     try { return await pending } finally { this.pending.delete(key) }
   }
@@ -156,5 +156,5 @@ export class AvatarResourceStore {
     }
   }
 
-  error(botId, avatarId = '') { return this.entries.get(this.filename(botId, avatarId))?.error || '' }
+  error(botId, avatarId) { return this.entries.get(this.filename(botId, avatarId))?.error || '' }
 }
