@@ -2528,6 +2528,12 @@ export function supportGuoba() {
           }
         },
         {
+          field: 'avatarReply.expressionTransition',
+          label: '表情渐变过渡',
+          bottomHelpMessage: '开启后：辅助模型选中特色表情时，GIF 先播放正常眨眼／说话，再约 0.35 秒交叉溶解到特色立绘并保持到结束；特色段按原节奏短暂闭眼、不张嘴。关闭后整段播放特色立绘（原行为）。默认开启',
+          component: 'Switch'
+        },
+        {
           field: 'avatarReply.groups',
           label: '角色动图群',
           bottomHelpMessage: '放置角色图片后使用 #chatgpt刷新角色文件夹 生成 JSON，再按 Bot＋群选择角色与档位；可用群号 8888 指代私聊。正式回复附带短气泡 GIF；每次增加一次辅助模型请求。使用说明：docs/avatar-reply-auto.md',
@@ -2537,7 +2543,7 @@ export function supportGuoba() {
             schemas: [
               { field: 'botId', label: 'Bot QQ', component: 'Input', required: true },
               { field: 'groupId', label: '群号', component: 'Input', required: true },
-              { field: 'switchOn', label: '自动附带角色动图', component: 'Switch' },
+              { field: 'switchOn', label: '开启角色动图', component: 'Switch' },
               { field: 'avatarId', label: '角色文件夹', component: 'Select',
                 componentProps: { options: roleOptions } },
               { field: 'size', label: 'GIF 分辨率', component: 'Select',

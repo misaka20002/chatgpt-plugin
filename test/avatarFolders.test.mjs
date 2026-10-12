@@ -196,8 +196,8 @@ test('每群角色和档位传到队列，私聊显式预览及生成中修改�
   await service.send({ isGroup: true, self_id: '999', group_id: '100' }, '回复', 'main')
   await service.send({ isGroup: true, self_id: '999', group_id: '200' }, '回复', 'main')
   assert.deepEqual(jobs.map(x => x.options), [
-    { avatarId: '甲', size: '1024x1024', duration: 5, fps: 20 },
-    { avatarId: '乙', size: '768x768', duration: 2, fps: 15 }
+    { avatarId: '甲', size: '1024x1024', duration: 5, fps: 20, transition: true },
+    { avatarId: '乙', size: '768x768', duration: 2, fps: 15, transition: true }
   ])
   assert.deepEqual(jobs.map(x => x.count), [0, 1])
   await service.send({ self_id: '999', isMaster: true }, '预览', undefined, true, '乙')

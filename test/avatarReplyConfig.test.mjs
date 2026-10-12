@@ -30,19 +30,22 @@ test('配置、锅巴和主人命令按 Bot/群持久化，关闭后旧授权行
       'process.exit(0)'
     ].join('\n')], { cwd, encoding: 'utf8', timeout: 15000 }))
   const saved = run([
-    "assert.deepEqual(Config.avatarReply, { provider: 'current', groups: [] })",
+    "assert.deepEqual(Config.avatarReply, { provider: 'current', expressionTransition: true, groups: [] })",
     "const providerSchema = guoba.schemas.find(s => s.field === 'avatarReply.provider')",
     "assert.equal(providerSchema.component, 'Select')",
     "assert.deepEqual(providerSchema.componentProps.options[0], { label: '跟随当前对话模型', value: 'current' })",
+    "const transitionSchema = guoba.schemas.find(s => s.field === 'avatarReply.expressionTransition')",
+    "assert.equal(transitionSchema.component, 'Switch')",
     "const schema = guoba.schemas.find(s => s.field === 'avatarReply.groups')",
     "assert.equal(schema.component, 'GSubForm')",
     "assert.deepEqual(schema.componentProps.schemas.map(s => s.field), ['botId', 'groupId', 'switchOn', 'avatarId', 'size', 'duration', 'fps'])",
-    "await guoba.setConfigData({ 'avatarReply.groups': [{ botId: '999', groupId: '100', switchOn: true, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 }, { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲' }, { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲' }, { botId: '../999', groupId: '200', switchOn: true }] }, { Result: { ok() {}, error(m) { throw new Error(m) } } })",
+    "await guoba.setConfigData({ 'avatarReply.expressionTransition': false, 'avatarReply.groups': [{ botId: '999', groupId: '100', switchOn: true, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 }, { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲' }, { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲' }, { botId: '../999', groupId: '200', switchOn: true }] }, { Result: { ok() {}, error(m) { throw new Error(m) } } })",
     "const fs = await import('node:fs/promises'); await fs.mkdir('data/chatgpt/avatars/角色甲', { recursive: true }); await fs.writeFile('data/chatgpt/avatars/角色甲/peraravatar-plus-config.json', '{}')",
     "const options = schema.componentProps.schemas.find(s => s.field === 'avatarId').componentProps.options; await guoba.getConfigData(); assert.ok(options.some(o => o.value === '角色甲'))",
     "await fs.mkdir('data/chatgpt/avatars/角色乙', { recursive: true }); await fs.writeFile('data/chatgpt/avatars/角色乙/peraravatar-plus-config.json', '{}'); const { avatarOptions } = await import(" + url('../utils/avatar/catalog.js') + "); avatarOptions(); assert.ok(options.some(o => o.value === '角色乙'))"
   ].join('\n'))
   assert.equal(saved.avatarReply.provider, 'current')
+  assert.equal(saved.avatarReply.expressionTransition, false)
   assert.deepEqual(saved.avatarReply.groups, [
     { botId: '999', groupId: '100', switchOn: true, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 },
     { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲', size: '512x640', duration: 3, fps: 10 },

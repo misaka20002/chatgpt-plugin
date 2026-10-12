@@ -54,17 +54,18 @@ export class AvatarReplyService {
         && (preview || this.enabled(e) && this.getConfig()?.groups?.includes(authorizedRow)
           && (this.groupVersions.get(key) || 0) === generation)
       let cue = fallbackAvatarCue(text)
+      // 'current' 保持跟随本轮对话实际使用的条目；未取到时由 SubLLM 回落全局默认。
+      const { provider, expressionTransition } = normalizeAvatarReplyConfig(this.getConfig())
       if (!preview) {
         try {
-          // 'current' 保持跟随本轮对话实际使用的条目；未取到时由 SubLLM 回落全局默认。
-          const { provider } = normalizeAvatarReplyConfig(this.getConfig())
           cue = await createAvatarCue(text, resource.expressions,
             provider === 'current' ? providerId : provider, this.generate)
         } catch (err) {
           this.warn('[ChatGPT] 角色短句生成失败，使用首句：' + err.message)
         }
       }
-      const gif = await this.queue.render(resource, cue, isCurrent, selection)
+      // 过渡开关随全局配置传入；不参与 selectionKey，渲染中途改开关不取消在途任务。
+      const gif = await this.queue.render(resource, cue, isCurrent, { ...selection, transition: expressionTransition })
       const latest = await this.store.load(botId, selection.avatarId)
       if (!isCurrent() || latest.version !== resource.version) return false
       directory = await fs.mkdtemp(path.join(os.tmpdir(), 'chatgpt-avatar-'))

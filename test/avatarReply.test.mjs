@@ -6,7 +6,7 @@ import os from 'node:os'
 import sharp from 'sharp'
 import { avatarEnabled, normalizeAvatarReplyConfig, shortCaption, createAvatarCue } from '../utils/avatar/config.js'
 import { parseAvatarResource, AvatarResourceStore } from '../utils/avatar/resource.js'
-import { avatarFrame, renderAvatarGif } from '../utils/avatar/render.js'
+import { avatarFrame, renderAvatarGif, expressionTimeline } from '../utils/avatar/render.js'
 import { AvatarRenderQueue } from '../utils/avatar/queue.js'
 import { AvatarReplyService } from '../utils/avatar/reply.js'
 
@@ -119,7 +119,10 @@ test('群/私聊开关严格按 Bot/渠道和布尔值生效，空默认与未�
   assert.equal(avatarEnabled({ isGroup: true, self_id: 999, group_id: 100 }, privateOn), false)
   const privateOff = normalizeAvatarReplyConfig({ groups: [{ botId: '999', groupId: '8888', switchOn: false }] })
   assert.equal(avatarEnabled({ self_id: 999 }, privateOff), false)
-  assert.deepEqual(normalizeAvatarReplyConfig(), { provider: 'current', groups: [] })
+  assert.deepEqual(normalizeAvatarReplyConfig(), { provider: 'current', expressionTransition: true, groups: [] })
+  // 过渡开关为严格布尔：只有显式 false 才关闭，其余（含字符串）回落默认开启。
+  assert.equal(normalizeAvatarReplyConfig({ expressionTransition: false }).expressionTransition, false)
+  assert.equal(normalizeAvatarReplyConfig({ expressionTransition: 'false' }).expressionTransition, true)
   assert.equal(normalizeAvatarReplyConfig({ provider: 'provider-1', groups: [] }).provider, 'provider-1')
   assert.equal(normalizeAvatarReplyConfig({ provider: '', groups: [] }).provider, 'current')
 })
@@ -152,6 +155,88 @@ test('生产状态机闭眼优先于嘴型，特色表情期间保持同一立�
   assert.equal(avatarFrame(resource, custom, 200).pictureIndex, 3)
   assert.equal(avatarFrame(resource, custom, 2100).pictureIndex, 3)
   assert.notEqual(avatarFrame(resource, custom, 1400).y, 0)
+})
+
+test('特色表情过渡三阶段：正常段、溶解段、特色段闪回闭眼且不出现张嘴帧', async () => {
+  const resource = await parseAvatarResource(JSON.stringify(await websiteConfig(2)))
+  const cue = { caption: '你好', action: 'idle', expressionId: 'expression_0' }
+  const options = { transition: true }
+  assert.deepEqual(expressionTimeline(2000), { normalMs: 650, dissolveMs: 350, featureMs: 1000 })
+  assert.deepEqual(expressionTimeline(3000), { normalMs: 1500, dissolveMs: 350, featureMs: 1150 })
+  assert.deepEqual(expressionTimeline(5000), { normalMs: 2500, dissolveMs: 350, featureMs: 2150 })
+  // 正常段与未命中特色时一致（0 正常、2 张嘴）；关闭过渡或未命中时维持旧的整段特色立绘。
+  assert.equal(avatarFrame(resource, cue, 0, 3000, options).pictureIndex, 0)
+  assert.equal(avatarFrame(resource, cue, 200, 3000, options).pictureIndex, 2)
+  assert.equal(avatarFrame(resource, cue, 200, 3000).pictureIndex, 3)
+  assert.equal(avatarFrame(resource, { ...cue, expressionId: null }, 200, 3000, options).pictureIndex, 2)
+  assert.equal(avatarFrame(resource, { ...cue, expressionId: 'unknown' }, 200, 3000, options).pictureIndex, 2)
+  // 溶解段：下层基础帧、上层特色层随进度渐显，位移在两态之间插值。
+  const dissolve = [1600, 1700, 1800].map(time => avatarFrame(resource, cue, time, 3000, options))
+  for (const frame of dissolve) {
+    assert.equal(frame.pictureIndex, 0)
+    assert.equal(frame.overlayIndex, 3)
+    assert.ok(frame.overlayOpacity > 0 && frame.overlayOpacity < 1)
+  }
+  assert.ok(dissolve[0].overlayOpacity < dissolve[1].overlayOpacity
+    && dissolve[1].overlayOpacity < dissolve[2].overlayOpacity)
+  assert.notEqual(dissolve[2].y, 0)
+  // 特色段：保持特色立绘；眨眼窗口闪回闭眼帧；溶解与特色段都不出现张嘴帧（2）。
+  const featureFrame = avatarFrame(resource, cue, 1900, 3000, options)
+  assert.equal(featureFrame.pictureIndex, 3)
+  assert.equal(featureFrame.overlayIndex, undefined)
+  assert.equal(avatarFrame(resource, cue, 2100, 3000, options).pictureIndex, 1)
+  for (let time = 1500; time <= 3000; time += 50) {
+    assert.notEqual(avatarFrame(resource, cue, time, 3000, options).pictureIndex, 2)
+  }
+})
+
+test('过渡开关作用于 GIF：开启首帧正常、末帧特色；关闭或缺省时整段特色立绘', async () => {
+  const resource = await parseAvatarResource(JSON.stringify(await websiteConfig(2)))
+  const cue = { caption: '你好', action: 'idle', expressionId: 'expression_0' }
+  const pixel = async (gif, page) => [...await sharp(gif, { page })
+    .extract({ left: 256, top: 250, width: 1, height: 1 }).removeAlpha().raw().toBuffer()]
+  const on = await renderAvatarGif(resource, cue, { transition: true })
+  assert.equal((await sharp(on, { animated: true }).metadata()).pages, 30)
+  const first = await pixel(on, 0)
+  assert.ok(first[0] > 200 && first[1] < 40 && first[2] < 40, '开启过渡时首帧应为正常图（红）')
+  const last = await pixel(on, 29)
+  assert.ok(last[0] > 200 && last[1] > 200 && last[2] < 40, '开启过渡时末帧应为特色图（黄）')
+  for (const gif of [await renderAvatarGif(resource, cue, { transition: false }), await renderAvatarGif(resource, cue)]) {
+    const head = await pixel(gif, 0)
+    assert.ok(head[0] > 200 && head[1] > 200 && head[2] < 40, '关闭或缺省过渡时整段应为特色图（黄）')
+  }
+})
+
+test('交叉溶解机制：上层 <image> 的 opacity 被按比例混合', async () => {
+  const pic = async color => 'data:image/png;base64,' + (await sharp({
+    create: { width: 8, height: 8, channels: 4, background: color }
+  }).png().toBuffer()).toString('base64')
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="8" height="8">'
+    + '<image width="8" height="8" xlink:href="' + await pic('#ff0000') + '"/>'
+    + '<image width="8" height="8" opacity="0.5" xlink:href="' + await pic('#ffff00') + '"/></svg>'
+  const pixel = [...await sharp(Buffer.from(svg)).removeAlpha().raw().toBuffer()].slice(0, 3)
+  assert.ok(pixel[0] > 200 && pixel[1] > 90 && pixel[1] < 170 && pixel[2] < 40, '红黄 50% 混合应得到橙色')
+})
+
+test('过渡开关随全局配置传入渲染参数，selection 形状保持不变', async t => {
+  const { root } = await fixture(t, 2)
+  const config = normalizeAvatarReplyConfig({
+    expressionTransition: false,
+    groups: [{ botId: '999', groupId: '100', switchOn: true, avatarId: '999' }]
+  })
+  const seen = []
+  const service = new AvatarReplyService({
+    root, getConfig: () => config, warn() {},
+    generate: async () => '{"caption":"你好","action":"idle","expressionId":"expression_0"}',
+    queue: { async render(resource, cue, isCurrent, options) { seen.push(options); return Buffer.from('gif') } },
+    sendImage: async () => {}
+  })
+  const e = { isGroup: true, self_id: '999', group_id: '100' }
+  assert.equal(await service.send(e, '回答', 'main'), true)
+  assert.deepEqual(seen[0], { avatarId: '999', size: '512x640', duration: 3, fps: 10, transition: false })
+  config.expressionTransition = true
+  assert.equal(await service.send({ ...e }, '回答', 'main'), true)
+  assert.equal(seen[1].transition, true)
 })
 
 test('实际 GIF 解码为 30 帧/3秒/循环，像素证明正常、张嘴、闭眼切换', async () => {

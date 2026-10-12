@@ -4,10 +4,27 @@ import { shortCaption, avatarRenderOptions } from './config.js'
 
 const { GIFEncoder, quantize, applyPalette } = gifenc
 
-export function avatarFrame(resource, cue, time, durationMs = 3000) {
-  const expression = resource.expressions.find(x => x.id === cue.expressionId)
-  const blinkAt = resource.blinkMin
-  const blinking = time >= blinkAt && (time - blinkAt) % resource.blinkMax < resource.blinkDuration
+// 特色表情过渡：正常段 → 交叉溶解（DISSOLVE_MS）→ 特色段，比例随时长自适应，特色段不短于 MIN_FEATURE_MS。
+const DISSOLVE_MS = 350
+const MIN_FEATURE_MS = 1000
+
+export function expressionTimeline(durationMs) {
+  let normalMs = Math.round(durationMs * 0.5)
+  let featureMs = durationMs - normalMs - DISSOLVE_MS
+  if (featureMs < MIN_FEATURE_MS) {
+    featureMs = MIN_FEATURE_MS
+    normalMs = durationMs - DISSOLVE_MS - featureMs
+  }
+  return { normalMs: Math.max(0, normalMs), dissolveMs: DISSOLVE_MS, featureMs }
+}
+
+function isBlinking(resource, time) {
+  return time >= resource.blinkMin && (time - resource.blinkMin) % resource.blinkMax < resource.blinkDuration
+}
+
+// expression 允许为 null（未选中特色）：逐行保留旧的单图播放语义。
+function frameParts(resource, cue, time, durationMs, expression) {
+  const blinking = isBlinking(resource, time)
   const talking = time < durationMs - 400 && Math.floor(time / 200) % 2 === 1
   const pictureIndex = expression ? expression.pictureIndex : blinking ? 1 : talking ? 2 : 0
   const action = cue.action === 'idle' && expression ? expression.animation : cue.action
@@ -33,6 +50,34 @@ export function avatarFrame(resource, cue, time, durationMs = 3000) {
   }
   if (action === 'recoil') y -= m.surpriseHopY * Math.abs(wave(Math.max(400, m.surpriseHopDur * 2))) * envelope
   return { pictureIndex, x, y, rotation }
+}
+
+export function avatarFrame(resource, cue, time, durationMs = 3000, options = {}) {
+  const expression = resource.expressions.find(x => x.id === cue.expressionId) ?? null
+  // 关闭过渡或未命中特色表情时保持旧行为：整段单张特色立绘 / 普通三帧循环。
+  if (options.transition !== true || !expression) return frameParts(resource, cue, time, durationMs, expression)
+  const { normalMs, dissolveMs } = expressionTimeline(durationMs)
+  // 正常段：与未命中特色时逐帧一致（眨眼、说话动嘴照常）。
+  if (time < normalMs) return frameParts(resource, cue, time, durationMs, null)
+  // 溶解段：下层基础帧不张嘴，上层特色层按进度渐显；位移与旋转在两态之间插值。
+  if (time < normalMs + dissolveMs) {
+    const base = frameParts(resource, cue, time, durationMs, null)
+    const feature = frameParts(resource, cue, time, durationMs, expression)
+    const progress = Math.min(1, (time - normalMs) / dissolveMs)
+    const blinking = isBlinking(resource, time)
+    return {
+      pictureIndex: blinking ? 1 : 0,
+      overlayIndex: blinking ? 1 : expression.pictureIndex,
+      overlayOpacity: progress,
+      x: base.x + (feature.x - base.x) * progress,
+      y: base.y + (feature.y - base.y) * progress,
+      rotation: base.rotation + (feature.rotation - base.rotation) * progress
+    }
+  }
+  // 特色段：保持特色立绘，眨眼按原节奏闪回基础闭眼帧，不掺张嘴帧。
+  const feature = frameParts(resource, cue, time, durationMs, expression)
+  if (isBlinking(resource, time)) feature.pictureIndex = 1
+  return feature
 }
 
 function escapeXml(text) {
@@ -94,8 +139,21 @@ function applyAlphaAndDither(rgba, width, height) {
   }
 }
 
+// 调色板采样用的等长 RGBA 混合：ratio 0..1 表示 top 的占比。
+function mixSamples(bottom, top, ratio) {
+  const mixed = Buffer.alloc(bottom.length)
+  for (let i = 0; i < bottom.length; i += 4) {
+    mixed[i] = Math.round(bottom[i] + (top[i] - bottom[i]) * ratio)
+    mixed[i + 1] = Math.round(bottom[i + 1] + (top[i + 1] - bottom[i + 1]) * ratio)
+    mixed[i + 2] = Math.round(bottom[i + 2] + (top[i + 2] - bottom[i + 2]) * ratio)
+    mixed[i + 3] = Math.round(bottom[i + 3] + (top[i + 3] - bottom[i + 3]) * ratio)
+  }
+  return mixed
+}
+
 export async function renderAvatarGif(resource, cue, options = {}) {
   const { size, duration, fps } = avatarRenderOptions(options)
+  const transition = options.transition === true
   const [width, height] = size.split('x').map(Number)
   const designHeight = height * 512 / width
   const stageBottom = designHeight === 640 ? 472 : 384
@@ -111,6 +169,17 @@ export async function renderAvatarGif(resource, cue, options = {}) {
       .resize({ width: 160, height: 160, fit: 'inside', withoutEnlargement: true })
       .ensureAlpha().raw().toBuffer())
   }
+  // 交叉溶解开启且命中特色时，补入基础图与特色图的半程混合样本，减轻溶解过程的色阶。
+  const transitionExpression = transition ? resource.expressions.find(x => x.id === cue.expressionId) : null
+  if (transitionExpression) {
+    const feature = await sharp(Buffer.from(resource.pictures[transitionExpression.pictureIndex].data))
+      .resize(160, 160, { fit: 'fill' }).ensureAlpha().raw().toBuffer()
+    for (const index of [0, 1, 2]) {
+      const picture = await sharp(Buffer.from(resource.pictures[index].data))
+        .resize(160, 160, { fit: 'fill' }).ensureAlpha().raw().toBuffer()
+      samples.push(mixSamples(picture, feature, 0.5))
+    }
+  }
   samples.push(await sharp(bubble)
     .resize({ width: 160, height: 160, fit: 'inside', withoutEnlargement: true })
     .ensureAlpha().raw().toBuffer())
@@ -123,22 +192,27 @@ export async function renderAvatarGif(resource, cue, options = {}) {
     palette[transparentIndex] = transparent
   } else if (transparentIndex < 0) palette.unshift([0, 0, 0, 0])
   const encoder = GIFEncoder()
-  for (let i = 0; i < duration * fps; i++) {
-    const frame = avatarFrame(resource, cue, i * 1000 / fps, duration * 1000)
-    const picture = resource.pictures[frame.pictureIndex]
+  // 单帧最多两层：溶解帧上层带 opacity 渐显；其余帧与旧结构一致（单层、无 opacity）。
+  const layer = (index, opacity) => {
+    const picture = resource.pictures[index]
     const place = picture.place
-    const w = picture.width
-    const h = picture.height
+    const content = '<g transform="translate(' + place.dx + ' ' + place.dy + ') rotate(' + place.rot
+      + ') scale(' + place.scale + ')"><image x="' + (-picture.width / 2) + '" y="' + (-picture.height)
+      + '" width="' + picture.width + '" height="' + picture.height
+      + '" xlink:href="data:image/png;base64,' + images[index] + '"/></g>'
+    return opacity == null ? content : '<g opacity="' + opacity.toFixed(4) + '">' + content + '</g>'
+  }
+  for (let i = 0; i < duration * fps; i++) {
+    const frame = avatarFrame(resource, cue, i * 1000 / fps, duration * 1000, { transition })
+    let avatar = layer(frame.pictureIndex)
+    if (frame.overlayIndex != null) avatar += layer(frame.overlayIndex, frame.overlayOpacity)
     // 模板、变换和图片类型固定；模型输出只作为经过 XML 转义的气泡文本。
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
       + ' width="' + width + '" height="' + height + '" viewBox="0 0 512 ' + designHeight
       + '">'
       + '<defs><clipPath id="avatar"><rect x="16" y="8" width="480" height="' + (stageBottom + 16) + '"/></clipPath></defs>'
       + '<g clip-path="url(#avatar)"><g transform="translate(' + (256 + frame.x) + ' ' + (stageBottom + frame.y)
-      + ') rotate(' + frame.rotation + ') scale(' + scale + ') translate(' + place.dx + ' ' + place.dy
-      + ') rotate(' + place.rot + ') scale(' + place.scale + ')">'
-      + '<image x="' + (-w / 2) + '" y="' + (-h) + '" width="' + w + '" height="' + h
-      + '" xlink:href="data:image/png;base64,' + images[frame.pictureIndex] + '"/></g></g></svg>'
+      + ') rotate(' + frame.rotation + ') scale(' + scale + ')">' + avatar + '</g></g></svg>'
     const rgba = await sharp(Buffer.from(svg)).composite([{ input: bubble }]).ensureAlpha().raw().toBuffer()
     // 透明输出：先做 alpha 二值化与有序抖动，再映射到全局调色板。
     applyAlphaAndDither(rgba, width, height)

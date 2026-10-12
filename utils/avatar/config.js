@@ -38,7 +38,12 @@ export function normalizeAvatarReplyConfig(value = {}) {
     if (avatarId) validateAvatarId(avatarId)
     groups.push({ botId, groupId, switchOn: row.switchOn === true, avatarId, ...avatarRenderOptions(row) })
   }
-  return { provider: typeof value?.provider === 'string' && value.provider ? value.provider : 'current', groups }
+  return {
+    provider: typeof value?.provider === 'string' && value.provider ? value.provider : 'current',
+    // 特色表情过渡：只有显式布尔才采纳，其余（含缺省）默认开启。
+    expressionTransition: typeof value?.expressionTransition === 'boolean' ? value.expressionTransition : true,
+    groups
+  }
 }
 
 // 当前会话对应的渠道号：群聊按群号，私聊用保留群号 8888。
