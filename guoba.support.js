@@ -263,7 +263,7 @@ export function supportGuoba() {
         {
           field: 'forwardReasoning',
           label: '是否转发思考过程',
-          bottomHelpMessage: 'OpenAI API、 Responses API、 Claude、 Gemini 等思考模型的思维链是否以合并转发形式发出；关闭时仅记录日志不发送',
+          bottomHelpMessage: 'OpenAI API、 Responses API、 Claude、 Gemini 等思考模型的思维链是否以合并转发形式发出；关闭时仅记录 info 级别的系统日志',
           component: 'Switch'
         },
         {

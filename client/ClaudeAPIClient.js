@@ -5,6 +5,7 @@ import { getMessageById, upsertMessage } from '../utils/history.js'
 import { BaseClient } from './BaseClient.js'
 import { Config } from '../utils/config.js'
 import { sendToolCallForwardMsg } from '../utils/toolForward.js'
+import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 
 const BASEURL = 'https://api.anthropic.com'
 
@@ -156,7 +157,7 @@ export class ClaudeAPIClient extends BaseClient {
       console.log(`sendMessage (${messages.length} messages)`, body)
     }
     let url = `${this.baseUrl}/v1/messages`
-    let result = await this.fetch(url, {
+    let result = await fetchWithConnectionRetry(this.fetch, url, {
       headers: {
         'anthropic-version': '2023-06-01',
         'x-api-key': this.key,
@@ -164,6 +165,10 @@ export class ClaudeAPIClient extends BaseClient {
       },
       method: 'POST',
       body: JSON.stringify(body)
+    }, {
+      onRetry: ({ error, retry, maxRetries, delayMs }) => {
+        console.warn(`[Chatgpt][Claude] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
+      }
     })
     if (result.status !== 200) {
       throw new Error(await result.text())

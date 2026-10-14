@@ -3,6 +3,8 @@
  * It intentionally keeps the Responses item protocol separate from the
  * Chat Completions message protocol used by chatgpt-api.js.
  */
+import { fetchWithConnectionRetry } from '../network-retry.js'
+
 export class ResponsesAPI {
   constructor (opts = {}) {
     const {
@@ -117,7 +119,7 @@ export class ResponsesAPI {
     if (this._debug) console.log('[Chatgpt][Responses] request:', JSON.stringify(body, null, 2))
 
     try {
-      const res = await this._fetch(url, {
+      const res = await fetchWithConnectionRetry(this._fetch, url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,6 +127,10 @@ export class ResponsesAPI {
         },
         body: JSON.stringify(body),
         signal: controller?.signal
+      }, {
+        onRetry: ({ error, retry, maxRetries, delayMs }) => {
+          console.warn(`[Chatgpt][Responses] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
+        }
       })
       if (!res.ok) {
         const reason = await res.text()

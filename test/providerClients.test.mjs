@@ -220,3 +220,75 @@ test('Responses 思维链 summary 优先，content.reasoning_text 兜底', async
     assert.equal(result.thinking_text, expected)
   }
 })
+
+// ===== 连接级重试：responses / claude 与 openai / gemini 对齐（最多 3 次、每次间隔 60 秒）=====
+
+test('Responses 与 Claude 连接错误按 3×60s 重试：三次失败后恢复，穷尽上限如实抛错', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const flush = async () => { for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve)) }
+  const payloads = {
+    responses: { id: 'r', output: [{ type: 'message', content: [{ type: 'output_text', text: '恢复' }] }] },
+    claude: { role: 'assistant', stop_reason: 'end_turn', content: [{ type: 'text', text: '恢复' }] }
+  }
+  for (const [type, payload] of Object.entries(payloads)) {
+    let calls = 0
+    const client = createClient(type, async () => {
+      calls++
+      if (calls < 4) {
+        const error = new Error('socket hang up')
+        error.code = 'ECONNRESET'
+        throw error
+      }
+      return Response.json(payload)
+    })
+    const run = client.sendMessage('问题', {})
+    await flush()
+    assert.equal(calls, 1, type)
+    t.mock.timers.tick(59999)
+    await flush()
+    assert.equal(calls, 1, `${type} 未满 60 秒不得重试`)
+    t.mock.timers.tick(1)
+    await flush()
+    assert.equal(calls, 2, type)
+    t.mock.timers.tick(60000)
+    await flush()
+    assert.equal(calls, 3, type)
+    t.mock.timers.tick(60000)
+    await flush()
+    assert.equal(calls, 4, type)
+    assert.equal((await run).text, '恢复')
+  }
+  for (const type of Object.keys(payloads)) {
+    let calls = 0
+    const client = createClient(type, async () => {
+      calls++
+      const error = new Error('socket hang up')
+      error.code = 'ECONNRESET'
+      throw error
+    })
+    const run = assert.rejects(client.sendMessage('问题', {}), /socket hang up/)
+    for (let i = 0; i < 3; i++) {
+      await flush()
+      t.mock.timers.tick(60000)
+    }
+    await flush()
+    await run
+    assert.equal(calls, 4, `${type} 重试上限为 3 次`)
+  }
+})
+
+test('Responses 与 Claude HTTP 状态错误立即失败，不进入连接级重试', async () => {
+  for (const type of ['responses', 'claude']) {
+    let calls = 0
+    let outcome = ''
+    const client = createClient(type, async () => {
+      calls++
+      return new Response('bad request', { status: 400 })
+    })
+    const run = client.sendMessage('问题', {}).then(() => { outcome = 'resolved' }, () => { outcome = 'rejected' })
+    for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve))
+    assert.equal(outcome, 'rejected', `${type} HTTP 状态错误应立即抛错`)
+    assert.equal(calls, 1, type)
+    await run
+  }
+})
