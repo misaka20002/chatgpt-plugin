@@ -1,15 +1,16 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { createAttemptHistory, runProviderFallback } from '../utils/providerFallback.js'
+import { createToolForwardMock } from './fixtures/toolForwardMock.mjs'
 
 // 仅替换宿主、媒体发送和网络边界，执行四种协议客户端的真实响应解析。
 const Config = { geminiMaxOutputTokens: 1024, gemini_temperature: 0.3, llm_maxToolRounds: 3 }
-/** 记录各 provider 通过 sendToolRoundTextForwardMsg 外发的工具轮文本 */
-const forwardCalls = []
 mock.module('../utils/config.js', { namedExports: { Config } })
 mock.module('../utils/common.js', { namedExports: { makeForwardMsg() {} } })
 mock.module('../utils/paimonFuction.js', { namedExports: { splitString_Enter() {} } })
-mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {}, sendToolRoundTextForwardMsg(e, entries) { forwardCalls.push(entries) } } })
+// toolForward 统一测试桩（fixtures/toolForwardMock.mjs）：该模块新增导出只需改工厂一处
+const toolForwardMock = createToolForwardMock()
+mock.module('../utils/toolForward.js', { namedExports: toolForwardMock.namedExports })
 mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode: text => [text] } })
 mock.module('../utils/proxy.js', { namedExports: { newFetch() { throw new Error('不应请求真实网络') } } })
 globalThis.logger = { info() {}, warn() {}, error() {}, debug() {} }
@@ -150,7 +151,7 @@ test('Gemini 思考 part 拆分为 thinking_text，不再与正文拼接', async
 test('Gemini 工具轮不把思考当工具间回复，思考跨轮累积到 thinking_text', async () => {
   const history = createAttemptHistory('gemini')
   const replies = []
-  forwardCalls.length = 0
+  toolForwardMock.forwardCalls.length = 0
   let calls = 0
   const client = new CustomGoogleGeminiClient({
     key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
@@ -176,14 +177,14 @@ test('Gemini 工具轮不把思考当工具间回复，思考跨轮累积到 thi
   assert.equal(result.text, '查到了答案')
   assert.equal(result.thinking_text, '第一轮思考第二轮思考')
   // 工具轮文本以合并转发立即单独外发，不再裸发群消息
-  assert.deepEqual(forwardCalls.flat().map(x => x.text), ['我先查一下'])
+  assert.deepEqual(toolForwardMock.forwardCalls.flat().map(x => x.text), ['我先查一下'])
   assert.deepEqual(replies, [])
 })
 
 test('Gemini 工具轮独白重归类为 thinking，不作为工具轮回复外发', async () => {
   const history = createAttemptHistory('gemini')
   const replies = []
-  forwardCalls.length = 0
+  toolForwardMock.forwardCalls.length = 0
   let calls = 0
   const client = new CustomGoogleGeminiClient({
     key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
@@ -206,7 +207,7 @@ test('Gemini 工具轮独白重归类为 thinking，不作为工具轮回复外�
   }])
   const result = await client.sendMessage('查一下', {})
   assert.equal(result.text, '查到了答案')
-  assert.equal(forwardCalls.length, 0)
+  assert.equal(toolForwardMock.forwardCalls.length, 0)
   assert.match(result.thinking_text, /Let's call lookup/)
   assert.deepEqual(replies, [])
 })
@@ -214,7 +215,7 @@ test('Gemini 工具轮独白重归类为 thinking，不作为工具轮回复外�
 test('Claude 工具轮文本立即单独外发，思考跨轮并入 thinking_text', async () => {
   const history = createAttemptHistory('claude')
   const replies = []
-  forwardCalls.length = 0
+  toolForwardMock.forwardCalls.length = 0
   let calls = 0
   const client = new ClaudeAPIClient({
     key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
@@ -242,7 +243,7 @@ test('Claude 工具轮文本立即单独外发，思考跨轮并入 thinking_tex
   assert.equal(result.text, '查到了答案')
   assert.equal(result.thinking_text, '第一轮思考第二轮思考第三轮思考')
   // 每一个工具轮的文本都以合并转发立即单独外发，不再被丢弃
-  assert.deepEqual(forwardCalls.flat().map(x => x.text), ['我先查一下', '再查一次'])
+  assert.deepEqual(toolForwardMock.forwardCalls.flat().map(x => x.text), ['我先查一下', '再查一次'])
   assert.deepEqual(replies, [])
 })
 

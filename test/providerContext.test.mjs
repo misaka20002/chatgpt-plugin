@@ -2,6 +2,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { connectionVersion } from '../utils/providerProfiles.js'
+import { createToolForwardMock } from './fixtures/toolForwardMock.mjs'
 
 // 执行真实 Core 和四种协议客户端，只隔离宿主、网络及工具的外部操作。
 let toolExecutions = 0, respond
@@ -23,9 +24,9 @@ mock.module('../../../lib/common/common.js', { defaultExport: { sleep: async () 
 mock.module('../utils/mcp.js', { defaultExport: {} })
 mock.module('../utils/paimonFuction.js', { namedExports: { getImageBase64() {}, splitString_Enter() {} } })
 mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode: text => [text] } })
-/** 记录 Core 工具循环外发的工具轮文本 */
-const roundTextForwards = []
-mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {}, sendToolRoundTextForwardMsg(e, entries) { roundTextForwards.push(entries) } } })
+// toolForward 统一测试桩（fixtures/toolForwardMock.mjs）：该模块新增导出只需改工厂一处
+const toolForwardMock = createToolForwardMock()
+mock.module('../utils/toolForward.js', { namedExports: toolForwardMock.namedExports })
 mock.module('../utils/hostedTools.js', { namedExports: { getEnabledHostedBuiltinTools: () => [] } })
 mock.module('../utils/proxy.js', { namedExports: { newFetch: async (url, options) => {
   const body = JSON.parse(options.body)
@@ -111,7 +112,7 @@ for (const type of Object.keys(responses)) {
 
 test('API 工具轮附带文本以合并转发立即单独外发，不再裸发群消息', async () => {
   requests.length = 0; toolExecutions = 0
-  roundTextForwards.length = 0
+  toolForwardMock.forwardCalls.length = 0
   const replies = []
   const originalReply = core.reply
   core.reply = async (m) => { replies.push(m) }
@@ -119,7 +120,7 @@ test('API 工具轮附带文本以合并转发立即单独外发，不再裸发�
     respond = (body, n) => responses.api(n === 2 ? '工具后的回答' : '下一轮回答', n === 1)
     const result = await core.sendMessage('请查询', { messages }, 'api', event, { enableSmart: true })
     assert.equal(result.text, '工具后的回答')
-    assert.deepEqual(roundTextForwards.flat(), [{ text: '下一轮回答', provider: 'OpenAI API', round: 1 }])
+    assert.deepEqual(toolForwardMock.forwardCalls.flat(), [{ text: '下一轮回答', provider: 'OpenAI API', round: 1 }])
     assert.deepEqual(replies, [])
   } finally {
     core.reply = originalReply

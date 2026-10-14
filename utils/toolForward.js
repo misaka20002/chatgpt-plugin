@@ -202,9 +202,10 @@ export async function sendToolCallForwardMsg(e, records = [], title = '工具调
 /**
  * 以合并转发形式「立即单独」外发模型在工具调用轮次附带说的话。
  * 与 sendToolCallForwardMsg 平行且独立：开关（forwardToolRoundText，默认开启）与标题都不同。
- * 说明：合并转发节点只接受纯文本，这里不做 convertFacesAndCQCode 转换——
- * 其返回的是 face/at 等 segment 对象数组，塞进文本节点会变成 [object Object]；
+ * 说明：本转发管线按纯文本节点构造（buildForwardBatches 会对每条消息 String() 分片），
+ * 因此不调用 convertFacesAndCQCode——它返回 face/at 等 segment 对象数组，String() 后会变成 [object Object]。
  * 而「转换后再序列化回文本」近似恒等（拿不到昵称的 @ 还会退化为 @QQ号），收益为负。
+ * （OneBot 11 规范本身允许 node.content 传消息段数组，这里固定用字符串形态：跨适配器兼容性最稳。）
  * @param {object} e 事件对象
  * @param {Array<{ text: string, provider?: string, round?: number }>} entries
  * @param {string} title 转发标题

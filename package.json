@@ -2,13 +2,13 @@
   "name": "chatgpt-plugin",
   "version": "2.8.5",
   "type": "module",
+  "packageManager": "pnpm@10.15.0",
   "author": "ikechan8370,misaka20002,eggcheb",
   "dependencies": {
     "@fastify/cookie": "^8.3.0",
     "@fastify/cors": "^8.2.0",
     "@fastify/static": "^6.9.0",
     "@fastify/websocket": "^8.2.0",
-    "@google/generative-ai": "^0.1.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "asn1.js": "^5.0.0",
     "axios": "^1.6.2",
@@ -49,11 +49,6 @@
     "ts-node": "^10.9.1",
     "ts-node-register": "^1.0.0"
   },
-  "pnpm": {
-    "patchedDependencies": {
-      "@google/generative-ai@0.1.1": "patches/@google__generative-ai@0.1.1.patch"
-    }
-  },
   "scripts": {
     "test:avatar": "node --test test/avatarReply.test.mjs test/avatarFolders.test.mjs && node --experimental-test-module-mocks --test test/avatarReplyConfig.test.mjs",
     "test:group-reply": "node --experimental-test-module-mocks --test test/groupReply.test.mjs test/groupReplyCore.test.mjs test/groupReplyChat.test.mjs",
@@ -66,6 +61,7 @@
     "test:meme:fast": "node test/meme/run.mjs --skip-slow",
     "test:meme:mutants": "node test/meme/run.mjs --all-mutants",
     "test:providers": "node --experimental-test-module-mocks --test test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs test/providerContext.test.mjs test/providerModels.test.mjs",
-    "test:thinking": "node --test test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test test/toolRoundTextForward.test.mjs"
+    "test:thinking": "node --test test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test test/toolRoundTextForward.test.mjs",
+    "check": "node test/checkSyntax.mjs && npm run test:config && npm run test:providers && npm run test:thinking"
   }
 }

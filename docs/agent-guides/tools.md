@@ -26,3 +26,12 @@
 ## OpenCode 联网搜索
 
 **OpenCode 联网搜索（`opencode_websearch`，锅巴「搜索/网络来源」值 `opencode_WebSearchTool`）**：移植自 OpenCode 的 websearch（用 Zen / Go 模型时内置的那个）——它**不走 Zen API**，而是直连 Exa（`mcp.exa.ai/mcp` 的 `web_search_exa`，回 SSE）与 Parallel（`search.parallel.ai/mcp` 的 `web_search`，回纯 JSON）的公开托管 MCP，单次 JSON-RPC `tools/call`、免 Key。非显然点：① **Exa 免费额度限流的提示是以 HTTP 200 普通结果返回的，没有 `isError`**（2026-09 实测，与其开源实现不同），所以工具按开头锚定 `You've hit Exa's free MCP rate limit` 把它判为失败——删掉这条就等于把限流提示当搜索结果喂给模型；② 选路在 OpenCode「按会话哈希分流」之上加了**失败换另一家**与**只有一家填了 Key 时它优先**；**没有"指定来源"配置项**（曾经有过 auto/exa/parallel 三选一，按需求删除，只保留自动），锅巴只暴露两家可选的 Key；③ Exa Key 走 `x-api-key` 头而不是 OpenCode 的 `?exaApiKey=`（Key 不进 URL，也就不进报错与日志），相应地 `redirect: 'manual'` 拒绝一切重定向——自动跟随会把自定义认证头原样带去别的域名；④ Parallel 的 `session_id` 是「进程随机盐 + 群号/QQ 号」的哈希，不要改成直接发群号。Exa 的参数刻意保持 OpenCode 实际发送的形状（`type`/`livecrawl` 当前被服务端忽略，但那是 OpenCode 每天在跑的调用）。
+
+## 依赖环与延迟调用约定
+
+仓库存在若干**有意保留的模块循环引用**（ESM 允许；工具轮文本改动期间专门核验过，勿在未理解时"顺手打破"）：
+
+- `utils/toolForward.js → utils/face.js → utils/paimonFuction.js → client/CustomGoogleGeminiClient.js → utils/toolForward.js`
+- `utils/common.js → utils/paimonFuction.js → client/CustomGoogleGeminiClient.js → utils/toolForward.js → utils/common.js`
+
+**硬规则：环上的模块只允许在函数体内使用彼此的导入**（相关导出均为函数声明，可安全延迟绑定）。**禁止在模块顶层立即调用这些导入、或读取它们的 `const` 导出**——会在环的另一端命中 TDZ / 半初始化，表现为启动即崩。往 `utils/toolForward.js`、`utils/face.js`、`utils/paimonFuction.js`、`utils/common.js`、`client/CustomGoogleGeminiClient.js` **新增 import 前**先对照上面两条环；落环则把使用点放进函数体内。注：`utils/paimonFuction.js` 对 `CustomGoogleGeminiClient` 的 import 目前只 import、无使用（死引用），是第二条环的既成事实。

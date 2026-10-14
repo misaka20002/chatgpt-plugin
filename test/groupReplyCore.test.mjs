@@ -1,6 +1,7 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { createToolForwardMock } from './fixtures/toolForwardMock.mjs'
 
 // 隔离工具、框架和 provider 边界；实际执行 Core 的各 provider 请求组装与 SubLLM 调用。
 // 按 import 列表提供未使用工具的桩，避免导入整个宿主；这里不是源码断言。
@@ -16,7 +17,9 @@ mock.module('../utils/common.js', { namedExports: {
 mock.module('../../../lib/common/common.js', { defaultExport: {} })
 mock.module('../utils/mcp.js', { defaultExport: {} })
 mock.module('../utils/paimonFuction.js', { namedExports: { getImageBase64() {} } })
-mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {}, sendToolRoundTextForwardMsg() {} } })
+// toolForward 统一测试桩（fixtures/toolForwardMock.mjs）
+const toolForwardMock = createToolForwardMock()
+mock.module('../utils/toolForward.js', { namedExports: toolForwardMock.namedExports })
 mock.module('../utils/proxy.js', { namedExports: { async newFetch() { return { ok: true } } } })
 mock.module('../utils/hostedTools.js', { namedExports: { getEnabledHostedBuiltinTools: () => [{ requestTool: { type: 'web_search', name: 'web_search' } }] } })
 const requests = []

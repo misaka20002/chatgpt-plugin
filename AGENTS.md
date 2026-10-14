@@ -77,7 +77,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - 不为覆盖率扩大任务，不测未触及的稳定路径，不重复语言/标准库保证。mock 只模拟依赖边界，被测逻辑必须执行生产代码。
 - 不默认增加变异测试、源码文本守卫、重复桩/真实链路测试、全组合矩阵或大规模端到端测试。源码守卫只用于必要静态约束，不能冒充行为测试；变异仅用于反复发生或难以判断覆盖有效性的高风险问题，或用户明确要求。
 - 测试脚本清单以 `package.json` 和磁盘实际文件为准，不保留缺失路径：与存在文件混跑时缺失路径可能被静默忽略。不要恢复历史 `chain*.test.mjs`，不用固定用例数证明覆盖。
-- 常用入口：`npm run test:memory` / `test:tools` / `test:media` / `test:config` / `test:render` / `test:meme:fast`（后续项同样加 `npm run`）。完整 meme 慢测试和 mutants 按需使用。
+- 常用入口：`npm run check`（全仓语法预检 + 快套件，CI 同款） / `test:memory` / `test:tools` / `test:media` / `test:config` / `test:thinking` / `test:render` / `test:meme:fast`（后续项同样加 `npm run`）。完整 meme 慢测试和 mutants 按需使用。
 - 临时脚本放系统临时目录，或用完删除并确认清理。真实模型/确认流程仅在相关改动无法由本地验证覆盖时验证；本地全绿不等于 CI 或真实运行保障。
 - 最终汇报包含 **Changes / Validation / Risks**：改了什么、实际跑了什么、与本次相关的剩余限制。
 
