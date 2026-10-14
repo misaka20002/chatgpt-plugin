@@ -1245,6 +1245,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'forwardToolRoundText',
+          label: '发送工具轮回复文本',
+          bottomHelpMessage: '智能模式中，将模型在工具调用轮次附带说的话以合并转发单独发送；默认开启',
+          component: 'Switch'
+        },
+        {
           field: 'llm_maxToolRounds',
           label: '工具调用最大轮次',
           bottomHelpMessage: '智能模式中 工具调用最大轮次数（呆毛注：因为已支持多工具并行调用，所以通常3轮次就足够处理日常任务了，按需增加）',

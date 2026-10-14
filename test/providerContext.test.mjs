@@ -23,7 +23,9 @@ mock.module('../../../lib/common/common.js', { defaultExport: { sleep: async () 
 mock.module('../utils/mcp.js', { defaultExport: {} })
 mock.module('../utils/paimonFuction.js', { namedExports: { getImageBase64() {}, splitString_Enter() {} } })
 mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode: text => [text] } })
-mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {} } })
+/** 记录 Core 工具循环外发的工具轮文本 */
+const roundTextForwards = []
+mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {}, sendToolRoundTextForwardMsg(e, entries) { roundTextForwards.push(entries) } } })
 mock.module('../utils/hostedTools.js', { namedExports: { getEnabledHostedBuiltinTools: () => [] } })
 mock.module('../utils/proxy.js', { namedExports: { newFetch: async (url, options) => {
   const body = JSON.parse(options.body)
@@ -106,6 +108,23 @@ for (const type of Object.keys(responses)) {
     assert.deepEqual(messages, original)
   })
 }
+
+test('API 工具轮附带文本以合并转发立即单独外发，不再裸发群消息', async () => {
+  requests.length = 0; toolExecutions = 0
+  roundTextForwards.length = 0
+  const replies = []
+  const originalReply = core.reply
+  core.reply = async (m) => { replies.push(m) }
+  try {
+    respond = (body, n) => responses.api(n === 2 ? '工具后的回答' : '下一轮回答', n === 1)
+    const result = await core.sendMessage('请查询', { messages }, 'api', event, { enableSmart: true })
+    assert.equal(result.text, '工具后的回答')
+    assert.deepEqual(roundTextForwards.flat(), [{ text: '下一轮回答', provider: 'OpenAI API', round: 1 }])
+    assert.deepEqual(replies, [])
+  } finally {
+    core.reply = originalReply
+  }
+})
 
 test('Responses 官网续聊只发送增量，工具回填使用本轮 ID；账号或版本变化时重建本地历史', async () => {
   const row = Config.getConfig().modelProviders.responses[0]

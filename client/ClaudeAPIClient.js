@@ -4,7 +4,8 @@ import _ from 'lodash'
 import { getMessageById, upsertMessage } from '../utils/history.js'
 import { BaseClient } from './BaseClient.js'
 import { Config } from '../utils/config.js'
-import { sendToolCallForwardMsg } from '../utils/toolForward.js'
+import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/toolForward.js'
+import { normalizeModelText } from '../utils/thinking.js'
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 
 const BASEURL = 'https://api.anthropic.com'
@@ -289,6 +290,8 @@ export class ClaudeAPIClient extends BaseClient {
     let toolRoundCount = 0
     let toolMode = opt.toolMode || 'AUTO'
     const maxToolRounds = Config.llm_maxToolRounds || 3
+    /** 工具轮思考（含被重归类的独白），跨轮累积后并入最终 thinking_text */
+    let toolRoundThinking = ''
 
     while (true) {
       const messages = history.map(h => { return { role: h.role, content: h.content } })
@@ -309,7 +312,7 @@ export class ClaudeAPIClient extends BaseClient {
         return {
           text: responseText,
           refused: response.stop_reason === 'refusal',
-          thinking_text: thinkingText,
+          thinking_text: toolRoundThinking + thinkingText,
           conversationId: '',
           parentMessageId: pendingUserMessage.id,
           id: idModel
@@ -318,7 +321,9 @@ export class ClaudeAPIClient extends BaseClient {
 
       if (toolRoundCount >= maxToolRounds) {
         logger.warn(`Claude工具调用已达最大轮次上限 ${maxToolRounds} 轮，返回当前文本并终止工具循环`)
-        const fallbackText = responseText || `工具调用已达最大轮次上限 ${maxToolRounds} 轮，已停止继续调用工具。`
+        // 上限轮文本会作为最终回复兜底，同样归一化，防止独白借道最终正文
+        const capped = normalizeModelText(responseText, { toolNames: toolUses.map(toolUse => toolUse.name), inToolRound: true })
+        const fallbackText = capped.text || `工具调用已达最大轮次上限 ${maxToolRounds} 轮，已停止继续调用工具。`
         const safeRespMessage = Object.assign({}, respMessage, {
           role: 'assistant',
           content: [{ type: 'text', text: fallbackText }]
@@ -327,7 +332,7 @@ export class ClaudeAPIClient extends BaseClient {
         await this.upsertMessage(safeRespMessage)
         return {
           text: fallbackText,
-          thinking_text: thinkingText,
+          thinking_text: toolRoundThinking + capped.thinking + thinkingText,
           conversationId: '',
           parentMessageId: pendingUserMessage.id,
           id: idModel
@@ -338,6 +343,19 @@ export class ClaudeAPIClient extends BaseClient {
       toolRoundCount++
       await this.upsertMessage(pendingUserMessage)
       await this.upsertMessage(respMessage)
+      // 工具轮附带文本：归一化后以合并转发立即单独外发（现状为丢弃）。
+      // 发送点在 onToolStart 之后，回退重试已被 irreversible 标记阻断，不会重复投递
+      const roundNormalized = normalizeModelText(responseText, { toolNames: toolUses.map(toolUse => toolUse.name), inToolRound: true })
+      if (roundNormalized.thinking || thinkingText) {
+        toolRoundThinking += roundNormalized.thinking + thinkingText
+      }
+      if (roundNormalized.text) {
+        await sendToolRoundTextForwardMsg(this.e, [{
+          text: roundNormalized.text,
+          provider: 'Claude',
+          round: toolRoundCount
+        }])
+      }
       const toolResults = []
       const toolForwardRecords = []
       for (const toolUse of toolUses) {

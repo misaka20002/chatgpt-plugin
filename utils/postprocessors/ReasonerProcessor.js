@@ -1,4 +1,5 @@
 import { AbstractPostProcessor } from './BasicProcessor.js'
+import { extractThinkTags } from '../thinking.js'
 
 export class ReasonerProcessor extends AbstractPostProcessor {
   constructor () {
@@ -20,39 +21,12 @@ export class ReasonerProcessor extends AbstractPostProcessor {
    */
   async processInner (input) {
     logger.debug('Running into ReasonerPostProcessor')
-    const { text, thinkingText } = extractThinkingTextAndText(input.text)
+    // 统一委托 utils/thinking.js：支持 <thinking>、多个标签块与未闭合标签；
+    // 与原实现相比会保留标签前的正文（原实现会把它整段丢弃）
+    const { text, thinking } = extractThinkTags(input.text)
     return {
       text,
-      thinking_text: (input.thinking_text ? input.thinking_text : '') + thinkingText // 作用：把思考的内容组合 = chatMessage.thinking_text + extractThinkingTextAndText(input.text).thinking_text
+      thinking_text: (input.thinking_text ? input.thinking_text : '') + thinking // 作用：把思考的内容组合 = chatMessage.thinking_text + extractThinkTags(input.text).thinking
     }
   }
-}
-
-/**
- * written by gpt-4o
- * @param str
- * @returns {{thinkingText: string, text: *}|{thinkingText: *, text: *}}
- */
-const extractThinkingTextAndText = (str) => {
-  if (typeof str !== 'string') {
-    return { thinkingText: '', text: '' }
-  }
-
-  // 使用正则表达式提取think标签内容
-  const thinkRegex = /<think>(.*?)<\/think>/s
-  const match = str.match(thinkRegex)
-
-  // 如果找到了<think>标签内容
-  if (match) {
-    // thinking_text就是<think>标签内的内容
-    const thinkingText = match[1].trim()
-
-    // text就是</think>标签后的部分
-    const text = str.slice(match.index + match[0].length).trim()
-
-    return { thinkingText, text }
-  }
-
-  // 如果没有<think>标签内容，返回空或原始内容
-  return { thinkingText: '', text: str.trim() }
 }

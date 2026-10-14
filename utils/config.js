@@ -226,6 +226,7 @@ const defaultConfig = {
   extraUrl: '',
   smartMode: false,
   forwardToolCallResult: false,
+  forwardToolRoundText: true,
   llm_maxToolRounds: 3,
   trssBotUin: '',
   geminiKey: '',

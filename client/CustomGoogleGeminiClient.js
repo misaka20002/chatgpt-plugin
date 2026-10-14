@@ -2,15 +2,8 @@ import crypto from 'crypto'
 import { GoogleGeminiClient } from './GoogleGeminiClient.js'
 import { newFetch } from '../utils/proxy.js'
 import _ from 'lodash'
-import {
-  splitString_Enter,
-} from '../utils/paimonFuction.js'
-
-import {
-  makeForwardMsg,
-} from '../utils/common.js'
-import { sendToolCallForwardMsg } from '../utils/toolForward.js'
-import { convertFacesAndCQCode } from '../utils/face.js'
+import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/toolForward.js'
+import { normalizeModelText } from '../utils/thinking.js'
 import { Config } from '../utils/config.js'
 import { syncInnerOs } from '../utils/innerOs.js';
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
@@ -127,7 +120,6 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     temperature: number?,
    *     topP: number?,
    *     tokK: number?,
-   *     replyPureTextCallback: Function,
    *     toolMode: 'AUTO' | 'ANY' | 'NONE'
    *     search: boolean,
    *     codeExecution: boolean,
@@ -454,37 +446,22 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         .map(part => part.functionCall?.thoughtSignature)
         .filter(sig => sig !== undefined && sig !== null)
 
+      // 工具轮附带文本：归一化后以合并转发立即单独外发，不再裸发群消息；
+      // 独白/思考标签会被重归类进 thinking 通道，不丢失内容
       const replyText = responseContent.parts.find(i => i.text && i.thought !== true)?.text
+      let roundThinking = ''
       if (replyText && replyText.trim()) {
-        // send reply first
-        // logger.info('[chatgpt]functionCall附加的对话text: ' + replyText.trim())
-
-        if (opt.sf_markdownPic) {
-          // sf图片模式
-          try {
-            if (replyText.trim()) {
-              const userMsg = this.e.img ? this.e.img.map(url => `<img src="${url}" width="256">`).join('\n') + "\n\n" + this.e.msg_bak_2 : this.e.msg_bak_2;
-              const { markdown_screenshot } = await import('../../siliconflow-plugin/utils/markdownPic.js')
-              const img = await markdown_screenshot(this.e.user_id, this.e.self_id, userMsg, replyText.trim());
-              this.e.reply({ ...img, origin: true }, true)
-            }
-          } catch (err) {
-            console.error('[chatgpt][functionCall附加的对话text]sf图片模式错误\n' + err)
-            opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
-          }
-        }
-        else {
-          if (replyText.length > 1000) {
-            // if (opt.auto_makeForwardMsg && replyText.trim()?.length > opt.auto_makeForwardMsg) {
-            this.e.reply(await makeForwardMsg(this.e, splitString_Enter(replyText.trim(), opt.auto_makeForwardMsg), `Tool回复 @${this.e.sender.card || this.e.sender.nickname}`));
-            // }
-            // else {
-            //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
-            // }
-          } else {
-            console.info("[chatgpt][functionCall附加的对话text] Processing...")
-            this.e.reply((await convertFacesAndCQCode(replyText.trim(), Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e)), true);
-          }
+        const normalized = normalizeModelText(replyText, {
+          toolNames,
+          inToolRound: true
+        })
+        roundThinking = normalized.thinking
+        if (normalized.text) {
+          await sendToolRoundTextForwardMsg(this.e, [{
+            text: normalized.text,
+            provider: 'Gemini',
+            round: opt.toolChain.depth + 1
+          }])
         }
       }
       let /** @type {FunctionResponse[]} **/ fcResults = []
@@ -586,9 +563,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
       // 工具结果仅在当前请求的历史缓冲中续接。
       const toolResult = await this.sendMessage('', responseOpt)
-      // 思考内容跨工具轮累积：本轮思考拼在后续递归结果之前，保持时间顺序
-      if (handled.thinking) {
-        toolResult.thinking_text = handled.thinking + (toolResult.thinking_text || '')
+      // 思考内容跨工具轮累积：本轮思考（含被重归类的独白）拼在后续递归结果之前，保持时间顺序
+      const roundThinkingText = roundThinking + (handled.thinking || '')
+      if (roundThinkingText) {
+        toolResult.thinking_text = roundThinkingText + (toolResult.thinking_text || '')
       }
       return toolResult
     }

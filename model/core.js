@@ -57,7 +57,8 @@ import { newFetch } from '../utils/proxy.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
 import { getImageBase64 } from '../utils/paimonFuction.js'
-import { sendToolCallForwardMsg } from '../utils/toolForward.js'
+import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/toolForward.js'
+import { normalizeModelText } from '../utils/thinking.js'
 import { redactArgsForLog, maskSecret } from '../utils/toolArgRedaction.js'
 import { GithubAPITool } from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
@@ -571,12 +572,30 @@ class Core {
       try {
         let msg = await sendResponsesWithContextFallback(initialInput, sendOptions)
         let toolRoundCount = 0
+        /** 工具轮思考（含被重归类的独白），跨轮累积后并入最终 thinking_text */
+        let toolRoundThinking = ''
         const maxToolRounds = Config.llm_maxToolRounds
 
         while (msg.toolCalls?.length > 0 && toolRoundCount < maxToolRounds) {
           opt.onToolStart()
           toolRoundCount++
-          if (msg.text) await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
+          // 工具轮附带文本：归一化后以合并转发立即单独外发，不再裸发群消息
+          if (msg.text) {
+            const normalized = normalizeModelText(msg.text.replace(/\n{2,}/g, '\n').trim(), {
+              toolNames: msg.toolCalls.map(toolCall => toolCall.function?.name),
+              inToolRound: true
+            })
+            if (normalized.thinking) {
+              toolRoundThinking += normalized.thinking
+            }
+            if (normalized.text) {
+              await sendToolRoundTextForwardMsg(e, [{
+                text: normalized.text,
+                provider: 'OpenAI Responses API',
+                round: toolRoundCount
+              }])
+            }
+          }
 
           const toolResults = await executeResponsesToolCalls(this, e, msg.toolCalls, fullFuncMap, isAdmin, sender, toolRoundCount)
           if (completionParams.tool_choice === 'required') delete completionParams.tool_choice
@@ -594,6 +613,9 @@ class Core {
           logger.warn(`Responses API 工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制终止工具循环`)
           msg.toolCalls = undefined
           msg.functionCall = undefined
+        }
+        if (toolRoundThinking) {
+          msg.thinking_text = toolRoundThinking + (msg.thinking_text || '')
         }
         return msg
       } catch (err) {
@@ -733,6 +755,8 @@ class Core {
         option.systemMessage = await buildOpenAISystem()
 
         let msg
+        /** 工具轮思考（含被重归类的独白），跨轮累积后并入最终 thinking_text */
+        let toolRoundThinking = ''
         try {
           // 强制调用工具 // 可能有用吧
           if (Config.enableForceToolKeywords !== false && Config.geminiForceToolKeywords && Array.isArray(Config.geminiForceToolKeywords)) {
@@ -767,7 +791,23 @@ class Core {
             toolRoundCount++
 
             if (msg.text) {
-              await this.reply((msg.text.replace(/\n{2,}/g, '\n')).trim())
+              // 工具轮附带文本：归一化后以合并转发立即单独外发，不再裸发群消息
+              const normalized = normalizeModelText(msg.text.replace(/\n{2,}/g, '\n').trim(), {
+                toolNames: msg.toolCalls?.length
+                  ? msg.toolCalls.map(toolCall => toolCall.function?.name)
+                  : (msg.functionCall?.name ? [msg.functionCall.name] : []),
+                inToolRound: true
+              })
+              if (normalized.thinking) {
+                toolRoundThinking += normalized.thinking
+              }
+              if (normalized.text) {
+                await sendToolRoundTextForwardMsg(e, [{
+                  text: normalized.text,
+                  provider: 'OpenAI API',
+                  round: toolRoundCount
+                }])
+              }
             }
 
             const pendingToolCalls = msg.toolCalls?.length
@@ -896,6 +936,9 @@ class Core {
             logger.error(err)
             throw err
           }
+        }
+        if (toolRoundThinking) {
+          msg.thinking_text = toolRoundThinking + (msg.thinking_text || '')
         }
         return msg
       } else {

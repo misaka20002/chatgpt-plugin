@@ -16,7 +16,7 @@ mock.module('../utils/common.js', { namedExports: {
 mock.module('../../../lib/common/common.js', { defaultExport: {} })
 mock.module('../utils/mcp.js', { defaultExport: {} })
 mock.module('../utils/paimonFuction.js', { namedExports: { getImageBase64() {} } })
-mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {} } })
+mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {}, sendToolRoundTextForwardMsg() {} } })
 mock.module('../utils/proxy.js', { namedExports: { async newFetch() { return { ok: true } } } })
 mock.module('../utils/hostedTools.js', { namedExports: { getEnabledHostedBuiltinTools: () => [{ requestTool: { type: 'web_search', name: 'web_search' } }] } })
 const requests = []

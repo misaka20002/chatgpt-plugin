@@ -198,3 +198,54 @@ export async function sendToolCallForwardMsg(e, records = [], title = '工具调
     }
   }
 }
+
+/**
+ * 以合并转发形式「立即单独」外发模型在工具调用轮次附带说的话。
+ * 与 sendToolCallForwardMsg 平行且独立：开关（forwardToolRoundText，默认开启）与标题都不同。
+ * 说明：合并转发节点只接受纯文本，这里不做 convertFacesAndCQCode 转换——
+ * 其返回的是 face/at 等 segment 对象数组，塞进文本节点会变成 [object Object]；
+ * 而「转换后再序列化回文本」近似恒等（拿不到昵称的 @ 还会退化为 @QQ号），收益为负。
+ * @param {object} e 事件对象
+ * @param {Array<{ text: string, provider?: string, round?: number }>} entries
+ * @param {string} title 转发标题
+ */
+export async function sendToolRoundTextForwardMsg(e, entries = [], title = '工具轮回复') {
+  // 默认开启：仅显式配置为 false 时关闭，兼容旧配置里没有该键的情况
+  if (Config.forwardToolRoundText === false || !e || !Array.isArray(entries) || entries.length === 0) {
+    return
+  }
+
+  const blockWords = Array.isArray(Config.blockWords) ? Config.blockWords : []
+  const messages = []
+  for (const entry of entries) {
+    const text = typeof entry?.text === 'string' ? entry.text.trim() : ''
+    if (!text) {
+      continue
+    }
+    // 与 apps/chat.js 的输出屏蔽词同语义；工具轮文本不走主投递链，这里必须自行过滤
+    const hit = blockWords.find(word => typeof word === 'string' && word && text.toLowerCase().includes(word.toLowerCase()))
+    if (hit) {
+      logger.info(`[Chatgpt][ToolForward] 工具轮回复命中屏蔽词「${hit}」，已跳过外发`)
+      continue
+    }
+    const prefix = entry.round ? `[第${entry.round}轮${entry.provider ? ` · ${entry.provider}` : ''}] ` : ''
+    messages.push(prefix + text)
+  }
+
+  if (messages.length === 0) {
+    return
+  }
+
+  try {
+    await replyForwardBatches(e, messages, title)
+  } catch (err) {
+    logger.warn(`[Chatgpt][ToolForward] 发送工具轮回复合并转发失败: ${err.message}`)
+    // 发送失败也不裸发正文，只留控制台日志与提示，避免独白类内容意外进群
+    logger.info(`[Chatgpt][ToolForward] 工具轮回复原文: ${messages.join('\n---\n')}`)
+    try {
+      await e.reply(`[${title}] 合并转发发送失败，内容已记录到控制台。`, true)
+    } catch (fallbackErr) {
+      logger.warn(`[Chatgpt][ToolForward] 发送工具轮回复兜底提示失败: ${fallbackErr.message}`)
+    }
+  }
+}

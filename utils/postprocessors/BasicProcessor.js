@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 export class AbstractPostProcessor {
   name = ''
@@ -44,7 +44,9 @@ export async function collectProcessors (type) {
       const fullPath = path.join(directoryPath, file)
       try {
         // 动态导入模块
-        const module = await import(fullPath)
+        // 注意必须转成 file:// URL：Windows 下纯路径（E:\…）会被 ESM loader 当成协议，
+        // 抛 ERR_UNSUPPORTED_ESM_URL_SCHEME，导致所有后处理器静默加载失败
+        const module = await import(pathToFileURL(fullPath).href)
 
         // 遍历模块的所有导出成员
         for (const key of Object.keys(module)) {
@@ -63,7 +65,8 @@ export async function collectProcessors (type) {
           }
         }
       } catch (err) {
-        // console.error(`Error processing file ${file}:`, err)
+        // 单个文件失败只跳过它、不中断整体收集，但必须留痕，避免加载失败被静默吞掉
+        console.error(`[ChatGPT] 加载后处理器 ${file} 失败：`, err)
       }
     }
   }

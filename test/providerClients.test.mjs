@@ -4,10 +4,12 @@ import { createAttemptHistory, runProviderFallback } from '../utils/providerFall
 
 // 仅替换宿主、媒体发送和网络边界，执行四种协议客户端的真实响应解析。
 const Config = { geminiMaxOutputTokens: 1024, gemini_temperature: 0.3, llm_maxToolRounds: 3 }
+/** 记录各 provider 通过 sendToolRoundTextForwardMsg 外发的工具轮文本 */
+const forwardCalls = []
 mock.module('../utils/config.js', { namedExports: { Config } })
 mock.module('../utils/common.js', { namedExports: { makeForwardMsg() {} } })
 mock.module('../utils/paimonFuction.js', { namedExports: { splitString_Enter() {} } })
-mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {} } })
+mock.module('../utils/toolForward.js', { namedExports: { sendToolCallForwardMsg() {}, sendToolRoundTextForwardMsg(e, entries) { forwardCalls.push(entries) } } })
 mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode: text => [text] } })
 mock.module('../utils/proxy.js', { namedExports: { newFetch() { throw new Error('不应请求真实网络') } } })
 globalThis.logger = { info() {}, warn() {}, error() {}, debug() {} }
@@ -148,6 +150,7 @@ test('Gemini 思考 part 拆分为 thinking_text，不再与正文拼接', async
 test('Gemini 工具轮不把思考当工具间回复，思考跨轮累积到 thinking_text', async () => {
   const history = createAttemptHistory('gemini')
   const replies = []
+  forwardCalls.length = 0
   let calls = 0
   const client = new CustomGoogleGeminiClient({
     key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
@@ -172,7 +175,75 @@ test('Gemini 工具轮不把思考当工具间回复，思考跨轮累积到 thi
   assert.equal(calls, 2)
   assert.equal(result.text, '查到了答案')
   assert.equal(result.thinking_text, '第一轮思考第二轮思考')
-  assert.deepEqual(replies, ['我先查一下'])
+  // 工具轮文本以合并转发立即单独外发，不再裸发群消息
+  assert.deepEqual(forwardCalls.flat().map(x => x.text), ['我先查一下'])
+  assert.deepEqual(replies, [])
+})
+
+test('Gemini 工具轮独白重归类为 thinking，不作为工具轮回复外发', async () => {
+  const history = createAttemptHistory('gemini')
+  const replies = []
+  forwardCalls.length = 0
+  let calls = 0
+  const client = new CustomGoogleGeminiClient({
+    key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
+    e: {
+      user_id: '123', sender: { user_id: '123', role: 'member' },
+      reply: async (msg) => { replies.push(Array.isArray(msg) ? msg.join('') : msg) }
+    },
+    fetch: async () => {
+      calls++
+      const parts = calls === 1
+        ? [{ text: "(wait, I should call lookup ...). Let's call lookup!" }, { functionCall: { name: 'lookup', args: {} } }]
+        : [{ text: '查到了答案' }]
+      return Response.json({ candidates: [{ finishReason: 'STOP', content: { role: 'model', parts } }] })
+    }
+  })
+  client.addTools([{
+    name: 'lookup',
+    function: () => ({ name: 'lookup', description: '查询', parameters: { type: 'object', properties: {} } }),
+    func: async () => '查询完成'
+  }])
+  const result = await client.sendMessage('查一下', {})
+  assert.equal(result.text, '查到了答案')
+  assert.equal(forwardCalls.length, 0)
+  assert.match(result.thinking_text, /Let's call lookup/)
+  assert.deepEqual(replies, [])
+})
+
+test('Claude 工具轮文本立即单独外发，思考跨轮并入 thinking_text', async () => {
+  const history = createAttemptHistory('claude')
+  const replies = []
+  forwardCalls.length = 0
+  let calls = 0
+  const client = new ClaudeAPIClient({
+    key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
+    e: {
+      user_id: '123', sender: { user_id: '123', role: 'member' },
+      reply: async (msg) => { replies.push(Array.isArray(msg) ? msg.join('') : msg) }
+    },
+    fetch: async () => {
+      calls++
+      const content = calls === 1
+        ? [{ type: 'thinking', thinking: '第一轮思考' }, { type: 'text', text: '我先查一下' }, { type: 'tool_use', id: 'tool-1', name: 'lookup', input: {} }]
+        : calls === 2
+          ? [{ type: 'thinking', thinking: '第二轮思考' }, { type: 'text', text: '再查一次' }, { type: 'tool_use', id: 'tool-2', name: 'lookup', input: {} }]
+          : [{ type: 'thinking', thinking: '第三轮思考' }, { type: 'text', text: '查到了答案' }]
+      return Response.json({ id: 'fixture-msg', role: 'assistant', stop_reason: calls < 3 ? 'tool_use' : 'end_turn', content })
+    }
+  })
+  client.addTools([{
+    name: 'lookup',
+    function: () => ({ name: 'lookup', description: '查询', parameters: { type: 'object', properties: {} } }),
+    func: async () => '查询完成'
+  }])
+  const result = await client.sendMessage('查一下', {})
+  assert.equal(calls, 3)
+  assert.equal(result.text, '查到了答案')
+  assert.equal(result.thinking_text, '第一轮思考第二轮思考第三轮思考')
+  // 每一个工具轮的文本都以合并转发立即单独外发，不再被丢弃
+  assert.deepEqual(forwardCalls.flat().map(x => x.text), ['我先查一下', '再查一次'])
+  assert.deepEqual(replies, [])
 })
 
 test('OpenAI 兼容非流式思维链按 reasoning_content → reasoning → reasoning_details 兜底', async () => {
