@@ -108,6 +108,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     this.baseUrl = props.baseUrl || BASEURL
     this.supportFunction = true
     this.debug = props.debug
+    this.providerName = props.providerName || ''
   }
 
   /**
@@ -390,7 +391,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         const cacheReadInfo = reportedCacheReadTokens == null
           ? ''
           : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
-        console.info(`[Chatgpt][Gemini] 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
+        console.info(`[Chatgpt][Gemini]${this.providerName ? `[${this.providerName}]` : ''} 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
       }
     } catch (err) {
       console.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);

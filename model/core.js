@@ -229,7 +229,7 @@ class Core {
         return newFetch(...args)
       }
       const result = await Core.prototype.sendWithProvider.call(context, prompt, nextConversation, row.type, event,
-        { ...opt, prepared, history, request, onToolStart: () => { state.irreversible = true } }, cfg)
+        { ...opt, prepared, history, request, providerName: row.name, onToolStart: () => { state.irreversible = true } }, cfg)
       if (result?.refused && !result.text) result.text = '模型拒绝回答'
       if (result) { result.actualProviderId = row.id; result.actualProviderVersion = connectionVersion(row); result.actualStore = cfg.responsesStore === true }
       return result
@@ -280,6 +280,7 @@ class Core {
           model: Config.claudeApiModel || 'claude-3-sonnet-20240229',
           debug: Config.debug,
           baseUrl: Config.claudeApiBaseUrl,
+          providerName: opt.providerName,
           e
           // temperature: Config.claudeApiTemperature || 0.5
         })
@@ -366,6 +367,7 @@ class Core {
         key: Config.getGeminiKey,
         model: Config.geminiModel,
         baseUrl: Config.geminiBaseUrl,
+        providerName: opt.providerName,
         debug: Config.debug
       })
       let option = {
@@ -470,7 +472,8 @@ class Core {
         debug: false,
         fetch: opt.request,
         maxResponseTokens: Config.responsesApiMaxToken,
-        maxModelTokens: Config.responsesMaxModelTokens
+        maxModelTokens: Config.responsesMaxModelTokens,
+        providerName: opt.providerName
       })
       let instructions = await buildResponsesInstructions()
 
@@ -644,6 +647,7 @@ class Core {
         maxModelTokens: Config.maxModelTokens,
         maxResponseTokens: Config.apiMaxToken,
         chatgptBlockCount: Config.chatgptBlockCount,
+        providerName: opt.providerName,
       }
 
       this.chatGPTApi = new ChatGPTAPI(opts)

@@ -59,6 +59,7 @@ export class GeminiSearchTool extends AbstractTool {
             key: config.getGeminiKey,
             model: config.geminiModel,
             baseUrl: config.geminiBaseUrl,
+            providerName: config.name,
             debug: Config.debug
         })
 

@@ -263,7 +263,7 @@ export function supportGuoba() {
         {
           field: 'forwardReasoning',
           label: '是否转发思考过程',
-          bottomHelpMessage: 'OpenAI API、 Responses API、 Claude、 Gemini 等思考模型的思维链是否以合并转发形式发出；关闭时仅记录日志不发送。默认开启。',
+          bottomHelpMessage: 'OpenAI API、 Responses API、 Claude、 Gemini 等思考模型的思维链是否以合并转发形式发出；关闭时仅记录日志不发送',
           component: 'Switch'
         },
         {
@@ -685,7 +685,7 @@ export function supportGuoba() {
                 field: 'geminiBaseUrl',
                 defaultValue: providerDefaults.gemini.geminiBaseUrl,
                 label: 'Gemini反代',
-                bottomHelpMessage: '对 https://generativelanguage.googleapis.com 的反代，可以填入 https://gemini-proxy1.588686.xyz/ 或 https://gemini-proxy4.588686.xyz/ （常见报错：500 Internal Server Error）；可用指令： #chatgpt切换gemini #chatgpt设置geminikey #chatgpt(开启|关闭)gemini(搜索|代码执行)',
+                bottomHelpMessage: '对 https://generativelanguage.googleapis.com 的反代，可以填入 https://gemini-proxy1.588686.xyz 或 https://gemini-proxy4.588686.xyz （常见报错：500 Internal Server Error）；可用指令： #chatgpt切换gemini #chatgpt设置geminikey #chatgpt(开启|关闭)gemini(搜索|代码执行)',
                 component: 'Input'
               },
               {
@@ -1951,7 +1951,7 @@ export function supportGuoba() {
         {
           field: 'groupReply.historyCount',
           label: '判断输入的群聊记录条数',
-          bottomHelpMessage: '最近记录上限，至少 20 条、默认 50 条、最多 500 条；不足时使用实际已采集条数。每条最多 2000 字符，图片/语音等仅提供类型标记',
+          bottomHelpMessage: '最近记录上限，至少 20 条、默认 50 条、最多 500 条；不足时使用实际已采集条数。每条最多 2000 字符，图片/语音等仅提供类型标记；推荐与 全局-允许机器人读取近期的最多群聊聊天记录条数 数量相同',
           component: 'InputNumber',
           componentProps: { min: 20, max: 500, step: 1 }
         },

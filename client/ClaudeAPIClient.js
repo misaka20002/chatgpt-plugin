@@ -78,6 +78,7 @@ export class ClaudeAPIClient extends BaseClient {
     this.baseUrl = props.baseUrl || BASEURL
     this.supportFunction = true
     this.debug = props.debug
+    this.providerName = props.providerName || ''
   }
 
   async getHistory (parentMessageId, userId = this.userId, opt = {}) {
@@ -195,7 +196,7 @@ export class ClaudeAPIClient extends BaseClient {
     const cacheReadInfo = reportedCacheReadTokens == null
       ? ''
       : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`
-    console.info(`[Chatgpt][Claude] 输入Token(${totalInputTokens})${body.max_tokens ? ` | 回复上限(${body.max_tokens})` : ''} | 回答Token(${outputTokens}) | 累计Token(${totalTokens})${cacheWriteInfo}${cacheReadInfo}`)
+    console.info(`[Chatgpt][Claude]${this.providerName ? `[${this.providerName}]` : ''} 输入Token(${totalInputTokens})${body.max_tokens ? ` | 回复上限(${body.max_tokens})` : ''} | 回答Token(${outputTokens}) | 累计Token(${totalTokens})${cacheWriteInfo}${cacheReadInfo}`)
     return response
   }
 

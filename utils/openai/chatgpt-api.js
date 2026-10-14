@@ -74,6 +74,7 @@ export class ChatGPTAPI {
     _upsertMessage;
     _messageStore;
     _chatgptBlockCount;
+    _providerName;
     /**
      * Creates a new client wrapper around OpenAI's chat completion API, mimicing the official ChatGPT webapp's functionality as closely as possible.
      *
@@ -91,10 +92,11 @@ export class ChatGPTAPI {
      * @param fetch - Optional override for the `fetch` implementation to use. Defaults to the global `fetch` function.
      */
     constructor(opts) {
-        const { apiKey, apiOrg, apiBaseUrl = 'https://api.openai.com/v1', debug = false, messageStore, completionParams, systemMessage, maxModelTokens = 16000, maxResponseTokens = 8192, chatgptBlockCount = 0, getMessageById, upsertMessage, fetch = globalFetch } = opts;
+        const { apiKey, apiOrg, apiBaseUrl = 'https://api.openai.com/v1', debug = false, providerName = '', messageStore, completionParams, systemMessage, maxModelTokens = 16000, maxResponseTokens = 8192, chatgptBlockCount = 0, getMessageById, upsertMessage, fetch = globalFetch } = opts;
         this._apiKey = apiKey;
         this._apiOrg = apiOrg;
         this._apiBaseUrl = apiBaseUrl;
+        this._providerName = providerName;
         this._debug = !!debug;
         this._fetch = fetch;
         this._completionParams = {
@@ -552,7 +554,7 @@ export class ChatGPTAPI {
             const cacheReadInfo = reportedCacheReadTokens == null
                 ? ''
                 : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
-            console.info(`[Chatgpt][API] 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`);
+            console.info(`[Chatgpt][API]${this._providerName ? `[${this._providerName}]` : ''} 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`);
             if (apiPromptTokens + maxTokens > this._maxModelTokens) {
                 console.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${apiPromptTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`);
             }

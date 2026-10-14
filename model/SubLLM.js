@@ -96,6 +96,7 @@ export class SubLLM {
   constructor(options = {}) {
     const row = resolveProvider(options.providerId || options.provider || Config.defaultProviderId)
     this.config = providerConfig(row)
+    this.providerName = row.name
     this.provider = row.type === 'api' ? 'openai' : row.type
     this.model = options.model || row[{ api: 'model', responses: 'responsesModel', gemini: 'geminiModel', claude: 'claudeApiModel' }[row.type]] || ''
     this.systemPrompt = options.systemPrompt || ''
@@ -160,6 +161,7 @@ export class SubLLM {
       fetch: newFetch,
       maxModelTokens: Config.maxModelTokens,
       maxResponseTokens: this.maxTokens || Config.apiMaxToken,
+      providerName: this.providerName,
     }
 
     const client = new ChatGPTAPI(opts)
@@ -197,7 +199,8 @@ export class SubLLM {
       debug: this.debug,
       fetch: newFetch,
       maxResponseTokens: this.maxTokens || Config.responsesApiMaxToken,
-      maxModelTokens: Config.responsesMaxModelTokens
+      maxModelTokens: Config.responsesMaxModelTokens,
+      providerName: this.providerName
     })
     // 子模型请求永远不附带 tools/tool_choice，避免不兼容模型被强制工具调用。
     const result = await client.sendMessage(buildResponsesInput(prompt, media), {
@@ -219,6 +222,7 @@ export class SubLLM {
       key: this.apiKey || Config.getGeminiKey,
       model: this.model || Config.geminiModel,
       baseUrl: this.apiBaseUrl || Config.geminiBaseUrl,
+      providerName: this.providerName,
       debug: this.debug,
     })
 
@@ -263,6 +267,7 @@ export class SubLLM {
       model: this.model || Config.claudeApiModel || 'claude-3-sonnet-20240229',
       debug: this.debug,
       baseUrl: this.apiBaseUrl || Config.claudeApiBaseUrl,
+      providerName: this.providerName,
     })
 
     const option = {

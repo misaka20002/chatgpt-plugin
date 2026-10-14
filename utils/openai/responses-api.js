@@ -9,6 +9,7 @@ export class ResponsesAPI {
       apiKey,
       apiBaseUrl = 'https://api.openai.com/v1',
       debug = false,
+      providerName = '',
       fetch = globalThis.fetch,
       maxResponseTokens,
       maxModelTokens
@@ -19,6 +20,7 @@ export class ResponsesAPI {
 
     this._apiKey = apiKey
     this._apiBaseUrl = apiBaseUrl.replace(/\/+$/, '')
+    this._providerName = providerName
     this._debug = debug
     this._fetch = fetch
     this._maxResponseTokens = maxResponseTokens
@@ -173,7 +175,7 @@ export class ResponsesAPI {
         const cacheReadInfo = reportedCacheReadTokens == null
           ? ''
           : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`
-        console.info(`[Chatgpt][Responses] 输入Token(${inputTokens})${maxOutputTokens ? ` | 回复上限(${maxOutputTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`)
+        console.info(`[Chatgpt][Responses]${this._providerName ? `[${this._providerName}]` : ''} 输入Token(${inputTokens})${maxOutputTokens ? ` | 回复上限(${maxOutputTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`)
         if (this._maxModelTokens && maxOutputTokens && inputTokens + maxOutputTokens > this._maxModelTokens) {
           console.warn(`[Chatgpt][Responses] 当前 token 配置边界过紧：输入Token(${inputTokens}) + 回复上限(${maxOutputTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的 Responses Token 配置。`)
         }
