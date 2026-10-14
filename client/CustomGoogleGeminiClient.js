@@ -131,7 +131,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     search: boolean,
    *     codeExecution: boolean,
    * }} opt
-   * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, id: string}>}
+   * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, thinking_text?: string, id: string}>}
    */
   async sendMessage(text, opt = {}) {
     const Config = this.config
@@ -250,7 +250,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     const normalizedHistory = normalizeGeminiHistory(history, maxHistoryWithCurrentMessage)
     history = normalizedHistory.history
     if (this.debug && normalizedHistory.changed) {
-      logger.info(`[Chatgpt][Gemini] cleaned invalid function-call history: ${JSON.stringify(normalizedHistory.stats)}`)
+      console.info(`[Chatgpt][Gemini] cleaned invalid function-call history: ${JSON.stringify(normalizedHistory.stats)}`)
     }
 
     // retryConfig 根据是否处于备用模式决定使用的模型名称
@@ -324,7 +324,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     //   delete body.tool_config
     // }
     if (this.debug) {
-      logger.info("body: " + JSON.stringify(body, null, 2))
+      console.info("body: " + JSON.stringify(body, null, 2))
     }
     let result = await fetchWithConnectionRetry(this.fetch, url, {
       method: 'POST',
@@ -335,7 +335,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     }, {
       onRetry: ({ error, retry, maxRetries, delayMs }) => {
-        logger.warn(`[Chatgpt][Gemini] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
+        console.warn(`[Chatgpt][Gemini] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
       }
     })
 
@@ -355,7 +355,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
      */
     let response = await result.json()
     if (this.debug) {
-      logger.info("response: " + JSON.stringify(response, null, 2))
+      console.info("response: " + JSON.stringify(response, null, 2))
     }
 
     // 检查响应中是否包含错误
@@ -390,10 +390,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         const cacheReadInfo = reportedCacheReadTokens == null
           ? ''
           : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
-        logger.info(`[Chatgpt][Gemini] 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
+        console.info(`[Chatgpt][Gemini] 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
       }
     } catch (err) {
-      logger.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
+      console.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
     }
 
     if (response.promptFeedback?.blockReason) throw Object.assign(new Error(`模型拒绝回答：${response.promptFeedback.blockReason}`), { noRetry: true })
@@ -453,7 +453,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         .map(part => part.functionCall?.thoughtSignature)
         .filter(sig => sig !== undefined && sig !== null)
 
-      const replyText = responseContent.parts.find(i => i.text)?.text
+      const replyText = responseContent.parts.find(i => i.text && i.thought !== true)?.text
       if (replyText && replyText.trim()) {
         // send reply first
         // logger.info('[chatgpt]functionCall附加的对话text: ' + replyText.trim())
@@ -468,7 +468,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
               this.e.reply({ ...img, origin: true }, true)
             }
           } catch (err) {
-            logger.error('[chatgpt][functionCall附加的对话text]sf图片模式错误\n' + err)
+            console.error('[chatgpt][functionCall附加的对话text]sf图片模式错误\n' + err)
             opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
           }
         }
@@ -481,7 +481,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             //   opt.replyPureTextCallback && await opt.replyPureTextCallback(replyText.trim())
             // }
           } else {
-            logger.info("[chatgpt][functionCall附加的对话text] Processing...")
+            console.info("[chatgpt][functionCall附加的对话text] Processing...")
             this.e.reply((await convertFacesAndCQCode(replyText.trim(), Config.enableRobotAt, Config.isProcessCQAtCode, Config.removeCQCodeFocus, this.e)), true);
           }
         }
@@ -489,7 +489,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       let /** @type {FunctionResponse[]} **/ fcResults = []
       const toolForwardRecords = []
       for (let fc of functionCall) {
-        logger.info(`[Chatgpt][Gemini] execution function: ${JSON.stringify(fc)}`)
+        console.info(`[Chatgpt][Gemini] execution function: ${JSON.stringify(fc)}`)
         const funcName = fc.name
         const toolArgsForForward = _.cloneDeep(fc.args || {})
         let chosenTool = this.tools.find(t => t.name === funcName)
@@ -530,9 +530,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
               mode: 'gemini'
             })
             functionResponse.response.content = await chosenTool.func(args, this.e)
-            logger.info(`[Chatgpt][Gemini] function ${fc.name} execution result: ${JSON.stringify(functionResponse.response.content)}`)
+            console.info(`[Chatgpt][Gemini] function ${fc.name} execution result: ${JSON.stringify(functionResponse.response.content)}`)
           } catch (err) {
-            logger.error(err)
+            console.error(err)
             functionResponse.response.content = {
               error: `Function execute error: ${err.message}`
             }
@@ -575,7 +575,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       // 递归直到返回text
       // 先把这轮的消息存下来
       await this.upsertMessage(getMessageForSave(thisMessage))
-      responseContent = handleSearchResponse(responseContent).responseContent
+      const handled = handleSearchResponse(responseContent)
+      responseContent = handled.responseContent
       const respMessage = Object.assign(responseContent, {
         id: idModel,
         parentMessageId: idThis
@@ -583,7 +584,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       await this.upsertMessage(respMessage)
 
       // 工具结果仅在当前请求的历史缓冲中续接。
-      return await this.sendMessage('', responseOpt)
+      const toolResult = await this.sendMessage('', responseOpt)
+      // 思考内容跨工具轮累积：本轮思考拼在后续递归结果之前，保持时间顺序
+      if (handled.thinking) {
+        toolResult.thinking_text = handled.thinking + (toolResult.thinking_text || '')
+      }
+      return toolResult
     }
     if (responseContent) {
       await this.upsertMessage(getMessageForSave(thisMessage))
@@ -593,7 +599,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       })
       await this.upsertMessage(respMessage)
     }
-    let { final } = handleSearchResponse(responseContent)
+    let { final, thinking } = handleSearchResponse(responseContent)
     try {
       if (groundingMetadata?.groundingChunks) {
         final += '\n参考资料\n'
@@ -601,14 +607,15 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           // final += `[${chunk.web.title}](${chunk.web.uri})\n`
           final += `[${chunk.web.title}]\n`
         })
-        logger.info('[Chatgpt][Gemini Grounding] 搜索查询: ' + groundingMetadata.webSearchQueries.join(', '));
+        console.info('[Chatgpt][Gemini Grounding] 搜索查询: ' + groundingMetadata.webSearchQueries.join(', '));
       }
     } catch (err) {
-      logger.warn(err)
+      console.warn(err)
     }
 
     return {
       text: final,
+      thinking_text: thinking,
       conversationId: '',
       parentMessageId: idThis,
       id: idModel
@@ -767,19 +774,32 @@ function stripGeminiFunctionCallParts(content) {
   }
 }
 
+/**
+ * 拆分正式回复与思考内容（Gemini 思考 part 形如 { text, thought: true }）
+ * @param {Content} responseContent
+ * @returns {{final: string, thinking: string, responseContent}}
+ */
 function handleSearchResponse(responseContent) {
   let final = ''
+  let thinking = ''
 
   // 如果 responseContent 不存在或没有 parts,直接返回
   if (!responseContent || !responseContent.parts) {
     return {
       final,
+      thinking,
       responseContent
     }
   }
 
   // 遍历每个 part 并处理
   responseContent.parts = responseContent.parts.map((part) => {
+    // 思考 part 只收集到 thinking，不并入正式回复；part 原样返回，保证 thoughtSignature 与历史回放语义不变
+    if (part.thought === true) {
+      if (typeof part.text === 'string') thinking += part.text
+      return { ...part }
+    }
+
     let newText = ''
 
     if (part.text) {
@@ -810,6 +830,7 @@ function handleSearchResponse(responseContent) {
 
   return {
     final,
+    thinking,
     responseContent
   }
 }

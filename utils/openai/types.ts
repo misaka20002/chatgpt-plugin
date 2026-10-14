@@ -242,6 +242,7 @@ export namespace openai {
                     role: Role
                     content?: string,
                     reasoning_content?: string,
+                    reasoning?: string,
                     function_call?: FunctionCall,
                     tool_calls: ToolCall[]
                 }
@@ -324,6 +325,7 @@ export namespace openai {
          */
         content: string
         reasoning_content: string
+        reasoning?: string
         function_call: FunctionCall,
         tool_calls: ToolCall[]
     }

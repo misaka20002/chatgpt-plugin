@@ -39,8 +39,26 @@ export class ResponsesAPI {
   _extractReasoningText (response) {
     return (response.output || [])
       .filter(item => item.type === 'reasoning')
-      .flatMap(item => item.summary || [])
-      .map(item => item.text || '')
+      .flatMap(item => {
+        const parts = []
+        // summary 优先：形态可能是 [{ type: 'summary_text', text }]，也可能是字符串数组或单个字符串
+        if (typeof item.summary === 'string') {
+          parts.push(item.summary)
+        } else if (Array.isArray(item.summary)) {
+          for (const summary of item.summary) {
+            if (typeof summary === 'string') parts.push(summary)
+            else if (summary && typeof summary.text === 'string') parts.push(summary.text)
+          }
+        }
+        // summary 为空时回退原始 CoT（gpt-oss 等模型会返回 content[].reasoning_text）
+        if (!parts.some(Boolean) && Array.isArray(item.content)) {
+          parts.length = 0
+          for (const content of item.content) {
+            if (content && content.type === 'reasoning_text' && typeof content.text === 'string') parts.push(content.text)
+          }
+        }
+        return parts
+      })
       .filter(Boolean)
       .join('\n')
   }

@@ -1661,7 +1661,7 @@ export class chatgpt extends plugin {
             let thinkingForward = await common.makeForwardMsg(e, [thinking], '思考过程')
             this.reply(thinkingForward)
           } else {
-            logger.mark('思考过程', thinking)
+            logger.info('思考过程', thinking)
           }
         }
 

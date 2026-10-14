@@ -27,6 +27,37 @@ function extractTextContent(content?: string | types.openai.ChatCompletionConten
         : content.filter(part => part.type === 'text').map(part => (part as any).text).join('\n')
 }
 
+/**
+ * 从 OpenAI 兼容响应片段提取思考文本（各网关字段命名不一，按优先级兜底）。
+ * 流式只认字符串字段；reasoning_details 是结构化数组，仅非流式使用（流式分片存在网关整段重发的重复风险）。
+ */
+function extractReasoningText(source?: any, includeDetails = false): string {
+    if (!source || typeof source !== 'object') {
+        return ''
+    }
+    if (typeof source.reasoning_content === 'string' && source.reasoning_content) {
+        return source.reasoning_content
+    }
+    if (typeof source.reasoning === 'string' && source.reasoning) {
+        return source.reasoning
+    }
+    if (includeDetails && Array.isArray(source.reasoning_details)) {
+        return source.reasoning_details.map((detail: any) => {
+            if (!detail || typeof detail !== 'object') {
+                return ''
+            }
+            if (detail.type === 'reasoning.text' && typeof detail.text === 'string') {
+                return detail.text
+            }
+            if (detail.type === 'reasoning.summary' && typeof detail.summary === 'string') {
+                return detail.summary
+            }
+            return '' // reasoning.encrypted 等无文本类型忽略
+        }).filter(Boolean).join('\n')
+    }
+    return ''
+}
+
 function getStoredMessageRole(role?: string): Role | 'function' {
     if (role === 'tool' || role === 'assistant' || role === 'system') {
         return role
@@ -485,7 +516,8 @@ export class ChatGPTAPI {
                                         }
                                         result.delta = delta.content
                                         if (delta?.content) result.text += delta.content
-                                        if (delta?.reasoning_content) result.thinking_text += delta.reasoning_content
+                                        const reasoningDelta = extractReasoningText(delta) // 流式只用字符串字段
+                                        if (reasoningDelta) result.thinking_text += reasoningDelta
                                         if (delta.role) {
                                             result.role = delta.role
                                         }
@@ -552,7 +584,7 @@ export class ChatGPTAPI {
                                     function: message.function_call
                                 }]
                             }
-                            result.thinking_text = message.reasoning_content
+                            result.thinking_text = extractReasoningText(message, true)
                             if (message.role) {
                                 result.role = message.role
                             }

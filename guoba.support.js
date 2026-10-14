@@ -263,7 +263,7 @@ export function supportGuoba() {
         {
           field: 'forwardReasoning',
           label: '是否转发思考过程',
-          bottomHelpMessage: 'OpenAI的o系列、deepseek的r系列等思考模型的思考过程是否以转发形式发出。仅适配reasoning_content。默认开启。',
+          bottomHelpMessage: 'OpenAI API、 Responses API、 Claude、 Gemini 等思考模型的思维链是否以合并转发形式发出；关闭时仅记录日志不发送。默认开启。',
           component: 'Switch'
         },
         {
