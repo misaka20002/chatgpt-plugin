@@ -8,6 +8,7 @@ import { normalizeAvatarReplyConfig } from './avatar/config.js'
 export const defaultOpenAIReverseProxy = 'https://api.openai.com/v1'
 export const pureSydneyInstruction = 'You\'re an AI assistant named [name]. Answer using the same language as the user.'
 
+// TODO: 2个月后（2027年1月） 移除 commit 29b84264a67e9bd1ff71f652efdd290cf8ccbd65 新增的 toolGroupAdminArr 配置迁移配套函数
 /**
  * `toolGroupAdminArr` 的配置迁移版本。
  *
