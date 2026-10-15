@@ -24,16 +24,19 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # 补一个宿主 lib/plugins/plugin.js 空壳。
+      # 补齐测试依赖的宿主文件空壳。
       #
-      # 插件按 Yunzai 的目录约定放在 <root>/plugins/chatgpt-plugin/，代码里用
-      # '../../../lib/plugins/plugin.js' 引宿主基类。CI 的 checkout 直接落在
-      # <work>/chatgpt-plugin/，上面两级没有 lib/，于是这个 import 解析不到。
-      # 测试里虽然用 mock.module 把它拦掉了，但 Node 仍要先「解析」该路径才能打桩，
-      # 解析不到就是 ERR_MODULE_NOT_FOUND（configGroupReply 的第 8 条用例因此挂掉）。
-      # 本地跑能过是因为 ../.. 恰好就是 Yunzai 根目录、lib/ 真实存在。
-      - name: 补宿主 plugin.js 空壳（CI 无 lib/ 目录）
+      # 插件按 Yunzai 的目录约定放在 <root>/plugins/chatgpt-plugin/，代码与测试里用
+      # '../../../lib/...' 引宿主模块（plugin.js / loader.js / common.js / puppeteer.js）。
+      # CI 的 checkout 直接落在 <work>/chatgpt-plugin/，上面两级没有 lib/，这些路径解析不到。
+      # 测试虽然用 mock.module 打桩，但 Node 必须先「解析」目标路径才能打桩，解析不到
+      # 就是 ERR_MODULE_NOT_FOUND。本地能过是因为 ../.. 恰好是 Yunzai 根目录、lib/ 真实存在。
+      - name: 补宿主 lib 空壳（CI 无 lib/ 目录）
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/../../lib/plugins"
-          printf 'export default class plugin {}\n' > "$GITHUB_WORKSPACE/../../lib/plugins/plugin.js"
+          HOST_LIB="$GITHUB_WORKSPACE/../../lib"
+          mkdir -p "$HOST_LIB/plugins" "$HOST_LIB/common" "$HOST_LIB/puppeteer"
+          printf 'export default class plugin {}\n' > "$HOST_LIB/plugins/plugin.js"
+          printf 'export const getBot = () => undefined\nexport const getPlatformInfo = () => ({ platform: "test" })\n' > "$HOST_LIB/plugins/loader.js"
+          printf 'export const common = {}\nexport default {}\n' > "$HOST_LIB/common/common.js"
+          printf 'export default class Puppeteer {}\n' > "$HOST_LIB/puppeteer/puppeteer.js"
       - run: pnpm run check
