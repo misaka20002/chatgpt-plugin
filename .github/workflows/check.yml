@@ -1,4 +1,3 @@
----
 name: "check"
 
 # 语法预检 + 快测试套件（内容见 package.json 的 check 脚本）
@@ -6,6 +5,12 @@ on:
   push:
     branches: [v2]
   pull_request:
+
+# 同一分支连续推送时只保留最新一次运行，旧的直接取消 ——
+# 否则每次推送都会各发一封通知，改几个文件就连着收好几封。
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -19,4 +24,16 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 补一个宿主 lib/plugins/plugin.js 空壳。
+      #
+      # 插件按 Yunzai 的目录约定放在 <root>/plugins/chatgpt-plugin/，代码里用
+      # '../../../lib/plugins/plugin.js' 引宿主基类。CI 的 checkout 直接落在
+      # <work>/chatgpt-plugin/，上面两级没有 lib/，于是这个 import 解析不到。
+      # 测试里虽然用 mock.module 把它拦掉了，但 Node 仍要先「解析」该路径才能打桩，
+      # 解析不到就是 ERR_MODULE_NOT_FOUND（configGroupReply 的第 8 条用例因此挂掉）。
+      # 本地跑能过是因为 ../.. 恰好就是 Yunzai 根目录、lib/ 真实存在。
+      - name: 补宿主 plugin.js 空壳（CI 无 lib/ 目录）
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/../../lib/plugins"
+          printf 'export default class plugin {}\n' > "$GITHUB_WORKSPACE/../../lib/plugins/plugin.js"
       - run: pnpm run check
