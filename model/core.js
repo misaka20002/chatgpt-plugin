@@ -41,6 +41,8 @@ import { EditCardTool } from '../utils/tools/EditCardTool.js'
 import { JinyanTool } from '../utils/tools/JinyanTool.js'
 import { KickOutTool } from '../utils/tools/KickOutTool.js'
 import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
+import { GetGroupNoticeTool } from '../utils/tools/GetGroupNoticeTool.js'
+import { GroupTodoTool } from '../utils/tools/GroupTodoTool.js'
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
 import { azureSerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
@@ -491,12 +493,12 @@ class Core {
 
       let isAdmin
       let sender
-      let fullFuncMap = {}
+      let funcMap = {}
       if (opt.enableSmart) {
         isAdmin = ['admin', 'owner'].includes(e.sender.role)
         sender = e.sender.user_id
-        const { funcMap, fullFuncMap: collectedFullFuncMap, promptAddition, systemAddition } = await collectTools(e)
-        fullFuncMap = collectedFullFuncMap
+        const { funcMap: collectedFuncMap, promptAddition, systemAddition } = await collectTools(e)
+        funcMap = collectedFuncMap
         promptAddition && (prompt += promptAddition)
         extraSystemMessage = systemAddition || ''
         instructions = await buildResponsesInstructions()
@@ -597,7 +599,7 @@ class Core {
             }
           }
 
-          const toolResults = await executeResponsesToolCalls(this, e, msg.toolCalls, fullFuncMap, isAdmin, sender, toolRoundCount)
+          const toolResults = await executeResponsesToolCalls(this, e, msg.toolCalls, funcMap, isAdmin, sender, toolRoundCount)
           if (completionParams.tool_choice === 'required') delete completionParams.tool_choice
 
           if (Config.responsesStore) {
@@ -738,7 +740,6 @@ class Core {
         let sender = e.sender.user_id
         const {
           funcMap,
-          fullFuncMap,
           promptAddition,
           systemAddition
         } = await collectTools(e)
@@ -860,8 +861,8 @@ class Core {
 
               let functionResult = ''
               try {
-                if (fullFuncMap[name.trim()]) {
-                  functionResult = await fullFuncMap[name.trim()].exec.bind(this)(mergeTrustedToolArgs(args, {
+                if (funcMap[name.trim()]) {
+                  functionResult = await funcMap[name.trim()].exec.bind(this)(mergeTrustedToolArgs(args, {
                     isAdmin,
                     sender
                   }), e)
@@ -971,7 +972,7 @@ class Core {
 }
 
 /** 执行 Responses API 请求的本地工具，并转换成 function_call_output items。 */
-async function executeResponsesToolCalls(core, e, toolCalls, fullFuncMap, isAdmin, sender, round) {
+async function executeResponsesToolCalls(core, e, toolCalls, funcMap, isAdmin, sender, round) {
   const toolForwardRecords = []
   const toolResults = []
 
@@ -994,8 +995,8 @@ async function executeResponsesToolCalls(core, e, toolCalls, fullFuncMap, isAdmi
 
     let functionResult = ''
     try {
-      if (fullFuncMap[name.trim()]) {
-        functionResult = await fullFuncMap[name.trim()].exec.bind(core)(mergeTrustedToolArgs(args, { isAdmin, sender }), e)
+      if (funcMap[name.trim()]) {
+        functionResult = await funcMap[name.trim()].exec.bind(core)(mergeTrustedToolArgs(args, { isAdmin, sender }), e)
         logger.info(`[Chatgpt][Responses] function ${name} execution result: ${JSON.stringify(functionResult)}`)
       } else {
         functionResult = `Function ${name} not found.`
@@ -1027,7 +1028,7 @@ async function executeResponsesToolCalls(core, e, toolCalls, fullFuncMap, isAdmi
 /**
  * 收集tools
  * @param e
- * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string, fullFuncMap: {}}>}
+ * @return {Promise<{systemAddition, funcMap: {}, promptAddition: string}>}
  */
 async function collectTools(e) {
   /** 搜索/网络来源 总工具 */
@@ -1078,10 +1079,8 @@ async function collectTools(e) {
     'KickOut': KickOutTool,
     'SetTitle': SetTitleTool,
     'HandleMsg': HandleMessageMsgTool,
+    'GroupTodo': GroupTodoTool,
   }
-  let groupAdminTools = Object.entries(groupAdminToolMap)
-    .filter(([key]) => Config.toolGroupAdminArr.includes(key))
-    .map(([_, ToolClass]) => new ToolClass());
 
   /** 图片/视频搜索工具（由搜索/网络来源配置控制） */
   const serpExtraToolMap = {
@@ -1093,17 +1092,13 @@ async function collectTools(e) {
     .filter(([key]) => Config.serpSourceArr.includes(key))
     .map(([_, ToolClass]) => new ToolClass());
 
-  /** fullTools 包括了踢人等管理员用的工具 */
-  let fullTools = [
-    new APTool(),
-    ...defaultTools,
-    ...gameQueryTools,
-    ...groupAdminTools,
-    ...serpExtraTools,
-    ...serpTools,
-  ]
-
-  let /** @type{AbstractTool[]} **/ tools = [ // Gemini 只有取 tools，不取 fullTools
+  /**
+   * 本轮真正可用的工具集：按上下文（群聊/私聊、Bot 是否为群管）与配置过滤后组装。
+   * 它既是广告给模型的 schema 来源，也是唯一的执行查找表——模型点名不在其中的工具时，
+   * 四个 provider 分支都拒绝执行、不会进入工具内部（错误措辞各异：OpenAI 两分支与 Claude 回
+   * `Function <name> not found.`，Gemini 回 `Function <name> doesn't exist`）。
+   */
+  let /** @type{AbstractTool[]} **/ tools = [
     new APTool(),
     ...defaultTools,
     ...gameQueryTools,
@@ -1131,6 +1126,8 @@ async function collectTools(e) {
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },
+    /** 群公告是群内公开的只读信息：只要在群里就能用，与 Bot 是否管理员、提问者身份都无关，故不进 groupAdminToolMap */
+    { condition: Config.toolGroupAdminArr.includes('GroupNotice') && e?.isGroup, ToolClass: GetGroupNoticeTool },
     { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },
     { condition: Config.generateHtml_ToolSwitch, ToolClass: GenerateHtmlTool },
     { condition: Config.generateGraphCalculator_ToolSwitch, ToolClass: GenerateGraphCalculatorTool },
@@ -1141,7 +1138,6 @@ async function collectTools(e) {
   optionalTools.forEach(({ condition, ToolClass }) => {
     if (condition) {
       tools.push(new ToolClass())
-      fullTools.push(new ToolClass())
     }
   });
 
@@ -1149,7 +1145,6 @@ async function collectTools(e) {
     const defaultMessageTool = new DefaultMessageTriggerTool(e)
     if (defaultMessageTool.allowedKeywords.size > 0) {
       tools.push(defaultMessageTool)
-      fullTools.push(defaultMessageTool)
     }
   }
 
@@ -1159,7 +1154,6 @@ async function collectTools(e) {
       const mcpTools = McpManager.getTools()
       mcpTools.forEach(mcpTool => {
         tools.push(mcpTool)
-        fullTools.push(mcpTool)
       })
     } catch (err) {
       logger.error(`[Chatgpt][mcp] 加载 MCP 工具到对话失败: ${err.message}`)
@@ -1173,7 +1167,7 @@ async function collectTools(e) {
       /** 当Bot是管理员才给这些工具（不用担心误伤，普通群成员只能对自己禁言>_<） */
       const allowedAdminKeys = ['EditCard', 'Jinyan', 'SetTitle']
       /** 当Bot是管理员+当用户是管理员才给这些工具 */
-      const masterOnlyKeys = ['KickOut', 'HandleMsg']
+      const masterOnlyKeys = ['KickOut', 'HandleMsg', 'GroupTodo']
       Object.entries(groupAdminToolMap)
         .filter(([key]) => Config.toolGroupAdminArr.includes(key))
         .filter(([key]) => {
@@ -1217,7 +1211,6 @@ async function collectTools(e) {
 
   return {
     funcMap: buildFuncMap(tools),
-    fullFuncMap: buildFuncMap(fullTools),
     systemAddition,
     promptAddition
   }

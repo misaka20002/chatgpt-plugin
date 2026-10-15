@@ -55,6 +55,37 @@ function loadConfigIn(userConfig) {
   return result
 }
 
+/** 子进程：只加载配置并回报 toolGroupAdminArr，不主动 save()（迁移与它触发的保存在 import 阶段完成） */
+const LOAD_ONLY_SCRIPT = `
+globalThis.logger = { info() {}, warn() {}, debug() {}, mark() {}, error: (...args) => console.error(...args) }
+const { Config } = await import(${JSON.stringify(configModuleUrl)})
+process.stdout.write(JSON.stringify(Config.getConfig().toolGroupAdminArr))
+process.exit(0)
+`
+
+/**
+ * 用给定 config.json 加载一次（迁移发生在 import 阶段），
+ * 回报内存里的数组与文件在加载后是否被改写及改写后的内容。
+ * @param {object|null} userConfig null 表示没有 config.json
+ */
+function loadForMigration(userConfig) {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'chatgpt-migrate-'))
+  tempDirs.push(cwd)
+  const configDir = path.join(cwd, 'plugins', 'chatgpt-plugin', 'config')
+  fs.mkdirSync(configDir, { recursive: true })
+  const configFile = path.join(configDir, 'config.json')
+  if (userConfig) fs.writeFileSync(configFile, JSON.stringify(userConfig, null, 2))
+  const readFile = () => (fs.existsSync(configFile) ? fs.readFileSync(configFile, 'utf8') : null)
+  const before = readFile()
+  const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', LOAD_ONLY_SCRIPT], { cwd, encoding: 'utf8' })
+  const after = readFile()
+  return {
+    loaded: JSON.parse(stdout),
+    written: after === null ? null : JSON.parse(after),
+    fileChanged: before !== after,
+  }
+}
+
 const USER_CONFIG = {
   cloudMode: 'file',
   ttsHD: true,
@@ -71,6 +102,10 @@ const USER_CONFIG = {
   siliconflow_VoiceApi: [{ siliconflow_Voice_Model: 'm', siliconflow_Voice_ReferenceId: 'custom:1', siliconflow_Voice_ReferenceText: 't', remark: '自定义' }],
   // 嵌套对象只保存了其中一个键
   memoryGroupCapture: { groups: [{ groupId: '10001', switchOn: true }] },
+  // 当前位置版本保存出来的配置都会带上这个迁移标记（saveDiff 会显式写入）。
+  // 带上它才代表「该实例已经历过迁移」，下面「清空的列表保持为空」才是用户主动取消的语义——
+  // 少了这一行，那份配置在迁移眼里就是「老配置」，两项新工具会被补进这个空数组。
+  toolGroupAdminArrMigration: 1,
 }
 
 describe('配置加载：数组整体采用用户保存的值', () => {
@@ -131,5 +166,99 @@ describe('配置加载：数组整体采用用户保存的值', () => {
     // 保存时用户的数组原样写回
     assert.deepEqual(custom.written.serpSourceArr, USER_CONFIG.serpSourceArr)
     assert.deepEqual(custom.written.toolGroupAdminArr, [])
+  })
+})
+
+/* ================= toolGroupAdminArr 的升级迁移 ================= */
+
+describe('toolGroupAdminArr 迁移：老实例首次升级时补齐新增工具', () => {
+  const ADDED = ['GroupNotice', 'GroupTodo']
+  // providerConfigVersion: 1 用来隔离出本次迁移，否则提供方迁移也会触发一次保存
+  const migrationConfig = arr => ({ providerConfigVersion: 1, toolGroupAdminArr: arr })
+
+  let defaultArr
+  let oldDefaultArr
+  let firstRun
+
+  before(() => {
+    defaultArr = loadForMigration(null).loaded
+    oldDefaultArr = defaultArr.filter(key => !ADDED.includes(key))
+    firstRun = loadForMigration(migrationConfig(['EditCard', 'KickOut']))
+  })
+
+  after(() => {
+    for (const dir of tempDirs) fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('前提：本次迁移要补的项确实不在旧默认值里', () => {
+    assert.ok(ADDED.every(key => !oldDefaultArr.includes(key)))
+  })
+
+  test('首次加载：追加缺失项、保留用户已有顺序，并把标记一起落盘', () => {
+    assert.deepEqual(firstRun.loaded, ['EditCard', 'KickOut', ...ADDED])
+    assert.deepEqual(firstRun.written.toolGroupAdminArr, ['EditCard', 'KickOut', ...ADDED])
+    assert.equal(firstRun.written.toolGroupAdminArrMigration, 1)
+  })
+
+  test('幂等：拿迁移后的文件再启动一次，结果不变、不写文件、不出现重复项', () => {
+    const secondRun = loadForMigration(firstRun.written)
+    assert.deepEqual(secondRun.loaded, firstRun.loaded)
+    assert.equal(secondRun.fileChanged, false)
+  })
+
+  test('用户主动取消后不会被重新加回：只看标记，不看数组缺不缺项', () => {
+    const run = loadForMigration({ providerConfigVersion: 1, toolGroupAdminArr: ['GroupTodo'], toolGroupAdminArrMigration: 1 })
+    assert.deepEqual(run.loaded, ['GroupTodo'])
+    assert.equal(run.fileChanged, false)
+  })
+
+  test('端到端：迁移落盘 → 用户在锅巴取消勾选 → 再启动不会被追加回来', () => {
+    // 用户取消 GroupNotice：数组变了，标记不变
+    const userEdited = { ...firstRun.written, toolGroupAdminArr: ['EditCard', 'GroupTodo'] }
+    const run = loadForMigration(userEdited)
+    assert.deepEqual(run.loaded, ['EditCard', 'GroupTodo'])
+    assert.equal(run.fileChanged, false)
+  })
+
+  test('用户把数组清空时同样追加：迁移只认标记，不替用户猜意图', () => {
+    const run = loadForMigration(migrationConfig([]))
+    assert.deepEqual(run.loaded, ADDED)
+  })
+
+  test('从未保存过该数组：整体采用默认值（本已含两项），标记仍要落盘', () => {
+    const run = loadForMigration({ providerConfigVersion: 1 })
+    assert.deepEqual(run.loaded, defaultArr)
+    // 数组无需追加，但进过迁移分支就得把标记写下去——否则每次启动都重判为「未迁移」，
+    // 迁移的「首次更新执行一次」永远没完成
+    assert.equal(run.fileChanged, true)
+    assert.equal(run.written.toolGroupAdminArrMigration, 1)
+    // 数组与默认值相同，差量保存本来就会略过它
+    assert.equal(Object.hasOwn(run.written, 'toolGroupAdminArr'), false)
+  })
+
+  test('幂等：标记落盘后再次启动不再重入迁移分支', () => {
+    const first = loadForMigration({ providerConfigVersion: 1 })
+    const second = loadForMigration(first.written)
+    assert.equal(second.fileChanged, false, '第二次启动不应再写文件')
+    assert.deepEqual(second.loaded, defaultArr)
+  })
+
+  test('数组已含两项但缺标记（老实例已手动勾选）：不重复追加，只补标记', () => {
+    const run = loadForMigration({ providerConfigVersion: 1, toolGroupAdminArr: defaultArr })
+    assert.deepEqual(run.loaded, defaultArr, '不得出现重复项')
+    assert.equal(run.written.toolGroupAdminArrMigration, 1)
+    assert.equal(Object.hasOwn(run.written, 'toolGroupAdminArr'), false, '与默认值相同，差量保存不写这一项')
+  })
+
+  test('全新安装（无 config.json）：不创建文件，默认值已含两项', () => {
+    const run = loadForMigration(null)
+    assert.deepEqual(run.loaded, defaultArr)
+    assert.equal(run.written, null)
+  })
+
+  test('追加后恰好等于默认值时数组也必须落盘（差量保存会整条略过，否则标记已迁移而文件里还是旧数组）', () => {
+    const run = loadForMigration(migrationConfig(oldDefaultArr))
+    assert.deepEqual(run.written.toolGroupAdminArr, defaultArr)
+    assert.equal(run.written.toolGroupAdminArrMigration, 1)
   })
 })

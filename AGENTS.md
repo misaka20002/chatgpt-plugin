@@ -22,6 +22,8 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 
 Issues, specs, and tickets live as markdown files under `.scratch/<feature>/` in this repo. See `docs/agents/issue-tracker.md`.
 
+多轮迭代出来的需求（逐轮追加、中途改口径、要拍板取舍的那类）**在动手实现前**先落盘成 `.scratch/<feature>/spec.md`——需求只活在对话里时，一次上下文压缩就只剩从会话转录反推这一条路，代价远高于当场写下。
+
 ### Domain docs
 
 single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/agents/domain.md`.
@@ -35,7 +37,10 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - 优先标准库与现有依赖；新增前确认根仓库是否已装，以及必要性、适用性和维护状况。
 - 不硬编码或提交密钥，不信任外部输入，不关安全校验硬过测试。优先修复真实可利用的授权绕过、泄漏、代码执行与数据破坏；不把理论风险扩展成无关重构。记忆内容的记录策略遵循记忆指南。
 - 日志、注释与用户文案用中文，日志前缀沿用 `[Memory]` / `[MemoryV2]` / `[ChatGPT]` 等。注释解释原因、业务约束和权衡；缩进与分号跟随所在文件。
+- **写「N 处都…」「所有…」「一律…」这类跨位置的全称断言前，逐个打开被断言的位置核对**，不要只核对自己刚改的那一处。本仓已因此出现过三次失实且都活到了评审：四个 provider 分支的错误措辞（Gemini 实际不同）、测试注释宣称"天然免疫"误伤、锅巴说明文案前后半句矛盾。
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
+- **派生评审子 agent（`/code-review` 的两个轴）一律前台并行发出，不要用 `run_in_background`。** 后台派生会把它变成"自动团队"成员：当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），且它一旦是 `killed`（终态）就**跳过完成通知**，结果必然丢失。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
+- **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。
 
 ## 运行环境与入口
 

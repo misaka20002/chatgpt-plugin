@@ -7,6 +7,22 @@ import { normalizeAvatarReplyConfig } from './avatar/config.js'
 // Reverse proxy of https://api.openai.com
 export const defaultOpenAIReverseProxy = 'https://api.openai.com/v1'
 export const pureSydneyInstruction = 'You\'re an AI assistant named [name]. Answer using the same language as the user.'
+
+/**
+ * `toolGroupAdminArr` 的配置迁移版本。
+ *
+ * 这个数组是「整体采用用户保存值」的（见 useWholeArray），默认值补不进已保存的配置，
+ * 所以新增 GroupNotice / GroupTodo 之后，保存过该数组的老实例升级后拿不到这两项。
+ * 迁移只做「追加缺失项」：保留用户已有顺序与勾选，已存在的项不重复加。
+ *
+ * 判定「是否已迁移」只看下面这个持久化标记，不看数组里缺不缺这两项——后者会把用户在锅巴里
+ * 主动取消的选项在每次重启时重新追加回去，正是 useWholeArray 修掉的那个 bug 的翻版。
+ * 标记值定义在 defaultConfig 里（与 providerConfigVersion 同处），由 saveDiff 显式落盘。
+ */
+const TOOL_GROUP_ADMIN_ARR_MIGRATION = 1
+/** 本次迁移要确保存在的项，顺序即追加顺序 */
+const TOOL_GROUP_ADMIN_ARR_ADDITIONS = ['GroupNotice', 'GroupTodo']
+
 const defaultConfig = {
   blockWords: ['屏蔽词1', '屏蔽词b'],
   promptBlockWords: ['屏蔽词1', '屏蔽词b'],
@@ -222,7 +238,7 @@ const defaultConfig = {
   serpSourceArr: ["SerpImageTool_Baidu", "Bilibili_SearchVideoTool", "Send163_MusicTool", "Weather_Tool", "geminiSearchTool", "SendQQ_MusicTool", "GithubAPI"],
   toolDefaultArr: ["SendPicture", "SendVideo", "QueryUserinfo", "BlockUser"],
   toolGameQueryArr: ["QueryStarRail", "QueryGenshin"],
-  toolGroupAdminArr: ["EditCard", "Jinyan", "KickOut", "SetTitle", "HandleMsg"],
+  toolGroupAdminArr: ["EditCard", "Jinyan", "KickOut", "SetTitle", "HandleMsg", "GroupNotice", "GroupTodo"],
   extraUrl: '',
   smartMode: false,
   forwardToolCallResult: false,
@@ -385,7 +401,10 @@ for (const field of Object.values(PROVIDER_FIELDS).flat()) delete defaultConfig[
 for (const field of ['gemini_fallbackModel', 'gemini_vqa_model', 'geminiSearchModel', 'geminiTemperature']) delete defaultConfig[field]
 Object.assign(defaultConfig, {
   providerConfigVersion: 1, modelProviders: emptyProviders(), defaultProviderId: '', fallbackProviderId: '',
-  imageProviderId: '', videoProviderId: '', geminiSearchProviderId: '', translateSource: ''
+  imageProviderId: '', videoProviderId: '', geminiSearchProviderId: '', translateSource: '',
+  // 刻意与 providerConfigVersion 一起放在 legacyDefaults 快照之后：迁移判定要能区分
+  // 「用户文件里没有这个键」（老配置，需要迁移）与「默认值」（新装实例，无需迁移）
+  toolGroupAdminArrMigration: TOOL_GROUP_ADMIN_ARR_MIGRATION
 })
 
 const _path = process.cwd()
@@ -416,6 +435,21 @@ function useWholeArray(objValue, srcValue) {
   if (Array.isArray(srcValue)) return lodash.cloneDeep(srcValue)
 }
 
+/**
+ * 向用户保存的 toolGroupAdminArr 追加缺失的项，返回数组是否真的被改动。
+ * 只追加、不重排、不覆盖：用户已有的顺序与勾选原样保留，已存在的项不重复加。
+ * 返回 false 只表示「这个数组不用改」，**不表示「这次不用迁移」**——标记照样要落盘。
+ */
+function appendMissingToolGroupAdminArr(rawConfig) {
+  const saved = rawConfig.toolGroupAdminArr
+  // 没保存过这一项 → 合并时整体采用默认值，新增项本来就在，数组无需追加
+  if (!Array.isArray(saved)) return false
+  const missing = TOOL_GROUP_ADMIN_ARR_ADDITIONS.filter(key => !saved.includes(key))
+  if (!missing.length) return false
+  rawConfig.toolGroupAdminArr = [...saved, ...missing]
+  return true
+}
+
 const configPath = `${_path}/plugins/chatgpt-plugin/config/config.json`
 let migrated = false
 if (hadConfigFile && config.providerConfigVersion !== 1) {
@@ -426,6 +460,24 @@ if (hadConfigFile && config.providerConfigVersion !== 1) {
   migrated = migrateProviders(legacy, providerDefaults, oldUse)
   config = legacy
 }
+
+/**
+ * toolGroupAdminArr 的一次性迁移，必须在下面与 defaultConfig 合并**之前**执行：
+ * 此刻 config 仍持有用户保存的原值，追加进去的项才会被 useWholeArray 整体采用。
+ *
+ * 两个标记各管一件事，别合并：`migratedToolGroupAdminArr` 决定数组本身要不要显式写盘；
+ * `pendingToolGroupAdminArrMarker` 决定这次启动要不要落盘——**只要进过这个分支就必须落盘**。
+ * 数组无需追加（用户已经手动勾选过这两项，或本就没保存过这个键）时若因此跳过保存，
+ * 标记就永远留不下来，每次启动都重判为「未迁移」，迁移的「首次更新执行一次」也就无从谈起。
+ */
+let migratedToolGroupAdminArr = false
+let pendingToolGroupAdminArrMarker = false
+if (hadConfigFile && config.toolGroupAdminArrMigration !== TOOL_GROUP_ADMIN_ARR_MIGRATION) {
+  migratedToolGroupAdminArr = appendMissingToolGroupAdminArr(config)
+  config.toolGroupAdminArrMigration = TOOL_GROUP_ADMIN_ARR_MIGRATION
+  pendingToolGroupAdminArrMarker = true
+}
+
 config = lodash.mergeWith({}, defaultConfig, config, useWholeArray)
 config.groupReply = normalizeGroupReplyConfig(config.groupReply)
 config.avatarReply = normalizeAvatarReplyConfig(config.avatarReply)
@@ -486,6 +538,12 @@ function saveDiff(target) {
     // TODO: 2个月后(2027年1月8日)移除 commit 5bb9f8a61d68982f97ac8d52afbca2979c9fbe11 及之前初代的配置文件迁移源码
     nestedChange.providerConfigVersion = 1
     nestedChange.modelProviders = candidate.modelProviders
+    // 迁移标记同理必须显式落盘：它的值恰好等于 defaultConfig 里的值，差量保存会把它整条略过，
+    // 于是下次启动又判定为「未迁移」，用户在锅巴里取消掉的项会被重新追加回来
+    nestedChange.toolGroupAdminArrMigration = TOOL_GROUP_ADMIN_ARR_MIGRATION
+    // 迁移当次数组本身也要显式落盘：追加后可能与默认值完全相同，差量保存会整条略过，
+    // 结果标记写成「已迁移」而文件里还是旧数组，两项工具再也补不上（同 modelProviders 的理由）
+    if (migratedToolGroupAdminArr) nestedChange.toolGroupAdminArr = candidate.toolGroupAdminArr
     fs.mkdirSync(path.dirname(configPath), { recursive: true })
     const temporary = `${configPath}.${process.pid}.tmp`
     try {
@@ -508,6 +566,20 @@ if (migrated) {
   fs.chmodSync(backup, 0o600)
   if (!saveDiff(config)) throw new Error('[ChatGPT] 模型提供商迁移保存失败，原配置备份已保留')
   logger.info('[ChatGPT] 模型提供商配置迁移完成，原配置已备份')
+}
+
+if (pendingToolGroupAdminArrMarker) {
+  if (!saveDiff(config)) {
+    // 值已在内存里（本次运行正常），下次启动标记仍未落盘，会重试一次
+    logger.error('[ChatGPT] 群管理工具配置迁移保存失败，将在下次启动时重试')
+  } else {
+    if (migratedToolGroupAdminArr) {
+      logger.info(`[ChatGPT] 群管理工具配置迁移完成：已向 toolGroupAdminArr 追加 ${TOOL_GROUP_ADMIN_ARR_ADDITIONS.join(' / ')}`)
+    }
+    // 已经落盘，之后的保存（如锅巴）走正常差量逻辑，不再无条件写这个数组
+    migratedToolGroupAdminArr = false
+    pendingToolGroupAdminArrMarker = false
+  }
 }
 
 /**

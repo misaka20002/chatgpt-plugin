@@ -109,7 +109,7 @@ describe('KickOutTool 授权边界（端到端）', () => {
 
 /* ================= 源码级守卫 ================= */
 
-describe('core.js 不得回退到不安全的合并顺序', () => {
+describe('core.js 不得回退到不安全的合并顺序或执行超集', () => {
   const source = fs.readFileSync(path.join(pluginRoot, 'model/core.js'), 'utf8')
 
   // core.js 依赖全局 logger/redis 与大量插件模块，无法在测试里 import，
@@ -121,5 +121,17 @@ describe('core.js 不得回退到不安全的合并顺序', () => {
 
   test('不再出现 Object.assign({ isAdmin, sender }, args) 这种反向合并', () => {
     assert.doesNotMatch(source, /Object\.assign\(\s*\{\s*isAdmin\s*,\s*sender\s*\}\s*,\s*args\s*\)/)
+  })
+
+  test('只存在一份工具查找表：广告集与执行集是同一份', () => {
+    // 曾经有两份：`tools` 广告给模型，无条件的 `fullTools` 供 OpenAI 两个分支执行，于是私聊、
+    // 非群管场景下未广告的群管工具照样能被模型点名执行。模型点名不存在的工具必须被拒绝，
+    // 而不是进入工具内部。
+    // 断言"构建查找表的调用只发生一次"，而不是去匹配 fullTools/fullFuncMap 这两个名字。
+    // 这只是降低误报概率，不是免疫：`buildFuncMap(` 仍是全文正则，注释里出现它一样会误伤，
+    // 只是远不如随口提到 fullTools 那么常见。
+    // 局限：若有人改用别的构建函数造出第二份查找表，这条拦不住。
+    const buildFuncMapCalls = source.match(/buildFuncMap\(/g) || []
+    assert.equal(buildFuncMapCalls.length, 1, '只应存在一份工具查找表（广告集 = 执行集）')
   })
 })
