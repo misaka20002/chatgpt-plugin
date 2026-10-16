@@ -1774,6 +1774,15 @@ export function supportGuoba() {
           },
         },
         {
+          field: 'memoryGroupCapture.provider',
+          label: '提炼模型来源',
+          bottomHelpMessage: '用于群记忆的提炼（每日自动与手动触发）；保存后即时生效，无需重启',
+          component: 'Select',
+          componentProps: {
+            options: [{ label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
+          }
+        },
+        {
           field: 'memoryGroupCapture.groups',
           label: '授权采集群',
           bottomHelpMessage: '群聊采集必须由 Bot 主人在此显式授权或群内 #群记忆开启；仅采集授权群的非指令、非Bot纯文本，原文默认保留30天；⚠️ 关闭某群的"开启采集"开关仅停止后续采集，不会删除已采集的原文与记忆，如需来源级清理请在群内使用 #群记忆关闭 指令',
