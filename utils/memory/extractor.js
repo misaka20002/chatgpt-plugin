@@ -11,6 +11,7 @@ import { Config } from '../config.js'
 
 import { buildExtractionPrompt, EXTRACTOR_SYSTEM } from './prompt.js'
 import { MemoryStore, canonicalFactKey, validateCandidateShape } from './store.js'
+import { resolveProvider } from '../providers.js'
 
 /**
  * 新增/更新类候选的最低置信度：**内部提取策略，不是用户配置**。
@@ -193,7 +194,17 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
         } else {
           if (!llmClient) {
             const { SubLLM } = await import('../../model/SubLLM.js')
-            const use = cfg.use || Config.defaultProviderId
+            let use = cfg.use || Config.defaultProviderId
+            // 构造前预检：只把「供应商解析失败」（未配置或已删除）收窄为可回退情形——
+            // 回退全局默认，避免无人值守的提炼因配置失效而卡死；其余构造期错误照常抛出，不吞错。
+            // 'current' 与已等于全局默认的条目没有回退空间，保持原样抛出。
+            try {
+              resolveProvider(use)
+            } catch (err) {
+              if (use === 'current' || use === Config.defaultProviderId) throw err
+              logger?.warn?.(`[MemoryV2] 提炼供应商 ${use} 不可用，回退全局默认：${err.message}`)
+              use = Config.defaultProviderId
+            }
             llmClient = new SubLLM({
               provider: use,
               systemPrompt: EXTRACTOR_SYSTEM,
