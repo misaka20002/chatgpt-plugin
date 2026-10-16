@@ -57,7 +57,7 @@ export async function fetchSSE(
             if (onError) {
                 onError(error)
             } else {
-                console.error(error)
+                logger.error(error)
             }
 
             // don't feed to the event parser

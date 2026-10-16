@@ -68,7 +68,7 @@ export class BingAIClient {
       this.ws = new WebSocket(url)
 
       this.ws.on('open', () => {
-        console.log('WebSocket connection established.')
+        logger.info('WebSocket connection established.')
         resolve()
       })
 
@@ -78,7 +78,7 @@ export class BingAIClient {
         })
       }
       this.ws.on('close', async (code, reason) => {
-        console.log('WebSocket connection closed. Code:', code, 'Reason:', reason)
+        logger.info('WebSocket connection closed. Code:', code, 'Reason:', reason)
 
         if (code === 401) {
           logger.error('token expired. try to refresh with refresh token')

@@ -44,7 +44,7 @@ export async function fetchSSE(url, options, fetch = nodefetch) {
                 onError(error);
             }
             else {
-                console.error(error);
+                logger.error(error);
             }
             // don't feed to the event parser
             return;

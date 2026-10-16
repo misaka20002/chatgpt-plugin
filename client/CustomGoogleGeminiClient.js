@@ -7,6 +7,7 @@ import { normalizeModelText } from '../utils/thinking.js'
 import { Config } from '../utils/config.js'
 import { syncInnerOs } from '../utils/innerOs.js';
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
+import { redactArgsForLog } from '../utils/toolArgRedaction.js'
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
@@ -243,7 +244,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     const normalizedHistory = normalizeGeminiHistory(history, maxHistoryWithCurrentMessage)
     history = normalizedHistory.history
     if (this.debug && normalizedHistory.changed) {
-      console.info(`[Chatgpt][Gemini] cleaned invalid function-call history: ${JSON.stringify(normalizedHistory.stats)}`)
+      logger.info(`[Chatgpt][Gemini] cleaned invalid function-call history: ${JSON.stringify(normalizedHistory.stats)}`)
     }
 
     // retryConfig 根据是否处于备用模式决定使用的模型名称
@@ -317,7 +318,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     //   delete body.tool_config
     // }
     if (this.debug) {
-      console.info("body: " + JSON.stringify(body, null, 2))
+      logger.info("body: " + JSON.stringify(body, null, 2))
     }
     let result = await fetchWithConnectionRetry(this.fetch, url, {
       method: 'POST',
@@ -328,7 +329,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
     }, {
       onRetry: ({ error, retry, maxRetries, delayMs }) => {
-        console.warn(`[Chatgpt][Gemini] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
+        logger.warn(`[Chatgpt][Gemini] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
       }
     })
 
@@ -348,7 +349,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
      */
     let response = await result.json()
     if (this.debug) {
-      console.info("response: " + JSON.stringify(response, null, 2))
+      logger.info("response: " + JSON.stringify(response, null, 2))
     }
 
     // 检查响应中是否包含错误
@@ -383,10 +384,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         const cacheReadInfo = reportedCacheReadTokens == null
           ? ''
           : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
-        console.info(`[Chatgpt][Gemini]${this.providerName ? `[${this.providerName}]` : ''} 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
+        logger.info(`[Chatgpt][Gemini]${this.providerName ? `[${this.providerName}]` : ''} 输入Token(${numTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${outTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheReadInfo}`);
       }
     } catch (err) {
-      console.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
+      logger.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
     }
 
     if (response.promptFeedback?.blockReason) throw Object.assign(new Error(`模型拒绝回答：${response.promptFeedback.blockReason}`), { noRetry: true })
@@ -467,8 +468,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       let /** @type {FunctionResponse[]} **/ fcResults = []
       const toolForwardRecords = []
       for (let fc of functionCall) {
-        console.info(`[Chatgpt][Gemini] execution function: ${JSON.stringify(fc)}`)
         const funcName = fc.name
+        logger.info(`[Chatgpt][Gemini][工具调用][${funcName}]: ${JSON.stringify(fc.args || {})}`)
         const toolArgsForForward = _.cloneDeep(fc.args || {})
         let chosenTool = this.tools.find(t => t.name === funcName)
         /**
@@ -493,6 +494,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
         if (!chosenTool) {
           // 根本没有这个工具！
+          logger.warn(`Function ${funcName} not found.`)
           functionResponse.response.content = {
             error: `Function ${funcName} doesn't exist`
           }
@@ -508,9 +510,9 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
               mode: 'gemini'
             })
             functionResponse.response.content = await chosenTool.func(args, this.e)
-            console.info(`[Chatgpt][Gemini] function ${fc.name} execution result: ${JSON.stringify(functionResponse.response.content)}`)
+            logger.info(`[Chatgpt][Gemini][工具返回][${funcName}]: ${JSON.stringify(functionResponse.response.content)}`)
           } catch (err) {
-            console.error(err)
+            logger.error(err)
             functionResponse.response.content = {
               error: `Function execute error: ${err.message}`
             }
@@ -520,7 +522,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           platform: 'Gemini',
           round: opt.toolChain.depth + 1,
           name: funcName,
-          args: toolArgsForForward,
+          args: redactArgsForLog(funcName, toolArgsForForward),
           result: functionResponse.response.content
         })
         fcResults.push(functionResponse)
@@ -539,6 +541,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
       // 达到工具调用上限时，强制下一轮不使用工具，让模型必须生成文本回复
       if (toolLimitReached) {
+        logger.warn(`Gemini工具调用已达最大轮次上限 ${maxToolRounds} 轮，强制下一轮不使用工具`)
         responseOpt.toolMode = 'NONE'
       }
 
@@ -586,10 +589,10 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
           // final += `[${chunk.web.title}](${chunk.web.uri})\n`
           final += `[${chunk.web.title}]\n`
         })
-        console.info('[Chatgpt][Gemini Grounding] 搜索查询: ' + groundingMetadata.webSearchQueries.join(', '));
+        logger.info('[Chatgpt][Gemini Grounding] 搜索查询: ' + groundingMetadata.webSearchQueries.join(', '));
       }
     } catch (err) {
-      console.warn(err)
+      logger.warn(err)
     }
 
     return {

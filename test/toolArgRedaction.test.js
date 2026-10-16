@@ -11,8 +11,8 @@ test('Memory_Tool 参数脱敏：只保留结构性字段，正文与取值替�
   const redacted = redactArgsForLog('Memory_Tool', args)
   const serialized = JSON.stringify(redacted)
 
-  assert.ok(!serialized.includes('13812345678'), '取值不得出现在日志/转发副本里')
-  assert.ok(!serialized.includes('用户的手机号'), '正文不得出现在日志/转发副本里')
+  assert.ok(!serialized.includes('13812345678'), '取值不得出现在转发副本里')
+  assert.ok(!serialized.includes('用户的手机号'), '正文不得出现在转发副本里')
   assert.equal(redacted.candidates[0].factValue, '[REDACTED]')
   assert.equal(redacted.candidates[0].text, '[REDACTED]')
   // 结构性字段保留，便于定位是哪条槽位触发了问题

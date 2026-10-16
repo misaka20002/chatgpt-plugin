@@ -116,7 +116,7 @@ export class ResponsesAPI {
     if (store && previousResponseId) body.previous_response_id = previousResponseId
 
     const url = `${this._apiBaseUrl}/responses`
-    if (this._debug) console.log('[Chatgpt][Responses] request:', JSON.stringify(body, null, 2))
+    if (this._debug) logger.info('[Chatgpt][Responses] request:', JSON.stringify(body, null, 2))
 
     try {
       const res = await fetchWithConnectionRetry(this._fetch, url, {
@@ -129,7 +129,7 @@ export class ResponsesAPI {
         signal: controller?.signal
       }, {
         onRetry: ({ error, retry, maxRetries, delayMs }) => {
-          console.warn(`[Chatgpt][Responses] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
+          logger.warn(`[Chatgpt][Responses] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`)
         }
       })
       if (!res.ok) {
@@ -141,7 +141,7 @@ export class ResponsesAPI {
       }
 
       const response = await res.json()
-      if (this._debug) console.log('[Chatgpt][Responses] response:', JSON.stringify(response, null, 2))
+      if (this._debug) logger.info('[Chatgpt][Responses] response:', JSON.stringify(response, null, 2))
 
       const usage = response.usage || {}
       const inputTokens = usage.input_tokens ?? usage.prompt_tokens
@@ -181,9 +181,9 @@ export class ResponsesAPI {
         const cacheReadInfo = reportedCacheReadTokens == null
           ? ''
           : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`
-        console.info(`[Chatgpt][Responses]${this._providerName ? `[${this._providerName}]` : ''} 输入Token(${inputTokens})${maxOutputTokens ? ` | 回复上限(${maxOutputTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`)
+        logger.info(`[Chatgpt][Responses]${this._providerName ? `[${this._providerName}]` : ''} 输入Token(${inputTokens})${maxOutputTokens ? ` | 回复上限(${maxOutputTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`)
         if (this._maxModelTokens && maxOutputTokens && inputTokens + maxOutputTokens > this._maxModelTokens) {
-          console.warn(`[Chatgpt][Responses] 当前 token 配置边界过紧：输入Token(${inputTokens}) + 回复上限(${maxOutputTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的 Responses Token 配置。`)
+          logger.warn(`[Chatgpt][Responses] 当前 token 配置边界过紧：输入Token(${inputTokens}) + 回复上限(${maxOutputTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的 Responses Token 配置。`)
         }
       }
 

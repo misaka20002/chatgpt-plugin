@@ -50,7 +50,7 @@ export class SunoClient {
     })
 
     if (createRes.status !== 200) {
-      console.log(await createRes.json())
+      logger.info(await createRes.json())
       throw new Error('Failed to create song ' + createRes.status)
     }
     let createData = await createRes.json()
@@ -71,14 +71,14 @@ export class SunoClient {
         }
         if (queryRes.status !== 200) {
           logger.error(await queryRes.text())
-          console.error('Failed to query song')
+          logger.error('Failed to query song')
         }
         let queryData = await queryRes.json()
         logger.debug(queryData)
         allDone = queryData.every(clip => clip.status === 'complete' || clip.status === 'error')
         songs = queryData.filter(clip => clip.status === 'complete')
       } catch (err) {
-        console.error(err)
+        logger.error(err)
       }
       await common.sleep(1000)
       timeout--

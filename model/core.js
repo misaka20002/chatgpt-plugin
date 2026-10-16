@@ -42,7 +42,7 @@ import { JinyanTool } from '../utils/tools/JinyanTool.js'
 import { KickOutTool } from '../utils/tools/KickOutTool.js'
 import { SetTitleTool } from '../utils/tools/SetTitleTool.js'
 import { GetGroupNoticeTool } from '../utils/tools/GetGroupNoticeTool.js'
-import { GroupTodoTool } from '../utils/tools/GroupTodoTool.js'
+// import { GroupTodoTool } from '../utils/tools/GroupTodoTool.js' // 群待办暂停注册：协议端暂未实现读取接口，等支持后恢复（见 groupAdminToolMap 处注释）
 import { SerpIkechan8370Tool } from '../utils/tools/SerpIkechan8370Tool.js'
 import { azureSerpTool } from '../utils/tools/SerpTool.js'
 import common from '../../../lib/common/common.js'
@@ -847,7 +847,8 @@ class Core {
                 args = {}
               }
 
-              logger.info(`[Chatgpt][API] execution function: ${JSON.stringify({ name, args: redactArgsForLog(name, args) })}`)
+              // 控制台日志保持明文（docs/adr/0002-tool-log-channel-and-redaction.md）；redactArgsForLog 仅用于会发送到会话的合并转发
+              logger.info(`[Chatgpt][API][工具调用][${name}]: ${JSON.stringify(args)}`)
               const toolArgsForForward = redactArgsForLog(name, args)
 
               if (!args.groupId) {
@@ -866,7 +867,7 @@ class Core {
                     isAdmin,
                     sender
                   }), e)
-                  logger.info(`[Chatgpt][API] function ${name} execution result: ${JSON.stringify(functionResult)}`)
+                  logger.info(`[Chatgpt][API][工具返回][${name}]: ${JSON.stringify(functionResult)}`)
                 } else {
                   functionResult = `Function ${name} not found.`
                   logger.warn(functionResult)
@@ -985,6 +986,7 @@ async function executeResponsesToolCalls(core, e, toolCalls, funcMap, isAdmin, s
       args = {}
     }
 
+    logger.info(`[Chatgpt][Responses][工具调用][${name}]: ${JSON.stringify(args)}`)
     const toolArgsForForward = redactArgsForLog(name, args)
     if (!args.groupId) args.groupId = e.group_id + '' || e.sender.user_id + ''
     try {
@@ -997,7 +999,7 @@ async function executeResponsesToolCalls(core, e, toolCalls, funcMap, isAdmin, s
     try {
       if (funcMap[name.trim()]) {
         functionResult = await funcMap[name.trim()].exec.bind(core)(mergeTrustedToolArgs(args, { isAdmin, sender }), e)
-        logger.info(`[Chatgpt][Responses] function ${name} execution result: ${JSON.stringify(functionResult)}`)
+        logger.info(`[Chatgpt][Responses][工具返回][${name}]: ${JSON.stringify(functionResult)}`)
       } else {
         functionResult = `Function ${name} not found.`
         logger.warn(functionResult)
@@ -1079,7 +1081,7 @@ async function collectTools(e) {
     'KickOut': KickOutTool,
     'SetTitle': SetTitleTool,
     'HandleMsg': HandleMessageMsgTool,
-    'GroupTodo': GroupTodoTool,
+    // 'GroupTodo': GroupTodoTool, // 群待办暂停注册：协议端（如 NapCat）暂未实现 get_group_todo_list，读取不可用；等支持后恢复注册，见 .scratch/group-notice-todo/napcat-group-todo.md
   }
 
   /** 图片/视频搜索工具（由搜索/网络来源配置控制） */
@@ -1167,7 +1169,7 @@ async function collectTools(e) {
       /** 当Bot是管理员才给这些工具（不用担心误伤，普通群成员只能对自己禁言>_<） */
       const allowedAdminKeys = ['EditCard', 'Jinyan', 'SetTitle']
       /** 当Bot是管理员+当用户是管理员才给这些工具 */
-      const masterOnlyKeys = ['KickOut', 'HandleMsg', 'GroupTodo']
+      const masterOnlyKeys = ['KickOut', 'HandleMsg'] // 'GroupTodo'（群待办）暂停注册期间一并移除，恢复时加回
       Object.entries(groupAdminToolMap)
         .filter(([key]) => Config.toolGroupAdminArr.includes(key))
         .filter(([key]) => {

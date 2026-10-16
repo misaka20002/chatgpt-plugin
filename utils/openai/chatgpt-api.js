@@ -296,7 +296,7 @@ export class ChatGPTAPI {
           upsert: m => this._upsertMessage(m),
         })
         if (trimInfo.trimmed) {
-            console.info(`[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}。若这类日志频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`);
+            logger.info(`[chatgpt] history trimmed: current=${trimInfo.currentTurnMessages}, keptHistory=${trimInfo.keptHistoryMessages}, attemptedHistory=${trimInfo.attemptedHistoryMessages}, droppedHistory=${trimInfo.droppedHistoryMessages}, keptToolChains=${trimInfo.keptToolChainCount}, budget=${trimInfo.promptBudget}, finalTokens=${numTokens}, reason=${trimInfo.stopReason}。若这类日志频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`);
         }
         const result = {
             role: 'assistant',
@@ -339,17 +339,17 @@ export class ChatGPTAPI {
                 delete body.functions;
             }
             if (this._debug) {
-                console.log("body: " + JSON.stringify(body, null, 2));
+                logger.info("body: " + JSON.stringify(body, null, 2));
             }
             if (this._apiOrg) {
                 headers['OpenAI-Organization'] = this._apiOrg;
             }
             if (this._debug) {
-                console.log(`sendMessage (${numTokens} tokens)`, body);
+                logger.info(`sendMessage (${numTokens} tokens)`, body);
             }
             const fetchWithRetry = (requestUrl, requestOptions) => fetchWithConnectionRetry(this._fetch, requestUrl, requestOptions, {
                 onRetry: ({ error, retry, maxRetries, delayMs }) => {
-                    console.warn(`[Chatgpt][OpenAI] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`);
+                    logger.warn(`[Chatgpt][OpenAI] 连接失败 (${error.code || error.message})，${delayMs / 1000} 秒后进行第 ${retry}/${maxRetries} 次重试`);
                 }
             });
             if (stream) {
@@ -446,7 +446,7 @@ export class ChatGPTAPI {
                             }
                         }
                         catch (err) {
-                            console.warn('OpenAI stream SEE event unexpected error', err);
+                            logger.warn('OpenAI stream SEE event unexpected error', err);
                             return reject(err);
                         }
                     }
@@ -470,7 +470,7 @@ export class ChatGPTAPI {
                     }
                     const response = (await res.json());
                     if (this._debug) {
-                        console.log("response: " + JSON.stringify(response, null, 2));
+                        logger.info("response: " + JSON.stringify(response, null, 2));
                     }
                     if (response?.id) {
                         result.id = response.id;
@@ -501,7 +501,7 @@ export class ChatGPTAPI {
                     }
                     else {
                         const res = response;
-                        console.error(res);
+                        logger.error(res);
                         return reject(new Error(`OpenAI error: ${res?.detail?.message || res?.detail || 'unknown'}`));
                     }
                     result.detail = response;
@@ -554,9 +554,9 @@ export class ChatGPTAPI {
             const cacheReadInfo = reportedCacheReadTokens == null
                 ? ''
                 : ` | 缓存命中(${cacheReadTokens}, ${cacheHitRate.toFixed(1)}%)`;
-            console.info(`[Chatgpt][API]${this._providerName ? `[${this._providerName}]` : ''} 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`);
+            logger.info(`[Chatgpt][API]${this._providerName ? `[${this._providerName}]` : ''} 输入Token(${apiPromptTokens})${maxTokens ? ` | 回复上限(${maxTokens})` : ''} | 回答Token(${answerTokens})${reasoningInfo} | 累计Token(${totalTokenCount})${cacheWriteInfo}${cacheReadInfo}`);
             if (apiPromptTokens + maxTokens > this._maxModelTokens) {
-                console.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${apiPromptTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`);
+                logger.warn(`[ChatGPT][API] 当前 token 配置边界过紧：输入Token(${apiPromptTokens}) + 回复上限(${maxTokens}) > 总上下文(${this._maxModelTokens})。请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧；插件将依赖历史裁剪，若仍超限，可能触发群聊上下文压缩或重试。`);
             }
             const cleanedCurrentMessages = currentMessages.map(m => ({
                 ...m,
