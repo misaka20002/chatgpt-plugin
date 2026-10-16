@@ -271,15 +271,15 @@ export class ChatgptManagement extends plugin {
         }
       ]
     })
-    this.task = [
-      {
-        cron: '0 0 */2 * * ?',
-        // cron: '*/1 * * * *',
-        name: 'refreshBingAi',
-        fnc: this.refreshBingAi,
-        log: false
-      }
-    ]
+    // this.task = [
+    //   { // 
+    //     cron: '0 0 */2 * * ?',
+    //     // cron: '*/1 * * * *',
+    //     name: 'refreshBingAi',
+    //     fnc: this.refreshBingAi,
+    //     log: false
+    //   }
+    // ]
     this.reply = async (msg, quote, data) => {
       if (!Config.enableMd) {
         return e.reply(msg, quote, data)
