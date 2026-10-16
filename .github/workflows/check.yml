@@ -1,4 +1,3 @@
----
 name: "check"
 
 # 语法预检 + 快测试套件（内容见 package.json 的 check 脚本）
@@ -6,6 +5,12 @@ on:
   push:
     branches: [v2]
   pull_request:
+
+# 同一分支连续推送时只保留最新一次运行，旧的直接取消 ——
+# 否则每次推送都会各发一封通知，改几个文件就连着收好几封。
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -19,4 +24,32 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 补齐测试依赖的宿主文件空壳。
+      #
+      # 插件按 Yunzai 的目录约定放在 <root>/plugins/chatgpt-plugin/，代码与测试里用
+      # '../../../lib/...' 引宿主模块。CI 的 checkout 直接落在 <work>/chatgpt-plugin/，
+      # 上面两级没有 lib/，这些路径解析不到；测试虽然用 mock.module 打桩，但 Node 必须先
+      # 「解析」目标路径才能打桩，解析不到就是 ERR_MODULE_NOT_FOUND。本地能过是因为
+      # ../.. 恰好是 Yunzai 根目录、lib/ 真实存在。空壳覆盖测试会解析到的宿主模块即可
+      # （当前为 plugin.js / loader.js / common.js；puppeteer.js 为 utils/common.js 依赖链预留）。
+      - name: 补宿主 lib 空壳（CI 无 lib/ 目录）
+        run: |
+          HOST_LIB="$GITHUB_WORKSPACE/../../lib"
+          mkdir -p "$HOST_LIB/plugins" "$HOST_LIB/common" "$HOST_LIB/puppeteer"
+          printf 'export default class plugin {}\n' > "$HOST_LIB/plugins/plugin.js"
+          printf 'export const getBot = () => undefined\nexport const getPlatformInfo = () => ({ platform: "test" })\n' > "$HOST_LIB/plugins/loader.js"
+          printf 'export const common = {}\nexport default {}\n' > "$HOST_LIB/common/common.js"
+          printf 'export default class Puppeteer {}\n' > "$HOST_LIB/puppeteer/puppeteer.js"
+      # 插件运行时还依赖宿主提供的模块（md5 / moment / yaml；md5 为宿主自带的替身模块）——
+      # 生产环境靠 Node 从插件目录逐级向上查找 node_modules 命中宿主根。CI 里按同一布局
+      # 把它们放到「宿主根」的 node_modules 上；不修改插件 package.json 与锁文件（npm --no-save）。
+      # 本步骤只写「宿主根」，与插件自身 pnpm 管理的 node_modules 互不影响。
+      - name: 补宿主提供的依赖（md5 / moment / yaml）
+        run: |
+          HOST_ROOT="$GITHUB_WORKSPACE/../.."
+          npm install --no-save --prefix "$HOST_ROOT" "moment@^2.30.1" "yaml@^2.9.0"
+          # md5：宿主用 lib/modules/md5 替身模块提供，这里放置等价的内联实现（生产同款逻辑）
+          mkdir -p "$HOST_ROOT/node_modules/md5"
+          printf '{"name":"md5","type":"module","main":"index.js"}\n' > "$HOST_ROOT/node_modules/md5/package.json"
+          printf 'import { createHash } from "node:crypto"\nexport default function md5(data) {\n  return createHash("md5").update(data).digest("hex")\n}\n' > "$HOST_ROOT/node_modules/md5/index.js"
       - run: pnpm run check
