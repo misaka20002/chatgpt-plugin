@@ -3,6 +3,8 @@
     "module": "node16",
     "moduleResolution": "node16",
     "esModuleInterop": true,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    // 不隐式扫描 node_modules/@types（残缺的 @types/uuid 会使 tsc -p 以 TS2688 中断）
+    "types": []
   }
 }
