@@ -8,9 +8,9 @@
 
 | 来源 | 说明 |
 | --- | --- |
-| `C:/Users/misak/AppData/Local/Programs/WorkBuddy/resources/app.asar.unpacked/cli/dist/codebuddy-lite-wb.mjs` | WorkBuddy 打包后的运行时实现（9,483,171 字节，mtime 2026-10-12 20:09，`sha256` 前 12 位 `1b1a01bc5f7b`）。下述引文均出自此文件，可按哈希复核。 |
+| `%LOCALAPPDATA%/Programs/WorkBuddy/resources/app.asar.unpacked/cli/dist/codebuddy-lite-wb.mjs` | WorkBuddy 打包后的运行时实现（9,483,171 字节，mtime 2026-10-12 20:09，`sha256` 前 12 位 `1b1a01bc5f7b`）。下述引文均出自此文件，可按哈希复核。 |
 | 本会话转录 `c27e8c6e-60ce-4bc8-8890-f7756a44683d.jsonl` | 本次调用的实际返回（派生结果、`TaskOutput` 输出）。 |
-| `C:/Users/misak/.workbuddy/audit-log/2026-10-15.jsonl` | 已查：**不含**这两个 task id，故未能从日志还原终止触发点。 |
+| `~/.workbuddy/audit-log/2026-10-15.jsonl` | 已查：**不含**这两个 task id，故未能从日志还原终止触发点。 |
 
 官方文档（`workbuddy.cn/docs/workbuddy/Overview` 及其子页）只覆盖界面与任务管理，**不含** Agent 工具的后台派生语义，因此不作为依据。
 

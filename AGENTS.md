@@ -14,7 +14,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 | `apps/派蒙meme.js`、`utils/memeCategory.js`、`resources/memeList/` | [meme](docs/agent-guides/meme.md)；改模板另读渲染指南 |
 | `utils/config.js`、`guoba.support.js`、provider 输出上限、`model/SubLLM.js` 参数传递 | [配置](docs/agent-guides/configuration.md) |
 | 插件注册、动态规则、priority、定时任务、Redis 操作、遗留接口 | [运行时](docs/agent-guides/runtime.md) |
-| 选择/编写测试、mock、临时探针、测试环境排障 | [测试](docs/agent-guides/testing.md) |
+| 选择/编写测试、mock、临时探针、测试环境排障、CI workflow 改动与复跑 | [测试](docs/agent-guides/testing.md) |
 
 ## Agent skills
 
@@ -41,6 +41,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
 - **派生评审子 agent（`/code-review` 的两个轴）一律前台并行发出，不要用 `run_in_background`。** 后台派生会把它变成"自动团队"成员：当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），且它一旦是 `killed`（终态）就**跳过完成通知**，结果必然丢失。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
 - **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。
+- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回）。
 
 ## 运行环境与入口
 
@@ -48,6 +49,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - 必须位于 Yunzai 根目录的 `plugins/chatgpt-plugin`；依赖宿主的 `logger`、`redis`、`Bot`、`segment` 和 `../../../lib/plugins/plugin.js`。这些不在插件仓库内，**不要修复这些宿主导入**。
 - `utils/common.js` 是重依赖入口，纯逻辑测试不要直接 import；测试需按需提供全局 stub/mock。
 - `config/config.json` 是运行时配置，**勿提交**。`utils/SydneyAIClient.js` 已废弃，不为本次任务顺手修复、重构或删除，也不删除其遗留 import；清理属于单独议题。
+- 查远端 PR/CI 用 gh：`%LOCALAPPDATA%\Programs\gh\bin\gh.exe`（已登录 misaka20002；本机新 shell 可能不在 PATH，用全路径）。公开仓库也可免认证 `curl` GitHub API 的 check-runs / jobs / annotations。
 
 | 路径 | 职责 / 数据流 |
 | --- | --- |

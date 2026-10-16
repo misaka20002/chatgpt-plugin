@@ -53,4 +53,4 @@
 - **真实群手动验证仍未做**：群公告读取、四类待办动作在真机 QQ 的实际表现需重启 Yunzai 后在群里发指令确认。
 - **本轮不提交**：用户决定人工审查。
 - 工作区共 **9 改 + 5 未跟踪**（`AGENTS.md`、`docs/agent-guides/configuration.md`、`docs/agent-guides/tools.md`、`guoba.support.js`、`model/core.js`、`package.json`、`test/configArrayMerge.test.js`、`test/toolContext.test.js`、`utils/config.js`；未跟踪为 4 个新文件 + `.scratch/group-notice-todo/`）。
-- 第二轮落地的工具偏好规则**只覆盖 chatgpt-plugin**。用户在 `E:\myrepo\` 下另有多个仓，要跨仓生效需各自再放一条。
+- 第二轮落地的工具偏好规则**只覆盖 chatgpt-plugin**。本机同一父目录下另有多个仓，要跨仓生效需各自再放一条。

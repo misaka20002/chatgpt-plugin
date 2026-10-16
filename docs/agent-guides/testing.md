@@ -35,6 +35,15 @@
 - **模块新增命名导出后，同步所有测试桩**：`mock.module()` 的 `namedExports` 缺了新增导出时注册不会报错，只有真跑到该路径才以 `TypeError` 炸出（本次就漏过一处）。`utils/toolForward.js` 的桩已集中为 `test/fixtures/toolForwardMock.mjs` 工厂——给该模块新增导出只需改工厂一处；其他模块新增导出后请 `grep -rn "mock.module" test/` 核对使用点。
 - 断言脚本（非 node:test 结构）作为"文件级"测试加入对应 npm script 即可。
 
+## 复跑 CI（模拟宿主）
+
+改 `.github/workflows/check.yml` 或排查"本机能过、CI 挂"时，可在系统临时目录按 CI 布局复跑，推送前得到与 CI 同序的结论。步骤以 workflow 为唯一来源，这里只写增量知识：
+
+- 布局：临时目录下建 `<sim>/chatgpt-plugin/chatgpt-plugin`（用 `git archive <分支> | tar -x -C` 展开代码）、`<sim>/lib`（宿主 lib 空壳落点）、`<sim>/node_modules`（宿主依赖落点）——对应 workflow 里 `$GITHUB_WORKSPACE/../../` 的含义。
+- 顺序：插件目录内 `pnpm install --frozen-lockfile` → 照 workflow 的「补宿主 lib 空壳」造文件 → 照「补宿主提供的依赖」补包（`npm --no-save --prefix <sim> …`，不碰 manifest 与锁文件）→ `pnpm run check`。
+- 判"某个空壳/依赖是否必需"：删一个候选（空壳文件或 `node_modules/<包名>`）后重跑 `pnpm run check`，失败即必需、通过即非必需。已实测：`common.js` 空壳必需、`puppeteer.js` 空壳非必需、`md5` 必需。
+- 收尾：推送后用 `gh pr checks <编号> -R <仓库> --watch` 等结果；刚推送的几秒内可能报 "no checks reported"，稍等约 10 秒再查。实验目录用完即删。
+
 ## 临时探针与真实链路
 
 - 临时调试脚本纪律：调试用脚本统一放**系统临时目录**（`$TMP`/`/tmp`）或即建即删，**不要留在仓库内**；用 `rm` 删除后必须确认生效（heredoc/管道组合命令可能因展开错误中断导致 rm 未执行，留下语法错误的残留文件）。
