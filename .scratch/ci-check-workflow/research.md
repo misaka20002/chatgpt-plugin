@@ -27,7 +27,7 @@
 | 三个模块被源码直接 import | 【已核实】`md5`：`apps/management.js:19`、`utils/bilibili/wbi.js:1`、`utils/translate.js:2`；`moment`：`apps/派蒙戳一戳.js:4`、`utils/SydneyAIClient.js:11`；`yaml`：`utils/common.js:6` | 仓库内 grep（见下） |
 | 宿主 package.json 声明 | 【已核实】`"md5": "link:lib/modules/md5"`、`"moment": "^2.30.1"`、`"yaml": "^2.9.0"` | `<Yunzai 根目录>/package.json:32,33,45` |
 | 宿主用 pnpm | 【已核实】存在 `pnpm-lock.yaml`、`node_modules/.pnpm`；`pnpm-workspace.yaml` 的 `packages` 含 `plugins/**` | `<Yunzai 根目录>/pnpm-workspace.yaml:1-2` |
-| 宿主根 `node_modules` 实际布局 | 【已核实】`md5 -> /e/myrepo/TRSS-Yunzai/lib/modules/md5`（符号链接）、`moment -> .../.pnpm/moment@2.30.1/...`、`yaml -> .../.pnpm/yaml@2.9.0/...` | 本机 `ls -la node_modules`（实测） |
+| 宿主根 `node_modules` 实际布局 | 【已核实】`md5 -> <Yunzai 根目录>/lib/modules/md5`（符号链接）、`moment -> .../.pnpm/moment@2.30.1/...`、`yaml -> .../.pnpm/yaml@2.9.0/...` | 本机 `ls -la node_modules`（实测） |
 | **更正**：调用方称"插件自己的 `node_modules/` 为空" | 【已核实】**不准确**。插件 `node_modules/` 有内容（lodash、node-fetch、fastify 等大量包，且含 `.package-lock.json`/`.yarn-integrity` 混合痕迹），只是**恰好缺** `md5`/`moment`/`yaml` 三个。 | 本机 `ls`（实测） |
 | 插件锁文件不含这三个包 | 【已核实】`pnpm-lock.yaml` 无 `md5@`/`moment@`/`yaml@` 顶层条目 | 仓库内 grep（实测） |
 | `moment` 的引用面 | 【已核实】全仓仅 2 个文件 import `moment`：`apps/派蒙戳一戳.js`、`utils/SydneyAIClient.js`。两者都**不在** `check` 三套件所 import 的生产模块闭包里（`apps/management.js:17` 虽 import `SydneyAIClient.js`，但 `test/providerMenu.test.mjs:78` 对它做了 `mock.module`） | grep 结果 + `test/providerMenu.test.mjs:78,91` |

@@ -12,7 +12,7 @@
 | 3 | 本机怪癖 | **两个 git 行为各浪费一次往返**：`git rev-parse --short` 多参数报 `Needed a single revision`（本会话踩 2 次；单参数正常）；`git grep --branches/--remotes` 报 unknown option（应逐 ref 循环）。 | **已落地**：并入 `AGENTS.md` 工程规则新增的「本机 git 与长输出」条（与第 4 项合并为一条）。 |
 | 4 | Tool economy | **两次超限输出（219KB / 375KB）被存档且读不回**（`Read`/`Grep` 对该存档路径权限拒绝）：一次 `git grep` 扫进 `server/static/**` 的 `.map` 打包产物；一次 CRLF 噪声 diff。各靠换姿势重跑挽回。 | **已落地**：同上「本机 git 与长输出」条（`server/static` 排除、`--ignore-cr-at-eol`、长输出先落日志）。 |
 | 5 | Tool economy（低·可选） | 两轮评审 prompt 各全文粘贴 12 条坏味道基线（技能约定 sub-agent 无其他途径；实际子代理可读文件）。 | 用户级技能（超本仓范围）：抽 `code-review/smell-baseline.md`，prompt 改指路径。可选。 |
-| 6 | 文档卫生 | **`.scratch` 等文档含带用户名的绝对路径**（开源仓库不宜公开本机路径）：已入库 3 行（group-notice-todo ×3）+ 本特性新写 19 行。 | **已落地**：22 行清洗（替换为 `%LOCALAPPDATA%`、`~`、`<仓库根>`、`<Yunzai 根目录>`、`<系统临时目录>`）；新增 `test/pathLeak.check.mjs`（白名单：占位符、`runner`、`turing`）并挂进 `npm run check`，本地与 CI 同跑。 |
+| 6 | 文档卫生 | **`.scratch` 等文档含带用户名的绝对路径**（开源仓库不宜公开本机路径）：已入库 3 行（group-notice-todo ×3）+ 本特性新写 19 行。 | **已落地**：22 行清洗（替换为 `%LOCALAPPDATA%`、`~`、`<仓库根>`、`<Yunzai 根目录>`、`<系统临时目录>`）；新增 `test/pathLeak.check.mjs`（白名单：占位符、`runner`、`turing`）并挂进 `npm run check`，本地与 CI 同跑；二次补漏 1 行 MSYS 形态（`/e/<目录>`），守卫加 MSYS 盘符模式（排除模板串 URL 片段）。 |
 
 ## 上个 retro 的落地项（本次核对）
 

@@ -1,6 +1,7 @@
 /**
- * 全仓"路径卫生"检查：拦截会随仓库公开的、带用户名的本机绝对路径
- * （Windows 的 `X:\Users\<名字>\` 与 Unix 的 `/home/<名字>/`、`/Users/<名字>/`）。
+ * 全仓"路径卫生"检查：拦截会随仓库公开的本机绝对路径
+ * （Windows 的 `X:\Users\<名字>\`、Unix 的 `/home/<名字>/`、`/Users/<名字>/`，
+ *  以及 MSYS 盘符形态 `/[a-z]/<目录>/…`）。
  * 供 `npm run check` 与 CI 使用；扫描面比 checkSyntax 广（含 .scratch 与 .md 等文本）。
  * 允许：占位形式（`<名字>`、`…`、`$…`、`%…%`、`{…}`）与白名单样例名：
  *   runner —— GitHub Actions 运行器路径（/home/runner/...），非个人目录
@@ -19,6 +20,8 @@ const MAX_BYTES = 512 * 1024
 const PATTERNS = [
   { label: 'Windows 用户目录', re: /[A-Za-z]:[\\/][Uu]sers[\\/]([^\\/\s"'`）)]+)/g },
   { label: 'Unix 用户目录', re: /(?<![\w.])\/(?:home|[Uu]sers)\/([^/\s"'`）)]+)/g },
+  // MSYS 盘符形态（如 /e/<目录>/…）；排除前置 } 的模板串 URL 片段（如 ${wsUrl}/c/api/…）
+  { label: 'MSYS 盘符路径', re: /(?<![\w.:/}-])\/[a-z]\/([^/\s"'`）)]+)/g },
 ]
 const ALLOW_USERNAMES = new Set(['runner', 'turing'])
 const isPlaceholder = name => ['<', '…', '$', '%', '{'].some(ch => name.startsWith(ch))
@@ -56,7 +59,7 @@ for (const file of files) {
 }
 
 if (findings.length > 0) {
-  console.error(`[ChatGPT] 路径卫生检查失败：${findings.length} 处带用户名的本机路径（已扫 ${files.length} 个文件）`)
+  console.error(`[ChatGPT] 路径卫生检查失败：${findings.length} 处本机绝对路径（已扫 ${files.length} 个文件）`)
   for (const finding of findings) console.error(`  - ${finding}`)
   console.error('  改用仓库相对路径或占位形式（如 %LOCALAPPDATA%、~、<系统临时目录>）；确属样例/占位的加白名单并在脚本里注明原因')
   process.exit(1)

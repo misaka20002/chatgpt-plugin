@@ -44,6 +44,16 @@
 - 判"某个空壳/依赖是否必需"：删一个候选（空壳文件或 `node_modules/<包名>`）后重跑 `pnpm run check`，失败即必需、通过即非必需。已实测：`common.js` 空壳必需、`puppeteer.js` 空壳非必需、`md5` 必需。
 - 收尾：推送后用 `gh pr checks <编号> -R <仓库> --watch` 等结果；刚推送的几秒内可能报 "no checks reported"，稍等约 10 秒再查。实验目录用完即删。
 
+## 远端 PR：CI 排查与合并前验证
+
+审查/合并来件 PR（fork 分支不在 origin 上）时，与上节复刻 CI 不同：这里复用本机真实的宿主与 `node_modules`，验证对象是 PR 的**合并预览**而不是 head。
+
+- 取代码：`git fetch origin refs/pull/<N>/head:refs/remotes/pull/<N>`，同理取 `refs/pull/<N>/merge`（合并预览）。**验证用 merge**——分支可能落后 base：head 上的失败不一定是 PR 的问题，用 base 的测试脚本组成也会误报（对没有 `pathLeak` 的旧树跑 `pathLeak` 必假红）。
+- 不动部署树的验证配方：`git worktree add --detach <临时根>/plugins/chatgpt-plugin`（目录深度与真实布局一致——`../../../lib` 的解析依赖它）→ 建三个 junction 指向真实环境：`<临时根>/lib`、`<临时根>/node_modules`、`<临时根>/plugins/chatgpt-plugin/node_modules` → 跑**目标树自己的** `package.json` 脚本。收尾顺序：**先摘 junction，再 `git worktree remove`**（防递归删除沿链接进真实目录）。
+- fork 贡献者的运行需维护者批准：批准前 `gh pr checks` 报 "no checks reported"，但运行已存在——用 `gh run list --branch <head>` 或 `actions/runs?head_sha=<sha>` 查，`gh api -X POST repos/<owner>/<repo>/actions/runs/<id>/approve` 批准。
+- CI 一直红先怀疑快照旧：PR 早于 base 上的 workflow 修复时，运行会一直用修复前的快照（实测：重跑复用原快照；关+重开生成的新运行也未采用 base 的修复）。出路是让 head 分支带上新 workflow（作者同步 base；`update-branch` 需凭据具备 `workflow` scope，缺则 403），或合并后以 v2 的 push 运行作权威验证。
+- 闭环自证：`git rev-parse <合并提交>^{tree}` 与本地验证过的 `pull/<N>/merge` 树一致，即"本地验证的就是落地的"。
+
 ## 临时探针与真实链路
 
 - 临时调试脚本纪律：调试用脚本统一放**系统临时目录**（`$TMP`/`/tmp`）或即建即删，**不要留在仓库内**；用 `rm` 删除后必须确认生效（heredoc/管道组合命令可能因展开错误中断导致 rm 未执行，留下语法错误的残留文件）。
