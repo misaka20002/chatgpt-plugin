@@ -45,7 +45,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 ## 运行环境与入口
 
 - 纯 ESM（`package.json` 的 `"type": "module"`），Node.js，无构建步骤、无 TypeScript，无 lint/format/类型检查配置。
-- 必须位于 Yunzai 根目录的 `plugins/chatgpt-plugin`；依赖宿主的 `logger`、`redis`、`Bot`、`segment` 和 `../../../lib/plugins/plugin.js`。这些不在插件仓库内，**不要修复这些宿主导入**。运行时还依赖宿主提供的 npm 包（如 `md5` / `moment` / `yaml`：由 Node 从插件目录逐级向上解析命中宿主 `node_modules`），**不要**在插件 package.json 里重复声明；CI 里由 `.github/workflows/check.yml` 按同一布局模拟补齐。
+- 必须位于 Yunzai 根目录的 `plugins/chatgpt-plugin`；依赖宿主的 `logger`、`redis`、`Bot`、`segment` 和 `../../../lib/plugins/plugin.js`。这些不在插件仓库内，**不要修复这些宿主导入**。运行时还依赖宿主提供的模块（如 `md5` / `moment` / `yaml`，其中 `md5` 是宿主自带的替身模块；由 Node 从插件目录逐级向上解析命中宿主 `node_modules`），**不要**在插件 package.json 里重复声明；CI 里由 `.github/workflows/check.yml` 按同一布局模拟补齐。
 - `utils/common.js` 是重依赖入口，纯逻辑测试不要直接 import；测试需按需提供全局 stub/mock。
 - `config/config.json` 是运行时配置，**勿提交**。`utils/SydneyAIClient.js` 已废弃，不为本次任务顺手修复、重构或删除，也不删除其遗留 import；清理属于单独议题。
 
