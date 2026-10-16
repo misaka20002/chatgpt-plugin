@@ -89,7 +89,8 @@ export class DailyConsolidation {
       rawRetentionDays: Number(g.rawRetentionDays) || 30,
       eventRetentionDays: Number(g.eventRetentionDays) || 90,
       maxAttempts: MAX_ATTEMPTS,
-      use: null,
+      // 提炼供应商：条目 ID 或 'current'（跟随全局对话模型），对应锅巴「提炼模型来源」
+      use: typeof g.provider === 'string' && g.provider ? g.provider : 'current',
     }
   }
 

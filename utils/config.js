@@ -359,6 +359,7 @@ const defaultConfig = {
   memoryGroupCapture: {
     groups: [], // 授权采集的群列表 [{groupId, switchOn}]，锅巴 GSubForm 管理或 #群记忆开启
     cronTime: '0 0 4 * * ? *', // 每日提炼 EasyCron，修改后重启生效
+    provider: 'current', // 提炼使用的模型供应商条目 ID 或 'current'（跟随全局对话模型）；锅巴「提炼模型来源」，保存后即时生效
     rawRetentionDays: 30, // 群原文保留天数
     eventRetentionDays: 90, // 未指定期限的临时事件默认保留天数
     inputTokenLimit: 30000, // 提取模型输入 Token 上限
