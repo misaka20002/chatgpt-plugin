@@ -54,3 +54,30 @@
 - **本轮不提交**：用户决定人工审查。
 - 工作区共 **9 改 + 5 未跟踪**（`AGENTS.md`、`docs/agent-guides/configuration.md`、`docs/agent-guides/tools.md`、`guoba.support.js`、`model/core.js`、`package.json`、`test/configArrayMerge.test.js`、`test/toolContext.test.js`、`utils/config.js`；未跟踪为 4 个新文件 + `.scratch/group-notice-todo/`）。
 - 第二轮落地的工具偏好规则**只覆盖 chatgpt-plugin**。本机同一父目录下另有多个仓，要跨仓生效需各自再放一条。
+
+## 第三轮（2026-10-16 深夜 → 10-17 凌晨：读取放开评审 → 暂停 + 后台派生复发·根因落定）
+
+- 依据：本会话（`a8c96ee0`，统计时 418 条记录 / 132 次工具调用；grill 两轮 → NapCat 调研 → 暂停注册）
+- 相关：[spec.md](spec.md)（2026-10-16/17 三条 Comments）、[ADR-0001](../../docs/adr/0001-group-todo-read-open-split.md)、[napcat-group-todo.md](napcat-group-todo.md)、仓库根 `GLOSSARY.md`
+
+| # | 类别 | 项 | 决定与落地 |
+| --- | --- | --- | --- |
+| 7 | Tool economy / Information access（复发，根因已证实） | **后台派生第三次被终止**，这次从运行时日志钉死了链条：spawn 落进已取消的自动团队，`00:03:53.166` 注册 → `.168` `running -> killed`（2 毫秒）→ `spawned after team cancel and was paused` → 10 秒后 `force killed (keepWakeable=false)` + 移出团队。对照同日 19:18 前台派生的两个评审 agent（`isTeamMember=false`）正常完成——**前台可靠、后台（自动团队成员）不可靠**。规则没拦住的原因：`AGENTS.md` 那条字面只写「评审子 agent」，调研不在其列 | **已落地**：`AGENTS.md` 规则扩宽为「一切需要结果的子 agent 一律前台派生」，补「出生即可能被停止」与「真正的后台=任务粒度」；`research.md` 复现记录更新为日志证据版 |
+| 8 | Information access | **运行时日志位置终于找到**：`~/.workbuddy/logs/<日期>/<工作区名>__<hash>.log`（含 `[cbc-kw=AGENT_TASK]` / `[AgentTaskManager]` / `[TeamMember-*]` / `[Interruption]`），会话转录在 `~/.workbuddy/projects/<项目>/<sessionId>.jsonl`；上轮「本机未定位到」作废 | **已落地**：写入 `research.md`「取证入口（增量）」 |
+| 9 | Navigation | **协议端本地参考副本没有指针**：本地 NapCatQQ 源码参考副本是本次调研的一手来源，此前只靠用户口头告知；下次查 NapCat 实现应先看本地副本（版本 `v4.18.38-2-g810052c6`），而不是绕 GitHub | **不写（用户拍板）**：不放 `AGENTS.md` 指针；本机绝对路径不入库（`napcat-group-todo.md` 改为不带路径的表述，保留 commit / 版本 / remote 作可复现标识）。同轮补充通用规则：含本机用户名的绝对路径不写进任何产出，已写入 `AGENTS.md` |
+| 10 | Automated checks（低优先·留观察） | `test/groupReplyCore.test.mjs` / `test/providerContext.test.mjs` 用正则从 `core.js` 源码扫 import 列表以注册 mock——**被注释掉的 import 行同样会被扫到**（本轮实测无害，属隐性行为）。可选加固：扫描前剥离 `//` 注释 | **不落地**（风险极低，改动测试扫描逻辑收益不成比例） |
+| 11 | Automated checks | **路径卫生护栏已存在但未指路**：`test/pathLeak.check.mjs`（随 `npm run check` / CI 运行）就是拦「用户名绝对路径泄露」的护栏，本轮由用户提醒才做全仓审计、跑通该检查（322 个文件、0 命中；`misak` 命中均为公开 GitHub 账号 / 公开链接，未动） | **已落地**：`AGENTS.md` 补「含本机用户名的绝对路径不写进任何产出（文档、注释、命令、回复）」规则并指向护栏；`napcat-group-todo.md` 与 retro #9 的本机路径同步改为不带路径的表述 |
+
+### 本轮的流程验证（证据）
+
+- 「跨位置全称断言逐处核对」继续生效：两份新文档（[ADR-0001](../../docs/adr/0001-group-todo-read-open-split.md)、`GLOSSARY.md`）与 spec 修订的措辞均逐处核对了代码事实。
+- 调研改为**当轮前台直接跑完**（`run_in_background` 三次全灭后的可靠通道），报告成功落盘——规则扩宽后的第一次执行。
+- `grill-with-docs` 首用：`GLOSSARY.md` + `ADR-0001` 随决策落盘；三次口径变化（读取放开 → 读写拆分 → 整体暂停）全部可追溯，「恢复清单」机制留在 spec Comments。
+- 协议端事实先落盘再拍板：NapCat 读取不可用的结论在拍板前完成，用户据此一刀暂停，避免把不可用功能发出去。
+- Tool economy：本轮 Bash 占 30/132 ≈ 23%（上轮 78%），其中 git / gh / rg / npm / node 属不可替代项——专用工具规则持续生效。
+- Automated checks：护栏在位（`npm run check` + CI），本类别无发现；唯一相关观察见 #10（不落地）。
+
+### 本轮产出（工作区，未提交）
+
+- 新增：`GLOSSARY.md`、`docs/adr/0001-group-todo-read-open-split.md`、`.scratch/group-notice-todo/napcat-group-todo.md`（另有本文件、`research.md`、`spec.md` 的本轮修订）。
+- 暂停：`guoba.support.js` / `model/core.js` 的群待办注册入口已注释（四处，带原因与恢复路径）；验证全绿（`node --check` ×2、`test:tools`、`test:group-reply` 64/64、`test:providers` 38/38、`test:config` 31/31）。

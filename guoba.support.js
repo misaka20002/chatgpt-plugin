@@ -1439,8 +1439,9 @@ export function supportGuoba() {
               { label: '设置头衔', value: 'SetTitle' },
               { label: '修改群昵称', value: 'EditCard' },
               { label: '消息工具（撤回、加精）', value: 'HandleMsg' },
-              { label: '群公告（只读、全员可用）', value: 'GroupNotice' },
-              { label: '群待办（查看、设置、完成、取消）', value: 'GroupTodo' },
+              { label: '读群公告', value: 'GroupNotice' },
+              // 群待办暂停注册：协议端（如 NapCat）暂未实现读取接口，等支持后恢复
+              // { label: '群待办（查看、设置、完成、取消）', value: 'GroupTodo' },
             ]
           }
         },

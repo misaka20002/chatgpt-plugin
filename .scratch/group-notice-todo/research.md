@@ -136,3 +136,13 @@ class SubagentWallClockTimeoutError extends Error {
 2. **同一轮里需要两个 agent 的产出时，不要用后台**——`code-review` 的两个轴正属此类，其 SKILL.md 也已写明 `in the foreground`，照做即可。
 3. **不要把 `killed` 当作"还没跑完"**。它是终态（E3）；且被杀的任务**不会**发通知（E4），静默失败。看到 `killed` 的正确处置是重新派生，而不是重试等待。
 4. **权威副本落在本仓**：规则写进 `AGENTS.md` 工程规则（随仓库走、跨机器可用），详情就是本文件。机器本地的 `~/.workbuddy/skills/code-review/{SKILL,SUBAGENT-DISPATCH}.md` 只是本地加强，不随仓库走；`SOUL.md` 里那份临时副本已按用户决定移除，避免同一规则多处漂移。
+
+## 复现记录（2026-10-16 深夜）：调研 agent 同类终止
+
+后台派生调研子 agent（`run_in_background: true`；自动团队 `_auto_a8c96ee0…`，成员名 `napcat-research`）**再次被终止**：任务 ID 从注册表彻底消失（`TaskOutput` → “No task found … There are no running background tasks”），报告文件未产出、无 inbox 通知、audit-log 无记录。与 10-15 那次现象一致。
+
+**根因（2026-10-17 在运行时日志里钉死）**：`~/.workbuddy/logs/2026-10-16/chatgpt-plugin__418608fe….log` 第 73775-73864 行是完整链条——`00:03:53.166` 注册（`running`）→ `.168` **`running -> killed`（2 毫秒）**、`error="sub-agent task session is aborted"` → 同秒 `TeamMember "napcat-research" current turn stopped (lead-cancelled)`、`spawned after team cancel and was paused` → `00:04:03.175` `force killed (keepWakeable=false)` 并移出团队注册表；此后 `TaskOutput` 才报 “No task found”。**本轮不是「触发点未知」：spawn 落进了已处于取消态的自动团队，出生即被停止。** 对照：同日 19:18-19:21 前台派生的两个评审子 agent（`isTeamMember=false`）正常完成（`Captured final output`）——前台不走自动团队、可靠。
+
+**取证入口（增量）**：运行时日志在 `~/.workbuddy/logs/<日期>/<工作区名>__<hash>.log`（含 `[cbc-kw=AGENT_TASK]` / `[AgentTaskManager]` / `[TeamMember-*]` / `[Interruption]` 前缀；上轮记录中「运行时日志本机未定位到」一句以此为准）；会话转录在 `~/.workbuddy/projects/<项目目录>/<sessionId>.jsonl`。
+
+结论扩展（已落 `AGENTS.md` 工程规则，从「评审两轴」扩到「一切需要结果的子 agent」，含调研）：一律前台派生。真正的「边聊边跑」在本产品里是**任务粒度**的能力（侧边栏多任务并行 /「保存到工作空间」的多 Agent 协作），不是会话内的后台子 agent。
