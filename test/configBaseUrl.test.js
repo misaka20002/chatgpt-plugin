@@ -158,7 +158,8 @@ test('锅巴保存的备注写盘并在面板读回，空缺条目补空串', t 
     for (const type of ['api', 'responses', 'claude', 'gemini']) {
       const field = guoba.schemas.find(s => s.field === 'modelProviders.' + type)
         .componentProps.schemas.find(s => s.field === 'note')
-      assert.equal(field.component, 'Input')
+      // 备注在四个来源面板里统一是多行文本框（锅巴 schema 的选择），与「仅用于区分条目」的用途一致
+      assert.equal(field.component, 'InputTextArea')
       assert.equal(field.label, '备注')
     }
     const option = supportGuoba().configInfo.schemas.find(s => s.field === 'defaultProviderId')
