@@ -10,6 +10,7 @@
 - QQ 模型切换由 `apps/providers.js` 管理，仅主人可用；主用、备用两个数字菜单完成后一起保存，取消／60 秒超时不改变配置。菜单以发出时的条目 ID 解析序号，提交时重新校验；修改配置同样锁定最初条目，不能在第二次消息到达时改用新全局条目。
 
 - 业务态前缀 `CHATGPT:`：`CHATGPT:CONVERSATIONS:*`（会话）、`CHATGPT:USE`（当前模型）、`CHATGPT:MESSAGE*` 等。
+- 偷图撤销 `CHATGPT:EMOJI_UNDO:<群号|8888>_<回执消息id>`：值为 `{ path, emotion, isNew }`，TTL 两周；`#gpt撤销偷图` 按被引用回执的消息 id 取回图片路径，`isNew=false` 表示这张图早就在库里、只清记录不删文件。私聊与群聊用 8888／群号分隔，避免消息 id 跨会话撞车。
 - 记忆 V2 前缀 `CHATGPT:MEMORY:V2:`：`item:{id}`（记忆本体）、`idx:*/slot:*/grp:*`（索引）、`evd:{id}`（证据集）、`raw:*/rawIdx:*`（原文）、`task:{gid}:{day}`（提炼任务）、`policy:{gid}`（游标）。
 - 旧记忆 Hash `CHATGPT:MEMORY:USER:*`：**只读用于清理**，首次 V2 写入即删，不要读取/展示其内容。
 - **node-redis 4.7 API 注意**：`zAdd(key, { score, value })`（对象形式）；`hSet(key, obj)`；`scanIterator({ MATCH })`；`del(...keys)` 支持多键。
@@ -22,6 +23,13 @@
 - **云崽的 redis 是 node-redis v4 的驼峰 API**（`hGet` / `hIncrBy` / `hGetAll` / `mGet`，写法是 `set(k, v, { EX: n })`）。需要原子锁就用 `set(k, v, { NX: true, EX: n })`：守卫选项名是大写 `NX: true`，**没抢到时返回 `null`**（`@redis/client` 的 `transformReply()` 声明就是 `… | null`），据此判断是否放行；不要写 `GET`→`SET` 两步（并发会一起通过），也不要用 `INCR` + `EXPIRE` 两步。
 - **`loadPlugin()` 的顺序是 `new p()` → `await init.init()` → `new p()` 再 push 进 `priority`**：init() 执行期间本插件还没注册，此处的动态注册会「找不到条目」——不用补救，随后构造的注册实例会按当时的模块级状态生成 `rule`（这也是 `keyMap` 作为模块级变量在加载期可用的原因）。
 - **TRSS loader 的定时任务 `task.fnc` 必须传函数引用**（如 `this.runDaily.bind(this)`），不能传方法名字符串：`loader.collectTask` 只校验 `i.cron && i.fnc` 后原样入队，`startTask` 直接 `await i.fnc()`，字符串会被当作函数调用报 `TypeError: i.fnc is not a function`。注册方式参考 `apps/ScheduleTaskPlugin.js` 等：把 `task` 放在构造函数体内（`super()` 之后赋值 `this.task`，此时才能 `bind(this)`），而不是塞进 `super({...})` 配置。注意消息路由的 `rule[].fnc` 仍是字符串（loader 用 `plugin[v.fnc](e)` 按名解析），二者约定不同，勿混淆。
+
+## 消息 id 与引用
+
+- **`e.source.seq` 不是数字序号**：宿主 `lib/plugins/loader.js` 处理 reply 段时写的是 `e.reply_id = i.id`、`e.source = { seq: i.id, time: i.id }`——`seq` 里装的是被引用消息的 **message id**。拿它当序号做加减、比较大小或传给 `getChatHistory` 都会静默错位。
+- **取发送结果的 id 用 `msgRet.seq || msgRet.data?.message_id`**：`e.reply()` 直接透传适配器的发送结果（`lib/bot.js` 里 `data.reply = data.group.sendMsg.bind(data.group)`），部分适配器只给 `data.message_id`。这个链路同时适配 TRSS-Yunzai 与 Miao-Yunzai；本项目只保证 TRSS 下的行为，Miao 已不再使用、不为其差异做兼容。
+- **两侧要同源**：写入用上一条的口径，读取用 `e.source?.seq || e.reply_id`（本宿主上二者同值），再叠 `e.source?.message_id` 兜底。键里必须带会话标识——群聊用群号，私聊用宿主伪群号 `8888`，否则消息 id 会跨会话撞车。
+- 参考实现：`apps/tts_voice_help.js` 的 `#gpt偷图` / `#gpt撤销偷图`（`CHATGPT:EMOJI_UNDO:<群号|8888>_<回执消息id>`，TTL 两周）。
 
 ## 群聊自主回复
 

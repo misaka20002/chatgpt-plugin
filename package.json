@@ -62,6 +62,7 @@
     "test:meme:mutants": "node test/meme/run.mjs --all-mutants",
     "test:providers": "node --experimental-test-module-mocks --test test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs test/providerContext.test.mjs test/providerModels.test.mjs",
     "test:thinking": "node --test test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test test/toolRoundTextForward.test.mjs",
-    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && npm run test:config && npm run test:providers && npm run test:thinking"
+    "test:emoji": "node --experimental-test-module-mocks --test test/emojiUndo.test.mjs",
+    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && npm run test:config && npm run test:providers && npm run test:thinking && npm run test:emoji"
   }
 }

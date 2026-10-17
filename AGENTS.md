@@ -41,7 +41,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
 - **一切需要结果的子 agent（含评审两轴与调研）一律前台派生，不要用 `run_in_background`。** 后台派生会把它变成"自动团队"成员：出生即可能被停止（运行时日志原文 “spawned after team cancel and was paused”）；当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），被终止（终态）后又**跳过完成通知**，结果必然丢失——评审与调研共 3 次实测无一存活。真正的后台并行是**任务粒度**（侧边栏多任务 /「保存到工作空间」多 Agent 协作），不是会话内子 agent。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
 - **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。**含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——一律用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`（随 `npm run check` / CI）。
-- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回）；`git show '分支:路径'` 先加 `MSYS_NO_PATHCONV=1`（不设时 Git Bash 的路径转换会改写参数，报 ambiguous argument）。
+- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回）；`ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`——不设时 Git Bash 的路径转换会改写参数，`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」；结论是否定或异常时先怀疑它。
 
 ## 运行环境与入口
 
@@ -54,6 +54,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 | 路径 | 职责 / 数据流 |
 | --- | --- |
 | `index.js`、`apps/` | 扫描命令模块并注册 `extends plugin` 类；每文件只注册第一个导出 |
+| `apps/tts_voice_help.js` | tts 语音设置指令、fish 账号管理、派蒙戳一戳存图、`#gpt偷图` / `#gpt撤销偷图`（表情库 `data/chatgpt/sendEmojiTool/<emotion>/`） |
 | `apps/chat.js` → `model/core.js` | `chatgpt()` → `abstractChat(e, prompt)` → `Core.sendMessage()` → 按 `use` 分发 provider |
 | `model/SubLLM.js`、`client/` | 子模型调用与 provider 协议；默认跟随 provider 回复 token 上限，工具/子代理不另设上限 |
 | `utils/tools/` | `collectTools(e)` 条件收集 → schema → 模型调用 → `func(opts, e)` → 结果回填 |
@@ -84,7 +85,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - 不为覆盖率扩大任务，不测未触及的稳定路径，不重复语言/标准库保证。mock 只模拟依赖边界，被测逻辑必须执行生产代码。
 - 不默认增加变异测试、源码文本守卫、重复桩/真实链路测试、全组合矩阵或大规模端到端测试。源码守卫只用于必要静态约束，不能冒充行为测试；变异仅用于反复发生或难以判断覆盖有效性的高风险问题，或用户明确要求。
 - 测试脚本清单以 `package.json` 和磁盘实际文件为准，不保留缺失路径：与存在文件混跑时缺失路径可能被静默忽略。不要恢复历史 `chain*.test.mjs`，不用固定用例数证明覆盖。
-- 常用入口：`npm run check`（全仓语法预检 + 快套件，CI 同款） / `test:memory` / `test:tools` / `test:media` / `test:config` / `test:thinking` / `test:render` / `test:meme:fast`（后续项同样加 `npm run`）。完整 meme 慢测试和 mutants 按需使用。
+- 常用入口：`npm run check`（全仓语法预检 + 路径卫生 + 快套件，CI 同款）；其余专项套件与慢测试按 `package.json` 的 `scripts`（`test:*`）选用，清单不在文档里复述——新增脚本时不必回头改这里。
 - 临时脚本放系统临时目录，或用完删除并确认清理。真实模型/确认流程仅在相关改动无法由本地验证覆盖时验证；本地全绿不等于 CI 或真实运行保障。
 - 最终汇报包含 **Changes / Validation / Risks**：改了什么、实际跑了什么、与本次相关的剩余限制。
 

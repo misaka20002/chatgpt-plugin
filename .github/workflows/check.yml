@@ -31,15 +31,16 @@ jobs:
       # 上面两级没有 lib/，这些路径解析不到；测试虽然用 mock.module 打桩，但 Node 必须先
       # 「解析」目标路径才能打桩，解析不到就是 ERR_MODULE_NOT_FOUND。本地能过是因为
       # ../.. 恰好是 Yunzai 根目录、lib/ 真实存在。空壳覆盖测试会解析到的宿主模块即可
-      # （当前为 plugin.js / loader.js / common.js；puppeteer.js 为 utils/common.js 依赖链预留）。
+      # （当前为 plugin.js / loader.js / common.js / config.js；puppeteer.js 为 utils/common.js 依赖链预留）。
       - name: 补宿主 lib 空壳（CI 无 lib/ 目录）
         run: |
           HOST_LIB="$GITHUB_WORKSPACE/../../lib"
-          mkdir -p "$HOST_LIB/plugins" "$HOST_LIB/common" "$HOST_LIB/puppeteer"
+          mkdir -p "$HOST_LIB/plugins" "$HOST_LIB/common" "$HOST_LIB/puppeteer" "$HOST_LIB/config"
           printf 'export default class plugin {}\n' > "$HOST_LIB/plugins/plugin.js"
           printf 'export const getBot = () => undefined\nexport const getPlatformInfo = () => ({ platform: "test" })\n' > "$HOST_LIB/plugins/loader.js"
           printf 'export const common = {}\nexport default {}\n' > "$HOST_LIB/common/common.js"
           printf 'export default class Puppeteer {}\n' > "$HOST_LIB/puppeteer/puppeteer.js"
+          printf 'export default { masterQQ: [] }\n' > "$HOST_LIB/config/config.js"
       # 插件运行时还依赖宿主提供的模块（md5 / moment / yaml；md5 为宿主自带的替身模块）——
       # 生产环境靠 Node 从插件目录逐级向上查找 node_modules 命中宿主根。CI 里按同一布局
       # 把它们放到「宿主根」的 node_modules 上；不修改插件 package.json 与锁文件（npm --no-save）。
