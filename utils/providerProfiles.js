@@ -12,6 +12,14 @@ export const KEY_FIELDS = { api: 'apiKey', responses: 'responsesApiKey', claude:
 export const URL_FIELDS = { api: 'openAiBaseUrl', responses: 'responsesApiBaseUrl', claude: 'claudeApiBaseUrl', gemini: 'geminiBaseUrl' }
 export const PROMPT_FIELDS = { api: 'promptPrefixOverride', responses: 'responsesSystemPrompt', claude: 'claudeSystemPrompt', gemini: 'geminiPrompt' }
 export const emptyProviders = () => ({ api: [], responses: [], claude: [], gemini: [] })
+/**
+ * 锅巴专属的纯展示字段：**不能**放进 PROVIDER_FIELDS。
+ * 那张表里的键会被 config.js 的 Proxy 当成裸属性名按首匹配解析（`Config.note` 会变成"默认提供商的备注"，
+ * 且默认条目换协议后语义随之改变），也会被 updateProvider 当成可写字段。
+ * 但 normalizeProviders 是按白名单重建整行的，白名单外的键一律丢弃，所以这些字段必须在这里单独保留，
+ * 否则锅巴里填的备注在保存那一刻就没了（面板仍提示保存成功）。
+ */
+export const PROVIDER_NOTE_FIELDS = ['note']
 
 export function listProviders(config) {
   return Object.keys(PROVIDER_FIELDS).flatMap(type => (config.modelProviders?.[type] || []).map(row => ({ ...row, type })))
@@ -45,6 +53,9 @@ export function normalizeProviders(config, defaults) {
       for (const field of PROVIDER_FIELDS[type]) {
         if (Object.hasOwn(input, field)) row[field] = structuredClone(input[field])
       }
+      // 缺省写成空串而不是留着 undefined：undefined 会在 JSON.stringify 时整个键消失，
+      // 同一条目于是有时带 note 有时不带，往返比较和 Object.hasOwn 判断都会不一致。
+      for (const field of PROVIDER_NOTE_FIELDS) row[field] = String(input[field] ?? '').trim()
       const model = MODEL_FIELDS[type]
       if (Array.isArray(row[model])) row[model] = row[model][0] || ''
       row[URL_FIELDS[type]] = String(row[URL_FIELDS[type]] ?? '').trim().replace(/\/+$/, '')

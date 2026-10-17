@@ -137,3 +137,47 @@ test('锅巴新增条目后更新全部来源选项，重命名保留 ID，错�
     assert.deepEqual(Config.getConfig(), before)
   `)
 })
+
+// 备注是锅巴专属展示字段：normalizeProviders 按白名单重建整行，白名单外的键会被静默丢弃，
+// 所以既要确认它真的落盘，也要确认它不影响来源下拉标签。
+const noteBase = {
+  providerConfigVersion: 1,
+  modelProviders: { api: [{ id: 'p1', name: '面包的one' }], responses: [], claude: [], gemini: [] },
+  defaultProviderId: 'p1'
+}
+
+test('锅巴保存的备注写盘并在面板读回，空缺条目补空串', t => {
+  const result = runConfig(t, noteBase, `
+    const rows = structuredClone(Config.getConfig().modelProviders.api)
+    rows[0].note = '  官方 key，别乱切  '
+    rows.push({ ...rows[0], id: '', name: '备用账号', note: undefined })
+    const Result = { ok: () => true, error: message => ({ error: message }) }
+    assert.equal(await guoba.setConfigData({ 'modelProviders.api': rows }, { Result }), true)
+    assert.equal(Config.getConfig().modelProviders.api[0].note, '官方 key，别乱切')
+    assert.equal(Config.getConfig().modelProviders.api[1].note, '')
+    for (const type of ['api', 'responses', 'claude', 'gemini']) {
+      const field = guoba.schemas.find(s => s.field === 'modelProviders.' + type)
+        .componentProps.schemas.find(s => s.field === 'note')
+      assert.equal(field.component, 'Input')
+      assert.equal(field.label, '备注')
+    }
+    const option = supportGuoba().configInfo.schemas.find(s => s.field === 'defaultProviderId')
+      .componentProps.options.find(o => o.value === 'p1')
+    assert.equal(option.label, 'Chat API - 面包的one')
+  `)
+  for (const snapshot of [result.current, result.displayed, result.written]) assert.equal(snapshot.note, '官方 key，别乱切')
+})
+
+test('配置文件里已有的备注在重新加载后保留，缺失条目补空串', t => {
+  const result = runConfig(t, {
+    ...noteBase,
+    modelProviders: {
+      ...noteBase.modelProviders,
+      api: [{ id: 'p1', name: '面包的one', note: '重载后还在' }, { id: 'p2', name: '没有备注' }]
+    }
+  }, `
+    assert.equal(Config.getConfig().modelProviders.api[1].note, '')
+    assert.equal(Config.save(), true)
+  `)
+  for (const snapshot of [result.loaded, result.displayed, result.written]) assert.equal(snapshot.note, '重载后还在')
+})

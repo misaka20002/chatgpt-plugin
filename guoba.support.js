@@ -426,6 +426,12 @@ export function supportGuoba() {
               { field: 'id', label: '内部标识', component: 'Input', show: false },
               { field: 'name', label: '名称', component: 'Input', required: true },
               {
+                field: 'note',
+                label: '备注',
+                bottomHelpMessage: '仅用于在锅巴里区分条目，不参与任何请求',
+                component: 'InputTextArea'
+              },
+              {
                 field: 'apiKey',
                 defaultValue: providerDefaults.api.apiKey,
                 label: 'Chat API Key',
@@ -520,6 +526,12 @@ export function supportGuoba() {
             schemas: [
               { field: 'id', label: '内部标识', component: 'Input', show: false },
               { field: 'name', label: '名称', component: 'Input', required: true },
+              {
+                field: 'note',
+                label: '备注',
+                bottomHelpMessage: '仅用于在锅巴里区分条目，不参与任何请求',
+                component: 'InputTextArea'
+              },
               {
                 field: 'responsesApiKey',
                 defaultValue: providerDefaults.responses.responsesApiKey,
@@ -617,6 +629,12 @@ export function supportGuoba() {
               { field: 'id', label: '内部标识', component: 'Input', show: false },
               { field: 'name', label: '名称', component: 'Input', required: true },
               {
+                field: 'note',
+                label: '备注',
+                bottomHelpMessage: '仅用于在锅巴里区分条目，不参与任何请求',
+                component: 'InputTextArea'
+              },
+              {
                 field: 'claudeApiKey',
                 defaultValue: providerDefaults.claude.claudeApiKey,
                 label: 'claude API Key',
@@ -674,6 +692,12 @@ export function supportGuoba() {
             schemas: [
               { field: 'id', label: '内部标识', component: 'Input', show: false },
               { field: 'name', label: '名称', component: 'Input', required: true },
+              {
+                field: 'note',
+                label: '备注',
+                bottomHelpMessage: '仅用于在锅巴里区分条目，不参与任何请求',
+                component: 'InputTextArea'
+              },
               {
                 field: 'geminiKey',
                 defaultValue: providerDefaults.gemini.geminiKey,
