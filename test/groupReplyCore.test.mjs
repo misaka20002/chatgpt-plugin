@@ -16,7 +16,6 @@ mock.module('../utils/common.js', { namedExports: {
 } })
 mock.module('../../../lib/common/common.js', { defaultExport: {} })
 mock.module('../utils/mcp.js', { defaultExport: {} })
-mock.module('../utils/paimonFuction.js', { namedExports: { getImageBase64() {} } })
 // toolForward 统一测试桩（fixtures/toolForwardMock.mjs）
 const toolForwardMock = createToolForwardMock()
 mock.module('../utils/toolForward.js', { namedExports: toolForwardMock.namedExports })
@@ -282,3 +281,49 @@ test('主条目缺少密钥在请求前失败，不尝试备用；Responses 内�
     assert.equal(requests.length, before + 1)
   } finally { row.responsesApiKey = key; scriptedReply = undefined }
 })
+
+// ===== 引用图接线：图进模型、失败提示只进 system =====
+const TINY_GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
+function systemOf (request) {
+  return request.options.system || request.options.systemMessage || request.options.instructions || ''
+}
+
+for (const provider of ['api', 'responses', 'claude', 'gemini']) {
+  test(`${provider} 引用图进入本次请求，且不把图挂进用户文本`, async () => {
+    const cfg = Config.getConfig()
+    const previous = cfg.mediaRecognitionSource
+    cfg.mediaRecognitionSource = 'Orignal'
+    try {
+      const e = { ...event, img: [`base64://${TINY_GIF}`] }
+      const result = await core.sendMessage('这是什么', {}, provider, e, { enableSmart: false })
+      assert.equal(result.text, '正常回复')
+      const request = requests.at(-1)
+      if (provider === 'claude' || provider === 'gemini') {
+        assert.equal(request.options.medias?.length, 1, `${provider} 应通过 opt.medias 携带图片`)
+      } else {
+        assert.match(JSON.stringify(request.prompt), /image_url|input_image/, `${provider} 应把图拼进多模态 content`)
+      }
+      assert.doesNotMatch(systemOf(request), /引用的图片获取失败/)
+      // 图不能拼进用户文本：prompt 里只应有原文
+      assert.ok(!JSON.stringify(request.prompt).includes('iVBORw0KGgo'), `${provider} 不应把 base64 写进文本`)
+    } finally {
+      cfg.mediaRecognitionSource = previous
+    }
+  })
+
+  test(`${provider} 取图失败时提示只进 system，不进用户文本`, async () => {
+    const cfg = Config.getConfig()
+    const previous = cfg.mediaRecognitionSource
+    cfg.mediaRecognitionSource = 'Orignal'
+    try {
+      const e = { ...event, img: ['base64://不是图片'] }
+      await core.sendMessage('这是什么', {}, provider, e, { enableSmart: false })
+      const request = requests.at(-1)
+      assert.match(systemOf(request), /引用的图片获取失败/)
+      assert.ok(!JSON.stringify(request.prompt).includes('引用的图片获取失败'), `${provider} 提示不得写进用户消息`)
+    } finally {
+      cfg.mediaRecognitionSource = previous
+    }
+  })
+}

@@ -22,7 +22,7 @@ mock.module('../utils/common.js', { namedExports: {
 } })
 mock.module('../../../lib/common/common.js', { defaultExport: { sleep: async () => {} } })
 mock.module('../utils/mcp.js', { defaultExport: {} })
-mock.module('../utils/paimonFuction.js', { namedExports: { getImageBase64() {}, splitString_Enter() {} } })
+mock.module('../utils/paimonFuction.js', { namedExports: { splitString_Enter() {} } })
 mock.module('../utils/face.js', { namedExports: { convertFacesAndCQCode: text => [text] } })
 // toolForward 统一测试桩（fixtures/toolForwardMock.mjs）：该模块新增导出只需改工厂一处
 const toolForwardMock = createToolForwardMock()
