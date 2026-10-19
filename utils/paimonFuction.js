@@ -62,18 +62,20 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
   const limitMB = Config.mediaMaxSizeInMB || 10;
   const maxSizeInBytes = limitMB * 1024 * 1024;
 
+  let mediaError = '';
   const blobRes = await url2Base64(targetUrl, false, true, {
     maxSizeBytes: maxSizeInBytes,
     allowLocalFile: !untrustedSource,
     allowPrivateNetwork: !untrustedSource,
-    mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined
-  }).catch(err => {
-    logger.warn('[recognitionResultsByGemini] 媒体获取失败: ' + hidePrivacyInfo(err.message || String(err)))
-    return null
+    mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined,
+    // url2Base64 内部吞掉异常并返回 null，只能靠回调拿到真实原因
+    onError: (err) => { mediaError = hidePrivacyInfo(err.message || String(err)) }
   });
 
   if (!blobRes || !blobRes.imageBlob) {
-    return fail(`媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
+    return fail(mediaError
+      ? `媒体文件获取失败：${mediaError}`
+      : `媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
   }
 
   try {
@@ -168,15 +170,19 @@ export async function recognitionResultsByCurrentModel(e, img = [], video = [], 
   }
 
   const limitMB = Config.mediaMaxSizeInMB || 10;
+  let mediaError = '';
   const blobRes = await url2Base64(targetUrl, false, true, {
     maxSizeBytes: limitMB * 1024 * 1024,
     allowLocalFile: !untrustedSource,
     allowPrivateNetwork: !untrustedSource,
-    mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined
+    mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined,
+    onError: (err) => { mediaError = hidePrivacyInfo(err.message || String(err)) }
   });
 
   if (!blobRes || !blobRes.imageBlob) {
-    throw new Error(`媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
+    throw new Error(mediaError
+      ? `媒体文件获取失败：${mediaError}`
+      : `媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
   }
 
   // 自动获取探测到的 MimeType
@@ -757,12 +763,36 @@ export async function getUserDetailedInfo(e, qq = null) {
 }
 
 /**
+ * 还原 CQ 码参数的实体转义。
+ *
+ * NapCat 下发的消息段参数整体经过 CQ 码转义（`[CQ:image,...,url=...&amp;rkey=...]`），
+ * 图片 URL 里的 `&` 变成 `&amp;`，原样请求会被腾讯 CDN 判为 invalid rkey（HTTP 400）。
+ *
+ * 实体集合与替换顺序对齐 aiocqhttp 的 unescape：`&#44;` / `&#91;` / `&#93;` 先，
+ * `&amp;` 最后——顺序反了会把字面量 `&amp;#44;` 误还原成逗号。
+ * base64 与 data URI 是直传负载，不解码。
+ *
+ * @param {string} s CQ 码里的参数原文
+ * @returns {string} 还原后的文本
+ */
+function unescapeCqCode(s) {
+  if (typeof s !== 'string' || s.indexOf('&') === -1) return s
+  if (s.startsWith('base64://') || s.startsWith('data:')) return s
+  return s
+    .replace(/&#0*44;/g, ',')
+    .replace(/&#0*91;/g, '[')
+    .replace(/&#0*93;/g, ']')
+    .replace(/&amp;/gi, '&')
+}
+
+/**
  * 获取图片的 base64 字符串
  * @param {string} url - 图片的 URL，可以是 http(s), data:URI 或 base64://
  * @returns {Promise<string | undefined>} - 返回纯 base64 字符串，失败返回 undefined
  */
 export async function getImageBase64(url) {
   if (!url) return undefined;
+  url = unescapeCqCode(url);
 
   try {
     // 1. 处理 data: URI (例如: data:image/png;base64,iVBORw0KGgo...)
@@ -954,6 +984,41 @@ function isDisallowedIpAddress(address) {
 }
 
 /**
+ * 即使域名可信也不应连接的地址：回环、链路本地（含云元数据 169.254.169.254）、
+ * 未指定地址与组播。这类地址不可能承载 CDN 内容，命中即视为异常。
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isAlwaysBlockedIp(address) {
+  const version = net.isIP(address)
+  if (version === 4) {
+    const [a, b] = address.split('.').map(Number)
+    return a === 0 || a === 127 || (a === 169 && b === 254) || a >= 224
+  }
+  if (version !== 6) return true
+  const groups = parseIpv6Groups(address)
+  if (!groups) return true
+  if (groups.every((g) => g === 0)) return true // ::
+  if (groups.slice(0, 7).every((g) => g === 0) && groups[7] === 1) return true // ::1
+  if ((groups[0] & 0xffc0) === 0xfe80) return true // link-local
+  if ((groups[0] & 0xff00) === 0xff00) return true // 组播
+  return false
+}
+
+/**
+ * 可信媒体域名：解析结果由平台方控制，模型只能挑选 URL、无法影响解析结果。
+ * 群图 CDN 会调度到 CGNAT（100.64/10）等非常规网段，严格拦截会误伤正常下载。
+ * 豁免只覆盖私网/CGNAT/保留段，回环与链路本地（含云元数据地址）仍然一律拒绝。
+ */
+const TRUSTED_MEDIA_HOSTS = ['.qq.com', '.qq.com.cn', '.qpic.cn', '.qlogo.cn', '.gtimg.cn']
+
+function isTrustedMediaHost(hostname) {
+  const h = String(hostname || '').toLowerCase()
+  if (!h) return false
+  return TRUSTED_MEDIA_HOSTS.some((suffix) => h === suffix.slice(1) || h.endsWith(suffix))
+}
+/**
  * 校验「不可信来源」的媒体地址，并返回本次连接应当使用的目标地址
  *
  * 模型的 tool arguments 属于不可信输入；直接交给下载函数等于开放 SSRF 与任意本地文件读取通道。
@@ -964,6 +1029,7 @@ function isDisallowedIpAddress(address) {
  * @returns {Promise<{address: string, family: number}>}
  * @throws {Error} 地址不合法、协议不允许或指向内网时抛错
  */
+
 export async function resolveSafeRemoteMediaUrl(url) {
   let parsed
   try {
@@ -993,11 +1059,25 @@ export async function resolveSafeRemoteMediaUrl(url) {
     throw new Error('媒体地址域名解析失败')
   }
   if (!resolved.length) throw new Error('媒体地址域名没有解析结果')
-  for (const { address } of resolved) {
-    if (isDisallowedIpAddress(address)) throw new Error('媒体地址解析到内网或本机，已拒绝')
+  const trusted = isTrustedMediaHost(hostname)
+  let picked = null
+  let fallback = null
+  for (const item of resolved) {
+    if (!isDisallowedIpAddress(item.address)) {
+      if (!picked) picked = item
+      continue
+    }
+    // 回环 / 链路本地不可能承载 CDN 内容，域名可信也不连接
+    if (isAlwaysBlockedIp(item.address) || !trusted) {
+      logger.warn(`[resolveSafeRemoteMediaUrl] 拒绝 ${hostname} -> ${item.address}`)
+      throw new Error('媒体地址解析到内网或本机，已拒绝')
+    }
+    // 可信域名遇到 CGNAT/私网：留作兜底，优先用同批次里的公网地址
+    if (!fallback) fallback = item
   }
-  const picked = resolved[0]
-  return { address: picked.address, family: picked.family }
+  const target = picked || fallback
+  if (!target) throw new Error('媒体地址没有可用的解析结果，已拒绝')
+  return { address: target.address, family: target.family }
 }
 
 /**
@@ -1146,6 +1226,7 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
  * @param {object} opt 可选
  * @param {number} opt.maxPixels 图片缩放选项 { maxPixels: 1048576 } 表示最大像素为 1024*1024=1048576
  * @param {number} opt.maxSizeBytes 最大下载字节
+ * @param {Function} [opt.onError] 失败原因回调：本函数失败时返回 null，调用方只能通过它拿到真实原因
  * @param {number} opt.onlyCheck 仅检查大小不下载
  * @param {boolean} opt.allowLocalFile 是否允许 file://、本地绝对路径与 base64 直传，默认 true；
  *                                     处理不可信来源（如模型提供的地址）时必须传 false
@@ -1158,6 +1239,8 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
  */
 export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = false, opt = {}, e = {}) {
   try {
+    // NapCat 下发的 URL 是 HTML 转义的（&amp;），不解码会被 CDN 当作非法 rkey 拒绝
+    url = unescapeCqCode(url)
     let buffer;
     let contentLength;
     let contentType = 'image/jpeg'; // 默认类型
@@ -1167,11 +1250,17 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     const allowLocalFile = opt.allowLocalFile !== false;
     const allowPrivateNetwork = opt.allowPrivateNetwork !== false;
     const sizeTip = `${(maxSizeInBytes / 1024 / 1024).toFixed(1)}MB`;
+    // 本函数对外契约是「失败返回 null」，调用方拿不到异常，只能通过回调取真实原因
+    const reportError = (message) => {
+      if (typeof opt.onError !== 'function') return
+      try { opt.onError(new Error(message)) } catch (err) { logger.warn('[url2Base64] onError 回调异常: ' + (err?.message || err)) }
+    }
 
     // 1. 判断是否为 base64 直传 (兼容 base64:// 和标准的 data: URL)
     if (url.startsWith('base64://') || url.startsWith('data:')) {
       if (!allowLocalFile) {
         logger.warn('[url2Base64] 不可信来源不接受 base64 直传地址，已拒绝');
+        reportError('不可信来源不接受 base64 直传地址');
         return null;
       }
 
@@ -1194,6 +1283,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
       const estimatedBytes = Math.floor(base64Str.length / 4) * 3 - paddingLength;
       if (estimatedBytes > maxSizeInBytes) {
         logger.warn(`[url2Base64] base64 数据超过限制大小 ${sizeTip}，已拒绝`);
+        reportError(`base64 数据超过限制大小 ${sizeTip}`);
         return null;
       }
 
@@ -1205,6 +1295,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     else if (url.startsWith('file://') || /^[a-zA-Z]:(\\|\/)|^\//.test(url)) {
       if (!allowLocalFile) {
         logger.warn('[url2Base64] 不可信来源不接受本地文件地址，已拒绝');
+        reportError('不可信来源不接受本地文件地址');
         return null;
       }
 
@@ -1224,6 +1315,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
       }
       if (stat.size > maxSizeInBytes) {
         logger.warn(`[url2Base64] 文件超过限制大小 ${sizeTip}，已拒绝`);
+        reportError(`文件超过限制大小 ${sizeTip}`);
         return null;
       }
 
@@ -1255,6 +1347,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     // 4. 校验文件大小
     if (contentLength && parseInt(contentLength) > maxSizeInBytes) {
       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 出错]`), logger.red(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`));
+      reportError(`下载内容超过 ${maxSizeInBytes / 1024 / 1024}MB`);
       if (e.reply) {
         if (!e.isFromHandUpRepaint) e.reply(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`, true);
       }
@@ -1305,6 +1398,10 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(hidePrivacyInfo(error.message || String(error))));
     if (e.reply) {
       if (!e.isFromHandUpRepaint) e.reply('引用的文件地址已失效或解析失败，请重新发送.', true);
+    }
+    // 本函数对外契约是「失败返回 null」，调用方拿不到异常，只能通过回调取真实原因
+    if (typeof opt.onError === 'function') {
+      try { opt.onError(error) } catch { /* 回调自身异常不影响主流程 */ }
     }
     return null;
   }
