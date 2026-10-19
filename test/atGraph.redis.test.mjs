@@ -1,4 +1,4 @@
-// 协议兼容检查：node --test test/atGraph.redis.test.mjs（需本机安装 redis-server）。
+// manual test: 协议兼容检查，需本机安装 redis-server（node --test test/atGraph.redis.test.mjs）。
 // 独立 Unix socket、临时目录、禁用持久化，不连接或改写云崽正在使用的 Redis。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

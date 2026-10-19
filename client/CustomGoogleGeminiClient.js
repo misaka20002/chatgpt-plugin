@@ -8,6 +8,7 @@ import { Config } from '../utils/config.js'
 import { syncInnerOs } from '../utils/innerOs.js';
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 import { redactArgsForLog } from '../utils/toolArgRedaction.js'
+import { buildGeminiInlineParts, pickMediaList } from '../utils/visionPayload.js'
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
 
@@ -218,26 +219,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         parentMessageId: opt.parentMessageId || undefined
       }
 
-    // 记录点: opt.media
-    // 逻辑：使用 media (带明确类型) 传递图片或视频
-    if (opt.media) {
-      let mime_type = opt.media.mimeType;
-      let data = opt.media.data;
-      // 去除可能携带的 data URL scheme 头部
-      if (data.startsWith('data:')) {
-        const match = data.match(/^data:(.*?);base64,(.*)$/);
-        if (match) {
-          mime_type = mime_type || match[1];
-          data = match[2];
-        }
-      }
-      // 支持通用媒体类型（视频、不同格式图片）
-      thisMessage.parts.push({
-        inline_data: {
-          mime_type: mime_type, // 例如 'video/mp4' 或 'image/png'
-          data: data
-        }
-      })
+    // 图片只跟用户这一轮走：functionResponse 轮再挂 inline_data 会被 Gemini 判为
+    // "Request contains an invalid argument"（AstrBot 同样只在用户消息里放图片，
+    // 工具回调轮只回 function_response）
+    if (!opt.functionResponse?.length) {
+      thisMessage.parts.push(...buildGeminiInlineParts(pickMediaList(opt)))
     }
     history.push(_.cloneDeep(thisMessage))
     const maxHistoryWithCurrentMessage = maxHistory > 0 ? maxHistory + 1 : 0
@@ -528,16 +514,16 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         fcResults.push(functionResponse)
       }
       sendToolCallForwardMsg(this.e, toolForwardRecords, 'Gemini工具调用与返回')
-      let responseOpt = _.cloneDeep(opt)
+      // 工具回调轮不携带媒体：sendMessage 的 functionResponse 守卫已挡住重复发送，
+      // 这里先摘字段再 clone，避免把整段 base64 复制一遍进递归调用
+      const { media: _media, medias: _medias, ...optWithoutMedia } = opt
+      let responseOpt = _.cloneDeep(optWithoutMedia)
       responseOpt.parentMessageId = idModel
       responseOpt.functionResponse = fcResults
       responseOpt.toolChain = {
         depth: opt.toolChain.depth + 1,
         calledTools: [...opt.toolChain.calledTools, ...toolNames]
       };
-
-      // 防止在工具回调的轮次中再次携带媒体文件，避免 API 报错 Request contains an invalid argument
-      delete responseOpt.media
 
       // 达到工具调用上限时，强制下一轮不使用工具，让模型必须生成文本回复
       if (toolLimitReached) {

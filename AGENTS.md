@@ -8,7 +8,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 
 | 修改范围 / 任务 | 先读 |
 | --- | --- |
-| `model/core.js`、`utils/tools/`、`client/` 的工具执行、鉴权、联网搜索；`utils/paimonFuction.js`、媒体识别与下载 | [工具与媒体](docs/agent-guides/tools.md) |
+| `model/core.js`、`utils/tools/`、`client/` 的工具执行、鉴权、联网搜索；`utils/paimonFuction.js`、`utils/quotedImage.js`、`utils/visionPayload.js`、媒体识别、引用图多模态与下载 | [工具与媒体](docs/agent-guides/tools.md) |
 | `utils/memory/`、`apps/memory*.js`、MemoryTool / UserProfileTool、记忆提示词 | [记忆 V2](docs/agent-guides/memory.md) |
 | `resources/**/index.html`、HTML/Markdown/SVG 生成工具、`utils/htmlDesignSkill.js`、`utils/renderSanitize.js`、出图/字体问题 | [渲染与安全](docs/agent-guides/rendering.md) |
 | `apps/派蒙meme.js`、`utils/memeCategory.js`、`resources/memeList/` | [meme](docs/agent-guides/meme.md)；改模板另读渲染指南 |

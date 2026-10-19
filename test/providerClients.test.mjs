@@ -119,6 +119,32 @@ test('Gemini 工具回填保持完整历史链，不截断之前的用户上下�
   assert.ok((await history.getMessageById(history.parentMessageId)).parentMessageId)
 })
 
+test('Gemini 工具轮回填不再重复携带引用图（invalid argument 回归）', async () => {
+  const IMAGE_BYTES = 'iVBORw0KGgo='
+  const history = createAttemptHistory('gemini')
+  const requests = []
+  const client = new CustomGoogleGeminiClient({
+    key: 'fixture-key', model: 'fixture-model', config: Config, ...history,
+    e: { user_id: '123', sender: { user_id: '123', role: 'member' }, reply: async () => {} },
+    fetch: async (url, options) => {
+      requests.push(JSON.parse(options.body))
+      const parts = requests.length === 1 ? [{ functionCall: { name: 'lookup', args: {} } }] : [{ text: '看完了' }]
+      return Response.json({ candidates: [{ finishReason: 'STOP', content: { role: 'model', parts } }] })
+    }
+  })
+  client.addTools([{ name: 'lookup', function: () => ({ name: 'lookup', description: '查询', parameters: { type: 'object', properties: {} } }), func: async () => 'ok' }])
+  await client.sendMessage('这张图里是什么', {
+    parentMessageId: history.parentMessageId,
+    medias: [{ mimeType: 'image/png', data: IMAGE_BYTES }]
+  })
+  assert.equal(requests.length, 2)
+  // 用底图字节判断，避免 inline_data / inlineData 两种写法差异
+  assert.ok(JSON.stringify(requests[0]).includes(IMAGE_BYTES), '用户轮必须带图')
+  assert.ok(!JSON.stringify(requests[1]).includes(IMAGE_BYTES), '工具回调轮不得再带图')
+  const lastParts = requests[1].contents.at(-1).parts
+  assert.ok(lastParts.every(part => !part.inlineData && !part.inline_data))
+})
+
 // ===== 思维链识别（各 provider → thinking_text，由 forwardReasoning 开关决定是否转发）=====
 
 /** 构造 SSE 流式响应，供 OpenAI 兼容流式思维链用例使用 */
@@ -362,5 +388,48 @@ test('Responses 与 Claude HTTP 状态错误立即失败，不进入连接级重
     assert.equal(outcome, 'rejected', `${type} HTTP 状态错误应立即抛错`)
     assert.equal(calls, 1, type)
     await run
+  }
+})
+
+test('提供商报错只向上抛，不把错误文案写进消息历史', async () => {
+  const history = createAttemptHistory('claude')
+  const upserts = []
+  const client = new ClaudeAPIClient({
+    key: 'fixture-key',
+    model: 'fixture-model',
+    config: Config,
+    getMessageById: history.getMessageById,
+    upsertMessage: async (message) => { upserts.push(message) }
+  })
+  client.getHistory = async () => []
+  client._createMessage = async () => {
+    throw new Error('OpenAI error 429: {"error":{"message":"upstream rate limit reached"}}')
+  }
+  await assert.rejects(() => client.sendMessage('你好', {}), /429/)
+  assert.deepEqual(upserts, [], '失败轮不得把错误文案或占位回复写入会话历史')
+})
+
+test('api 与 gemini 提供商报错也只抛错，不写入消息历史', async () => {
+  const cases = [
+    ['api', async () => { throw new Error('429 upstream rate limit reached') }],
+    ['gemini', async () => new Response(
+      JSON.stringify({ error: { code: 429, message: '429 upstream rate limit reached' } }),
+      { status: 429, headers: { 'content-type': 'application/json' } }
+    )]
+  ]
+  for (const [type, fetchImpl] of cases) {
+    const history = createAttemptHistory(type)
+    const upserts = []
+    const client = createClient(type, fetchImpl)
+    // ChatGPTAPI 走构造函数注入的 _upsertMessage，Gemini 用 this.upsertMessage；
+    // ResponsesAPI 没有持久化钩子（历史由调用方管），故不在此列
+    if (type === 'api') client._upsertMessage = async (message) => { upserts.push(message) }
+    else client.upsertMessage = async (message) => { upserts.push(message) }
+    await assert.rejects(
+      () => client.sendMessage('你好', { parentMessageId: history.parentMessageId }),
+      /429|rate limit/,
+      type
+    )
+    assert.deepEqual(upserts, [], `${type} 失败轮不得写入任何消息`)
   }
 })

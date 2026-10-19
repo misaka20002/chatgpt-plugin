@@ -8,9 +8,25 @@ import net from 'node:net'
 import http from 'node:http'
 import https from 'node:https'
 import { newFetch } from './proxy.js'
+import { unescapeCqCode } from './cqCode.js'
 
 /** 媒体识别的默认系统提示词：Gemini 识别与「当前模型」识别共用，避免两处文案漂移 */
 const DEFAULT_MEDIA_RECOGNITION_PROMPT = `描述这个媒体中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`
+
+/**
+ * 媒体获取失败的统一文案：有真实原因就用它，否则回落到大小提示
+ *
+ * 不能反过来「一律显示超过 5MB」——早期实现把下载失败、类型不符、地址被拒全归到体积上，排障时误导。
+ *
+ * @param {string} mediaError `url2Base64` 的 onError 回调带回的原因
+ * @param {number} limitMB 本次的体积上限
+ * @returns {string}
+ */
+function describeMediaFetchFailure(mediaError, limitMB) {
+  return mediaError
+    ? `媒体文件获取失败：${mediaError}`
+    : `媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`
+}
 
 /**
  * @description: 获取gemini的识图/识视频结果，需要填写了gemini的token
@@ -22,10 +38,14 @@ const DEFAULT_MEDIA_RECOGNITION_PROMPT = `描述这个媒体中的内容，主�
  * @param {string} [options.prompt] 本次识别的具体要求，缺省用 e.msg
  * @param {boolean} [options.throwOnError] 失败时抛错，而不是返回「识别出错：...」字符串（工具调用方应传 true）
  * @param {boolean} [options.untrustedSource] 媒体地址来自不可信输入（如模型参数）：只允许公网 http(s)，禁止本地文件与内网地址
+ * @param {boolean} [options.trustedMediaSource] 地址确认为本次事件携带的媒体地址：只放开私网/benchmark 拦截，
+ *                                              本地文件与媒体类型校验保持严格（两者不能合并成一个开关）
  * @return {string|Promise<string>}
  */
 export async function recognitionResultsByGemini(e, img = [], video = [], systemPrompt = DEFAULT_MEDIA_RECOGNITION_PROMPT, options = {}) {
-  const { prompt, throwOnError = false, untrustedSource = false } = options
+  const { prompt, throwOnError = false, untrustedSource = false, trustedMediaSource = false } = options
+  // 可信来源只影响「能否连私网」；本地文件与媒体类型仍按不可信来源收紧
+  const allowPrivateNetwork = !untrustedSource || trustedMediaSource
 
   // 默认保持旧的「返回错误字符串」契约；工具调用方要求失败即抛错时传 throwOnError
   const fail = (message) => {
@@ -66,16 +86,16 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
   const blobRes = await url2Base64(targetUrl, false, true, {
     maxSizeBytes: maxSizeInBytes,
     allowLocalFile: !untrustedSource,
-    allowPrivateNetwork: !untrustedSource,
+    allowPrivateNetwork,
+    // 可信来源仍要解析并固定连接：回环 / 云元数据不因来源可信而放行
+    enforceAlwaysBlocked: trustedMediaSource,
     mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined,
     // url2Base64 内部吞掉异常并返回 null，只能靠回调拿到真实原因
     onError: (err) => { mediaError = hidePrivacyInfo(err.message || String(err)) }
   });
 
   if (!blobRes || !blobRes.imageBlob) {
-    return fail(mediaError
-      ? `媒体文件获取失败：${mediaError}`
-      : `媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
+    return fail(describeMediaFetchFailure(mediaError, limitMB))
   }
 
   try {
@@ -113,7 +133,7 @@ export async function recognitionResultsByGemini(e, img = [], video = [], system
 
   } catch (err) {
     // 日志与返回都给调用方，错误信息中的网址/IP 必须脱敏
-    logger.warn('[recognitionResultsByGemini] 识别请求失败: ' + hidePrivacyInfo(err.message || String(err)))
+    logger.warn('[ChatGPT][recognitionResultsByGemini] 识别请求失败: ' + hidePrivacyInfo(err.message || String(err)))
     return fail(hidePrivacyInfo(err.message || "网络或API错误"))
   }
 }
@@ -141,10 +161,13 @@ const MEDIA_SUPPORTED_USES = ['api', 'responses', 'claude', 'gemini']
  * @param {object} [options]
  * @param {string} [options.prompt] 本次识别的具体要求，缺省用 e.msg
  * @param {boolean} [options.untrustedSource] 媒体地址来自不可信输入（如模型参数）：只允许公网 http(s)，禁止本地文件与内网地址
+ * @param {boolean} [options.trustedMediaSource] 地址确认为本次事件携带的媒体地址：只放开私网/benchmark 拦截，
+ *                                              本地文件与媒体类型校验保持严格
  * @return {Promise<string>} 识别结果文本
  */
 export async function recognitionResultsByCurrentModel(e, img = [], video = [], systemPrompt = DEFAULT_MEDIA_RECOGNITION_PROMPT, options = {}) {
-  const { prompt, untrustedSource = false } = options
+  const { prompt, untrustedSource = false, trustedMediaSource = false } = options
+  const allowPrivateNetwork = !untrustedSource || trustedMediaSource
 
   let targetUrl = null
   let isVideo = false
@@ -174,15 +197,15 @@ export async function recognitionResultsByCurrentModel(e, img = [], video = [], 
   const blobRes = await url2Base64(targetUrl, false, true, {
     maxSizeBytes: limitMB * 1024 * 1024,
     allowLocalFile: !untrustedSource,
-    allowPrivateNetwork: !untrustedSource,
+    allowPrivateNetwork,
+    // 可信来源仍要解析并固定连接：回环 / 云元数据不因来源可信而放行
+    enforceAlwaysBlocked: trustedMediaSource,
     mediaKind: untrustedSource ? (isVideo ? 'video' : 'image') : undefined,
     onError: (err) => { mediaError = hidePrivacyInfo(err.message || String(err)) }
   });
 
   if (!blobRes || !blobRes.imageBlob) {
-    throw new Error(mediaError
-      ? `媒体文件获取失败：${mediaError}`
-      : `媒体文件获取失败、为空、或已超过限制大小 ${limitMB}MB`)
+    throw new Error(describeMediaFetchFailure(mediaError, limitMB))
   }
 
   // 自动获取探测到的 MimeType
@@ -763,66 +786,6 @@ export async function getUserDetailedInfo(e, qq = null) {
 }
 
 /**
- * 还原 CQ 码参数的实体转义。
- *
- * NapCat 下发的消息段参数整体经过 CQ 码转义（`[CQ:image,...,url=...&amp;rkey=...]`），
- * 图片 URL 里的 `&` 变成 `&amp;`，原样请求会被腾讯 CDN 判为 invalid rkey（HTTP 400）。
- *
- * 实体集合与替换顺序对齐 aiocqhttp 的 unescape：`&#44;` / `&#91;` / `&#93;` 先，
- * `&amp;` 最后——顺序反了会把字面量 `&amp;#44;` 误还原成逗号。
- * base64 与 data URI 是直传负载，不解码。
- *
- * @param {string} s CQ 码里的参数原文
- * @returns {string} 还原后的文本
- */
-function unescapeCqCode(s) {
-  if (typeof s !== 'string' || s.indexOf('&') === -1) return s
-  if (s.startsWith('base64://') || s.startsWith('data:')) return s
-  return s
-    .replace(/&#0*44;/g, ',')
-    .replace(/&#0*91;/g, '[')
-    .replace(/&#0*93;/g, ']')
-    .replace(/&amp;/gi, '&')
-}
-
-/**
- * 获取图片的 base64 字符串
- * @param {string} url - 图片的 URL，可以是 http(s), data:URI 或 base64://
- * @returns {Promise<string | undefined>} - 返回纯 base64 字符串，失败返回 undefined
- */
-export async function getImageBase64(url) {
-  if (!url) return undefined;
-  url = unescapeCqCode(url);
-
-  try {
-    // 1. 处理 data: URI (例如: data:image/png;base64,iVBORw0KGgo...)
-    if (url.startsWith('data:')) {
-      // 提取逗号后面的纯 base64 数据部分
-      return url.includes(',') ? url.split(',')[1] : url;
-    }
-
-    // 2. 处理 base64:// 自定义协议前缀
-    if (url.startsWith('base64://')) {
-      return url.replace(/^base64:\/\//, '');
-    }
-
-    // 3. 处理普通的 http / https 网络请求
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    // 注意：Buffer.from 是 Node.js 环境的 API
-    return Buffer.from(arrayBuffer).toString('base64');
-
-  } catch (error) {
-    console.error(`Failed to convert image to base64: ${url}`, error);
-    return undefined;
-  }
-}
-
-/**
  * 从 e.message[i] 的 file_id 提取文件，或直接获取图片 (image)、音频 (record) 等消息类型的直链 (url) 或本地路径
 
         let fileUrl = '';
@@ -876,7 +839,7 @@ export async function getOnebotFileOrMediaUrl(e, msg) {
       }
     }
   } catch (error) {
-    logger.error(`[paimonFuction] 获取文件/Record链接异常:`, error);
+    logger.error(`[ChatGPT][paimonFuction] 获取文件/Record链接异常:`, error);
   }
 
   return fileUrl || '';
@@ -929,21 +892,78 @@ function parseIpv6Groups(address) {
 }
 
 /**
+ * IPv4 网段分类表
+ *
+ * 两档语义必须分开：
+ * - `always`：回环、链路本地（含云元数据）、未指定、组播——即便域名可信也不连；
+ * - `disallowed`：私网 / CGNAT / benchmark——不可信来源拒绝，可信的 QQ 图 CDN 允许。
+ * 网段定义只维护这一份，别在别处再抄一遍（抄两遍迟早分叉）。
+ */
+const IPV4_BLOCKS = [
+  { tier: 'always', test: (a) => a === 0 }, // 未指定地址
+  { tier: 'always', test: (a) => a === 127 }, // 回环
+  { tier: 'always', test: (a, b) => a === 169 && b === 254 }, // 链路本地（含云元数据 169.254.169.254）
+  { tier: 'always', test: (a) => a >= 224 }, // 组播与保留
+  { tier: 'disallowed', test: (a) => a === 10 }, // 私网 A
+  { tier: 'disallowed', test: (a, b) => a === 172 && b >= 16 && b <= 31 },
+  { tier: 'disallowed', test: (a, b) => a === 192 && b === 168 },
+  { tier: 'disallowed', test: (a, b) => a === 100 && b >= 64 && b <= 127 }, // CGNAT
+  { tier: 'disallowed', test: (a, b) => a === 198 && (b === 18 || b === 19) } // benchmark
+]
+
+/**
+ * 查 IPv4 属于哪一档
+ *
+ * @param {string} address
+ * @returns {'always'|'disallowed'|null}
+ */
+function ipv4BlockTier(address) {
+  const [a, b] = address.split('.').map(Number)
+  return IPV4_BLOCKS.find((block) => block.test(a, b))?.tier ?? null
+}
+
+/**
  * 判断 IPv4 是否为不应被外部输入访问的网段
  *
  * @param {string} address
  * @returns {boolean}
  */
 function isDisallowedIpv4(address) {
-  const [a, b] = address.split('.').map(Number)
-  if (a === 0 || a === 10 || a === 127) return true
-  if (a === 169 && b === 254) return true // link-local
-  if (a === 172 && b >= 16 && b <= 31) return true
-  if (a === 192 && b === 168) return true
-  if (a === 100 && b >= 64 && b <= 127) return true // CGNAT
-  if (a === 198 && (b === 18 || b === 19)) return true // benchmark
-  if (a >= 224) return true // 组播与保留
-  return false
+  return ipv4BlockTier(address) !== null
+}
+
+/**
+ * 可信来源可以豁免的地址：只有 IPv4 私网 / CGNAT / benchmark（含 mapped、WKP NAT64 变形）
+ *
+ * ULA（fc00::/7）、site-local（fec0::/10）、local-use NAT64（64:ff9b:1::/48）不在豁免范围——
+ * 它们不是 CDN 调度会给出的地址，没有理由因为「来源可信」就放行。
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isTrustedBypassable(address) {
+  const version = net.isIP(address)
+  if (version === 4) return ipv4BlockTier(address) === 'disallowed'
+  if (version !== 6) return false
+  const embedded = embeddedIpv4(parseIpv6Groups(address))
+  return embedded ? ipv4BlockTier(embedded) === 'disallowed' : false
+}
+
+/**
+ * 取 IPv6 里内嵌的 IPv4（IPv4-mapped / compatible / WKP NAT64），没有则返回 null
+ *
+ * 前缀本身不代表目标：`::ffff:7f00:1`、`::7f00:1`、`64:ff9b::a9fe:a9fe` 真正连的都是末 32 位。
+ * 两处判定（disallowed / always-blocked）共用这一份，别各写各的（写两遍必然有一处漏 NAT64）。
+ *
+ * @param {number[]|null} groups parseIpv6Groups 的结果
+ * @returns {string|null} 点分十进制 IPv4
+ */
+function embeddedIpv4(groups) {
+  if (!groups || groups.length !== 8) return null
+  const mapped = groups.slice(0, 5).every((g) => g === 0) && (groups[5] === 0xffff || groups[5] === 0)
+  const nat64 = groups[0] === 0x0064 && groups[1] === 0xff9b && groups.slice(2, 6).every((g) => g === 0)
+  if (!mapped && !nat64) return null
+  return `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}`
 }
 
 /**
@@ -963,15 +983,8 @@ function isDisallowedIpAddress(address) {
   const groups = parseIpv6Groups(address)
   if (!groups) return true
 
-  if (groups.every((g) => g === 0)) return true // ::
-  if (groups.slice(0, 7).every((g) => g === 0) && groups[7] === 1) return true // ::1
-
-  // IPv4-mapped (::ffff:0:0/96, groups[5]=0xffff) 与 IPv4-compatible (::/96, groups[5]=0)：
-  // 都按内嵌的末 32 位重新交给 IPv4 判定
-  if (groups.slice(0, 5).every((g) => g === 0) && (groups[5] === 0xffff || groups[5] === 0)) {
-    const ipv4 = `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}`
-    return isDisallowedIpv4(ipv4)
-  }
+  const embedded = embeddedIpv4(groups)
+  if (embedded) return isDisallowedIpv4(embedded)
 
   if ((groups[0] & 0xffc0) === 0xfe80) return true // fe80::/10 link-local
   if ((groups[0] & 0xffc0) === 0xfec0) return true // fec0::/10 已废弃的 site-local（RFC 3879）
@@ -992,15 +1005,14 @@ function isDisallowedIpAddress(address) {
  */
 function isAlwaysBlockedIp(address) {
   const version = net.isIP(address)
-  if (version === 4) {
-    const [a, b] = address.split('.').map(Number)
-    return a === 0 || a === 127 || (a === 169 && b === 254) || a >= 224
-  }
+  if (version === 4) return ipv4BlockTier(address) === 'always'
   if (version !== 6) return true
   const groups = parseIpv6Groups(address)
   if (!groups) return true
-  if (groups.every((g) => g === 0)) return true // ::
-  if (groups.slice(0, 7).every((g) => g === 0) && groups[7] === 1) return true // ::1
+  // 内嵌 IPv4（mapped / compatible / WKP NAT64）按真实目标判定：
+  // `::ffff:a9fe:a9fe`、`64:ff9b::a9fe:a9fe` 都是云元数据地址
+  const embedded = embeddedIpv4(groups)
+  if (embedded) return isAlwaysBlockedIp(embedded)
   if ((groups[0] & 0xffc0) === 0xfe80) return true // link-local
   if ((groups[0] & 0xff00) === 0xff00) return true // 组播
   return false
@@ -1026,11 +1038,13 @@ function isTrustedMediaHost(hostname) {
  * 再解析一次域名，攻击者可以让第一次解析返回公网、第二次返回内网（DNS rebinding / TOCTOU）。
  *
  * @param {string} url
+ * @param {object} [options]
+ * @param {boolean} [options.trusted] 调用方已确认地址来自服务端事件：只豁免私网/CGNAT/benchmark 判定，
+ *                                    回环、链路本地与云元数据仍然拒绝
  * @returns {Promise<{address: string, family: number}>}
  * @throws {Error} 地址不合法、协议不允许或指向内网时抛错
  */
-
-export async function resolveSafeRemoteMediaUrl(url) {
+export async function resolveSafeRemoteMediaUrl(url, { trusted: forcedTrusted = false } = {}) {
   let parsed
   try {
     parsed = new URL(url)
@@ -1042,9 +1056,15 @@ export async function resolveSafeRemoteMediaUrl(url) {
   }
 
   const hostname = parsed.hostname.replace(/^\[|\]$/g, '')
+  // forcedTrusted：调用方已确认地址来自服务端事件，只豁免私网/CGNAT 判定
+  const trusted = forcedTrusted || isTrustedMediaHost(hostname)
   const literal = net.isIP(hostname)
   if (literal) {
-    if (isDisallowedIpAddress(hostname)) throw new Error('媒体地址指向内网或本机，已拒绝')
+    // 字面量分支与域名分支必须同口径：永远拒绝优先，其次才看「可信来源 + 可豁免网段」
+    if (isAlwaysBlockedIp(hostname)) throw new Error('媒体地址指向内网或本机，已拒绝')
+    if (isDisallowedIpAddress(hostname) && !(trusted && isTrustedBypassable(hostname))) {
+      throw new Error('媒体地址指向内网或本机，已拒绝')
+    }
     return { address: hostname, family: literal }
   }
   // 纯数字 / 0x 主机名可能被部分解析器当成整数形式的 IPv4（inet_aton 兼容写法），保守拒绝
@@ -1059,20 +1079,26 @@ export async function resolveSafeRemoteMediaUrl(url) {
     throw new Error('媒体地址域名解析失败')
   }
   if (!resolved.length) throw new Error('媒体地址域名没有解析结果')
-  const trusted = isTrustedMediaHost(hostname)
   let picked = null
   let fallback = null
   for (const item of resolved) {
+    // 回环 / 链路本地 / 云元数据与域名可信度无关，一律不连。
+    // 必须先判：WKP NAT64 这类地址在 isDisallowedIpAddress 眼里是公网前缀，
+    // 只有拆开内嵌 IPv4 才能看出它指向 127.0.0.1 或 169.254.169.254。
+    if (isAlwaysBlockedIp(item.address)) {
+      logger.warn(`[ChatGPT][resolveSafeRemoteMediaUrl] 拒绝 ${hostname} -> ${item.address}`)
+      throw new Error('媒体地址解析到内网或本机，已拒绝')
+    }
     if (!isDisallowedIpAddress(item.address)) {
       if (!picked) picked = item
       continue
     }
-    // 回环 / 链路本地不可能承载 CDN 内容，域名可信也不连接
-    if (isAlwaysBlockedIp(item.address) || !trusted) {
-      logger.warn(`[resolveSafeRemoteMediaUrl] 拒绝 ${hostname} -> ${item.address}`)
+    // 可信来源只豁免私网/CGNAT/benchmark；ULA、site-local、local-use NAT64 仍拒绝
+    if (!trusted || !isTrustedBypassable(item.address)) {
+      logger.warn(`[ChatGPT][resolveSafeRemoteMediaUrl] 拒绝 ${hostname} -> ${item.address}`)
       throw new Error('媒体地址解析到内网或本机，已拒绝')
     }
-    // 可信域名遇到 CGNAT/私网：留作兜底，优先用同批次里的公网地址
+    // 可信来源遇到 CGNAT/私网：留作兜底，优先用同批次里的公网地址
     if (!fallback) fallback = item
   }
   const target = picked || fallback
@@ -1120,11 +1146,12 @@ function createPinnedAgent(protocol, { address, family }) {
  * @param {object} options
  * @param {number} options.maxSizeBytes 响应体字节上限
  * @param {boolean} options.verifyUrl 是否按不可信来源逐跳校验地址（并固定连接目标）
+ * @param {boolean} [options.trustPrivate] 校验时把私网/CGNAT/benchmark 视作可放行（来源已确认为事件媒体）
  * @param {'image'|'video'} [options.expectedKind] 期望的媒体大类，仅在严格校验时传入
  * @param {number} [options.timeoutMs]
  * @returns {Promise<{buffer: Buffer, contentType: string, contentLength: number}>}
  */
-async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKind, timeoutMs = 60000 }) {
+async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, trustPrivate, expectedKind, timeoutMs = 60000 }) {
   let currentUrl = url
   const sizeTip = `${(maxSizeBytes / 1024 / 1024).toFixed(1)}MB`
 
@@ -1132,7 +1159,7 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
     // 严格模式：先校验并把本次连接固定到已审核的地址，避免建连时二次解析
     let pinnedAgent
     if (verifyUrl) {
-      const target = await resolveSafeRemoteMediaUrl(currentUrl)
+      const target = await resolveSafeRemoteMediaUrl(currentUrl, { trusted: trustPrivate })
       pinnedAgent = createPinnedAgent(new URL(currentUrl).protocol, target)
     }
 
@@ -1232,12 +1259,20 @@ async function downloadMediaToBuffer(url, { maxSizeBytes, verifyUrl, expectedKin
  *                                     处理不可信来源（如模型提供的地址）时必须传 false
  * @param {boolean} opt.allowPrivateNetwork 是否允许访问内网/本机地址，默认 true；
  *                                          处理不可信来源时必须传 false（只允许公网 http/https，逐跳校验并固定连接目标）
+ * @param {boolean} opt.enforceAlwaysBlocked 私网/CGNAT 放行，但仍校验并固定连接目标，
+ *                                           用来拦回环、链路本地与云元数据（服务端事件来源的媒体用这个）
  * @param {'image'|'video'} opt.mediaKind 期望的媒体大类；明确的非媒体 Content-Type 在读 body 前拒绝，
  *                                        视频的空类型或 application/octet-stream 在限量下载后按文件签名确认类型
  * @param {*} e e 可选，用于回复
  * @return {*}
  */
 export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = false, opt = {}, e = {}) {
+  // 本函数对外契约是「失败返回 null」，调用方拿不到异常，只能通过回调取真实原因
+  const reportError = (message) => {
+    if (typeof opt.onError !== 'function') return
+    try { opt.onError(new Error(message)) } catch (err) { logger.warn('[ChatGPT][url2Base64] onError 回调异常: ' + (err?.message || err)) }
+  }
+
   try {
     // NapCat 下发的 URL 是 HTML 转义的（&amp;），不解码会被 CDN 当作非法 rkey 拒绝
     url = unescapeCqCode(url)
@@ -1250,16 +1285,11 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     const allowLocalFile = opt.allowLocalFile !== false;
     const allowPrivateNetwork = opt.allowPrivateNetwork !== false;
     const sizeTip = `${(maxSizeInBytes / 1024 / 1024).toFixed(1)}MB`;
-    // 本函数对外契约是「失败返回 null」，调用方拿不到异常，只能通过回调取真实原因
-    const reportError = (message) => {
-      if (typeof opt.onError !== 'function') return
-      try { opt.onError(new Error(message)) } catch (err) { logger.warn('[url2Base64] onError 回调异常: ' + (err?.message || err)) }
-    }
 
     // 1. 判断是否为 base64 直传 (兼容 base64:// 和标准的 data: URL)
     if (url.startsWith('base64://') || url.startsWith('data:')) {
       if (!allowLocalFile) {
-        logger.warn('[url2Base64] 不可信来源不接受 base64 直传地址，已拒绝');
+        logger.warn('[ChatGPT][url2Base64] 不可信来源不接受 base64 直传地址，已拒绝');
         reportError('不可信来源不接受 base64 直传地址');
         return null;
       }
@@ -1282,7 +1312,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
       const paddingLength = base64Str.endsWith('==') ? 2 : (base64Str.endsWith('=') ? 1 : 0);
       const estimatedBytes = Math.floor(base64Str.length / 4) * 3 - paddingLength;
       if (estimatedBytes > maxSizeInBytes) {
-        logger.warn(`[url2Base64] base64 数据超过限制大小 ${sizeTip}，已拒绝`);
+        logger.warn(`[ChatGPT][url2Base64] base64 数据超过限制大小 ${sizeTip}，已拒绝`);
         reportError(`base64 数据超过限制大小 ${sizeTip}`);
         return null;
       }
@@ -1294,7 +1324,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     // 2. 判断是否为 file:// 协议或本地绝对路径 (兼容 Windows / Linux)
     else if (url.startsWith('file://') || /^[a-zA-Z]:(\\|\/)|^\//.test(url)) {
       if (!allowLocalFile) {
-        logger.warn('[url2Base64] 不可信来源不接受本地文件地址，已拒绝');
+        logger.warn('[ChatGPT][url2Base64] 不可信来源不接受本地文件地址，已拒绝');
         reportError('不可信来源不接受本地文件地址');
         return null;
       }
@@ -1314,7 +1344,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
         throw new Error(`找不到本地文件: ${localPath}`);
       }
       if (stat.size > maxSizeInBytes) {
-        logger.warn(`[url2Base64] 文件超过限制大小 ${sizeTip}，已拒绝`);
+        logger.warn(`[ChatGPT][url2Base64] 文件超过限制大小 ${sizeTip}，已拒绝`);
         reportError(`文件超过限制大小 ${sizeTip}`);
         return null;
       }
@@ -1336,7 +1366,9 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
       // 3. 常规 URL 下载：手动接管重定向 + 流式累计字节上限
       const downloaded = await downloadMediaToBuffer(url, {
         maxSizeBytes: maxSizeInBytes,
-        verifyUrl: !allowPrivateNetwork,
+        // enforceAlwaysBlocked：私网/CGNAT 放行，但仍要校验并固定连接（拦回环与云元数据）
+        verifyUrl: !allowPrivateNetwork || opt.enforceAlwaysBlocked === true,
+        trustPrivate: opt.enforceAlwaysBlocked === true,
         expectedKind: opt.mediaKind
       });
       buffer = downloaded.buffer;
@@ -1346,7 +1378,7 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
 
     // 4. 校验文件大小
     if (contentLength && parseInt(contentLength) > maxSizeInBytes) {
-      logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 出错]`), logger.red(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`));
+      logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[ChatGPT][url2Base64 出错]`), logger.red(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`));
       reportError(`下载内容超过 ${maxSizeInBytes / 1024 / 1024}MB`);
       if (e.reply) {
         if (!e.isFromHandUpRepaint) e.reply(`文件大小超过${maxSizeInBytes / 1024 / 1024}MB，已中断执行`, true);
@@ -1372,11 +1404,11 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     //   } catch (err) {
     //     // sharp 处理超时或失败
     //     if (err.message.includes('timeout')) {
-    //       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理超时`));
+    //       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[ChatGPT][url2Base64 错误]`), logger.red(`图片处理超时`));
     //       if (e.reply && !e.isFromHandUpRepaint) e.reply('引用的图片过大，sharp处理失败.', true);
     //       return null;
     //     } else {
-    //       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(`图片处理失败: ${err.message}`));
+    //       logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[ChatGPT][url2Base64 错误]`), logger.red(`图片处理失败: ${err.message}`));
     //       if (e.reply && !e.isFromHandUpRepaint) e.reply('sharp图片处理失败.', true);
     //       return null;
     //     }
@@ -1395,14 +1427,12 @@ export async function url2Base64(url, isReturnBuffer = false, isReturnBlob = fal
     }
 
   } catch (error) {
-    logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[url2Base64 错误]`), logger.red(hidePrivacyInfo(error.message || String(error))));
+    logger.mark(logger.blue('[派蒙nai]'), logger.cyan(`[ChatGPT][url2Base64 错误]`), logger.red(hidePrivacyInfo(error.message || String(error))));
     if (e.reply) {
       if (!e.isFromHandUpRepaint) e.reply('引用的文件地址已失效或解析失败，请重新发送.', true);
     }
-    // 本函数对外契约是「失败返回 null」，调用方拿不到异常，只能通过回调取真实原因
-    if (typeof opt.onError === 'function') {
-      try { opt.onError(error) } catch { /* 回调自身异常不影响主流程 */ }
-    }
+    // 本函数对外契约是「失败返回 null」，调用方只能通过回调拿到真实原因
+    reportError(hidePrivacyInfo(error.message || String(error)))
     return null;
   }
 }

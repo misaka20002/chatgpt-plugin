@@ -33,6 +33,16 @@ globalThis.redis = { get: async () => 'api', set: async () => 'OK', exists: asyn
 globalThis.Bot = {}
 globalThis.segment = {}
 
+// 内容探测依赖宿主的 file-type（宿主 package.json 声明）。缺失时相关用例跳过而不是判红：
+// 判断依据是「能不能真的 import 到」，而不是某个配置项——本地精简安装与 CI 都走这条路。
+let hasFileType = true
+try {
+  await import('file-type')
+} catch {
+  hasFileType = false
+}
+const fileTypeSkip = hasFileType ? false : '宿主未安装 file-type，跳过内容探测用例'
+
 const geminiCalls = []
 
 // 只替换公网请求边界，让工具仍执行真实的地址校验、下载、类型探测与 SubLLM 载荷组装。
@@ -60,6 +70,31 @@ mock.module('../client/CustomGoogleGeminiClient.js', {
         geminiCalls.push({ prompt, option })
         return { text: 'gemini-ok' }
       }
+    }
+  }
+})
+
+// 可信域名豁免只能用 DNS 桩验证：真实解析结果随网络与代理变化，测不出「可信 + CGNAT」这类组合
+const DNS_TABLE = {
+  'img.qq.com': [{ address: '100.64.7.9', family: 4 }],
+  'loopback.qq.com': [{ address: '::ffff:7f00:1', family: 6 }],
+  'metadata.qq.com': [{ address: '::ffff:a9fe:a9fe', family: 6 }],
+  // WKP NAT64：前缀看着是公网，内嵌 IPv4 才是真实目标
+  'nat64-loopback.qq.com': [{ address: '64:ff9b::7f00:1', family: 6 }],
+  'nat64-metadata.qq.com': [{ address: '64:ff9b::a9fe:a9fe', family: 6 }],
+  'nat64-public.qq.com': [{ address: '64:ff9b::808:808', family: 6 }],
+  'private.example.com': [{ address: '10.1.2.3', family: 4 }]
+}
+mock.module('node:dns/promises', {
+  defaultExport: {
+    lookup: async (hostname) => {
+      const hit = DNS_TABLE[hostname]
+      if (!hit) {
+        const err = new Error(`getaddrinfo ENOTFOUND ${hostname}`)
+        err.code = 'ENOTFOUND'
+        throw err
+      }
+      return hit
     }
   }
 })
@@ -92,6 +127,9 @@ const REJECTED_URLS = [
   'http://[64:ff9b:1::1]/a.jpg',
   'http://[fd00::1]/a.jpg',
   'http://[ff02::1]/a.jpg',
+  // WKP NAT64 字面量：前缀是公网，内嵌 IPv4 才是真实目标
+  'http://[64:ff9b::a00:1]/a.jpg',
+  'http://[64:ff9b::a9fe:a9fe]/a.jpg',
   'http://169.254.169.254/latest/meta-data/',
   'http://10.0.0.8/a.jpg',
   'http://172.16.0.1/a.jpg',
@@ -118,6 +156,50 @@ test('放行公网地址（含公网 IPv6 与 WKP NAT64 前缀）', async () => 
   // 64:ff9b::/96 是公网 WKP（其编码私网 IPv4 由 RFC 6052 明令禁止）；
   // 被拒绝的是 local-use 的 64:ff9b:1::/48，两者不能一起拦
   await assertSafeRemoteMediaUrl('http://[64:ff9b::808:808]/a.jpg')
+})
+
+test('可信来源也不接受 base64 直传（trustedMediaSource 只放开私网）', async () => {
+  const result = await recognitionResultsByGemini({}, ['base64://QUJD'], [], undefined, {
+    prompt: '看看这张',
+    untrustedSource: true,
+    trustedMediaSource: true
+  })
+  assert.match(String(result), /base64|媒体文件获取失败/, `实际返回：${result}`)
+})
+
+test('可信域名解析到 CGNAT 时放行（群图 CDN 的常见调度）', async () => {
+  assert.deepEqual(
+    await resolveSafeRemoteMediaUrl('https://img.qq.com/a.jpg'),
+    { address: '100.64.7.9', family: 4 }
+  )
+})
+
+test('可信域名解析到回环 / 云元数据（含 IPv4-mapped 与 WKP NAT64 写法）仍然拒绝', async () => {
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('https://loopback.qq.com/a.jpg'), /内网或本机/)
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('https://metadata.qq.com/a.jpg'), /内网或本机/)
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('https://nat64-loopback.qq.com/a.jpg'), /内网或本机/)
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('https://nat64-metadata.qq.com/a.jpg'), /内网或本机/)
+})
+
+test('WKP NAT64 内嵌公网地址不被误杀', async () => {
+  assert.deepEqual(
+    await resolveSafeRemoteMediaUrl('https://nat64-public.qq.com/a.jpg'),
+    { address: '64:ff9b::808:808', family: 6 }
+  )
+})
+
+test('可信来源的字面量 CGNAT 放行，ULA / local-use NAT64 仍拒绝', async () => {
+  assert.deepEqual(
+    await resolveSafeRemoteMediaUrl('http://100.64.7.9/a.jpg', { trusted: true }),
+    { address: '100.64.7.9', family: 4 }
+  )
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('http://[fc00::1]/a.jpg', { trusted: true }), /内网或本机/)
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('http://[64:ff9b:1::1]/a.jpg', { trusted: true }), /内网或本机/)
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('http://169.254.169.254/a.jpg', { trusted: true }), /内网或本机/)
+})
+
+test('非可信域名解析到私网仍然拒绝', async () => {
+  await assert.rejects(() => resolveSafeRemoteMediaUrl('https://private.example.com/a.jpg'), /内网或本机/)
 })
 
 test('严格模式返回已校验的连接目标（用于固定连接，防 DNS rebinding）', async () => {
@@ -268,7 +350,7 @@ test('mediaKind 校验：返回 200 的 text/html 被拒绝，image/* 正常放�
   assert.equal(asVideo, null, '按视频请求时 image/* 应被拒绝')
 })
 
-test('视频响应为通用二进制或缺少类型时，按文件内容确认 MP4 并修正 MIME', async () => {
+test('视频响应为通用二进制或缺少类型时，按文件内容确认 MP4 并修正 MIME', { skip: fileTypeSkip }, async () => {
   for (const headers of [{ 'content-type': 'Application/Octet-Stream; charset=binary' }, {}]) {
     videoResponse = { body: mp4Header, headers }
     const result = await url2Base64(videoUrl, false, true, strictVideoOptions)
@@ -279,7 +361,7 @@ test('视频响应为通用二进制或缺少类型时，按文件内容确认 M
   }
 })
 
-test('兼容旧版 file-type 的 CommonJS fromBuffer 导出', async (t) => {
+test('兼容旧版 file-type 的 CommonJS fromBuffer 导出', { skip: fileTypeSkip }, async (t) => {
   // 仅改变依赖的导出形状，文件签名仍由真实解析器检测。
   const installedFileType = await import('file-type')
   const fromBuffer = installedFileType.fileTypeFromBuffer || installedFileType.default?.fromBuffer || installedFileType.fromBuffer
@@ -326,7 +408,7 @@ test('视频类型探测不放行明确的 HTML 类型，也不放宽图片类�
   assert.equal(await url2Base64(videoUrl, false, true, { ...strictVideoOptions, mediaKind: 'image' }), null)
 })
 
-test('视频识别工具两种来源均将探测后的 MIME 与原始数据传给 Gemini', async () => {
+test('视频识别工具两种来源均将探测后的 MIME 与原始数据传给 Gemini', { skip: fileTypeSkip }, async () => {
   const cfg = Config.getConfig()
   const originalSource = cfg.mediaRecognitionSource
   try {

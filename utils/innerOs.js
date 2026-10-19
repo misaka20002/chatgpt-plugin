@@ -113,7 +113,7 @@ export function syncInnerOs(items, innerOs, opts = {}) {
   if (opts.upsert) {
     const p = opts.upsert(firstUser)
     if (p?.catch) {
-      p.catch(opts.onError || (err => logger.warn('[innerOs] 更新消息到持久化层失败', err)))
+      p.catch(opts.onError || (err => logger.warn('[ChatGPT][innerOs] 更新消息到持久化层失败', err)))
     }
   }
 
@@ -136,7 +136,7 @@ export function syncInnerOs(items, innerOs, opts = {}) {
       scenario = '旧数据迁移-无旧 innerOs 或内容变化-直接注入'
     }
   }
-  logger.debug(`[innerOs] ${scenario}，消息 ID: ${firstUser.id ?? 'unknown'}，列表共 ${items.length} 条，其中 user/assistant ${userAssistantCount} 条`)
+  logger.debug(`[ChatGPT][innerOs] ${scenario}，消息 ID: ${firstUser.id ?? 'unknown'}，列表共 ${items.length} 条，其中 user/assistant ${userAssistantCount} 条`)
 
   return { changed: true, text: newText }
 }

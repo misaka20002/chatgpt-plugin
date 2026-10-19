@@ -58,7 +58,8 @@ import { getEnabledHostedBuiltinTools } from '../utils/hostedTools.js'
 import { newFetch } from '../utils/proxy.js'
 import Keyv from 'keyv'
 import crypto from 'crypto'
-import { getImageBase64 } from '../utils/paimonFuction.js'
+import { loadQuotedImages, appendMediaFailureHint, resolveTurnSystem } from '../utils/quotedImage.js'
+import { buildOpenAIContent, buildResponsesInput } from '../utils/visionPayload.js'
 import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/toolForward.js'
 import { normalizeModelText } from '../utils/thinking.js'
 import { redactArgsForLog, maskSecret } from '../utils/toolArgRedaction.js'
@@ -205,6 +206,32 @@ function mergeSystemPrompt(systemPrompt, e, opt = {}) {
   return systemPrompt
 }
 
+/**
+ * 取本轮引用图
+ *
+ * 四家 provider 分支共用：非 Orignal 模式直接空结果，否则统一走 quotedImage
+ * （10MB 上限、代理、CQ 还原、格式探测与 2MB 转码）。
+ *
+ * @param {object} e 云崽事件
+ * @param {object} [prepared] 本轮共享的准备态（主备 provider 复用）
+ * @returns {Promise<{medias: Array<{mimeType: string, data: string}>, failed: number}>}
+ */
+async function collectQuotedImages(e, prepared) {
+  if (Config.mediaRecognitionSource !== 'Orignal') return { medias: [], failed: 0 }
+  // 一轮只取一次：prepared 在主备 provider 之间共享，切换时不重复下载
+  return await loadQuotedImages(e, prepared)
+}
+
+/**
+ * 把引用图挂到本次请求选项上；没有图时保持原样，避免给客户端传空数组
+ *
+ * @param {object} option 客户端 sendMessage 的选项
+ * @param {Array<object>} medias
+ */
+function applyQuotedMedias(option, medias) {
+  if (medias.length) option.medias = medias
+}
+
 class Core {
   async sendMessage(prompt, conversation = {}, use, e, opt = {}) {
     const source = opt.providerSource || structuredClone(Config.getConfig())
@@ -346,20 +373,10 @@ class Core {
           }
         }
         option.system = system
-        // let img = await parseSourceImg(e)
-        if (e.img && e.img.length > 0 && Config.mediaRecognitionSource == "Orignal") {
-          let imageUrl = e.img ? e.img[0] : undefined;
-          if (imageUrl) {
-            const base64String = await getImageBase64(imageUrl);
-            if (base64String) {
-              option.media = {
-                mimeType: 'image/jpeg',
-                data: base64String
-              };
-            }
-          }
-        }
-        option.system = opt.prepared.system ??= option.system
+        const quoted = await collectQuotedImages(e, opt.prepared)
+        applyQuotedMedias(option, quoted.medias)
+        // 缓存只存基础 system；提示按本次尝试单独追加（prepared 跨主备复用）
+        option.system = resolveTurnSystem(opt.prepared, option.system, quoted.failed > 0)
         return await client.sendMessage(promptForClaude, option)
       }
     } else if (use === 'gemini') { // 使用接口 ##############################
@@ -388,20 +405,10 @@ class Core {
         thinkingLevel: Config.geminiThinkingLevel || ''
       }
 
-      // 记录点: opt.media
-      if (Config.mediaRecognitionSource == "Orignal") {
-        // const image = await parseSourceImg(e)
-        let imageUrl = e.img ? e.img[0] : undefined;
-        if (imageUrl) {
-          const base64String = await getImageBase64(imageUrl);
-          if (base64String) {
-            option.media = {
-              mimeType: 'image/jpeg',
-              data: base64String
-            };
-          }
-        }
-      }
+      // 记录点: opt.medias —— 引用图统一走 quotedImage
+      const quoted = await collectQuotedImages(e, opt.prepared)
+      applyQuotedMedias(option, quoted.medias)
+      const quotedFailed = quoted.failed > 0
 
       if (opt.enableSmart) {
         const {
@@ -450,7 +457,7 @@ class Core {
       option.sf_markdownPic = Config.sf_markdownPic
       option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
-      option.system = opt.prepared.system ??= option.system
+      option.system = resolveTurnSystem(opt.prepared, option.system, quotedFailed)
       return await client.sendMessage(prompt, option)
     } else if (use === 'responses') { // OpenAI Responses API ##############################
       const completionParams = {}
@@ -459,6 +466,7 @@ class Core {
       if (typeof Config.responsesTemperature === 'number') completionParams.temperature = Config.responsesTemperature
 
       let extraSystemMessage = ''
+      let quotedFailed = false
       const buildResponsesInstructions = async (groupContextLength = Config.groupContextLength) => {
         let instructions = await handleSystem(e, opt.system.responses || Config.responsesSystemPrompt, {
           ...opt.settings,
@@ -480,16 +488,9 @@ class Core {
       })
       let instructions = await buildResponsesInstructions()
 
-      let imageDataUrl = null
-      const imageUrl = e.img ? e.img[0] : undefined
-      if (imageUrl && Config.mediaRecognitionSource === 'Orignal') {
-        try {
-          const base64String = await getImageBase64(imageUrl)
-          if (base64String) imageDataUrl = `data:image/jpeg;base64,${base64String}`
-        } catch (err) {
-          logger.error('Responses API 获取图片失败', err)
-        }
-      }
+      const quoted = await collectQuotedImages(e, opt.prepared)
+      const quotedMedias = quoted.medias
+      quotedFailed = quoted.failed > 0
 
       let isAdmin
       let sender
@@ -527,18 +528,12 @@ class Core {
         ]
       }
 
-      let initialInput = imageDataUrl
-        ? [{
-          role: 'user',
-          content: [
-            { type: 'input_text', text: prompt || '请描述这张图片' },
-            { type: 'input_image', image_url: imageDataUrl }
-          ]
-        }]
+      let initialInput = quotedMedias.length
+        ? buildResponsesInput(prompt || '请描述这张图片', quotedMedias)
         : prompt
       const currentInput = Array.isArray(initialInput) ? initialInput : [{ role: 'user', content: initialInput }]
       if (!Config.responsesStore || !conversation.previousResponseId) initialInput = [...(conversation.messages || []).filter(m => ['user', 'assistant'].includes(m.role)), ...currentInput]
-      instructions = opt.prepared.system ??= instructions
+      instructions = resolveTurnSystem(opt.prepared, instructions, quotedFailed)
       const statelessToolInput = Array.isArray(initialInput)
         ? [...initialInput]
         : [{ role: 'user', content: initialInput }]
@@ -558,7 +553,8 @@ class Core {
             if (!isContextExceeded || i >= retryLengths.length) throw err
             const nextGroupContextLength = retryLengths[i]
             logger.warn(`[chatgpt][Responses] 上下文超限，压缩群聊记录后重试，groupContextLength=${nextGroupContextLength}`)
-            sendOptions.instructions = await buildResponsesInstructions(nextGroupContextLength)
+            const rebuilt = await buildResponsesInstructions(nextGroupContextLength)
+            sendOptions.instructions = quotedFailed ? appendMediaFailureHint(rebuilt) : rebuilt
           }
         }
       }
@@ -645,6 +641,7 @@ class Core {
       // let maxModelTokens = getMaxModelTokens(completionParams.model)
       // let system = promptPrefix
       let extraSystemMessage = ''
+      let quotedFailed = false
       const buildOpenAISystem = async (groupContextLength = Config.groupContextLength) => {
         let system = await handleSystem(e, promptPrefix, {
           ...opt.settings,
@@ -656,6 +653,10 @@ class Core {
         }
         return system
       }
+      // 引用图先取：失败提示按每次尝试单独追加（缓存只存基础 system）
+      const quoted = await collectQuotedImages(e, opt.prepared)
+      const quotedMedias = quoted.medias
+      quotedFailed = quoted.failed > 0
       let system = await buildOpenAISystem()
 
       logger.debug(system)
@@ -694,6 +695,7 @@ class Core {
         }
         option = Object.assign(option, conversation)
       }
+      // Chat Completions 的图片走 messageContent（buildOpenAIContent），option 上没有 medias 字段
 
       /** 定义OpenAI格式请求 */
       const sendOpenAIWithContextFallback = async (messageContent, sendOption) => {
@@ -705,7 +707,8 @@ class Core {
           try {
             // logger.mark(`messageContent:\n` + JSON.stringify(messageContent, null, 2))
             // logger.mark(`sendOption:\n` + JSON.stringify(sendOption, null, 2))
-            sendOption.systemMessage = opt.prepared.system ??= sendOption.systemMessage
+            // 第 0 次走缓存；压缩重试后的 system 是本次特意重建的，必须绕过缓存
+            sendOption.systemMessage = resolveTurnSystem(opt.prepared, sendOption.systemMessage, quotedFailed, { useCache: i === 0 })
             return await this.chatGPTApi.sendMessage(messageContent, sendOption)
           } catch (err) {
             const isContextExceeded = err.message?.indexOf('context_length_exceeded') > 0
@@ -716,22 +719,6 @@ class Core {
             logger.warn(`[chatgpt] 上下文超限，压缩群聊记录后重试，groupContextLength=${nextGroupContextLength}。若频繁出现，请检查锅巴中的“回复内容最大Token数(apiMaxToken)”与“模型总上下文Token数(maxModelTokens)”配置是否过紧。`)
             sendOption.systemMessage = await buildOpenAISystem(nextGroupContextLength)
           }
-        }
-      }
-
-      let imageDataUrl = null;
-      let imageUrl = e.img ? e.img[0] : undefined;
-      if (imageUrl && Config.mediaRecognitionSource == "Orignal") {
-        try {
-          const base64String = await getImageBase64(imageUrl);
-          if (base64String) {
-            // mimeType == "gif" 会报错，强制使用这个
-            const mimeType = 'image/jpeg';
-            // OpenAI API 要求格式: data:image/jpeg;base64,{base64_string}
-            imageDataUrl = `data:${mimeType};base64,${base64String}`;
-          }
-        } catch (err) {
-          logger.error('OpenAI 获取图片失败', err);
         }
       }
 
@@ -768,14 +755,10 @@ class Core {
             }
           }
 
-          let messageContent = prompt;
-          if (imageDataUrl) {
-            // 当图片存在时，重组数据为多模态数组
-            messageContent = [
-              { type: 'text', text: prompt || '请描述这张图片' },
-              { type: 'image_url', image_url: { url: imageDataUrl } }
-            ];
-          }
+          // 有引用图时重组为多模态数组；无图保持纯字符串
+          let messageContent = quotedMedias.length
+            ? buildOpenAIContent(prompt || '请描述这张图片', quotedMedias)
+            : prompt;
 
           msg = await sendOpenAIWithContextFallback(messageContent, option)
 
@@ -946,13 +929,9 @@ class Core {
       } else {
         let msg
         try {
-          let messageContent = prompt;
-          if (imageDataUrl) {
-            messageContent = [
-              { type: 'text', text: prompt || '请描述这张图片' },
-              { type: 'image_url', image_url: { url: imageDataUrl } }
-            ];
-          }
+          let messageContent = quotedMedias.length
+            ? buildOpenAIContent(prompt || '请描述这张图片', quotedMedias)
+            : prompt;
           msg = await sendOpenAIWithContextFallback(messageContent, option)
         } catch (err) {
           if (!opt.allowFallback && err.message?.indexOf('context_length_exceeded') > 0) {

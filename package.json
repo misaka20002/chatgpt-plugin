@@ -50,19 +50,19 @@
     "ts-node-register": "^1.0.0"
   },
   "scripts": {
-    "test:avatar": "node --test test/avatarReply.test.mjs test/avatarFolders.test.mjs && node --experimental-test-module-mocks --test test/avatarReplyConfig.test.mjs",
-    "test:group-reply": "node --experimental-test-module-mocks --test test/groupReply.test.mjs test/groupReplyCore.test.mjs test/groupReplyChat.test.mjs",
-    "test:memory": "node --experimental-test-module-mocks --test test/memoryV2.test.js test/memoryProvider.test.js test/memoryApps.test.mjs test/atGraph.test.mjs test/atGraphAvatars.test.mjs",
-    "test:config": "node --test test/configArrayMerge.test.js test/configBaseUrl.test.js test/configGroupReply.test.js test/providerConfig.test.js",
-    "test:tools": "node --test test/githubTool.test.js test/opencodeWebSearchTool.test.js test/toolContext.test.js test/toolArgRedaction.test.js test/groupAdminTools.test.js && node test/htmlTool.check.mjs && node test/render/htmlRender.template.check.mjs && node --experimental-test-module-mocks --test test/htmlToolSend.test.mjs",
+    "test:avatar": "node --test --test-force-exit test/avatarReply.test.mjs test/avatarFolders.test.mjs && node --experimental-test-module-mocks --test --test-force-exit test/avatarReplyConfig.test.mjs",
+    "test:group-reply": "node --experimental-test-module-mocks --test --test-force-exit test/groupReply.test.mjs test/groupReplyCore.test.mjs test/groupReplyChat.test.mjs",
+    "test:memory": "node --experimental-test-module-mocks --test --test-force-exit test/memoryV2.test.js test/memoryProvider.test.js test/memoryApps.test.mjs test/atGraph.test.mjs test/atGraphAvatars.test.mjs",
+    "test:config": "node --test --test-force-exit test/configArrayMerge.test.js test/configBaseUrl.test.js test/configGroupReply.test.js test/providerConfig.test.js",
+    "test:tools": "node --test --test-force-exit test/githubTool.test.js test/opencodeWebSearchTool.test.js test/toolContext.test.js test/toolArgRedaction.test.js test/groupAdminTools.test.js && node test/htmlTool.check.mjs && node test/render/htmlRender.template.check.mjs && node --experimental-test-module-mocks --test --test-force-exit test/htmlToolSend.test.mjs",
     "test:render": "node test/render/mathRender.check.mjs && node test/render/mathRender.security.check.mjs",
-    "test:media": "node --experimental-test-module-mocks --test test/uploadRecord.test.mjs test/subllmMedia.test.mjs test/recognitionMedia.test.mjs test/mediaUrlGuard.test.mjs",
+    "test:media": "node --experimental-test-module-mocks --test --test-force-exit test/uploadRecord.test.mjs test/subllmMedia.test.mjs test/recognitionMedia.test.mjs test/mediaUrlGuard.test.mjs test/quotedImageVision.test.mjs",
     "test:meme": "node test/meme/run.mjs",
     "test:meme:fast": "node test/meme/run.mjs --skip-slow",
     "test:meme:mutants": "node test/meme/run.mjs --all-mutants",
-    "test:providers": "node --experimental-test-module-mocks --test test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs test/providerContext.test.mjs test/providerModels.test.mjs",
-    "test:thinking": "node --test test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test test/toolRoundTextForward.test.mjs",
-    "test:emoji": "node --experimental-test-module-mocks --test test/emojiUndo.test.mjs",
-    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && npm run test:config && npm run test:providers && npm run test:thinking && npm run test:emoji"
+    "test:providers": "node --experimental-test-module-mocks --test --test-force-exit test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs test/providerContext.test.mjs test/providerModels.test.mjs",
+    "test:thinking": "node --test --test-force-exit test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test --test-force-exit test/toolRoundTextForward.test.mjs",
+    "test:emoji": "node --experimental-test-module-mocks --test --test-force-exit test/emojiUndo.test.mjs",
+    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs && npm run test:config && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:media && npm run test:group-reply"
   }
 }

@@ -8,6 +8,7 @@ import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/to
 import { normalizeModelText } from '../utils/thinking.js'
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 import { redactArgsForLog } from '../utils/toolArgRedaction.js'
+import { buildClaudeImageBlocks, pickMediaList } from '../utils/visionPayload.js'
 
 const BASEURL = 'https://api.anthropic.com'
 
@@ -269,16 +270,7 @@ export class ClaudeAPIClient extends BaseClient {
      * }>}
      */
     let thisContent = [{ type: 'text', text }]
-    if (opt.media) {
-      thisContent.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: opt.media.mimeType || 'image/jpeg',
-          data: opt.media.data
-        }
-      })
-    }
+    thisContent.push(...buildClaudeImageBlocks(pickMediaList(opt)))
     const thisMessage = {
       role: 'user',
       content: thisContent,
