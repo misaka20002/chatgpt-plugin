@@ -1,0 +1,120 @@
+/**
+ * 确定性风格检查（零依赖）：只收「正则就能判定、且当前仓库零存量违规」的机械规则
+ *
+ * 供 `npm run check` 与 CI 使用。规则准入标准是**零存量违规**：带存量噪音的规则会让门禁
+ * 变成常红，最后被忽略。以下候选已评估、暂不纳入（要做先清存量再引入 linter）：
+ * - 日志前缀全小写：现存 112 处（`[chatgpt]`、`[meme]`、`[chatgpt-tt]`…），是历史约定；
+ *   只禁止**可判定的子集**——单 token 的 camelCase 前缀（`[quotedImage]`），这条已零存量；
+ * - `utils/` 的 `console.log`：48 处；
+ * - 行尾空格：379 处；
+ * - 无注释空 `catch`：24 处；
+ * - 未使用变量：需要 AST，仓库当前没有解析器依赖。
+ *
+ * 规则：
+ * 1. JSDoc 与声明同行：文档块结束符后直接跟 `const`/`function`/`class` 等 —— 必须换行，
+ *    否则 summary 不再独立成块。
+ * 1b. 日志前缀不能是 camelCase 单 token（`[quotedImage]`）：要么全小写的历史前缀，
+ *     要么 `[ChatGPT][子模块]` 两段式。
+ * 2. `client/` 与 `model/` 里出现 `console.log(`（跳过注释行）—— 请求组装路径必须走 `logger`。
+ * 3. 测试文件必须被某个 `test:*` 脚本引用；只需本机环境才能跑的，文件头写 `manual test:` 豁免。
+ * 4. `test:*` 脚本里引用的文件必须存在。
+ */
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const SCAN_DIRS = ['apps', 'client', 'model', 'utils', 'test', 'prompts']
+const SCAN_FILES = ['index.js', 'guoba.support.js']
+const SKIP_DIRS = new Set(['node_modules', '.git', '.workbuddy', '.venv', 'output', 'temp', 'fixtures'])
+const CODE_EXTS = new Set(['.js', '.mjs', '.cjs'])
+/** 只在这两个目录禁用 console.log：请求组装路径，是 `logger` 的职责 */
+const NO_CONSOLE_LOG_DIRS = ['client/', 'model/']
+
+const JSDOC_SAME_LINE_RE = /\*\/[ \t]+(?:const|let|var|function|async[ \t]+function|export|class)\b/
+const CAMEL_LOG_PREFIX_RE = /\blogger\.(?:info|warn|error|mark|debug|blue|cyan|red)\(\s*['"`]\[([a-z][A-Za-z0-9]*)\]/
+const CONSOLE_LOG_RE = /\bconsole\.log\(/
+
+const violations = []
+
+function scanFile(file) {
+  const text = readFileSync(file, 'utf8')
+  if (text.length > 512 * 1024) return
+  const relative = path.relative(ROOT, file).split(path.sep).join('/')
+  const forbidConsoleLog = NO_CONSOLE_LOG_DIRS.some(dir => relative.startsWith(dir))
+  text.split('\n').forEach((line, index) => {
+    if (line.includes('lint-ignore')) return
+    if (JSDOC_SAME_LINE_RE.test(line)) {
+      violations.push(`${relative}:${index + 1} JSDoc 结束与声明须换行`)
+    }
+    const camelLog = CAMEL_LOG_PREFIX_RE.exec(line)
+    if (camelLog && /[A-Z]/.test(camelLog[1])) {
+      violations.push(`${relative}:${index + 1} 日志前缀 "${camelLog[1]}" 是 camelCase；改全小写或 "[ChatGPT][子模块]"`)
+    }
+    if (!forbidConsoleLog) return
+    const trimmed = line.trim()
+    if (trimmed.startsWith('*') || trimmed.startsWith('//')) return
+    if (CONSOLE_LOG_RE.test(line)) {
+      violations.push(`${relative}:${index + 1} 请求组装路径请用 logger，不用 console.log`)
+    }
+  })
+}
+
+function walk(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue
+      walk(path.join(dir, entry.name))
+      continue
+    }
+    if (!entry.isFile()) continue
+    if (!CODE_EXTS.has(path.extname(entry.name))) continue
+    scanFile(path.join(dir, entry.name))
+  }
+}
+
+for (const dir of SCAN_DIRS) {
+  const absolute = path.join(ROOT, dir)
+  try {
+    if (statSync(absolute).isDirectory()) walk(absolute)
+  } catch {
+    // 目录不存在就跳过：分支裁剪后可能出现
+  }
+}
+for (const file of SCAN_FILES) {
+  try {
+    if (statSync(path.join(ROOT, file)).isFile()) scanFile(path.join(ROOT, file))
+  } catch {
+    // 同上
+  }
+}
+
+const scripts = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts
+const scriptsText = Object.values(scripts).join('\n')
+
+// 规则 3：测试文件必须挂进某个脚本，否则永远不会有谁跑它
+const testDir = path.join(ROOT, 'test')
+for (const entry of readdirSync(testDir, { withFileTypes: true })) {
+  if (!entry.isFile() || !/\.test\.(?:m?js)$/.test(entry.name)) continue
+  if (scriptsText.includes(`test/${entry.name}`)) continue
+  const head = readFileSync(path.join(testDir, entry.name), 'utf8').slice(0, 400)
+  if (/manual test:/.test(head)) continue
+  violations.push(`test/${entry.name} 没有被任何 test:* 脚本引用；只需手工运行的请把首行写成 "manual test: <原因>"`)
+}
+
+// 规则 4：脚本里的 test/ 路径必须真实存在（改文件名/删文件后最容易漏）
+const referenced = [...scriptsText.matchAll(/test\/[\w./-]+\.(?:m?js)/g)].map(match => match[0])
+for (const file of new Set(referenced)) {
+  try {
+    statSync(path.join(ROOT, file))
+  } catch {
+    violations.push(`package.json 引用了不存在的测试文件 ${file}`)
+  }
+}
+
+if (violations.length) {
+  console.error(`[ChatGPT] 风格检查未通过，共 ${violations.length} 处：`)
+  for (const item of violations) console.error('  - ' + item)
+  process.exit(1)
+}
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载与脚本路径')
