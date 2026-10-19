@@ -240,7 +240,7 @@ export function supportGuoba() {
         {
           field: 'isConvertSentenceToArrayReply',
           label: '分多次回复',
-          bottomHelpMessage: '模拟真人行为，自动分段，把ai回复分成1-3次回复。需要关闭选项 QQ开启markdown',
+          bottomHelpMessage: '模拟真人行为，把 AI 回复分成 1-3 条。原文含标题、列表、表格、代码块时整条发送，不拆分',
           component: 'Switch'
         },
         {

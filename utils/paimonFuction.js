@@ -208,6 +208,31 @@ export async function recognitionResultsByCurrentModel(e, img = [], video = [], 
   return text
 }
 
+// 块级 markdown 的特征：标题、引用、列表、围栏、表格、HTML 块、分隔线、缩进代码
+const BLOCK_MARKDOWN_PATTERN = new RegExp([
+  '^[ \\t]*#{1,6}[ \\t]',                           // ATX 标题
+  '^[ \\t]*>',                                        // 引用
+  '^[ \\t]*([-*+]|\\d+\\.)[ \\t]',               // 有序 / 无序列表
+  '^[ \\t]*(```|~~~)',                                // 围栏代码
+  '^[ \\t]*\\|',                                    // 表格行
+  '^[ \\t]*:?-{3,}:?([ \\t]*\\|[ \\t]*:?-{3,}:?)+', // 无前导竖线的表格分隔行
+  '^[ \\t]*<[a-zA-Z!/]',                              // HTML 块
+  '^[ \\t]*(---+|\\*\\*\\*+|___+)[ \\t]*$',    // 分隔线
+  '^[ \\t]*(=+|-+)[ \\t]*$',                        // setext 标题下划线
+  '^(    |\\t)',                                      // 缩进代码
+].join('|'), 'm')
+
+/**
+ * 原文是否包含块级 markdown。
+ * 判断从严：宁可误判成 markdown（少切一条），也不要把代码块、表格、列表拆开。
+ * 行内样式（粗体、斜体、行内代码）不算，普通闲聊仍然可以按句分段。
+ */
+export function containsBlockMarkdown(text) {
+  const source = String(text || '')
+  if (!source.trim()) return false
+  return BLOCK_MARKDOWN_PATTERN.test(source)
+}
+
 /**
  * @description: 把句子转为不超过3个元素的数组，自动处理 at对象
  * @param {Array|Object|String} inputArr
@@ -216,6 +241,11 @@ export async function recognitionResultsByCurrentModel(e, img = [], video = [], 
 export function convertSentenceToArray(inputArr) {
   // 确保输入是数组格式
   const elements = Array.isArray(inputArr) ? inputArr : [inputArr];
+
+  // 原文含块级 markdown 就整条发送，切开会把代码块、表格、列表拆断
+  if (elements.length === 1 && typeof elements[0] === 'string' && containsBlockMarkdown(elements[0])) {
+    return [[elements[0]]];
+  }
 
   let flatList = [];
   for (const item of elements) {
