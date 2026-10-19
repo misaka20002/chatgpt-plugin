@@ -1,7 +1,7 @@
 # spec：记忆提炼模型供应商（memoryGroupCapture.provider）
 
-Status: implemented（已实现；2026-10-16 在部署机完成验证，待提交 PR）
-- 交付状态：代码已完成并在部署机验证通过；PR 目标 misaka20002/chatgpt-plugin（base 分支 v2）
+Status: done（2026-10-16 在部署机完成验证，代码已合入）
+- 交付状态：代码已合入 v2（2026-10-19 核对；原记「待提交 PR」已过期）——运行时读取见 `utils/memory/dailyTask.js`，默认值见 `utils/config.js`，锅巴字段见 `guoba.support.js`
 - 需求方：部署者；动机：为高频批量提炼选用性价比更高的模型
 
 ## Problem Statement

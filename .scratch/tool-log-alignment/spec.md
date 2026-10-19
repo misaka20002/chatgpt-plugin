@@ -1,6 +1,6 @@
 # spec：工具调用/返回日志对齐（logger 通道 + 中文标签 + 留痕边界）
 
-- 状态：**已交付**（2026-10-17，分支 v2；commit `7f4cbc4`）
+Status: done（2026-10-17，分支 v2；commit `7f4cbc4`）
 - 决策来源：2026-10-16/17 两轮问答（Q1–Q8）；术语见根目录 `GLOSSARY.md`，边界决策见 `docs/adr/0002-tool-log-channel-and-redaction.md`
 - 相关 retro：交付后按需补
 

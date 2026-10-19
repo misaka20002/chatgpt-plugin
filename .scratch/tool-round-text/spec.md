@@ -1,6 +1,6 @@
 # spec：工具轮文本改以合并转发单独外发并归一化思考
 
-- 状态：**已交付**（commit `a69f3fe`，2026-10-15，分支 v2）
+Status: done（commit `a69f3fe`，2026-10-15，分支 v2）
 - 完整计划与 AstrBot 架构调研：平台目录 `.workbuddy/plans/toasty-beacon-curie-l7pMWBS-.md`（Part I 为调研背景，本文件为其执行记录精编）
 - 相关 retro：同目录 [retro.md](retro.md)
 

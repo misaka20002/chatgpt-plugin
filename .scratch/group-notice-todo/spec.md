@@ -1,9 +1,10 @@
 # spec：群公告与群待办工具（含 toolGroupAdminArr 迁移、移除 fullTools 超集）
 
-Status: ready-for-agent
-- 交付状态：代码已完成并通过三轮双轴评审，工作区未提交（2026-10-15，分支 v2）
+Status: done（群公告、单一执行查找表、配置迁移已交付；群待办 wontfix）
+- 交付状态：已提交，commit `29b8426`（2026-10-19 核对；原记「工作区未提交」已过期）
+- 群待办：wontfix —— 协议端未实现读取接口，且已确认不再恢复；理由见 [.out-of-scope/group-todo-tools.md](../../.out-of-scope/group-todo-tools.md)
 - 修订（2026-10-16）：读取放开 + 读写拆分（见文末 Comments 与各条目标注「2026-10-16 修订」处）
-- 暂停（2026-10-17）：群待办工具整体暂停注册（guoba 与 core 注册入口已注释），待协议端支持读取后按「恢复清单」重启；见文末 Comments
+- 暂停（2026-10-17）：群待办工具整体暂停注册（guoba 与 core 注册入口已注释）；2026-10-19 降为 wontfix，恢复清单作废
 - 相关 retro：同目录 retro.md（待补）
 
 ## Problem Statement
@@ -127,3 +128,4 @@ Status: ready-for-agent
 - 2026-10-15 测试接缝确认：三处既有接缝，不新增；注入条件不单独断言，作为已知边界记录在案。
 - 2026-10-16 二轮评审（读取放开 + 读写拆分）：用户拍板 ① 读取（list）全员可用、写入维持主人 / 群管档；② 连 Bot 闸一并放开（对齐群公告），故拆为两个工具分开注册（只读 `getGroupTodoList` 无参数 / 写入改名 `manageGroupTodo`），共用 `GroupTodo` 配置键，guoba 结构与选项文案保持不动；③ 描述与 messageId 措辞定稿。决策见 [ADR-0001](../../docs/adr/0001-group-todo-read-open-split.md)，术语见 [GLOSSARY.md](../../GLOSSARY.md)，协议事实见 [napcat-group-todo.md](napcat-group-todo.md)。
 - 2026-10-17 暂停：调研确认 NapCat（本地副本 v4.18.38-2）未实现 `get_group_todo_list`、读取不可用，用户拍板——群待办工具整体暂停注册，注释 guoba 与 core 的注册入口，保留代码与设计，待协议端可读取后恢复。**恢复清单**：① guoba `toolGroupAdminArr` 选项；② core 的 import / `groupAdminToolMap` / `masterOnlyKeys` 三处注释；③ 按 ADR-0001 实施读写拆分与改名；④ 解除暂停时做真实群手动验证。配置默认值与迁移条目本轮未动（恢复正常注册即可，无需再改配置）。
+- 2026-10-19 降为 wontfix：用户确认群待办未来不再修复。spec 顶层记 `done`（公告与两项重构已交付），群待办单独记 `wontfix`，理由落档 `.out-of-scope/group-todo-tools.md`。**上述恢复清单作废**，第 ③ 条（按 ADR-0001 实现读写拆分）随之失效——该拆分的目的只是把“读取”从群管档放开，读取既然拿不到，拆分就没有管辖对象。代码与注册入口的注释保持原样，不删除实现。

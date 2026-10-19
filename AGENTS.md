@@ -24,6 +24,10 @@ Issues, specs, and tickets live as markdown files under `.scratch/<feature>/` in
 
 多轮迭代出来的需求（逐轮追加、中途改口径、要拍板取舍的那类）**在动手实现前**先落盘成 `.scratch/<feature>/spec.md`——需求只活在对话里时，一次上下文压缩就只剩从会话转录反推这一条路，代价远高于当场写下。
 
+### Triage labels
+
+`Status:` 取 `needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`，已交付用 `done`。See `docs/agents/triage-labels.md`.
+
 ### Domain docs
 
 single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/agents/domain.md`.
