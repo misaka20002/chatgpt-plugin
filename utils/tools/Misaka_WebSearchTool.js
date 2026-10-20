@@ -1,135 +1,240 @@
 import { AbstractTool } from './AbstractTool.js'
-import { execSync } from 'child_process'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-// 获取当前文件的目录路径
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const pluginRoot = path.resolve(__dirname, '../..')
+import { fetchText, fetchLocalPage } from './localFetch.js'
+import { UNTRUSTED_NOTICE, capForModel } from './webContent.js'
 
 /**
- * 网页搜索工具：通过Python后端调用 Google → Bing → 搜狗 搜索引擎
+ * 纯本地搜索：不经过任何第三方服务，直接抓三个搜索引擎的结果页。
+ *
+ * 它是兜底工具——没有 Key、也没装 Python 时还能搜一点东西。代价写在工具描述里：
+ * 站点改版、限流、地区封锁都会让它当场失效，失败时给出可归因的原因，不做静默降级。
  */
+
+const ENGINE_TIMEOUT_MS = 15000
+
+/** 结果页正文的抓取预算：三条并发，整体最多等这么久 */
+const BODY_TIMEOUT_MS = 8000
+
+/** 只给前几条抓正文；再多就是拿延迟换信息量 */
+const BODY_RESULT_COUNT = 3
+
+const BODY_CHARS = 2000
+
+const MAX_RESULTS = 20
+
+const MAX_TITLE_CHARS = 200
+
+function decodeEntities(text) {
+  return String(text)
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => safeFromCodePoint(parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_, code) => safeFromCodePoint(Number(code)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&ensp;|&emsp;|&thinsp;/g, ' ')
+    .replace(/&middot;/g, '·')
+    .replace(/&hellip;/g, '…')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    .replace(/&ldquo;/g, '“')
+    .replace(/&rdquo;/g, '”')
+    .replace(/&lsquo;/g, '‘')
+    .replace(/&rsquo;/g, '’')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+}
+
+function safeFromCodePoint(code) {
+  if (!Number.isFinite(code) || code <= 0 || code > 0x10FFFF) return ''
+  try {
+    return String.fromCodePoint(code)
+  } catch {
+    return ''
+  }
+}
+
+function stripTags(html) {
+  return decodeEntities(String(html).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * 解析 Bing 结果页。结果块是 `li.b_algo`，标题链接在 `h2 > a`，摘要在块内第一个 `<p>`。
+ * @param {string} html
+ * @returns {{ title: string, url: string, snippet: string }[]}
+ */
+export function parseBing(html) {
+  const results = []
+  for (const block of String(html).split(/<li[^>]*class="[^"]*b_algo[^"]*"/i).slice(1)) {
+    const anchor = /<h2[^>]*>[\s\S]*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
+    if (!anchor) continue
+    const snippet = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(block)
+    results.push({
+      title: stripTags(anchor[2]).slice(0, MAX_TITLE_CHARS),
+      url: decodeEntities(anchor[1]),
+      snippet: snippet ? stripTags(snippet[1]) : ''
+    })
+  }
+  return results
+}
+
+/**
+ * 解析 DuckDuckGo 的 HTML 版结果页。链接类名是 `result__a`，真实地址在 `uddg` 参数里，
+ * 需要 URL 解码一次；摘要类名是 `result__snippet`。
+ * @param {string} html
+ * @returns {{ title: string, url: string, snippet: string }[]}
+ */
+export function parseDuckDuckGo(html) {
+  const results = []
+  for (const block of String(html).split(/class="result results_links/i).slice(1)) {
+    const anchor = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
+    if (!anchor) continue
+    const href = /href="([^"]+)"/i.exec(anchor[0])
+    if (!href) continue
+    let url = decodeEntities(href[1])
+    const target = /[?&]uddg=([^&]+)/.exec(url)
+    if (target) {
+      try {
+        url = decodeURIComponent(target[1])
+      } catch {
+        // 编码坏了就保留原链接，至少还能点开
+      }
+    } else if (url.startsWith('//')) {
+      url = `https:${url}`
+    }
+    const snippet = /<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
+    results.push({
+      title: stripTags(anchor[1]).slice(0, MAX_TITLE_CHARS),
+      url,
+      snippet: snippet ? stripTags(snippet[1]) : ''
+    })
+  }
+  return results
+}
+
+/**
+ * 解析百度结果页。`h3 > a` 的 href 是 `baidu.com/link?url=…` 跳转链，真实地址在结果块的
+ * `mu` 属性里——必须用 `mu`，否则模型拿到的是没法判断来源的跳转链接。
+ * @param {string} html
+ * @returns {{ title: string, url: string, snippet: string }[]}
+ */
+export function parseBaidu(html) {
+  const results = []
+  for (const block of String(html).split(/<div[^>]*class="result/i).slice(1)) {
+    if (!block.includes('<h3')) continue
+    const anchor = /<h3[^>]*>[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
+    if (!anchor) continue
+    const real = /\smu="([^"]+)"/i.exec(block)
+    results.push({
+      title: stripTags(anchor[2]).slice(0, MAX_TITLE_CHARS),
+      url: decodeEntities(real ? real[1] : anchor[1]),
+      snippet: ''
+    })
+  }
+  return results
+}
+
+const ENGINES = [
+  {
+    label: 'Bing',
+    build: (query, limit) => `https://cn.bing.com/search?q=${encodeURIComponent(query)}&setlang=zh-CN&count=${limit}`,
+    parse: parseBing
+  },
+  {
+    label: 'DuckDuckGo',
+    build: query => `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+    parse: parseDuckDuckGo
+  },
+  {
+    label: '百度',
+    build: (query, limit) => `https://www.baidu.com/s?wd=${encodeURIComponent(query)}&rn=${limit}`,
+    parse: parseBaidu
+  }
+]
+
+async function searchWith(engine, query, limit) {
+  const { text } = await fetchText(engine.build(query, limit), { timeoutMs: ENGINE_TIMEOUT_MS })
+  return engine.parse(text)
+    .filter(item => /^https?:\/\//i.test(item.url))
+    .slice(0, limit)
+}
+
+/**
+ * 给前几条结果并发补正文。抓不到就留空——一条正文失败不该影响整次搜索。
+ * @param {{ title: string, url: string, snippet: string, excerpt?: string }[]} results
+ */
+async function attachExcerpts(results) {
+  const targets = results.slice(0, BODY_RESULT_COUNT)
+  const outcomes = await Promise.allSettled(
+    targets.map(item => fetchLocalPage(item.url, { timeoutMs: BODY_TIMEOUT_MS }))
+  )
+  outcomes.forEach((outcome, index) => {
+    if (outcome.status === 'fulfilled') {
+      targets[index].excerpt = outcome.value.text.slice(0, BODY_CHARS)
+    }
+  })
+}
+
 export class Misaka_WebSearchTool extends AbstractTool {
-    name = 'web_search'
+  name = 'web_search'
 
-    parameters = {
-        properties: {
-            query: {
-                type: 'string',
-                description: '和用户的问题最相关的搜索关键词，用于在网络上搜索'
-            },
-            max_results: {
-                type: 'number',
-                description: '返回的最大搜索结果数量，默认为 5',
-                default: 5
-            }
-        },
-        required: ['query']
+  parameters = {
+    properties: {
+      query: {
+        type: 'string',
+        description: '和用户的问题最相关的搜索关键词'
+      },
+      max_results: {
+        type: 'number',
+        description: `返回的最大搜索结果数量，默认 5，范围 1-${MAX_RESULTS}`,
+        default: 5
+      }
+    },
+    required: ['query']
+  }
+
+  func = async function (opts) {
+    const query = typeof opts.query === 'string' ? opts.query.trim() : ''
+    if (!query) {
+      return 'Error: 搜索关键词不能为空'
+    }
+    const rawLimit = Number(opts.max_results ?? 5)
+    const limit = Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 5
+    if (limit < 1 || limit > MAX_RESULTS) {
+      return `Error: 搜索结果数量应在 1-${MAX_RESULTS} 之间`
     }
 
-    description = '搜索网络以回答用户的问题。当用户需要搜索网络以获取即时性的信息时调用此工具。支持搜索关键词和指定最大结果数量。'
-
-    constructor() {
-        super()
+    const failures = []
+    let hit
+    for (const engine of ENGINES) {
+      try {
+        const results = await searchWith(engine, query, limit)
+        if (results.length) {
+          hit = { engine, results }
+          break
+        }
+        failures.push(`${engine.label}: 解析不到结果`)
+      } catch (err) {
+        failures.push(`${engine.label}: ${err?.message || err}`)
+      }
     }
 
-    // LLM调用的Tool
-    func = async function (opts) {
-        const { query, max_results = 5 } = opts
+    if (!hit) {
+      return `Error: 三个搜索引擎都没有返回结果（可能被限流或页面结构变化）\n${failures.join('\n')}`
+    }
 
-        if (!query || typeof query !== 'string') {
-            return 'Error: 搜索关键词不能为空'
-        }
+    await attachExcerpts(hit.results)
 
-        if (max_results < 1 || max_results > 20) {
-            return 'Error: 搜索结果数量应在 1-20 之间'
-        }
+    const blocks = hit.results.map((item, index) => {
+      const lines = [`## ${index + 1}. [${item.title || item.url}](${item.url})`]
+      if (item.snippet) lines.push(item.snippet)
+      if (item.excerpt) lines.push('', item.excerpt)
+      return lines.join('\n')
+    })
 
-        logger.info(`web_searcher - search_from_search_engine: ${query}`)
+    return capForModel(
+      `Web search results from 本地搜索 (${hit.engine.label}) for "${query}" (${UNTRUSTED_NOTICE}):\n\n${blocks.join('\n\n')}`
+    )
+  }.bind(this)
 
-        try {
-            // Python 脚本路径
-            const pythonScript = path.join(pluginRoot, 'utils', 'web_search.py')
-            
-            // 准备传递给Python脚本的参数
-            const searchParams = JSON.stringify({
-                query: query,
-                max_results: max_results
-            })
-
-            // 使用 execSync 执行 Python 脚本
-            let stdout
-            try {
-                stdout = execSync(`python3 "${pythonScript}"`, {
-                    input: searchParams,
-                    encoding: 'utf-8',
-                    windowsHide: true,
-                    timeout: 60000 // 60秒超时
-                })
-            } catch (pythonError) {
-                // 如果 python3 不存在，尝试使用 python
-                try {
-                    stdout = execSync(`python "${pythonScript}"`, {
-                        input: searchParams,
-                        encoding: 'utf-8',
-                        windowsHide: true,
-                        timeout: 60000 // 60秒超时
-                    })
-                } catch (fallbackError) {
-                    throw new Error(`Python execution failed. Please ensure Python 3 is installed and available in PATH. Error: ${fallbackError.message}`)
-                }
-            }
-
-            // 解析Python脚本的输出
-            const result = JSON.parse(stdout)
-
-            if (!result.success) {
-                // 检查是否是依赖问题
-                if (result.dependency_error) {
-                    return `Error: Python依赖缺失 - ${result.error}\n\n请安装必要的Python包：\npip install aiohttp beautifulsoup4\n\n可选安装googlesearch包以获得更好的Google搜索效果：\npip install googlesearch-python`
-                }
-                return `Error: 搜索失败 - ${result.error}`
-            }
-
-            if (!result.results || result.results.length === 0) {
-                return 'Error: 网络搜索没有返回任何结果，请尝试不同的关键词'
-            }
-
-            logger.info(`Processing ${result.results.length} search results...`)
-
-            // 格式化搜索结果
-            const formattedResults = []
-            for (const searchResult of result.results) {
-                let resultText = `${searchResult.index}. ${searchResult.title}\n`
-                
-                if (searchResult.snippet) {
-                    resultText += `${searchResult.snippet}\n`
-                }
-                
-                if (searchResult.content) {
-                    resultText += `${searchResult.content}\n`
-                }
-                
-                resultText += '\n'
-                formattedResults.push(resultText)
-            }
-
-            // 添加搜索总结信息
-            const summary = `\n=== 搜索总结 ===\n搜索关键词: ${query}\n找到 ${result.total_results} 个结果\n处理成功 ${result.processed_results} 个结果\n\n`
-
-            return summary + formattedResults.join('').trim()
-
-        } catch (error) {
-            console.error('Web search error:', error)
-            
-            // 检查是否是Python相关的错误
-            if (error.message.includes('python') || error.message.includes('Python')) {
-                return `Error: Python环境问题 - ${error.message}\n\n请确保：\n1. 已安装 Python 3\n2. Python 在系统 PATH 中可用\n3. 已安装必要的依赖包：pip install aiohttp beautifulsoup4`
-            }
-            
-            return `Error: 网络搜索失败 - ${error.message || '未知错误'}。请检查网络连接或稍后重试。`
-        }
-    }.bind(this)
+  description = '用本机网络直接搜索 Bing、DuckDuckGo、百度，返回标题、真实链接、摘要和前几条的正文摘录。它不经过任何第三方服务，也不绕过反爬：站点限流或改版时可能搜不到，失败会说明是哪个引擎、什么原因。需要更稳的搜索时改用其它已配置的搜索来源。'
 }
