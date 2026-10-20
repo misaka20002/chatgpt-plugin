@@ -1,5 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
+import { UNTRUSTED_NOTICE, capForModel } from './webContent.js'
 
 /** 使用 Tavily 搜索并获得结果摘要的工具 */
 export class TavilyTool extends AbstractTool {
@@ -160,7 +161,8 @@ export class TavilyTool extends AbstractTool {
             // 如果启用了链接显示，添加使用提示
             const linkTip = '\n\n💡 提示: 如需了解详细内容，可使用网页提取工具获取完整页面信息。'
 
-            return finalResult + linkTip
+            // 摘要同样来自第三方网页：标成不可信数据，并与其他工具共用 20000 字符封顶
+            return capForModel(`Web search results from Tavily (${UNTRUSTED_NOTICE}):\n${finalResult}${linkTip}`)
 
         } catch (error) {
             console.error('Tavily search error:', error)

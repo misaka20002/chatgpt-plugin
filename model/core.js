@@ -91,6 +91,8 @@ import { TTSAudioTool } from '../utils/tools/TTSAudioTool.js'
 import { SendQQMusicTool } from '../utils/tools/SendQQMusicTool.js'
 import { BaiduAISearchTool } from '../utils/tools/BaiduAiSearchTool.js'
 import { OpenCodeWebSearchTool } from '../utils/tools/OpenCodeWebSearchTool.js'
+import { ExaWebFetchTool } from '../utils/tools/ExaWebFetchTool.js'
+import { ParallelWebFetchTool } from '../utils/tools/ParallelWebFetchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
 import { GroupMemberSkillTool } from '../utils/tools/GroupMemberSkillTool.js'
@@ -1026,6 +1028,8 @@ async function collectTools(e) {
     'SendQQ_MusicTool': SendQQMusicTool,
     'BaiduAI_SearchTool': BaiduAISearchTool,
     'opencode_WebSearchTool': OpenCodeWebSearchTool,
+    'exa_WebFetchTool': ExaWebFetchTool,
+    'parallel_WebFetchTool': ParallelWebFetchTool,
     'GithubAPI': GithubAPITool,
   }
   /** 搜索/网络来源 */

@@ -1,6 +1,6 @@
-import crypto from 'node:crypto'
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
+import { conversationSessionId } from './toolSession.js'
 
 /*
  * 移植自 OpenCode 的 websearch 工具（使用 OpenCode Zen / Go 模型时内置的联网搜索）。
@@ -26,9 +26,6 @@ const MAX_ERROR_CHARS = 200
  */
 const EXA_FREE_RATE_LIMIT_NOTICE = /^You['’]ve hit Exa['’]s free MCP rate limit/i
 
-/** 进程级随机盐：会话标识只在本进程内稳定，且无法反推出群号 / QQ 号 */
-const SESSION_SALT = crypto.randomBytes(16).toString('hex')
-
 /** 本模块自己产生的错误（已带好上下文），不要在底层 catch 里被二次包装 */
 class WebSearchError extends Error {
   constructor(message) {
@@ -44,17 +41,6 @@ function truncateText(text, limit) {
 
 function getApiKey(provider) {
   return String((provider === 'exa' ? Config.exaApiKey : Config.parallelApiKey) || '').trim()
-}
-
-/**
- * 按会话生成发给搜索服务的 session_id。
- * Parallel 要求同一对话复用同一个 session_id（用于免费额度限流与日志关联），OpenCode 传的是
- * 自己的会话 ID；这里的"会话"是群（私聊为用户），但群号 / QQ 号不能直接交给第三方，所以加盐哈希。
- * @returns {string} 32 位十六进制
- */
-function conversationSessionId(e) {
-  const scope = e?.group_id ? `group:${e.group_id}` : `user:${e?.user_id ?? e?.sender?.user_id ?? ''}`
-  return crypto.createHash('sha256').update(`${SESSION_SALT}:${scope}`).digest('hex').slice(0, 32)
 }
 
 /**

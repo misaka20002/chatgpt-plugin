@@ -1376,6 +1376,8 @@ export function supportGuoba() {
               { label: 'OpenCode同款搜索（可配置）', value: 'opencode_WebSearchTool' },
               { label: 'Tavily search（需配置）', value: 'tavily_search' },
               { label: 'Tavily网页读取工具（需配置）', value: 'tavily_WebsiteTool' },
+              { label: 'Exa 网页读取（免 Key 可用）', value: 'exa_WebFetchTool' },
+              { label: 'Parallel 网页读取（免 Key 可用）', value: 'parallel_WebFetchTool' },
               { label: 'Azure search（需配置）', value: 'azure' },
               { label: 'Github仓库读取（需配置）', value: 'GithubAPI' },
               { label: '必应图片搜索工具（分辨率低）', value: 'SerpImageTool_Bing' },
