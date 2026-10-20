@@ -125,7 +125,6 @@ const CHECK_EXCLUDED = new Set([
   'test:meme', // meme 慢测试
   'test:meme:fast', // meme 日常回归，仍属专项
   'test:meme:mutants', // meme 变异测试，仅专项
-  // 其中 localWebTools.test.js 的私网/SSRF 与总预算用例已单独接进 check（0.7s），不走这条豁免
   'test:tools', // 工具行为专项（220+ 例，4.6s）；改到工具时本地跑，不压 CI 门禁
   'test:memory', // 记忆/图谱专项（8.8s，是专项里最贵的一项）；按需本地跑
 ])
