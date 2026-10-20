@@ -46,16 +46,16 @@ async function cancelBody(response) {
  * （chunked / SSE 响应拿不到声明值）。
  * @param {Response} response
  * @param {number} [maxBytes]
- * @returns {Promise<string>}
+ * @returns {Promise<Buffer>}
  */
-async function readBodyLimited(response, maxBytes = MAX_RESPONSE_BYTES) {
+async function readBytesLimited(response, maxBytes = MAX_RESPONSE_BYTES) {
   const declared = Number(response.headers.get('content-length'))
   if (Number.isFinite(declared) && declared > maxBytes) {
     await cancelBody(response)
     throw new WebFetchError(`响应体过大（Content-Length ${declared} 字节 > 上限 ${maxBytes}）`)
   }
   if (!response.body) {
-    return ''
+    return Buffer.alloc(0)
   }
   const reader = response.body.getReader()
   const chunks = []
@@ -70,7 +70,7 @@ async function readBodyLimited(response, maxBytes = MAX_RESPONSE_BYTES) {
     }
     chunks.push(value)
   }
-  return Buffer.concat(chunks).toString('utf8')
+  return Buffer.concat(chunks)
 }
 
 /**
@@ -120,7 +120,7 @@ export async function requestText(url, options, { timeoutMs, maxBytes = MAX_RESP
       throw new WebFetchError(`返回了意外的重定向（HTTP ${response.status}），已拒绝跟随`, { status: response.status })
     }
     // body 读取要留在同一个 try 里：超时也可能发生在「响应头已到、body 很慢」阶段
-    body = await readBodyLimited(response, maxBytes)
+    body = (await readBytesLimited(response, maxBytes)).toString('utf8')
   } catch (err) {
     if (err instanceof WebFetchError) throw err
     if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
@@ -130,6 +130,53 @@ export async function requestText(url, options, { timeoutMs, maxBytes = MAX_RESP
     throw new WebFetchError(`请求失败：${err?.message || err}${cause ? `（${cause}）` : ''}`)
   }
   return { status: response.status, ok: response.ok, body }
+}
+
+/**
+ * 发一次请求并读完响应体，返回原始字节与 `content-type`。
+ *
+ * 与 `requestText` 的差别只有两点：不解码（调用方要按 charset 自己解），以及 3xx **不抛错也不跟随**——
+ * 本地抓取必须逐跳重新校验目标主机（私网拦截），跟随由调用方的循环负责。
+ * @param {string} url
+ * @param {RequestInit} options
+ * @param {{ timeoutMs: number, maxBytes?: number }} limits
+ * @returns {Promise<{ status: number, ok: boolean, contentType: string, location: string, body: Buffer }>}
+ */
+export async function requestBinary(url, options, { timeoutMs, maxBytes = MAX_RESPONSE_BYTES }) {
+  let response
+  let body
+  try {
+    response = await fetch(url, {
+      ...options,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs)
+    })
+    if (response.status >= 300 && response.status < 400) {
+      await cancelBody(response)
+      return {
+        status: response.status,
+        ok: false,
+        contentType: response.headers.get('content-type') || '',
+        location: response.headers.get('location') || '',
+        body: Buffer.alloc(0)
+      }
+    }
+    body = await readBytesLimited(response, maxBytes)
+  } catch (err) {
+    if (err instanceof WebFetchError) throw err
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      throw new WebFetchError(`请求超时（${timeoutMs / 1000} 秒）`)
+    }
+    const cause = err?.cause?.code || err?.cause?.message
+    throw new WebFetchError(`请求失败：${err?.message || err}${cause ? `（${cause}）` : ''}`)
+  }
+  return {
+    status: response.status,
+    ok: response.ok,
+    contentType: response.headers.get('content-type') || '',
+    location: '',
+    body
+  }
 }
 
 /**
