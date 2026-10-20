@@ -1360,7 +1360,7 @@ export function supportGuoba() {
           field: 'serpSourceArr',
           label: '搜索/网络来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择（需配置）的工具，需要填写下面对应Key；若使用呆毛版纯本地搜索工具，需要安装python3和依赖，附Ubuntu的安装方法: `apt install python3 python3-pip` `pip install aiohttp beautifulsoup4 googlesearch-python`',
+          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择（需配置）的工具，需要填写下面对应Key；呆毛纯本地搜索/网页读取不需要任何 Key 或额外运行环境（不装 Python、不装浏览器），但容易被站点限流，只适合兜底',
           componentProps: {
             allowAdd: true,
             allowDel: true,
@@ -1381,8 +1381,8 @@ export function supportGuoba() {
               { label: 'Azure search（需Key）', value: 'azure' },
               { label: 'Github仓库读取（需Key）', value: 'GithubAPI' },
               { label: '必应图片搜索工具（分辨率低）', value: 'SerpImageTool_Bing' },
-              { label: '呆毛版纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
-              { label: '本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
+              { label: '呆毛纯本地搜索工具（无反爬）', value: 'misaka_WebSearchTool' },
+              { label: '呆毛纯本地网页读取工具（无反爬）', value: 'local_WebsiteTool' },
               { label: 'ikechan8370（不再提供服务）', value: 'ikechan8370' },
             ]
           }
