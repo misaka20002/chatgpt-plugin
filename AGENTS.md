@@ -22,7 +22,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 
 Issues, specs, and tickets live as markdown files under `.scratch/<feature>/` in this repo. See `docs/agents/issue-tracker.md`.
 
-多轮迭代出来的需求（逐轮追加、中途改口径、要拍板取舍的那类）**在动手实现前**先落盘成 `.scratch/<feature>/spec.md`——需求只活在对话里时，一次上下文压缩就只剩从会话转录反推这一条路，代价远高于当场写下。
+多轮迭代出来的需求（逐轮追加、中途改口径、要拍板取舍的那类）**在动手实现前**先落盘成 `.scratch/<feature>/spec.md`——需求只活在对话里时，一次上下文压缩就只剩从会话转录反推这一条路，代价远高于当场写下。实现中偏离 spec（口径变了、范围扩大、用户当场追加要求）就**当场把 spec 改到与代码一致再继续**，不要留给评审对齐：这类漂移会被读成「代码与 spec 不一致」，查证成本远高于改那一行。
 
 ### Triage labels
 
@@ -45,11 +45,12 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
 - **一切需要结果的子 agent（含评审两轴与调研）一律前台派生，不要用 `run_in_background`。** 后台派生会把它变成"自动团队"成员：出生即可能被停止（运行时日志原文 “spawned after team cancel and was paused”）；当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），被终止（终态）后又**跳过完成通知**，结果必然丢失——评审与调研共 3 次实测无一存活。真正的后台并行是**任务粒度**（侧边栏多任务 /「保存到工作空间」多 Agent 协作），不是会话内子 agent。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
 - **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。**含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——一律用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`（随 `npm run check` / CI）。
-- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回）；`ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`——不设时 Git Bash 的路径转换会改写参数，`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」；结论是否定或异常时先怀疑它。
+- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回），**判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不要接 `tail` / `grep` 管道**——退出码会变成后者的，`grep` 无匹配还会给出假的失败；`ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`——不设时 Git Bash 的路径转换会改写参数，`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」；结论是否定或异常时先怀疑它。
 
 ## 运行环境与入口
 
 - 纯 ESM（`package.json` 的 `"type": "module"`），Node.js，无构建步骤、无 TypeScript，无 lint/format/类型检查配置。
+- **本仓没有 Python 代码**，工具链也不依赖它。一次性验证要跑 Python 时，venv 建在系统临时目录、用完连目录删；不往系统解释器 `pip install`——装进去就留在全局，仓库里没有任何检查能发现它。
 - 必须位于 Yunzai 根目录的 `plugins/chatgpt-plugin`；依赖宿主的 `logger`、`redis`、`Bot`、`segment` 和 `../../../lib/plugins/plugin.js`。这些不在插件仓库内，**不要修复这些宿主导入**。运行时还依赖宿主提供的模块（如 `md5` / `moment` / `yaml`，其中 `md5` 是宿主自带的替身模块；由 Node 从插件目录逐级向上解析命中宿主 `node_modules`），**不要**在插件 package.json 里重复声明；CI 里由 `.github/workflows/check.yml` 按同一布局模拟补齐。
 - `utils/common.js` 是重依赖入口，纯逻辑测试不要直接 import；测试需按需提供全局 stub/mock。
 - `config/config.json` 是运行时配置，**勿提交**。`utils/SydneyAIClient.js` 已废弃，不为本次任务顺手修复、重构或删除，也不删除其遗留 import；清理属于单独议题。

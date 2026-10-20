@@ -39,6 +39,8 @@
 | 知乎（问题与专栏）、Reddit | 两条路都 403；puppeteer 也拿不到 |
 | PDF | HTTP 拿到二进制（需按 content-type 拦掉），puppeteer 30 秒导航超时 |
 
+**复现口径**：两条通道的 HTML 都过同一个 `convertHTMLToMarkdown`，再按同一套规则压成**纯文本**计字符数——不要直接量 Markdown 长度，Reddit 的 403 页曾因内联 base64 图被算成 87900 字符，「壳」会被当成正文（实现阶段又踩了一次，所以 `fetchLocalPage` 出口现在会滤掉 `data:` 图片）。HTTP 侧是一次普通 GET + 该转换器；puppeteer 侧是本机 Edge headless + `waitUntil: 'networkidle0'`，冷启动单独计时。
+
 **样本局限**：单机单 IP，以中英文主流站为主。纯客户端渲染且无 SSR 的内容站理论上会让 HTTP 拿不到正文；这批样本里没有出现——出现的「只有 JS 能读」全是登录墙。
 
 ## 考虑过的替代方案
