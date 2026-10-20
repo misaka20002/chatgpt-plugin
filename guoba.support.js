@@ -1360,7 +1360,7 @@ export function supportGuoba() {
           field: 'serpSourceArr',
           label: '搜索/网络来源',
           component: 'Select',
-          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择（需配置）的工具，需要填写下面对应Key；呆毛纯本地搜索/网页读取不需要任何 Key 或额外运行环境（不装 Python、不装浏览器），但容易被站点限流，只适合兜底',
+          bottomHelpMessage: '若选择 Gemini原生搜索 需确保 对话-Gemini方式可使用；若选择（需配置）的工具，需要填写下面对应Key',
           componentProps: {
             allowAdd: true,
             allowDel: true,

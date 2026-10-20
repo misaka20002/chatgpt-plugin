@@ -188,13 +188,29 @@ describe('网页读取', () => {
 
 describe('搜索', () => {
   test('百度取 mu 的真实地址、DuckDuckGo 解 uddg', () => {
-    const baidu = parseBaidu(`<div class="result c-container"><h3 class="t"><a href="http://www.baidu.com/link?url=abc">标题甲</a></h3><div mu="https://real.example.com/a"></div></div>`)
+    const baidu = parseBaidu(`<div class="result c-container"><h3 class="t"><a href="http://www.baidu.com/link?url=abc">标题甲</a></h3><div class="cos-color-text-tiny summary-text_15QGa"><em>摘要</em>甲正文</div><div mu="https://real.example.com/a"></div></div>`)
     assert.equal(baidu[0].url, 'https://real.example.com/a')
     assert.equal(baidu[0].title, '标题甲')
+    assert.match(baidu[0].snippet, /摘要.*甲正文/)
 
     const ddg = parseDuckDuckGo(`<div class="result results_links"><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2F93.184.216.36%2Fb">标题乙</a><a class="result__snippet">摘要乙</a></div>`)
     assert.equal(ddg[0].url, 'https://93.184.216.36/b')
     assert.equal(ddg[0].snippet, '摘要乙')
+  })
+
+  test('搜索页 302 到私网：拒绝跟随，换下一个引擎', async () => {
+    stubFetch(call => {
+      if (call.url.includes('cn.bing.com')) return redirect('http://127.0.0.1:6099/')
+      if (call.url.includes('html.duckduckgo.com')) {
+        return html('<div class="result results_links"><a class="result__a" href="https://93.184.216.36/ok">降级结果</a></div>')
+      }
+      return html('<html><head><title>落地页</title></head><body><p>正文</p></body></html>')
+    })
+
+    const out = await new Misaka_WebSearchTool().func({ query: '关键词' })
+
+    assert.equal(calls.filter(call => call.url.includes('127.0.0.1')).length, 0, '重定向目标不该被请求')
+    assert.match(out, /本地搜索 \(DuckDuckGo\)/)
   })
 
   test('Bing 失败时降级到 DuckDuckGo，并用后者作为来源', async () => {

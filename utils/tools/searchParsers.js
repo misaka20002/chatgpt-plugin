@@ -66,6 +66,26 @@ export function parseDuckDuckGo(html) {
 }
 
 /**
+ * 百度的摘要节点。类名带构建 hash（`summary-text_15QGa`），且历史上换过三种写法
+ * （`c-abstract`、`content-right`），所以只在前缀上匹配。匹配不到就给空串——拿邻近文本
+ * 猜摘要比没有摘要更糟：模型会把导航栏文案当成页面内容。
+ */
+const BAIDU_SNIPPET_PATTERNS = [
+  /class="[^"]*\bsummary-text[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span|p)>/i,
+  /class="[^"]*\bc-abstract[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span|p)>/i,
+  /class="[^"]*\bcontent-right[^"]*"[^>]*>([\s\S]*?)<\/(?:div|span|p)>/i
+]
+
+function baiduSnippet(block) {
+  for (const pattern of BAIDU_SNIPPET_PATTERNS) {
+    const matched = pattern.exec(block)
+    const text = matched ? stripTags(matched[1]) : ''
+    if (text) return text
+  }
+  return ''
+}
+
+/**
  * 解析百度结果页。`h3 > a` 的 href 是 `baidu.com/link?url=…` 跳转链，真实地址在结果块的
  * `mu` 属性里——必须用 `mu`，否则模型拿到的是没法判断来源的跳转链接。
  * @param {string} html
@@ -81,7 +101,7 @@ export function parseBaidu(html) {
     results.push({
       title: stripTags(anchor[2]).slice(0, MAX_TITLE_CHARS),
       url: decodeEntities(real ? real[1] : anchor[1]),
-      snippet: ''
+      snippet: baiduSnippet(block)
     })
   }
   return results

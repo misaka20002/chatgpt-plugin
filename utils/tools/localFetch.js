@@ -173,17 +173,18 @@ function titleOf(html) {
 /**
  * 跟随重定向地发一次 GET，返回最后一跳的字节与 `content-type`。
  *
- * `validate` 是每一跳都要跑的钩子：本地读取用它拦私网，搜索引擎用它时不需要（地址由插件拼，
- * 不含模型输入）。重定向的跟随放在这里而不是 fetch 的 `redirect: 'follow'`，就是为了让钩子
- * 有机会看到中间跳。
+ * `validate` 是每一跳都要跑的钩子，用来拦私网；`validateFromHop` 决定从第几跳开始跑：
+ * 本地读取填 0（地址来自模型，第一跳就要校验），搜索引擎填 1（第一跳的地址由插件自己拼，
+ * 可信；但**重定向目标不可信**，从第二跳起必须校验）。重定向的跟随放在这里而不是
+ * fetch 的 `redirect: 'follow'`，就是为了让钩子有机会看到中间跳。
  * @param {string} url
- * @param {{ headers?: object, timeoutMs: number, maxBytes?: number, validate?: (url: URL) => Promise<void>, onHeaders?: (meta: { status: number, ok: boolean, contentType: string }) => void }} options
+ * @param {{ headers?: object, timeoutMs: number, maxBytes?: number, validate?: (url: URL) => Promise<void>, validateFromHop?: number, onHeaders?: (meta: { status: number, ok: boolean, contentType: string }) => void }} options
  */
-async function requestFollowing(url, { headers = {}, timeoutMs, maxBytes = MAX_BYTES, validate, onHeaders } = {}) {
+async function requestFollowing(url, { headers = {}, timeoutMs, maxBytes = MAX_BYTES, validate, validateFromHop = 0, onHeaders } = {}) {
   let current = url
   const deadline = Date.now() + timeoutMs
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    if (validate) {
+    if (validate && hop >= validateFromHop) {
       await validate(new URL(current))
     }
     const remaining = deadline - Date.now()
@@ -270,11 +271,11 @@ export async function fetchLocalPage(value, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS
 }
 
 /**
- * 取一份 HTML 原文：不转 Markdown，**也不校验私网**。
+ * 取一份 HTML 原文：不转 Markdown，第一跳也不做私网校验。
  *
- * 名字里的 `Raw` 不只是「没转换」，更是「没设防」：它只给**地址由插件自己拼、不含模型输入**的
- * 固定端点用（目前是三个搜索引擎）。不要拿它去读模型给的 URL——那条路是 `fetchLocalPage`，
- * 它会在每一跳重定向上做私网拦截。
+ * 只给**地址由插件自己拼、不含模型输入**的固定端点用（目前是三个搜索引擎）——第一跳是
+ * 引擎地址，没必要再解析一次 DNS；但**重定向目标照样要拦**：`validateFromHop: 1` 让 302
+ * 指向 `http://127.0.0.1:6099` 这种目标在读之前就失败。要读模型给的 URL，用 `fetchLocalPage`。
  * @param {string} url
  * @param {{ timeoutMs?: number, headers?: object }} [options]
  * @returns {Promise<{ url: string, status: number, contentType: string, text: string }>}
@@ -287,7 +288,9 @@ export async function fetchRawHtml(url, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS, he
       'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
       ...headers
     },
-    timeoutMs
+    timeoutMs,
+    validate: assertPublicTarget,
+    validateFromHop: 1
   })
   if (!response.ok) {
     throw new WebFetchError(`HTTP ${response.status}`, { status: response.status })
