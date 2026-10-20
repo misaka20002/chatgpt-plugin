@@ -19,8 +19,10 @@
  * 3. 测试文件必须被某个 `test:*` 脚本引用；只需本机环境才能跑的，文件头写 `manual test:` 豁免。
  * 4. `test:*` 脚本里引用的文件必须存在。
  * 5. 每个 `test:*` 必须被 `check` 调用，或在 CHECK_EXCLUDED 里写明豁免理由——否则 CI 永远不跑它。
+ * 6. 仓库根不得出现 `package-lock.json` 或 `.venv`：前者是 npm 在 pnpm 工作区里跑出来的，
+ *    后者是本仓已无 Python 代码的证据（临时验证的 venv 该建在系统临时目录）。
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -123,6 +125,7 @@ const CHECK_EXCLUDED = new Set([
   'test:meme', // meme 慢测试
   'test:meme:fast', // meme 日常回归，仍属专项
   'test:meme:mutants', // meme 变异测试，仅专项
+  // 其中 localWebTools.test.js 的私网/SSRF 与总预算用例已单独接进 check（0.7s），不走这条豁免
   'test:tools', // 工具行为专项（220+ 例，4.6s）；改到工具时本地跑，不压 CI 门禁
   'test:memory', // 记忆/图谱专项（8.8s，是专项里最贵的一项）；按需本地跑
 ])
@@ -136,9 +139,19 @@ for (const name of Object.keys(scripts).filter(key => key.startsWith('test:'))) 
   violations.push(`package.json 的 ${name} 没有接进 check；接进去，或加进 lint.check.mjs 的 CHECK_EXCLUDED 并写明原因`)
 }
 
+// 规则 6：跑错工具链或临时验证留下的产物。两条都是实际踩过的：npm 在 pnpm 工作区里生成了
+// package-lock.json；`python -m venv .venv` 在插件目录留下一个只有 pip 的空壳。
+const STRAY_ARTIFACTS = [
+  ['package-lock.json', '本仓是 pnpm 工作区，这是 npm install 的产物：删掉它，改用 pnpm'],
+  ['.venv', '本仓没有 Python 代码：临时验证的 venv 建在系统临时目录，用完连目录删掉']
+]
+for (const [name, reason] of STRAY_ARTIFACTS) {
+  if (existsSync(path.join(ROOT, name))) violations.push(`不应存在 ${name}——${reason}`)
+}
+
 if (violations.length) {
   console.error(`[ChatGPT] 风格检查未通过，共 ${violations.length} 处：`)
   for (const item of violations) console.error('  - ' + item)
   process.exit(1)
 }
-console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径与套件接线')
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物')

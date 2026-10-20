@@ -137,7 +137,7 @@ Status: ready-for-agent
 
 - 先例：`test/exaWebFetchTool.test.js`、`test/opencodeWebSearchTool.test.js`（工具实例 + 全局 fetch 桩）。
 
-**接线**：新增测试文件接进 `test:tools`；`test:tools` 不进 `check`（沿用「check 只留核心门禁」的既定取舍）。
+**接线**：新增测试文件接进 `test:tools`；`test:tools` 整体不进 `check`（沿用「check 只留核心门禁」的既定取舍）。**但本文件例外**——`test/localWebTools.test.js` 单独挂在 `check` 末尾（0.7s）：它守的是私网拦截与搜索总预算，回归了 CI 必须变红。
 
 ## Out of Scope
 
