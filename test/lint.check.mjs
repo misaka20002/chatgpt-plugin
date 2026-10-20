@@ -117,16 +117,19 @@ for (const file of new Set(referenced)) {
 // （历史事故：test:tools 里的工具测试长期不在 check 里，CI 变绿却对工具改动零覆盖）
 const CHECK_EXCLUDED = new Set([
   'test:avatar', // 头像处理专项，慢
-  'test:memory', // 记忆系统专项，依赖宿主图谱/Redis 环境
-  'test:render', // 数学渲染专项，需要浏览器
+  // 走 puppeteer 真实导航（harnessBrowser.mjs）：开本机 Chromium 时 34s 全绿，CI 无 Chromium
+  'test:render',
   'test:meme', // meme 慢测试
   'test:meme:fast', // meme 日常回归，仍属专项
   'test:meme:mutants', // meme 变异测试，仅专项
 ])
+// 按「npm run <名字>」切词后精确比对：`includes` 子串匹配会让 `test:meme` 命中
+// `test:meme:fast`，于是没接线的套件也能蒙过去
 const checkScript = scripts.check || ''
+const invokedByCheck = new Set([...checkScript.matchAll(/\bnpm run ([^\s&|;)]+)/g)].map(match => match[1]))
 for (const name of Object.keys(scripts).filter(key => key.startsWith('test:'))) {
   if (CHECK_EXCLUDED.has(name)) continue
-  if (checkScript.includes(`npm run ${name}`)) continue
+  if (invokedByCheck.has(name)) continue
   violations.push(`package.json 的 ${name} 没有接进 check；接进去，或加进 lint.check.mjs 的 CHECK_EXCLUDED 并写明原因`)
 }
 

@@ -11,9 +11,16 @@ const config = { enableMemory: true, enableAtGraph: true, memoryGroupCapture: { 
 let saves = 0
 Object.defineProperties(config, {
   getConfig: { value: () => config },
-  save: { value: () => { saves++; return true } }
+  save: { value: () => { saves++; return true } },
+  // 锅巴保存走 Config.commit(candidate)（Proxy 的 get 分支），不是 Config.save：
+  // 桩缺它时 setConfigData 会以「配置保存失败：Config.commit is not a function」判红。
+  commit: { value: candidate => { saves++; Object.assign(config, candidate); return true } }
 })
-mock.module('../utils/config.js', { namedExports: { Config: config } })
+// `guoba.support.js` 会 import `{ Config, providerDefaults }`：桩里缺具名导出时注册不报错，
+// 只在真正加载该模块时以 SyntaxError 炸出（本套件要靠 supportGuoba() 验证图谱开关面板）。
+// providerDefaults 只被读成各字段的 defaultValue，空对象够用。
+const providerDefaults = { api: {}, responses: {}, claude: {}, gemini: {} }
+mock.module('../utils/config.js', { namedExports: { Config: config, providerDefaults } })
 mock.module('../../../lib/plugins/plugin.js', { defaultExport: class { constructor(options) { Object.assign(this, options) } } })
 let renderResult
 let renderCalls

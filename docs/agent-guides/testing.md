@@ -34,9 +34,9 @@
 - 测试环境不要 import `utils/common.js`，也不要 import `client/*`（两者都会拉起 `lib/config` 等宿主重依赖；`client/*` 必须在 `mock.module()` 里替换，见 `test/mediaUrlGuard.test.mjs` 顶部）。这类依赖链会让进程在测试结束后仍不退出，所以所有 `node --test` 脚本统一带 `--test-force-exit`：它只处理「测试都跑完了但句柄没释放」，不会掩盖真的失败。
 - 风格门禁：`node test/lint.check.mjs`（随 `check`/CI 执行）。零依赖，只收「当前零存量违规」的机械规则：JSDoc 与声明同行、日志前缀禁 camelCase 单 token（`[quotedImage]` 这类改写成 `[ChatGPT][子模块]`）、`client/`/`model/` 出现 `console.log`、测试文件必须挂进 `test:*`、脚本引用的文件必须存在。带存量噪音的规则（日志前缀 112 处、`utils/` 的 `console.log` 48 处、行尾空格 379 处、无注释空 `catch` 24 处、未使用变量需 AST）记在脚本头部，作为日后引入 linter 的清单——先清存量再加规则，别让门禁常红。
 - 只需手工运行的测试（如依赖本机 redis）：不挂脚本，但首行写 `manual test: <原因>`，风格检查会豁免；否则判为「写好了却永远没人跑」。
-- `npm run check` 现在包含 `test:media` 与 `test:group-reply`（此前只在本地手跑）。CI 同样只跑 `check`，所以新增测试要挂进某个 `test:*` 脚本才会被执行。
+- `check` 的具体组成以 `package.json` 的 `check` 脚本为准（本文不复述，避免与 scripts 漂移）；CI 同样只跑 `check`，所以新增测试要挂进某个 `test:*` 脚本、该套件再挂进 `check`，才会被执行（`lint.check.mjs` 规则 5 会拦未接线的套件）。
 - **mock ESM 模块依赖**：要替换模块级 import（如 `SubLLM` 的四个 provider client、工具的 `paimonFuction`）时用 `node:test` 的 `mock.module()`，注册必须在动态 `import` 目标模块之前，运行加 `--experimental-test-module-mocks`（示例见 `test/subllmMedia.test.mjs`、`test/recognitionMedia.test.mjs`）。
-- **模块新增命名导出后，同步所有测试桩**：`mock.module()` 的 `namedExports` 缺了新增导出时注册不会报错，只有真跑到该路径才以 `TypeError` 炸出（本次就漏过一处）。`utils/toolForward.js` 的桩已集中为 `test/fixtures/toolForwardMock.mjs` 工厂——给该模块新增导出只需改工厂一处；其他模块新增导出后请 `grep -rn "mock.module" test/` 核对使用点。
+- **模块新增命名导出后，同步所有测试桩**：`mock.module()` 的 `namedExports` 缺了新增导出时注册不会报错，只有真跑到该路径才以 `TypeError`/`SyntaxError` 炸出（本次就漏过两处）。`utils/toolForward.js` 的桩已集中为 `test/fixtures/toolForwardMock.mjs` 工厂——给该模块新增导出只需改工厂一处；其他模块新增导出后请 `grep -rn "mock.module" test/` 核对使用点。`utils/config.js` 的桩没有工厂，要求是：具名导出至少 `Config` 与 `providerDefaults`（`guoba.support.js` 顶部就 import 这两个），且 `Config` 自带 `getConfig`/`save`/`commit`——锅巴的保存路径走 `Config.commit(candidate)` 而不是 `save`。
 - 断言脚本（非 node:test 结构）作为"文件级"测试加入对应 npm script 即可。
 
 ## 复跑 CI（模拟宿主）

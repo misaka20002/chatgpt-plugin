@@ -54,5 +54,5 @@ jobs:
           printf '{"name":"md5","type":"module","main":"index.js"}\n' > "$HOST_ROOT/node_modules/md5/package.json"
           printf 'import { createHash } from "node:crypto"\nexport default function md5(data) {\n  return createHash("md5").update(data).digest("hex")\n}\n' > "$HOST_ROOT/node_modules/md5/index.js"
       - run: pnpm run check
-        # check 现在包含 test:media 与 test:group-reply。
+        # 套件组成以 package.json 的 check 脚本为准，这里不复述（曾写过具体套件名，加套件后就漂移了）。
         # 内容探测用例依赖宿主的 file-type；CI 没装时测试会自己标 skip（# skipped 3），不会变红。

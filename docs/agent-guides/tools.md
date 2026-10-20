@@ -9,7 +9,7 @@
 ## 智能模式工具
 `opt.enableSmart` 时调用 `collectTools(e)` 收集工具（条件注册，如 `{ condition: Config.enableMemory, ToolClass: MemoryTool }`）→ 工具 schema 注入 → 模型调用工具 → 执行 `func(opts, e)` → 结果回填。**工具注册统一由配置开关控制，勿新增无条件注册。**
 
-**新增搜索/网络来源工具时，三处共用同一个字符串键**：`model/core.js` 的 `serpToolMap`、`guoba.support.js` 里 `serpSourceArr` 的选项、`utils/config.js` 的默认数组（默认不启用就不改数组）。键名不一致的典型症状是「锅巴能勾选，但模型看不到工具」；同一个键必须同时出现在前两处。
+**新增搜索/网络来源工具时，四处共用同一个字符串键**：`model/core.js` 的 `serpToolMap`（搜索/网络来源）**或** `serpExtraToolMap`（图片/视频搜索）、`guoba.support.js` 里 `serpSourceArr` 的选项、`utils/config.js` 的默认数组（默认不启用就不改数组）。`collectTools` 里这两个映射**都**按 `Config.serpSourceArr` 过滤、都会进 `tools`，但分别服务不同类工具——网页读取/搜索进 `serpToolMap`，图片视频检索进 `serpExtraToolMap`，放错映射通常仍能注册，却会让同一开关下的工具分居两处、后续改动只命中一个。键名不一致的典型症状是「锅巴能勾选，但模型看不到工具」；同一个键必须同时出现在 `serpSourceArr` 选项与 `core.js` 的某个映射里。
 
 工具的失败/外部内容/鉴权/外部请求等约定如下（`GithubAPITool` 可作参考，但每条都要按具体协议判断，**不要机械照抄**）：
 
