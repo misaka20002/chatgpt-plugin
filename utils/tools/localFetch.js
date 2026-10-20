@@ -14,12 +14,13 @@ import { BlockList, isIP } from 'node:net'
 import { requestBinary, WebFetchError } from './webFetchTransport.js'
 import { requireHttpUrl } from './webContent.js'
 import { convertHTMLToMarkdown } from './htmlMarkdown.js'
+import { stripTags } from './htmlText.js'
 
 /** 响应体上限：与托管提取的 8 MiB 分开，本地抓取只需要正文，5 MiB 足够 */
 const MAX_BYTES = 5 * 1024 * 1024
 
 /** 整次抓取（含重定向）的总预算，不是每一跳的 */
-export const LOCAL_FETCH_TIMEOUT_MS = 30000
+const LOCAL_FETCH_TIMEOUT_MS = 30000
 
 /** 最多跟随几跳重定向；每一跳都要重新校验目标主机 */
 const MAX_REDIRECTS = 5
@@ -35,6 +36,10 @@ const ACCEPT = 'text/html,application/xhtml+xml,text/plain;q=0.9,application/jso
 /**
  * 私网与保留地址段。模型可以把任意地址塞进 tool arguments，而这些结果是会发到群里的：
  * `http://127.0.0.1:6099` 就是 Yunzai 自己的管理面板。本地抓取没有中间人，必须自己拦。
+ *
+ * IPv6 侧按 128 位真实地址判定，不能只匹配字面写法：`::ffff:7f00:1` 与 `::ffff:127.0.0.1`
+ * 是同一个地址；`::`、`fec0::/10`（已废弃的 site-local）、`ff00::/8`（组播）同样不可达外部。
+ * 这条与 `docs/agent-guides/tools.md` 里既有的媒体地址校验口径一致。
  */
 const BLOCKED_RANGES = new BlockList()
 BLOCKED_RANGES.addSubnet('0.0.0.0', 8, 'ipv4')
@@ -44,14 +49,39 @@ BLOCKED_RANGES.addSubnet('127.0.0.0', 8, 'ipv4')
 BLOCKED_RANGES.addSubnet('169.254.0.0', 16, 'ipv4')
 BLOCKED_RANGES.addSubnet('172.16.0.0', 12, 'ipv4')
 BLOCKED_RANGES.addSubnet('192.168.0.0', 16, 'ipv4')
+BLOCKED_RANGES.addAddress('::', 'ipv6')
 BLOCKED_RANGES.addAddress('::1', 'ipv6')
+BLOCKED_RANGES.addSubnet('64:ff9b:1::', 48, 'ipv6')
 BLOCKED_RANGES.addSubnet('fc00::', 7, 'ipv6')
 BLOCKED_RANGES.addSubnet('fe80::', 10, 'ipv6')
+BLOCKED_RANGES.addSubnet('fec0::', 10, 'ipv6')
+BLOCKED_RANGES.addSubnet('ff00::', 8, 'ipv6')
+
+/**
+ * 把 IPv4-mapped 的 IPv6 还原成 IPv4（`::ffff:127.0.0.1` 与 `::ffff:7f00:1` 两种写法）。
+ * 不还原就会漏掉整个 v4 私网——只查 IPv6 段时 `::ffff:127.0.0.1` 不命中任何一条。
+ * @param {string} address
+ * @returns {string} 还原后的 IPv4，非 mapped 地址返回空串
+ */
+function mappedIPv4(address) {
+  const dotted = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(address)
+  if (dotted) return dotted[1]
+  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(address)
+  if (!hex) return ''
+  const high = parseInt(hex[1], 16)
+  const low = parseInt(hex[2], 16)
+  return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`
+}
 
 function isBlockedAddress(address) {
   const family = isIP(address)
   if (!family) return false
-  return BLOCKED_RANGES.check(address, family === 4 ? 'ipv4' : 'ipv6')
+  if (family === 6) {
+    const v4 = mappedIPv4(address)
+    if (v4) return isBlockedAddress(v4)
+    return BLOCKED_RANGES.check(address, 'ipv6')
+  }
+  return BLOCKED_RANGES.check(address, 'ipv4')
 }
 
 /**
@@ -128,20 +158,16 @@ function decodeBytes(bytes, label) {
   return new TextDecoder('utf-8').decode(bytes)
 }
 
+/**
+ * 取 `<title>`。要在转换前从原始 HTML 里拿——`htmlMarkdown.js` 会丢掉 `<head>`。
+ * 实体解码与搜索结果页共用 `htmlText.js`，否则标题里的 `&mdash;` 会原样进契约头。
+ * @param {string} html
+ * @returns {string}
+ */
 function titleOf(html) {
   const matched = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)
   if (!matched) return ''
-  return matched[1]
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&#x27;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 200)
+  return stripTags(matched[1]).slice(0, 200)
 }
 
 /**
@@ -151,9 +177,9 @@ function titleOf(html) {
  * 不含模型输入）。重定向的跟随放在这里而不是 fetch 的 `redirect: 'follow'`，就是为了让钩子
  * 有机会看到中间跳。
  * @param {string} url
- * @param {{ headers?: object, timeoutMs: number, maxBytes?: number, validate?: (url: URL) => Promise<void> }} options
+ * @param {{ headers?: object, timeoutMs: number, maxBytes?: number, validate?: (url: URL) => Promise<void>, onHeaders?: (meta: { status: number, ok: boolean, contentType: string }) => void }} options
  */
-async function requestFollowing(url, { headers = {}, timeoutMs, maxBytes = MAX_BYTES, validate } = {}) {
+async function requestFollowing(url, { headers = {}, timeoutMs, maxBytes = MAX_BYTES, validate, onHeaders } = {}) {
   let current = url
   const deadline = Date.now() + timeoutMs
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -164,7 +190,7 @@ async function requestFollowing(url, { headers = {}, timeoutMs, maxBytes = MAX_B
     if (remaining <= 0) {
       throw new WebFetchError(`请求超时（${timeoutMs / 1000} 秒）`)
     }
-    const response = await requestBinary(current, { headers }, { timeoutMs: remaining, maxBytes })
+    const response = await requestBinary(current, { headers }, { timeoutMs: remaining, maxBytes, onHeaders })
     if (response.status >= 300 && response.status < 400) {
       if (!response.location) {
         throw new WebFetchError(`站点返回了 HTTP ${response.status} 重定向但没有给出 Location`, { status: response.status })
@@ -178,12 +204,27 @@ async function requestFollowing(url, { headers = {}, timeoutMs, maxBytes = MAX_B
 }
 
 /**
+ * 去掉内联图片：`![alt](data:image/svg+xml;base64,…)` 这类。
+ *
+ * 很多站点的 logo/图标是内联 SVG，转换后是一整段 base64。模型看不了图片，这段却会实打实地
+ * 挤掉正文——实测 `opencode.ai/zh` 的转换结果有 61% 是它、`cn.bing.com` 41%。转换器本身
+ * 忠实保留（它不只是给本插件用），过滤放在这一层：对外输出是给模型读的。
+ * @param {string} markdown
+ * @returns {string}
+ */
+function stripInlineImages(markdown) {
+  return markdown
+    .replace(/!\[[^\]]*\]\(\s*data:[^)]*\)/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+}
+
+/**
  * 抓一页并转成 Markdown。
  *
  * 失败一律抛 `WebFetchError`，消息里带得上原因（HTTP 状态、超时、内容类型、私网拦截）。
  * 调用方据此返回 `Error: …`，不要把失败当成「这一页没有内容」。
  * @param {unknown} value 模型给的地址
- * @param {{ timeoutMs?: number }} [options] 只给测试留口子，工具调用不传
+ * @param {{ timeoutMs?: number }} [options] 搜索工具用它把「抓正文」压进自己的总预算
  * @returns {Promise<{ url: string, title: string, text: string, contentType: string }>}
  */
 export async function fetchLocalPage(value, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS } = {}) {
@@ -194,7 +235,15 @@ export async function fetchLocalPage(value, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS
       'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
     },
     timeoutMs,
-    validate: assertPublicTarget
+    validate: assertPublicTarget,
+    // 在读 body 之前按 content-type 拦掉 PDF / 图片：等下载完 5 MiB 再报错是白花流量
+    onHeaders: ({ status, contentType }) => {
+      if (status < 200 || status >= 300) return
+      const mime = mimeOf(contentType)
+      if (!isTextualMime(mime)) {
+        throw new WebFetchError(`不支持的内容类型：${mime}`, { status })
+      }
+    }
   })
 
   if (response.status === 403) {
@@ -205,10 +254,6 @@ export async function fetchLocalPage(value, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS
   }
 
   const mime = mimeOf(response.contentType)
-  if (!isTextualMime(mime)) {
-    throw new WebFetchError(`不支持的内容类型：${mime}`, { status: response.status })
-  }
-
   const charset = charsetFromContentType(response.contentType) || charsetFromMeta(response.body)
   const raw = decodeBytes(response.body, charset)
   const isHtml = mime === 'text/html' || mime === 'application/xhtml+xml' || /^\s*<(?:!doctype|html)/i.test(raw)
@@ -219,21 +264,22 @@ export async function fetchLocalPage(value, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS
   return {
     url: response.url,
     title: titleOf(raw),
-    text: convertHTMLToMarkdown(raw).trim(),
+    text: stripInlineImages(convertHTMLToMarkdown(raw)).trim(),
     contentType: mime
   }
 }
 
 /**
- * 取一份 HTML 原文（不做 Markdown 转换、不拦私网）。
+ * 取一份 HTML 原文：不转 Markdown，**也不校验私网**。
  *
- * 只给「地址由插件自己拼、不含模型输入」的固定端点用——目前是三个搜索引擎。它不调
- * `assertPublicTarget`，所以**不要**拿它去读模型给的 URL。
+ * 名字里的 `Raw` 不只是「没转换」，更是「没设防」：它只给**地址由插件自己拼、不含模型输入**的
+ * 固定端点用（目前是三个搜索引擎）。不要拿它去读模型给的 URL——那条路是 `fetchLocalPage`，
+ * 它会在每一跳重定向上做私网拦截。
  * @param {string} url
  * @param {{ timeoutMs?: number, headers?: object }} [options]
  * @returns {Promise<{ url: string, status: number, contentType: string, text: string }>}
  */
-export async function fetchText(url, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS, headers = {} } = {}) {
+export async function fetchRawHtml(url, { timeoutMs = LOCAL_FETCH_TIMEOUT_MS, headers = {} } = {}) {
   const response = await requestFollowing(url, {
     headers: {
       'User-Agent': USER_AGENT,

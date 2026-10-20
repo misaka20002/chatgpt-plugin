@@ -1,3 +1,13 @@
+/**
+ * Chromium 连接/启动的旧封装。
+ *
+ * **当前没有任何模块 import 它**：原先唯一的调用方是 `website` 工具的 puppeteer 通道，
+ * 那条路已按 ADR 0005 删除（正文覆盖不比纯 HTTP 好，却要 2–5 秒一页加一个 Chromium）。
+ * 保留是因为删除文件属于单独议题，不在这里顺手做。
+ *
+ * 不要拿它读网页：`ChatGPTPuppeteer.close()` 关的是共享实例（连的是 `127.0.0.1:51777`），
+ * 一旦连上，`close()` 会把插件自己的头像/数学渲染一起关掉——这正是当初删掉那个通道的原因。
+ */
 import lodash from 'lodash'
 import { Config } from './config.js'
 let puppeteer = {}

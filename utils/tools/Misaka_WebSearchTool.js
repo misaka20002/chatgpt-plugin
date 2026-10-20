@@ -1,5 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
-import { fetchText, fetchLocalPage } from './localFetch.js'
+import { fetchLocalPage, fetchRawHtml } from './localFetch.js'
+import { parseBaidu, parseBing, parseDuckDuckGo } from './searchParsers.js'
 import { UNTRUSTED_NOTICE, capForModel } from './webContent.js'
 
 /**
@@ -11,7 +12,13 @@ import { UNTRUSTED_NOTICE, capForModel } from './webContent.js'
 
 const ENGINE_TIMEOUT_MS = 15000
 
-/** 结果页正文的抓取预算：三条并发，整体最多等这么久 */
+/**
+ * 整次搜索（引擎轮询 + 抓正文）的总预算。两个阶段共用一个 deadline，因为旧实现最坏要
+ * 3 × 15 秒引擎 + 8 秒正文 ≈ 53 秒——一次工具调用不该占住这么久。
+ */
+const SEARCH_BUDGET_MS = 20000
+
+/** 抓正文阶段自己的上限：三条并发，整体最多等这么久（总预算剩得更少时按剩余的算） */
 const BODY_TIMEOUT_MS = 8000
 
 /** 只给前几条抓正文；再多就是拿延迟换信息量 */
@@ -20,118 +27,6 @@ const BODY_RESULT_COUNT = 3
 const BODY_CHARS = 2000
 
 const MAX_RESULTS = 20
-
-const MAX_TITLE_CHARS = 200
-
-function decodeEntities(text) {
-  return String(text)
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => safeFromCodePoint(parseInt(code, 16)))
-    .replace(/&#(\d+);/g, (_, code) => safeFromCodePoint(Number(code)))
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&ensp;|&emsp;|&thinsp;/g, ' ')
-    .replace(/&middot;/g, '·')
-    .replace(/&hellip;/g, '…')
-    .replace(/&mdash;/g, '—')
-    .replace(/&ndash;/g, '–')
-    .replace(/&ldquo;/g, '“')
-    .replace(/&rdquo;/g, '”')
-    .replace(/&lsquo;/g, '‘')
-    .replace(/&rsquo;/g, '’')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-}
-
-function safeFromCodePoint(code) {
-  if (!Number.isFinite(code) || code <= 0 || code > 0x10FFFF) return ''
-  try {
-    return String.fromCodePoint(code)
-  } catch {
-    return ''
-  }
-}
-
-function stripTags(html) {
-  return decodeEntities(String(html).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
-}
-
-/**
- * 解析 Bing 结果页。结果块是 `li.b_algo`，标题链接在 `h2 > a`，摘要在块内第一个 `<p>`。
- * @param {string} html
- * @returns {{ title: string, url: string, snippet: string }[]}
- */
-export function parseBing(html) {
-  const results = []
-  for (const block of String(html).split(/<li[^>]*class="[^"]*b_algo[^"]*"/i).slice(1)) {
-    const anchor = /<h2[^>]*>[\s\S]*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
-    if (!anchor) continue
-    const snippet = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(block)
-    results.push({
-      title: stripTags(anchor[2]).slice(0, MAX_TITLE_CHARS),
-      url: decodeEntities(anchor[1]),
-      snippet: snippet ? stripTags(snippet[1]) : ''
-    })
-  }
-  return results
-}
-
-/**
- * 解析 DuckDuckGo 的 HTML 版结果页。链接类名是 `result__a`，真实地址在 `uddg` 参数里，
- * 需要 URL 解码一次；摘要类名是 `result__snippet`。
- * @param {string} html
- * @returns {{ title: string, url: string, snippet: string }[]}
- */
-export function parseDuckDuckGo(html) {
-  const results = []
-  for (const block of String(html).split(/class="result results_links/i).slice(1)) {
-    const anchor = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
-    if (!anchor) continue
-    const href = /href="([^"]+)"/i.exec(anchor[0])
-    if (!href) continue
-    let url = decodeEntities(href[1])
-    const target = /[?&]uddg=([^&]+)/.exec(url)
-    if (target) {
-      try {
-        url = decodeURIComponent(target[1])
-      } catch {
-        // 编码坏了就保留原链接，至少还能点开
-      }
-    } else if (url.startsWith('//')) {
-      url = `https:${url}`
-    }
-    const snippet = /<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
-    results.push({
-      title: stripTags(anchor[1]).slice(0, MAX_TITLE_CHARS),
-      url,
-      snippet: snippet ? stripTags(snippet[1]) : ''
-    })
-  }
-  return results
-}
-
-/**
- * 解析百度结果页。`h3 > a` 的 href 是 `baidu.com/link?url=…` 跳转链，真实地址在结果块的
- * `mu` 属性里——必须用 `mu`，否则模型拿到的是没法判断来源的跳转链接。
- * @param {string} html
- * @returns {{ title: string, url: string, snippet: string }[]}
- */
-export function parseBaidu(html) {
-  const results = []
-  for (const block of String(html).split(/<div[^>]*class="result/i).slice(1)) {
-    if (!block.includes('<h3')) continue
-    const anchor = /<h3[^>]*>[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
-    if (!anchor) continue
-    const real = /\smu="([^"]+)"/i.exec(block)
-    results.push({
-      title: stripTags(anchor[2]).slice(0, MAX_TITLE_CHARS),
-      url: decodeEntities(real ? real[1] : anchor[1]),
-      snippet: ''
-    })
-  }
-  return results
-}
 
 const ENGINES = [
   {
@@ -151,26 +46,37 @@ const ENGINES = [
   }
 ]
 
-async function searchWith(engine, query, limit) {
-  const { text } = await fetchText(engine.build(query, limit), { timeoutMs: ENGINE_TIMEOUT_MS })
+async function searchWith(engine, query, limit, timeoutMs) {
+  // 地址由上面的 ENGINES 拼出来，不含模型输入，所以走不设防的 fetchRawHtml（模型给的 URL 走 fetchLocalPage）
+  const { text } = await fetchRawHtml(engine.build(query, limit), { timeoutMs })
   return engine.parse(text)
     .filter(item => /^https?:\/\//i.test(item.url))
     .slice(0, limit)
 }
 
 /**
- * 给前几条结果并发补正文。抓不到就留空——一条正文失败不该影响整次搜索。
+ * 给前几条结果并发补正文。抓不到就留空——一条正文失败不该影响整次搜索，但原因要记下来，
+ * 否则「为什么这条没有正文」在日志里查不到。
  * @param {{ title: string, url: string, snippet: string, excerpt?: string }[]} results
+ * @param {number} deadline 整次搜索的截止时刻：抓正文与引擎轮询共用一个预算
  */
-async function attachExcerpts(results) {
+async function attachExcerpts(results, deadline) {
   const targets = results.slice(0, BODY_RESULT_COUNT)
   const outcomes = await Promise.allSettled(
-    targets.map(item => fetchLocalPage(item.url, { timeoutMs: BODY_TIMEOUT_MS }))
+    targets.map(async item => {
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) {
+        throw new Error('搜索总预算已用完，未抓正文')
+      }
+      return fetchLocalPage(item.url, { timeoutMs: Math.min(BODY_TIMEOUT_MS, remaining) })
+    })
   )
   outcomes.forEach((outcome, index) => {
     if (outcome.status === 'fulfilled') {
       targets[index].excerpt = outcome.value.text.slice(0, BODY_CHARS)
+      return
     }
+    globalThis.logger?.warn?.(`[chatgpt][web_search] 正文抓取失败 ${targets[index].url}：${outcome.reason?.message || outcome.reason}`)
   })
 }
 
@@ -204,10 +110,16 @@ export class Misaka_WebSearchTool extends AbstractTool {
     }
 
     const failures = []
+    const deadline = Date.now() + SEARCH_BUDGET_MS
     let hit
     for (const engine of ENGINES) {
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) {
+        failures.push(`${engine.label}: 总预算 ${SEARCH_BUDGET_MS / 1000} 秒已用完，未执行`)
+        continue
+      }
       try {
-        const results = await searchWith(engine, query, limit)
+        const results = await searchWith(engine, query, limit, Math.min(ENGINE_TIMEOUT_MS, remaining))
         if (results.length) {
           hit = { engine, results }
           break
@@ -222,7 +134,7 @@ export class Misaka_WebSearchTool extends AbstractTool {
       return `Error: 三个搜索引擎都没有返回结果（可能被限流或页面结构变化）\n${failures.join('\n')}`
     }
 
-    await attachExcerpts(hit.results)
+    await attachExcerpts(hit.results, deadline)
 
     const blocks = hit.results.map((item, index) => {
       const lines = [`## ${index + 1}. [${item.title || item.url}](${item.url})`]

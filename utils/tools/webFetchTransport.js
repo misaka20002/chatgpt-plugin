@@ -107,29 +107,11 @@ function parseMcpMessage(body) {
  * @returns {Promise<{ status: number, ok: boolean, body: string }>}
  */
 export async function requestText(url, options, { timeoutMs, maxBytes = MAX_RESPONSE_BYTES }) {
-  let response
-  let body
-  try {
-    response = await fetch(url, {
-      ...options,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs)
-    })
-    if (response.status >= 300 && response.status < 400) {
-      await cancelBody(response)
-      throw new WebFetchError(`返回了意外的重定向（HTTP ${response.status}），已拒绝跟随`, { status: response.status })
-    }
-    // body 读取要留在同一个 try 里：超时也可能发生在「响应头已到、body 很慢」阶段
-    body = (await readBytesLimited(response, maxBytes)).toString('utf8')
-  } catch (err) {
-    if (err instanceof WebFetchError) throw err
-    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
-      throw new WebFetchError(`请求超时（${timeoutMs / 1000} 秒）`)
-    }
-    const cause = err?.cause?.code || err?.cause?.message
-    throw new WebFetchError(`请求失败：${err?.message || err}${cause ? `（${cause}）` : ''}`)
+  const { status, ok, body } = await requestBinary(url, options, { timeoutMs, maxBytes })
+  if (status >= 300 && status < 400) {
+    throw new WebFetchError(`返回了意外的重定向（HTTP ${status}），已拒绝跟随`, { status })
   }
-  return { status: response.status, ok: response.ok, body }
+  return { status, ok, body: body.toString('utf8') }
 }
 
 /**
@@ -137,12 +119,15 @@ export async function requestText(url, options, { timeoutMs, maxBytes = MAX_RESP
  *
  * 与 `requestText` 的差别只有两点：不解码（调用方要按 charset 自己解），以及 3xx **不抛错也不跟随**——
  * 本地抓取必须逐跳重新校验目标主机（私网拦截），跟随由调用方的循环负责。
+ *
+ * `onHeaders` 在读完响应头、读 body 之前调用：本地读取用它按 `content-type` 提前拒掉 PDF
+ * 这类内容，否则要把整个文件下完才发现不该读。
  * @param {string} url
  * @param {RequestInit} options
- * @param {{ timeoutMs: number, maxBytes?: number }} limits
+ * @param {{ timeoutMs: number, maxBytes?: number, onHeaders?: (meta: { status: number, ok: boolean, contentType: string }) => void }} limits
  * @returns {Promise<{ status: number, ok: boolean, contentType: string, location: string, body: Buffer }>}
  */
-export async function requestBinary(url, options, { timeoutMs, maxBytes = MAX_RESPONSE_BYTES }) {
+export async function requestBinary(url, options, { timeoutMs, maxBytes = MAX_RESPONSE_BYTES, onHeaders }) {
   let response
   let body
   try {
@@ -151,14 +136,24 @@ export async function requestBinary(url, options, { timeoutMs, maxBytes = MAX_RE
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs)
     })
+    const contentType = response.headers.get('content-type') || ''
     if (response.status >= 300 && response.status < 400) {
       await cancelBody(response)
       return {
         status: response.status,
         ok: false,
-        contentType: response.headers.get('content-type') || '',
+        contentType,
         location: response.headers.get('location') || '',
         body: Buffer.alloc(0)
+      }
+    }
+    if (onHeaders) {
+      try {
+        // 3xx 已在上面返回，这里 meta 里不可能带 location
+        onHeaders({ status: response.status, ok: response.ok, contentType })
+      } catch (err) {
+        await cancelBody(response)
+        throw err
       }
     }
     body = await readBytesLimited(response, maxBytes)

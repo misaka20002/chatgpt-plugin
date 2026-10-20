@@ -2,7 +2,7 @@
  * 纯本地搜索与网页读取工具
  *
  * 覆盖点（按「测试越少越好」定的取舍，只保底，不求全）：
- *  1. 读取：统一契约头 + Markdown 正文 + 按截断标记续读
+ *  1. 读取：统一契约头 + Markdown 正文 + 按截断标记续读 + 内联 base64 图片被滤掉
  *  2. 读取：私网地址被拒且不发请求
  *  3. 读取：GBK 页面按 meta charset 解码
  *  4. 读取：非文本内容、403、超时、字节上限、重定向与跳数上限
@@ -19,7 +19,8 @@ if (!globalThis.logger) {
 }
 
 const { WebsiteTool } = await import('../utils/tools/WebsiteTool.js')
-const { Misaka_WebSearchTool, parseBaidu, parseDuckDuckGo } = await import('../utils/tools/Misaka_WebSearchTool.js')
+const { Misaka_WebSearchTool } = await import('../utils/tools/Misaka_WebSearchTool.js')
+const { parseBaidu, parseDuckDuckGo } = await import('../utils/tools/searchParsers.js')
 
 const realFetch = globalThis.fetch
 let calls = []
@@ -62,6 +63,20 @@ describe('网页读取', () => {
     assert.doesNotMatch(out, /alert\('bad'\)/)
   })
 
+  test('内联 data: 图片不进正文，正常外链图片保留', async () => {
+    // 站点的内联 SVG logo 转换后是一整段 base64，实测能占掉 41–61% 的正文
+    stubFetch(() => html(`<html><head><title>带图</title></head><body>
+      <p>正文</p>
+      <img src="data:image/svg+xml;base64,QUJDREVG" alt="logo">
+      <img src="https://93.184.216.34/a.png" alt="外链图">
+      </body></html>`))
+
+    const out = await new WebsiteTool().func({ url: 'https://93.184.216.34/img' })
+
+    assert.doesNotMatch(out, /QUJDREVG/)
+    assert.match(out, /93\.184\.216\.34\/a\.png/)
+  })
+
   test('续读：按截断标记里的 start 再调一次能拿到后续片段', async () => {
     const body = `<html><head><title>长文</title></head><body><p>${'a'.repeat(20000)}${'B'.repeat(1000)}</p></body></html>`
     stubFetch(() => html(body))
@@ -81,9 +96,21 @@ describe('网页读取', () => {
       throw new Error('不该发出请求')
     })
 
-    const out = await new WebsiteTool().func({ url: 'http://127.0.0.1:6099/' })
-
-    assert.match(out, /拒绝访问私网地址/)
+    // 覆盖 loopback / 私有 / 链路本地 / 0.0.0.0 与两种 IPv4-mapped 写法：只查 v6 段时
+    // `::ffff:7f00:1` 不命中任何一条，整套 v4 私网会被绕过
+    for (const url of [
+      'http://127.0.0.1:6099/',
+      'http://10.1.2.3/',
+      'http://192.168.1.1/',
+      'http://169.254.169.254/latest/meta-data/',
+      'http://0.0.0.0/',
+      'http://[::1]/',
+      'http://[::ffff:127.0.0.1]/',
+      'http://[::ffff:7f00:1]/'
+    ]) {
+      const out = await new WebsiteTool().func({ url })
+      assert.match(out, /拒绝访问私网地址/, url)
+    }
     assert.equal(calls.length, 0)
   })
 
