@@ -8,7 +8,7 @@
 
 - [x] 提取工具单次回填上限为 20000 字符；超过时追加截断标记并给出可续读的 `start`
 - [x] `start` 生效：对同一 URL 传不同偏移能拿到对应片段
-- [x] `failed_results` 非空且 `results` 为空时按失败返回，错误信息包含失败 URL 与原因（沿用该文件既有的 `throw` 风格，不做风格迁移）
+- [x] `failed_results` 非空时按失败返回（本工具单 URL 请求，明细必然针对本页），错误信息包含失败 URL 与原因（沿用该文件既有的 `throw` 风格，不做风格迁移）
 - [x] 提取结果以 `Provider: Tavily`、`URL`、`Title` 开头，并带不可信声明；不再输出原来的中文分段文案
 - [x] `extract_depth` 参数保留，`basic`/`advanced` 的取值校验行为不变
 - [x] 不新增 `format`、`include_images`、`query`、`chunks_per_source` 参数

@@ -110,6 +110,34 @@ describe('tavily_website_extract', () => {
     )
   })
 
+  test('failed_results 非空时即使带了 results 也按失败处理（单 URL 请求，明细必然针对本页）', async () => {
+    stubFetch(() => jsonResponse({
+      results: [{ url: PAGE_URL, raw_content: 'half page' }],
+      failed_results: [{ url: PAGE_URL, error: 'crawl incomplete' }]
+    }))
+
+    await assert.rejects(() => extract({ url: PAGE_URL }), /crawl incomplete/)
+  })
+
+  test('正文为空：抛出（沿用本文件的 throw 风格）', async () => {
+    stubFetch(() => jsonResponse({ results: [{ url: PAGE_URL, raw_content: '   ' }] }))
+
+    await assert.rejects(() => extract({ url: PAGE_URL }), /没有可读文本/)
+  })
+
+  test('start 超出正文长度：抛出', async () => {
+    stubFetch(() => jsonResponse({ results: [{ url: PAGE_URL, raw_content: 'abc' }] }))
+
+    await assert.rejects(() => extract({ url: PAGE_URL, start: 10 }), /start 10 超出正文长度/)
+  })
+
+  test('start 超出可续读上限：抛出且不发请求', async () => {
+    stubFetch(() => jsonResponse({ results: [{ url: PAGE_URL, raw_content: 'abc' }] }))
+
+    await assert.rejects(() => extract({ url: PAGE_URL, start: 9_999_999 }), /超出可续读上限/)
+    assert.equal(fetchCalls.length, 0)
+  })
+
   test('空结果且没有失败明细：抛出', async () => {
     stubFetch(() => jsonResponse({ results: [] }))
 

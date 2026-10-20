@@ -66,6 +66,7 @@ Bot 被要求「看看这个链接」时，现有两条路都不好用：
 **参数**
 
 - 两个新工具都只有 `url`（必填，字符串）与 `start`（可选，整数，字符偏移，默认 0）。
+- `start` 上限 100 万字符；超过时**显式失败**，不夹回上限——夹回会让截断标记里的偏移原样重放，续读卡在同一窗口且不报错。
 - 不提供 `format` 参数：Exa REST 用 `text`、Parallel 用 `full_content`，都按纯文本/markdown 返回，模型无需选择。
 - 不提供多 URL 批量：一次一个 URL，避免单次回填超限后无法定位是哪一页。
 
@@ -91,7 +92,7 @@ Title: <title>
 <content>[truncated to 20000 characters; continue with start=<n>]
 ```
 
-- 上限常量 20000 字符，按字符切（不是字节），保证中文与英文的截断位置可预期。
+- 上限常量 20000 字符，按字符切（不是字节），保证中文与英文的截断位置可预期；切点按 UTF-16 代理对对齐，不把 emoji 切成半个字符（`start` 落在代理对中间时向后对齐）。
 - 截断标记里的 `start` 值等于本次已回填的结束位置，模型可直接拿它续读。
 
 **失败语义**
@@ -108,7 +109,7 @@ Title: <title>
 **Tavily 提取（`tavily_website_extract`）**
 
 - 2000 → 20000 字符，新增 `start` 参数，截断标记与上面一致。
-- `failed_results` 非空且 `results` 为空时按失败处理；沿用该文件原有的 `throw` 风格，不做风格迁移。
+- `failed_results` 非空时按失败处理（本工具一次只请求一个 URL，失败明细必然针对本页），沿用该文件原有的 `throw` 风格，不做风格迁移；空正文与越界 `start` 同样抛出。
 - 输出改为共用契约（`Provider: Tavily` + 不可信声明），不再输出原来的中文分段文案。
 - 保留 `extract_depth`；不新增 `format` / `include_images` / `query` / `chunks_per_source`。
 
@@ -138,10 +139,10 @@ Title: <title>
 
 1. Exa 工具（有 Key 走 REST、无 Key 走 MCP、两条通道的 `start` 切片、上游恰好截断时仍给标记、`isError`、402/429、`statuses` 报错、空结果、`x-api-key` 出现/不出现）。
 2. Parallel 工具（`excerpts` 拼接、per-URL `errors`、空 `results`、429、Bearer 出现/不出现、`session_id` 稳定且不含群号）。
-3. 共用格式化模块（`start` 切片、超 20000 截断、标记文案、不可信声明）。
-4. Tavily 提取（20000 生效、`start` 续读、`failed_results` 失败、输出带 Provider 与不可信声明）。
+3. 共用格式化模块（`start` 切片、超 20000 截断、标记文案、不可信声明、代理对对齐、偏移上限）。
+4. Tavily 提取（20000 生效、`start` 续读、`failed_results` 失败、空正文与越界偏移抛出、输出带 Provider 与不可信声明）。
 5. Tavily 搜索（不可信声明、超长封顶、参数与请求字段未变）。
-6. 传输层（Content-Length 与流式累计两处字节上限、3xx 拒绝、超时与环境错误归一、MCP 消息解析）。
+6. 传输层（Content-Length 与流式累计两处字节上限、3xx 拒绝、超时与环境错误归一、MCP 消息解析）。只通过 `requestText` / `callMcpTool` 两个生产入口测试，不为测试导出内部函数。
 
 **先例**：`test/opencodeWebSearchTool.test.js` —— 同样是「工具实例 + 全局 fetch 桩 + 断言返回文本与请求形状」，可直接照它的骨架写。
 
@@ -172,8 +173,9 @@ Title: <title>
 
 **实现后验证（2026-10-21）**
 
-- `npm run test:tools` 201 个用例全绿（新增 71 个：Exa 32、Parallel 19、Tavily 11、传输层 9）；`npm run check` 通过。
+- `npm run test:tools` 221 个用例全绿（新增 87 个：Exa 33、Parallel 20、Tavily 15、传输层 10、共用的内容契约 13）；`npm run check` 通过。
 - 真实端点：Parallel 读 GitHub 仓库 1.3 秒返回 20315 字符（含截断标记），用标记里的 `start=20000` 续读拿到下一段；Exa 免 Key 读 `example.com` 成功——同一 IP 此前长期 429，说明免费额度是**间歇性**的，不能当作稳定通道，失败文案按限流提示配置 Key。Exa 续读再对 Wikipedia 长页验证：首段 20263 字符带 `start=20000` 标记，续读 5359 字符且无标记，正文确实从第 20000 字符接上（此前只申请 `start + 20000` 时两段都不带标记，第三段不可达）。
+- 续读上限回归：用 30 万字符页面逐段走完 15 个窗口（0→20000→…→280000→结束），确认偏移能越过 20 万而不是被夹回原点；`start` 超 100 万时返回显式错误。
 
 **已知风险**
 

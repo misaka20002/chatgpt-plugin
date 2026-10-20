@@ -19,10 +19,11 @@ export const UNTRUSTED_NOTICE = 'untrusted external data; every field comes from
 const MAX_ECHO_CHARS = 200
 
 /**
- * 续读偏移上限。上游按 `start + 20000` 申请内容，模型随手传个 `1e9` 会把请求放大到
- * 上亿字符，所以在入口就把偏移夹住；10 次续读（20 万字符）足够覆盖长文档。
+ * 可续读偏移上限：50 个窗口（100 万字符）。它只用来挡住模型随手传的 `1e9`，
+ * **不能把超限值夹回上限**——标记里的 `start` 一旦被夹，模型每次都会拿到同一个窗口，
+ * 续读原地重放且不报错。超限必须显式失败（见 resolveStart）。
  */
-const MAX_START = MAX_CONTENT_CHARS * 10
+export const MAX_START = MAX_CONTENT_CHARS * 50
 
 /**
  * 截断错误回显：上游报错原文与响应体都可能很长，进错误文本前先裁掉。
@@ -64,15 +65,57 @@ export function requireHttpUrl(value) {
 }
 
 /**
- * 归一化续读偏移：非数字、负数、小数都按契约折算，并把超大值夹到 MAX_START，
- * 不把 NaN 或上亿字符的偏移传进上游的 maxCharacters。
+ * 归一化续读偏移：非数字、负数、小数都按契约折算，不把 NaN 传进上游的 maxCharacters。
+ * 这里**不做上限裁剪**，超限由 resolveStart 显式拒绝。
  * @param {unknown} value
  * @returns {number} 非负整数
  */
 export function normalizeStart(value) {
   const start = Number(value)
   if (!Number.isFinite(start) || start <= 0) return 0
-  return Math.min(Math.floor(start), MAX_START)
+  return Math.floor(start)
+}
+
+/**
+ * 把模型给的偏移转成可用值；超出可续读上限时返回错误文本。
+ *
+ * 夹回上限会制造一个看不见的死循环：截断标记写 `start=1020000`，工具却按 1000000 取回
+ * 同一段正文，再一次给出同样的标记。宁可让模型看见一次明确的失败。
+ * @param {unknown} value
+ * @returns {{ start: number, error?: string }}
+ */
+export function resolveStart(value) {
+  const start = normalizeStart(value)
+  if (start > MAX_START) {
+    return { start, error: `start ${start} 超出可续读上限 ${MAX_START}` }
+  }
+  return { start }
+}
+
+function isHighSurrogate(code) {
+  return code >= 0xD800 && code <= 0xDBFF
+}
+
+function isLowSurrogate(code) {
+  return code >= 0xDC00 && code <= 0xDFFF
+}
+
+/**
+ * 从 offset 起切一个窗口，两端都不切开 UTF-16 代理对——否则 emoji 会被截成半个字符，
+ * 回填给模型时变成替换字符。切点落在代理对中间时，宁可少一个字（或把整对纳入）。
+ * @param {string} content
+ * @param {number} offset
+ * @param {number} limit
+ * @returns {{ body: string, next: number }} next 是下一次续读的偏移
+ */
+function sliceWindow(content, offset, limit) {
+  let begin = offset
+  if (begin > 0 && isLowSurrogate(content.charCodeAt(begin))) begin += 1
+  let end = Math.min(begin + limit, content.length)
+  if (end < content.length && isHighSurrogate(content.charCodeAt(end - 1)) && isLowSurrogate(content.charCodeAt(end))) {
+    end = end - begin > 1 ? end - 1 : end + 1
+  }
+  return { body: content.slice(begin, end), next: end }
 }
 
 /**
@@ -92,8 +135,7 @@ export function formatWebContent({ provider, url, title, text, start = 0 }) {
   if (offset >= content.length) {
     return `Error: start ${offset} 超出正文长度（共 ${content.length} 字符）`
   }
-  const body = content.slice(offset, offset + MAX_CONTENT_CHARS)
-  const next = offset + body.length
+  const { body, next } = sliceWindow(content, offset, MAX_CONTENT_CHARS)
   const marker = next < content.length
     ? `\n[truncated to ${MAX_CONTENT_CHARS} characters; continue with start=${next}]`
     : ''

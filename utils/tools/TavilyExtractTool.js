@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { clipForError, formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
+import { clipForError, formatWebContent, requireHttpUrl, resolveStart } from './webContent.js'
 import { requestText } from './webFetchTransport.js'
 
 /** 使用 Tavily 提取完整内容的工具 */
@@ -31,7 +31,8 @@ export class TavilyExtractTool extends AbstractTool {
         const { extract_depth = 'basic' } = opts
         // 校验放在取 Key 与发请求之前：非法地址不该被送到第三方
         const url = requireHttpUrl(opts?.url)
-        const start = normalizeStart(opts?.start)
+        const { start, error: startError } = resolveStart(opts?.start)
+        if (startError) throw new Error(startError)
 
         // 获取 Tavily API 密钥
         const tavilyKey = Config.getTavilyKey
@@ -64,34 +65,39 @@ export class TavilyExtractTool extends AbstractTool {
             data = JSON.parse(body)
         } catch (error) {
             console.error('Tavily extract error:', error)
-
-            // 如果是网络错误，提供更友好的错误信息
-            if (error.message.includes('timeout') || error.message.includes('ENOTFOUND')) {
-                throw new Error(`网页提取失败: 无法访问指定URL或网络超时 (${url})`)
-            }
-
+            // 传输层已把超时/网络原因写进 message，这里只补工具上下文，不改写措辞
             throw new Error(`网页提取失败: ${error.message}`)
+        }
+
+        // failed_results 是 Tavily 的逐 URL 失败明细。本工具一次只请求一个 URL，
+        // 所以只要它非空就一定是本页失败，不能拿"页面没内容"糊过去
+        const failed = Array.isArray(data.failed_results) ? data.failed_results : []
+        if (failed.length) {
+            const detail = failed
+                .map(item => `${item.url || url}（${item.error || '未知错误'}）`)
+                .join('；')
+            throw new Error(`网页提取失败: Tavily 未能提取内容 ${detail}`)
         }
 
         const results = Array.isArray(data.results) ? data.results : []
         if (!results.length) {
-            // failed_results 是 Tavily 的逐 URL 失败明细，不能当成"页面没内容"静默返回
-            const failed = Array.isArray(data.failed_results) ? data.failed_results : []
-            if (failed.length) {
-                const detail = failed
-                    .map(item => `${item.url || url}（${item.error || '未知错误'}）`)
-                    .join('；')
-                throw new Error(`网页提取失败: Tavily 未能提取内容 ${detail}`)
-            }
             throw new Error(`网页提取失败: 没有从 ${url} 提取到内容`)
         }
 
         const result = results[0]
+        const text = String(result.raw_content ?? '')
+        // 空正文与越界偏移在本文件按既有风格抛出，保持与其他失败路径一致
+        if (!text.trim()) {
+            throw new Error(`网页提取失败: ${result.url || url} 没有可读文本`)
+        }
+        if (start >= text.length) {
+            throw new Error(`网页提取失败: start ${start} 超出正文长度（共 ${text.length} 字符）`)
+        }
         return formatWebContent({
             provider: 'Tavily',
             url: result.url || url,
             title: result.title,
-            text: result.raw_content,
+            text,
             start
         })
     }

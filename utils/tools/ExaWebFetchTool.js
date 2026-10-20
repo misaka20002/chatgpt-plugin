@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { MAX_CONTENT_CHARS, clipForError, formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
+import { MAX_CONTENT_CHARS, clipForError, formatWebContent, requireHttpUrl, resolveStart } from './webContent.js'
 import { WebFetchError, callMcpTool, requestText } from './webFetchTransport.js'
 
 /*
@@ -138,7 +138,8 @@ export class ExaWebFetchTool extends AbstractTool {
     } catch (err) {
       return `Error: ${err.message}`
     }
-    const start = normalizeStart(opts?.start)
+    const { start, error } = resolveStart(opts?.start)
+    if (error) return `Error: ${error}`
     const apiKey = String(Config.exaApiKey || '').trim()
 
     try {

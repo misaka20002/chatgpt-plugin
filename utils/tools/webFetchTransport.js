@@ -13,7 +13,7 @@ import { clipForError } from './webContent.js'
  * 响应体字节上限。Parallel 的 `full_content` 会返回整页（实测 Node 文档 80 万字符），
  * 256 KiB 那种搜索工具的口径在这里会直接误杀正常页面，所以放到 8 MiB。
  */
-export const MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+const MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 
 /** 传输层自己的错误：消息已带好上下文，上层不要再拼一次 */
 export class WebFetchError extends Error {
@@ -33,7 +33,7 @@ export class WebFetchError extends Error {
  * 取消尚未消费的响应体，否则连接不能及时复用。
  * @param {Response} response
  */
-export async function cancelBody(response) {
+async function cancelBody(response) {
   try {
     await response.body?.cancel()
   } catch {
@@ -48,7 +48,7 @@ export async function cancelBody(response) {
  * @param {number} [maxBytes]
  * @returns {Promise<string>}
  */
-export async function readBodyLimited(response, maxBytes = MAX_RESPONSE_BYTES) {
+async function readBodyLimited(response, maxBytes = MAX_RESPONSE_BYTES) {
   const declared = Number(response.headers.get('content-length'))
   if (Number.isFinite(declared) && declared > maxBytes) {
     await cancelBody(response)
@@ -79,7 +79,7 @@ export async function readBodyLimited(response, maxBytes = MAX_RESPONSE_BYTES) {
  * @param {string} body
  * @returns {object|null}
  */
-export function parseMcpMessage(body) {
+function parseMcpMessage(body) {
   const candidates = [body.trim()]
   for (const line of body.split(/\r?\n/)) {
     if (line.startsWith('data:')) candidates.push(line.slice(5).trim())

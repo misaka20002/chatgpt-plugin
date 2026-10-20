@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
+import { formatWebContent, requireHttpUrl, resolveStart } from './webContent.js'
 import { WebFetchError, callMcpTool } from './webFetchTransport.js'
 import { conversationSessionId } from './toolSession.js'
 
@@ -95,7 +95,8 @@ export class ParallelWebFetchTool extends AbstractTool {
     } catch (err) {
       return `Error: ${err.message}`
     }
-    const start = normalizeStart(opts?.start)
+    const { start, error } = resolveStart(opts?.start)
+    if (error) return `Error: ${error}`
     const apiKey = String(Config.parallelApiKey || '').trim()
 
     try {

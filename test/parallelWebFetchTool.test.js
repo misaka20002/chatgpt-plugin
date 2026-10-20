@@ -221,4 +221,13 @@ describe('输入边界', () => {
       assert.equal(fetchCalls.length, 0)
     })
   }
+
+  test('start 超出可续读上限：直接报错且不发请求', async () => {
+    stubFetch(() => pageResponse({ results: [{ url: PAGE_URL, excerpts: ['x'] }] }))
+
+    const result = await read({ url: PAGE_URL, start: 9_999_999 })
+
+    assert.match(result, /^Error: start 9999999 超出可续读上限/)
+    assert.equal(fetchCalls.length, 0)
+  })
 })
