@@ -18,6 +18,7 @@
  * 2. `client/` 与 `model/` 里出现 `console.log(`（跳过注释行）—— 请求组装路径必须走 `logger`。
  * 3. 测试文件必须被某个 `test:*` 脚本引用；只需本机环境才能跑的，文件头写 `manual test:` 豁免。
  * 4. `test:*` 脚本里引用的文件必须存在。
+ * 5. 每个 `test:*` 必须被 `check` 调用，或在 CHECK_EXCLUDED 里写明豁免理由——否则 CI 永远不跑它。
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -112,9 +113,26 @@ for (const file of new Set(referenced)) {
   }
 }
 
+// 规则 5：每个 test:* 要么被 check 调用，要么进显式豁免清单——否则它只活在本地
+// （历史事故：test:tools 里的工具测试长期不在 check 里，CI 变绿却对工具改动零覆盖）
+const CHECK_EXCLUDED = new Set([
+  'test:avatar', // 头像处理专项，慢
+  'test:memory', // 记忆系统专项，依赖宿主图谱/Redis 环境
+  'test:render', // 数学渲染专项，需要浏览器
+  'test:meme', // meme 慢测试
+  'test:meme:fast', // meme 日常回归，仍属专项
+  'test:meme:mutants', // meme 变异测试，仅专项
+])
+const checkScript = scripts.check || ''
+for (const name of Object.keys(scripts).filter(key => key.startsWith('test:'))) {
+  if (CHECK_EXCLUDED.has(name)) continue
+  if (checkScript.includes(`npm run ${name}`)) continue
+  violations.push(`package.json 的 ${name} 没有接进 check；接进去，或加进 lint.check.mjs 的 CHECK_EXCLUDED 并写明原因`)
+}
+
 if (violations.length) {
   console.error(`[ChatGPT] 风格检查未通过，共 ${violations.length} 处：`)
   for (const item of violations) console.error('  - ' + item)
   process.exit(1)
 }
-console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载与脚本路径')
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径与套件接线')

@@ -13,6 +13,7 @@
  */
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 if (!globalThis.logger) {
   globalThis.logger = { info() {}, warn() {}, error() {}, debug() {}, mark() {}, trace() {}, log() {} }
@@ -26,6 +27,8 @@ const MCP_ENDPOINT = 'https://mcp.exa.ai/mcp'
 const REST_ENDPOINT = 'https://api.exa.ai/contents'
 const PAGE_URL = 'https://example.com/article'
 const EXA_RATE_LIMIT_NOTICE = "You've hit Exa's free MCP rate limit. To continue using without limits, create your own Exa API key."
+/** 2026-10-21 真实抓取的 web_fetch_exa 响应（见 test/fixtures/providers/README.md） */
+const REAL_MCP_RESPONSE = readFileSync(new URL('./fixtures/providers/exa-web-fetch-mcp.txt', import.meta.url), 'utf8')
 
 const realFetch = globalThis.fetch
 let fetchCalls = []
@@ -129,6 +132,16 @@ describe('通道选择与请求形状', () => {
 
     assert.ok(result.includes('plain body'))
   })
+
+  test('真实响应样张：SSE + markdown 纯文本，没有 title 字段', async () => {
+    stubFetch(() => new Response(REAL_MCP_RESPONSE, { status: 200, headers: { 'content-type': 'text/event-stream' } }))
+
+    const result = await read({ url: 'https://example.com' })
+
+    assert.ok(result.startsWith('Web page content from Exa for https://example.com/'))
+    assert.ok(result.includes('# Example Domain'))
+    assert.ok(result.includes('Title: (untitled)'))
+  })
 })
 
 /* ================= 回填边界 ================= */
@@ -204,6 +217,28 @@ describe('回填边界', () => {
     stubFetch(() => sseResponse(mcpResult('abc')))
 
     assert.match(await read({ url: PAGE_URL, start: 10 }), /^Error: start 10 超出正文长度/)
+  })
+
+  test('长文续读：窗口严格推进直到页尾，不会原地重放（回归：start 曾被夹回上限）', async () => {
+    const page = 'x'.repeat(300000)
+    stubFetch(call => sseResponse(mcpResult(page.slice(0, call.body.params.arguments.maxCharacters))))
+
+    const windows = []
+    let start = 0
+    let result = ''
+    for (let i = 0; i < 30; i++) {
+      windows.push(start)
+      result = await read({ url: PAGE_URL, start })
+      const marker = result.match(/continue with start=(\d+)/)
+      if (!marker) break
+      start = Number(marker[1])
+    }
+
+    // 30 万字符 = 15 个 20000 的窗口，偏移必须一路递增到 280000
+    assert.equal(windows.length, 15)
+    windows.forEach((value, index) => assert.equal(value, index * MAX_CONTENT_CHARS))
+    assert.ok(!result.includes('[truncated'))
+    assert.ok(result.endsWith('x'.repeat(MAX_CONTENT_CHARS)))
   })
 })
 

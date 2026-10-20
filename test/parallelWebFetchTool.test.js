@@ -12,6 +12,7 @@
  */
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 if (!globalThis.logger) {
   globalThis.logger = { info() {}, warn() {}, error() {}, debug() {}, mark() {}, trace() {}, log() {} }
@@ -25,6 +26,8 @@ const ENDPOINT = 'https://search.parallel.ai/mcp'
 const PAGE_URL = 'https://example.com/article'
 const GROUP_ID = 736450001
 const event = { group_id: GROUP_ID, user_id: 20002 }
+/** 2026-10-21 真实抓取的 web_fetch 响应（见 test/fixtures/providers/README.md） */
+const REAL_MCP_RESPONSE = readFileSync(new URL('./fixtures/providers/parallel-web-fetch.json', import.meta.url), 'utf8')
 
 const realFetch = globalThis.fetch
 let fetchCalls = []
@@ -102,6 +105,16 @@ describe('请求形状与正文拼装', () => {
 
     assert.ok(result.includes('Title: (untitled)'))
     assert.ok(result.includes('first\n\nsecond'))
+  })
+
+  test('真实响应样张：JSON-RPC 里嵌字符串化 JSON，正文在 excerpts', async () => {
+    stubFetch(() => new Response(REAL_MCP_RESPONSE, { status: 200, headers: { 'content-type': 'application/json' } }))
+
+    const result = await read({ url: 'https://example.com' })
+
+    assert.ok(result.startsWith('Web page content from Parallel for https://example.com'))
+    assert.ok(result.includes('Title: Example Domain'))
+    assert.ok(result.includes('This domain is for use in documentation examples'))
   })
 
   test('session_id 同一群稳定、不同群不同、不含真实群号', async () => {

@@ -9,6 +9,8 @@
 ## 智能模式工具
 `opt.enableSmart` 时调用 `collectTools(e)` 收集工具（条件注册，如 `{ condition: Config.enableMemory, ToolClass: MemoryTool }`）→ 工具 schema 注入 → 模型调用工具 → 执行 `func(opts, e)` → 结果回填。**工具注册统一由配置开关控制，勿新增无条件注册。**
 
+**新增搜索/网络来源工具时，三处共用同一个字符串键**：`model/core.js` 的 `serpToolMap`、`guoba.support.js` 里 `serpSourceArr` 的选项、`utils/config.js` 的默认数组（默认不启用就不改数组）。键名不一致的典型症状是「锅巴能勾选，但模型看不到工具」；同一个键必须同时出现在前两处。
+
 工具的失败/外部内容/鉴权/外部请求等约定如下（`GithubAPITool` 可作参考，但每条都要按具体协议判断，**不要机械照抄**）：
 
 - **失败要显式标记为错误，不能返回"假成功"**：本仓库工具的**既定统一风格是 `return 'Error: …'`**（`GeminiSearchTool`、`MemoryTool`、`UserProfileTool`、`Misaka_WebSearchTool`、`GroupMemberSkillTool` 等大量工具在用），这是有意选择，**不要为了"更规范"改成 `throw`，也不要引入 `is_error` 前缀探测、结构化错误包装之类的新机制**——已实测该文本语义被各对话模型正确理解（含 Gemini 分支），审查或重构时不要纠缠这一点。四个执行器（`model/core.js` 的 OpenAI Chat Completions 与 Responses 分支、`client/ClaudeAPIClient.js`、`client/CustomGoogleGeminiClient.js`）都会 catch 工具异常并作为工具结果回传模型，所以 `throw`（`GithubTool`、`SearchBilibiliTool` 等在用）同样可用，但**修改工具时沿用该文件原有风格即可，不做风格迁移**。真正要杜绝的是另一件事：把 4xx/5xx 的错误 JSON 或失败文本原样当结果返回——那种"失败"在文本上与正常数据无法区分，模型会以为请求成功了。
