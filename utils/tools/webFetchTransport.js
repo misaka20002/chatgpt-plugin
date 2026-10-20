@@ -7,14 +7,13 @@
  * 避免两个工具各写一遍导致其中一份漏掉资源边界。
  */
 
+import { clipForError } from './webContent.js'
+
 /**
  * 响应体字节上限。Parallel 的 `full_content` 会返回整页（实测 Node 文档 80 万字符），
  * 256 KiB 那种搜索工具的口径在这里会直接误杀正常页面，所以放到 8 MiB。
  */
 export const MAX_RESPONSE_BYTES = 8 * 1024 * 1024
-
-/** 错误信息里回显上游报错原文的长度上限 */
-const MAX_ERROR_CHARS = 200
 
 /** 传输层自己的错误：消息已带好上下文，上层不要再拼一次 */
 export class WebFetchError extends Error {
@@ -29,10 +28,6 @@ export class WebFetchError extends Error {
   }
 }
 
-function clip(text) {
-  const value = String(text ?? '')
-  return value.length > MAX_ERROR_CHARS ? `${value.slice(0, MAX_ERROR_CHARS)}…` : value
-}
 
 /**
  * 取消尚未消费的响应体，否则连接不能及时复用。
@@ -163,18 +158,18 @@ export async function callMcpTool({ url, tool, args, headers = {}, timeoutMs, ma
   }
   if (!ok) {
     const detail = message?.error?.message
-    throw new WebFetchError(`HTTP ${status}${detail ? `：${clip(detail)}` : ''}`, { status })
+    throw new WebFetchError(`HTTP ${status}${detail ? `：${clipForError(detail)}` : ''}`, { status })
   }
   if (!message) {
     throw new WebFetchError('返回的内容不是 MCP JSON-RPC 消息', { status })
   }
   if (message.error) {
-    throw new WebFetchError(`服务端报错：${clip(message.error.message || JSON.stringify(message.error))}`, { status })
+    throw new WebFetchError(`服务端报错：${clipForError(message.error.message || JSON.stringify(message.error))}`, { status })
   }
   const content = Array.isArray(message.result?.content) ? message.result.content : []
   const text = content.find(item => typeof item?.text === 'string' && item.text.trim())?.text ?? ''
   if (message.result?.isError) {
-    throw new WebFetchError(`服务端报错：${clip(text || '未知错误')}`, { status })
+    throw new WebFetchError(`服务端报错：${clipForError(text || '未知错误')}`, { status })
   }
   return text
 }

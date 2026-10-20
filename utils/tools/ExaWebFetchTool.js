@@ -1,6 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { MAX_CONTENT_CHARS, formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
+import { MAX_CONTENT_CHARS, clipForError, formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
 import { WebFetchError, callMcpTool, requestText } from './webFetchTransport.js'
 
 /*
@@ -14,7 +14,12 @@ const REST_ENDPOINT = 'https://api.exa.ai/contents'
 const MCP_ENDPOINT = 'https://mcp.exa.ai/mcp'
 /** 两条通道共用 30 秒总超时 */
 const REQUEST_TIMEOUT_MS = 30000
-const MAX_ERROR_CHARS = 200
+/**
+ * 每次比回填窗口多申请 1 个字符。Exa 在上游按 `maxCharacters` 截断，若恰好只申请
+ * `start + 20000`，返回长度就等于窗口右边界，本地无法区分「正好读完」与「还有后续」，
+ * 截断标记会永远不出现、续读无从开始。多要一个字符就能判断。
+ */
+const EXA_REQUEST_CHARS = MAX_CONTENT_CHARS + 1
 /**
  * Exa 免费额度被限流时，托管服务把提示当成**普通结果文本**返回（HTTP 200、没有 isError，
  * 2026-09 在 web_search_exa 上实测如此），不识别就会把限流提示当页面正文交给模型。
@@ -22,15 +27,10 @@ const MAX_ERROR_CHARS = 200
  */
 const EXA_FREE_RATE_LIMIT_NOTICE = /^You['’]ve hit Exa['’]s free MCP rate limit/i
 
-function clip(text) {
-  const value = String(text ?? '')
-  return value.length > MAX_ERROR_CHARS ? `${value.slice(0, MAX_ERROR_CHARS)}…` : value
-}
-
 /**
- * 从 MCP 的文本结果里取出页面正文。Exa 的 `web_fetch_exa` 成功态本机无法实测
- * （出口 IP 一直被 429），所以三种形状都认：文本本身是 `{results:[…]}`、是结果数组、
- * 或直接就是正文。
+ * 从 MCP 的文本结果里取出页面正文。实测 `web_fetch_exa` 成功态直接返回 markdown 正文
+ * （没有 title 字段），但 Exa 的其它工具会回 JSON 文本，所以三种形状都认：
+ * 文本本身是 `{results:[…]}`、是结果数组、或直接就是正文。
  * @param {string} raw
  * @param {string} fallbackUrl
  * @returns {{ url: string, title: string, text: string }}
@@ -60,7 +60,7 @@ async function fetchViaRest(url, start, apiKey) {
       'x-api-key': apiKey,
       'User-Agent': 'chatgpt-plugin'
     },
-    body: JSON.stringify({ urls: [url], text: { maxCharacters: start + MAX_CONTENT_CHARS } })
+    body: JSON.stringify({ urls: [url], text: { maxCharacters: start + EXA_REQUEST_CHARS } })
   }, { timeoutMs: REQUEST_TIMEOUT_MS })
 
   if (status === 402) {
@@ -70,7 +70,7 @@ async function fetchViaRest(url, start, apiKey) {
     throw new WebFetchError('触发限流（HTTP 429）', { status })
   }
   if (!ok) {
-    throw new WebFetchError(`HTTP ${status}${body.trim() ? `：${clip(body)}` : ''}`, { status })
+    throw new WebFetchError(`HTTP ${status}${body.trim() ? `：${clipForError(body)}` : ''}`, { status })
   }
 
   let data
@@ -80,14 +80,20 @@ async function fetchViaRest(url, start, apiKey) {
     throw new WebFetchError('返回的内容不是 JSON', { status })
   }
 
+  // 只请求了一个 URL，所以 statuses 里的每一条都关于这一页：有 error 就是失败，
+  // 不能拿半截正文掩盖抓取失败
+  const failed = (Array.isArray(data?.statuses) ? data.statuses : [])
+    .filter(item => item?.status === 'error')
+    .map(item => `${item.id || item.url || url}：${clipForError(item.error || '未知错误')}`)
+  if (failed.length) {
+    throw new WebFetchError(`Exa 未能提取内容（${failed.join('；')}）`, { status })
+  }
+
   const results = Array.isArray(data?.results) ? data.results : []
   const first = results[0]
   const text = String(first?.text ?? first?.content ?? '')
   if (!text.trim()) {
-    const failed = (Array.isArray(data?.statuses) ? data.statuses : [])
-      .filter(item => item?.status === 'error')
-      .map(item => `${item.id || item.url || url}：${clip(item.error || '未知错误')}`)
-    throw new WebFetchError(failed.length ? `Exa 未能提取内容（${failed.join('；')}）` : '没有返回页面内容', { status })
+    throw new WebFetchError('没有返回页面内容', { status })
   }
   return { url: first.url || url, title: first.title, text }
 }
@@ -97,7 +103,7 @@ async function fetchViaMcp(url, start) {
   const text = await callMcpTool({
     url: MCP_ENDPOINT,
     tool: 'web_fetch_exa',
-    args: { urls: [url], maxCharacters: start + MAX_CONTENT_CHARS },
+    args: { urls: [url], maxCharacters: start + EXA_REQUEST_CHARS },
     timeoutMs: REQUEST_TIMEOUT_MS
   })
   if (EXA_FREE_RATE_LIMIT_NOTICE.test(text.trim())) {

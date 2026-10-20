@@ -90,7 +90,7 @@ describe('通道选择与请求形状', () => {
       jsonrpc: '2.0',
       id: 1,
       method: 'tools/call',
-      params: { name: 'web_fetch_exa', arguments: { urls: [PAGE_URL], maxCharacters: MAX_CONTENT_CHARS } }
+      params: { name: 'web_fetch_exa', arguments: { urls: [PAGE_URL], maxCharacters: MAX_CONTENT_CHARS + 1 } }
     })
     assert.ok(result.startsWith(`Web page content from Exa for ${PAGE_URL} (${UNTRUSTED_NOTICE}):\nTitle: (untitled)\n\n`))
     assert.ok(result.includes('hello world'))
@@ -107,7 +107,7 @@ describe('通道选择与请求形状', () => {
     assert.ok(!url.includes('exa-secret'))
     assert.equal(options.headers['x-api-key'], 'exa-secret')
     assert.equal(options.headers.Authorization, undefined)
-    assert.deepEqual(body, { urls: [PAGE_URL], text: { maxCharacters: MAX_CONTENT_CHARS } })
+    assert.deepEqual(body, { urls: [PAGE_URL], text: { maxCharacters: MAX_CONTENT_CHARS + 1 } })
     assert.ok(result.includes('Title: REST 标题'))
     assert.ok(result.includes('rest body'))
   })
@@ -149,10 +149,37 @@ describe('回填边界', () => {
 
     const result = await read({ url: PAGE_URL, start: MAX_CONTENT_CHARS })
 
-    assert.equal(fetchCalls[0].body.params.arguments.maxCharacters, MAX_CONTENT_CHARS * 2)
+    assert.equal(fetchCalls[0].body.params.arguments.maxCharacters, MAX_CONTENT_CHARS * 2 + 1)
     const { body } = split(result)
     assert.equal(body.length, 5000)
     assert.ok(!result.includes('[truncated'))
+  })
+
+  test('上游恰好截在申请长度时仍给出续读标记（每次多申请 1 字符）', async () => {
+    setConfig({ exaApiKey: 'exa-key' })
+    const full = 'a'.repeat(20000) + 'TAIL'
+    stubFetch(() => jsonResponse({ results: [{ url: PAGE_URL, text: full.slice(0, 20001) }] }))
+
+    const first = await read()
+
+    assert.equal(fetchCalls[0].body.text.maxCharacters, 20001)
+    assert.ok(first.endsWith(`\n[truncated to ${MAX_CONTENT_CHARS} characters; continue with start=${MAX_CONTENT_CHARS}]`))
+
+    stubFetch(() => jsonResponse({ results: [{ url: PAGE_URL, text: full }] }))
+    const second = await read({ url: PAGE_URL, start: MAX_CONTENT_CHARS })
+
+    assert.ok(second.endsWith('TAIL'))
+    assert.ok(!second.includes('[truncated'))
+  })
+
+  test('REST 通道同样按 start 本地切片', async () => {
+    setConfig({ exaApiKey: 'exa-key' })
+    stubFetch(() => jsonResponse({ results: [{ url: PAGE_URL, title: 'T', text: 'x'.repeat(100) + 'AFTER' }] }))
+
+    const result = await read({ url: PAGE_URL, start: 100 })
+
+    assert.equal(fetchCalls[0].body.text.maxCharacters, MAX_CONTENT_CHARS + 100 + 1)
+    assert.ok(result.endsWith('AFTER'))
   })
 
   test('start 不是数字或为负时按 0 处理', async () => {
@@ -161,8 +188,8 @@ describe('回填边界', () => {
     const negative = await read({ url: PAGE_URL, start: -5 })
     const garbage = await read({ url: PAGE_URL, start: 'abc' })
 
-    assert.equal(fetchCalls[0].body.params.arguments.maxCharacters, MAX_CONTENT_CHARS)
-    assert.equal(fetchCalls[1].body.params.arguments.maxCharacters, MAX_CONTENT_CHARS)
+    assert.equal(fetchCalls[0].body.params.arguments.maxCharacters, MAX_CONTENT_CHARS + 1)
+    assert.equal(fetchCalls[1].body.params.arguments.maxCharacters, MAX_CONTENT_CHARS + 1)
     assert.ok(negative.includes('abc'))
     assert.ok(garbage.includes('abc'))
   })

@@ -71,9 +71,10 @@ Bot 被要求「看看这个链接」时，现有两条路都不好用：
 
 **Exa 工具的两条通道**
 
-- 配了 Key：`POST https://api.exa.ai/contents`，`x-api-key` 头，body `{ urls: [url], text: { maxCharacters: start + 20000 } }`；从 `results[0]` 取 `title` / `text` / `url`，`statuses[]` 中状态为 error 的条目按失败处理。
-- 没配 Key：`POST https://mcp.exa.ai/mcp`，JSON-RPC `tools/call`，`name: web_fetch_exa`，`arguments: { urls: [url], maxCharacters: start + 20000 }`；不接受 Key 时也不带 `x-api-key`。
-- MCP 成功态的响应形状无法在本机验证（出口 IP 一直被 429）：解析器按「先按 JSON 取 `result.content[].text`；该文本本身是 JSON 时取 `results[0].text` 或 `results[0].content`；否则当纯文本」实现，测试用构造桩覆盖三种形状。
+- 配了 Key：`POST https://api.exa.ai/contents`，`x-api-key` 头，body `{ urls: [url], text: { maxCharacters: start + 20000 + 1 } }`；从 `results[0]` 取 `title` / `text` / `url`，`statuses[]` 中状态为 error 的条目按失败处理。
+- 没配 Key：`POST https://mcp.exa.ai/mcp`，JSON-RPC `tools/call`，`name: web_fetch_exa`，`arguments: { urls: [url], maxCharacters: start + 20000 + 1 }`；不接受 Key 时也不带 `x-api-key`。
+- **多申请的那 1 个字符是必要的**（实现期发现）：Exa 在上游按 `maxCharacters` 截断，只申请 `start + 20000` 时返回长度恰好等于窗口右边界，本地无法区分「正好读完」与「还有后续」，截断标记永远不会出现，第三段起不可达。多取 1 字符即可判定，且页面恰好 20000 字时不会误报。
+- MCP 成功态实测直接返回 markdown 正文（无 title 字段）；解析器仍按「先按 JSON 取 `result.content[].text`；该文本本身是 JSON 时取 `results[0].text` 或 `results[0].content`；否则当纯文本」实现，测试用构造桩覆盖三种形状。
 
 **Parallel 工具**
 
@@ -135,11 +136,12 @@ Title: <title>
 
 **要测的模块**
 
-1. Exa 工具（有 Key 走 REST、无 Key 走 MCP、`isError`、402/429、`statuses` 报错、空结果、`x-api-key` 出现/不出现）。
+1. Exa 工具（有 Key 走 REST、无 Key 走 MCP、两条通道的 `start` 切片、上游恰好截断时仍给标记、`isError`、402/429、`statuses` 报错、空结果、`x-api-key` 出现/不出现）。
 2. Parallel 工具（`excerpts` 拼接、per-URL `errors`、空 `results`、429、Bearer 出现/不出现、`session_id` 稳定且不含群号）。
 3. 共用格式化模块（`start` 切片、超 20000 截断、标记文案、不可信声明）。
 4. Tavily 提取（20000 生效、`start` 续读、`failed_results` 失败、输出带 Provider 与不可信声明）。
 5. Tavily 搜索（不可信声明、超长封顶、参数与请求字段未变）。
+6. 传输层（Content-Length 与流式累计两处字节上限、3xx 拒绝、超时与环境错误归一、MCP 消息解析）。
 
 **先例**：`test/opencodeWebSearchTool.test.js` —— 同样是「工具实例 + 全局 fetch 桩 + 断言返回文本与请求形状」，可直接照它的骨架写。
 
@@ -170,8 +172,8 @@ Title: <title>
 
 **实现后验证（2026-10-21）**
 
-- `npm run test:tools` 190 个用例全绿（新增 60 个：Exa 30、Parallel 19、Tavily 11）；`npm run check` 通过。
-- 真实端点：Parallel 读 GitHub 仓库 1.3 秒返回 20315 字符（含截断标记），用标记里的 `start=20000` 续读拿到下一段；Exa 免 Key 读 `example.com` 成功——同一 IP 此前长期 429，说明免费额度是**间歇性**的，不能当作稳定通道，失败文案按限流提示配置 Key。
+- `npm run test:tools` 201 个用例全绿（新增 71 个：Exa 32、Parallel 19、Tavily 11、传输层 9）；`npm run check` 通过。
+- 真实端点：Parallel 读 GitHub 仓库 1.3 秒返回 20315 字符（含截断标记），用标记里的 `start=20000` 续读拿到下一段；Exa 免 Key 读 `example.com` 成功——同一 IP 此前长期 429，说明免费额度是**间歇性**的，不能当作稳定通道，失败文案按限流提示配置 Key。Exa 续读再对 Wikipedia 长页验证：首段 20263 字符带 `start=20000` 标记，续读 5359 字符且无标记，正文确实从第 20000 字符接上（此前只申请 `start + 20000` 时两段都不带标记，第三段不可达）。
 
 **已知风险**
 

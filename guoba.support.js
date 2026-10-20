@@ -1420,13 +1420,13 @@ export function supportGuoba() {
         {
           field: 'exaApiKey',
           label: 'Exa API Key',
-          bottomHelpMessage: '可选，用于 OpenCode同款联网搜索 的 Exa 来源（与 OpenCode 使用 Zen 模型时内置的 websearch 相同，直连 Exa / Parallel 的公开托管搜索服务；只填了一家的 Key 时优先用那家，否则按会话在两家之间分流，失败时自动换另一家）；不填走免费额度（按服务器 IP 限流，很容易用完）；前往 https://dashboard.exa.ai/api-keys 申请',
+          bottomHelpMessage: '可选，用于 OpenCode同款联网搜索 与 Exa 网页读取（有 Key 走 REST /contents，形状更稳）；不填时搜索与网页读取都走免费额度（按服务器 IP 限流，很容易用完）；前往 https://dashboard.exa.ai/api-keys 申请',
           component: 'InputPassword'
         },
         {
           field: 'parallelApiKey',
           label: 'Parallel API Key',
-          bottomHelpMessage: '可选，用于 OpenCode同款联网搜索 的 Parallel 来源；不填走免费额度；前往 https://platform.parallel.ai 申请',
+          bottomHelpMessage: '可选，用于 OpenCode同款联网搜索 的 Parallel 来源，以及 Parallel 网页读取的付费档；不填走免费额度（网页读取按会话限流）；前往 https://platform.parallel.ai 申请',
           component: 'InputPassword'
         },
         {

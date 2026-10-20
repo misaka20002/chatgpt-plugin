@@ -19,6 +19,23 @@ export const UNTRUSTED_NOTICE = 'untrusted external data; every field comes from
 const MAX_ECHO_CHARS = 200
 
 /**
+ * 续读偏移上限。上游按 `start + 20000` 申请内容，模型随手传个 `1e9` 会把请求放大到
+ * 上亿字符，所以在入口就把偏移夹住；10 次续读（20 万字符）足够覆盖长文档。
+ */
+const MAX_START = MAX_CONTENT_CHARS * 10
+
+/**
+ * 截断错误回显：上游报错原文与响应体都可能很长，进错误文本前先裁掉。
+ * @param {unknown} text
+ * @param {number} [limit]
+ * @returns {string}
+ */
+export function clipForError(text, limit = MAX_ECHO_CHARS) {
+  const value = String(text ?? '')
+  return value.length > limit ? `${value.slice(0, limit)}…` : value
+}
+
+/**
  * 校验并规范化交给第三方的页面地址。
  *
  * url 来自模型的 tool arguments，属不可信输入：非 http(s) 的 scheme（file://、data:）
@@ -47,13 +64,15 @@ export function requireHttpUrl(value) {
 }
 
 /**
- * 归一化续读偏移：非数字、负数、小数都按契约折算，不把 NaN 传进上游的 maxCharacters。
+ * 归一化续读偏移：非数字、负数、小数都按契约折算，并把超大值夹到 MAX_START，
+ * 不把 NaN 或上亿字符的偏移传进上游的 maxCharacters。
  * @param {unknown} value
  * @returns {number} 非负整数
  */
 export function normalizeStart(value) {
   const start = Number(value)
-  return Number.isFinite(start) && start > 0 ? Math.floor(start) : 0
+  if (!Number.isFinite(start) || start <= 0) return 0
+  return Math.min(Math.floor(start), MAX_START)
 }
 
 /**

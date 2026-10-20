@@ -1,6 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
+import { clipForError, formatWebContent, normalizeStart, requireHttpUrl } from './webContent.js'
+import { requestText } from './webFetchTransport.js'
 
 /** 使用 Tavily 提取完整内容的工具 */
 export class TavilyExtractTool extends AbstractTool {
@@ -46,23 +47,21 @@ export class TavilyExtractTool extends AbstractTool {
 
         let data
         try {
-            // 调用 Tavily Extract API
-            const response = await fetch('https://api.tavily.com/extract', {
+            // 调用 Tavily Extract API：走共用传输层，取字节上限、拒绝跟随重定向与超时归一
+            const { status, ok, body } = await requestText('https://api.tavily.com/extract', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${tavilyKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(120000)
-            })
+                body: JSON.stringify(payload)
+            }, { timeoutMs: 120000 })
 
-            if (!response.ok) {
-                const errorText = await response.text()
-                throw new Error(`Tavily Extract API error: ${errorText} (Status: ${response.status})`)
+            if (!ok) {
+                throw new Error(`Tavily Extract API error: ${clipForError(body)} (Status: ${status})`)
             }
 
-            data = await response.json()
+            data = JSON.parse(body)
         } catch (error) {
             console.error('Tavily extract error:', error)
 
