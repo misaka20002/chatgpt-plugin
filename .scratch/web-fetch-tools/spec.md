@@ -1,6 +1,6 @@
 # spec：网页读取工具（Exa / Parallel）与 Tavily 工具对齐
 
-Status: ready-for-agent（2026-10-21）
+Status: implemented（2026-10-21）
 
 - 决策来源：2026-10-21 四轮问答；架构决策见 `docs/adr/0004-hosted-web-extraction-over-self-hosted-fetch.md`
 - 术语：「网页读取」「续读」见根目录 `GLOSSARY.md`
@@ -118,8 +118,9 @@ Title: <title>
 
 **共用模块**
 
-- 内容格式化模块：导出 20000 上限常量与 `formatWebContent({ provider, url, title, text, start })`，负责切片、截断标记与不可信声明；四个工具都调它。
-- 会话标识模块：把进程随机盐与 `conversationSessionId(e)` 从搜索工具里抽出来，供 Parallel 工具复用；行为不变（仍是 32 位十六进制、同一会话稳定、不含群号）。
+- 内容格式化模块 `utils/tools/webContent.js`：导出 20000 上限常量、`UNTRUSTED_NOTICE`、`formatWebContent({ provider, url, title, text, start })`、`capForModel(text)`、`normalizeStart` 与 `requireHttpUrl`；负责切片、截断标记、不可信声明与输入校验，四个工具都调它。
+- 会话标识模块 `utils/tools/toolSession.js`：把进程随机盐与 `conversationSessionId(e)` 从搜索工具里抽出来，供 Parallel 工具复用；行为不变（仍是 32 位十六进制、同一会话稳定、不含群号）。
+- 传输模块 `utils/tools/webFetchTransport.js`（实现期新增）：Exa 的 REST/MCP 与 Parallel 的 MCP 共用同一套响应体字节上限、`redirect: 'manual'`、超时归一、SSE/JSON 解析与 `isError` 判定；字节上限取 8 MiB（Parallel `full_content` 实测 80 万字符，搜索工具的 256 KiB 会误杀正常页面）。
 - `opencode_websearch` 只改导入来源，选路、Key、错误文案均不变。
 
 **文档**
@@ -166,6 +167,11 @@ Title: <title>
 | Parallel 免 Key | Reddit 46882 字符、微博 12009、36氪 4597、GitHub 仓库 107698、Node 文档 806450、PDF 可读；知乎返回验证页、Medium `http_error`、X 只有登录页；延迟 0.4–29s |
 | Exa 免 Key | 本机出口 IP 始终 429；REST 匿名 402，故成功态形状只能按文档 + 桩实现 |
 | AstrBot | 无本地实现，四个读取工具都是厂商 API 转发；其 Tavily 提取不截断、无续读，不能作为对齐目标 |
+
+**实现后验证（2026-10-21）**
+
+- `npm run test:tools` 190 个用例全绿（新增 60 个：Exa 30、Parallel 19、Tavily 11）；`npm run check` 通过。
+- 真实端点：Parallel 读 GitHub 仓库 1.3 秒返回 20315 字符（含截断标记），用标记里的 `start=20000` 续读拿到下一段；Exa 免 Key 读 `example.com` 成功——同一 IP 此前长期 429，说明免费额度是**间歇性**的，不能当作稳定通道，失败文案按限流提示配置 Key。
 
 **已知风险**
 
