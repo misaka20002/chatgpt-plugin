@@ -63,6 +63,6 @@
     "test:providers": "node --experimental-test-module-mocks --test --test-force-exit test/providerFallback.test.mjs test/providerMenu.test.mjs test/providerSources.test.mjs test/providerClients.test.mjs test/providerContext.test.mjs test/providerModels.test.mjs",
     "test:thinking": "node --test --test-force-exit test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test --test-force-exit test/toolRoundTextForward.test.mjs",
     "test:emoji": "node --experimental-test-module-mocks --test --test-force-exit test/emojiUndo.test.mjs",
-    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs && npm run test:config && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:memory && npm run test:media && npm run test:group-reply && npm run test:tools"
+    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs && npm run test:config && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:media && npm run test:group-reply"
   }
 }

@@ -12,7 +12,7 @@
 
 - 群聊自主回复：`npm run test:group-reply`，覆盖观察器、防抖、候选窗口、并发与关闭后停止回复，以及 Core/SubLLM 四家 provider 的无工具请求；配置与锅巴保存/重载由 `test/configGroupReply.test.js` 纳入 `npm run test:config`。
 
-- 记忆系统：`npm run test:memory`
+- 记忆系统：`npm run test:memory`（不在 `check` 里：8.8s，是专项套件里最贵的一项，改到记忆/图谱时本地跑）
   - `test/memoryV2.test.js`：V2 核心单元/回归测试，覆盖存储、提取、召回、每日提炼、采集与 Memory_Tool 等核心逻辑。
   - `test/memoryApps.test.mjs`：apps 层契约测试，通过 `mock.module()` 隔离 TRSS 插件基类与重依赖，覆盖观察器 `rule` 匹配（必须能匹配多行文本）、管理指令的展示编号与按序号删除的一致性（全序比较器不能被删）。**只 mock 边界，被测的排序/编号/正则匹配必须执行真实生产代码**——把业务逻辑写进 mock 等于自己验证自己。
   - `test/atGraph.test.mjs`：@ 图谱聚合、好感度规则、读取上限、指令权限/参数、并发及发送前授权复查；模板实际布局另用 `node test/render/atGraph.check.mjs [--shot]` 检查。
@@ -20,7 +20,7 @@
   - 历史上出现过的 `chain.test.mjs` / `chain2.test.mjs` / `chain3.test.mjs` / `chain5.test.mjs` **不属于当前测试体系，不要引用、恢复、补建或假定它们存在**（`chain5` 已于 2026-09-20 删除）。测试报告只以当前 `package.json` 的 `test:memory` 实际列出的文件为准，**不要写死用例数**，读数以当次 Node 输出为准。
   - 本测试不依赖真实 Redis、真实模型或完整 TRSS 运行环境。
 - 图谱 Redis 协议兼容专项：`node --test test/atGraph.redis.test.mjs`，需要本机 `redis-server` 与 Unix socket；测试自行启动独立临时实例，禁用持久化，不连接云崽 Redis。用于确认服务端命令兼容、倒序时间边界、过期原文和读取条数上限；不加入日常无 Redis 依赖的 `test:memory`。
-- 工具行为：`npm run test:tools`（GithubTool 行为、OpenCode 联网搜索、三个网页读取工具与其共用输出契约、传输层字节/重定向边界、工具鉴权上下文与参数脱敏、`generate_html` 与 htmlRender 模板/发送分支）。**文件清单与断言细节不在本文复述**，以 `package.json` 的 `test:tools` 为准；新增测试文件必须同时接进该脚本（`lint.check.mjs` 规则 3 会拦），新增 `test:*` 套件必须接进 `check` 或写进 `CHECK_EXCLUDED`（规则 5）——否则 CI 永远不跑它。`test/htmlToolSend.test.mjs` 用 `mock.module` 隔离渲染与子模型，落盘写真实文件。
+- 工具行为：`npm run test:tools`（GithubTool 行为、OpenCode 联网搜索、三个网页读取工具与其共用输出契约、传输层字节/重定向边界、工具鉴权上下文与参数脱敏、`generate_html` 与 htmlRender 模板/发送分支）。**文件清单与断言细节不在本文复述**，以 `package.json` 的 `test:tools` 为准；新增测试文件必须同时接进该脚本（`lint.check.mjs` 规则 3 会拦）。**本套件不在 `check` 里**：220+ 例、4.6s，改到工具时本地跑，不压 CI 门禁。新增 `test:*` 套件要么接进 `check`，要么写进 `CHECK_EXCLUDED` 并注明用途与耗时（规则 5）；默认后者——`check` 只收每次改动都该跑的核心门禁，堆进去就会变慢、变慢就会被绕过。`test/htmlToolSend.test.mjs` 用 `mock.module` 隔离渲染与子模型，落盘写真实文件。
 - 媒体识别相关：`npm run test:media`（SubLLM 多模态载荷、按需内容识别的来源选择与失败语义、引用图的格式/体积预处理与四协议载荷、不可信媒体地址与下载字节边界；用 `mock.module` + `--experimental-test-module-mocks`）。其中内容探测依赖**宿主的 `file-type`**（宿主 `package.json` 已声明）：测试启动时探测能否 `import` 到它，缺失就把 3 条内容探测用例标为 skip（`# skipped 3`），而不是判红——本地精简安装与 CI 都走这条路。
 - 配置系统：`npm run test:config`（`test/configArrayMerge.test.js`：加载配置时数组整体采用用户的值、嵌套对象仍按键深合并、未保存过的默认数组原地修改后能写盘；`test/configBaseUrl.test.js`：四家 provider 地址的加载、直接赋值、锅巴保存与显示一致，保留路径和空值；每次加载起一个子进程并把 cwd 指到临时目录，走真实的加载与保存代码，锅巴测试仅 mock 无关语音依赖与 Redis）。
 - 偷图与撤销：`npm run test:emoji`（`test/emojiUndo.test.mjs`：`#gpt偷图` 的提示文本进识图 prompt、回执文案、`#gpt撤销偷图` 的键匹配与删文件边界——复用记录、只清记录、记录过期、库外路径拒绝；cwd 切到临时目录，写真实文件、不碰仓库 `data/`；宿主与识图/fetch/redis 用 `mock.module` 隔离）。
@@ -34,7 +34,7 @@
 - 测试环境不要 import `utils/common.js`，也不要 import `client/*`（两者都会拉起 `lib/config` 等宿主重依赖；`client/*` 必须在 `mock.module()` 里替换，见 `test/mediaUrlGuard.test.mjs` 顶部）。这类依赖链会让进程在测试结束后仍不退出，所以所有 `node --test` 脚本统一带 `--test-force-exit`：它只处理「测试都跑完了但句柄没释放」，不会掩盖真的失败。
 - 风格门禁：`node test/lint.check.mjs`（随 `check`/CI 执行）。零依赖，只收「当前零存量违规」的机械规则：JSDoc 与声明同行、日志前缀禁 camelCase 单 token（`[quotedImage]` 这类改写成 `[ChatGPT][子模块]`）、`client/`/`model/` 出现 `console.log`、测试文件必须挂进 `test:*`、脚本引用的文件必须存在。带存量噪音的规则（日志前缀 112 处、`utils/` 的 `console.log` 48 处、行尾空格 379 处、无注释空 `catch` 24 处、未使用变量需 AST）记在脚本头部，作为日后引入 linter 的清单——先清存量再加规则，别让门禁常红。
 - 只需手工运行的测试（如依赖本机 redis）：不挂脚本，但首行写 `manual test: <原因>`，风格检查会豁免；否则判为「写好了却永远没人跑」。
-- `check` 的具体组成以 `package.json` 的 `check` 脚本为准（本文不复述，避免与 scripts 漂移）；CI 同样只跑 `check`，所以新增测试要挂进某个 `test:*` 脚本、该套件再挂进 `check`，才会被执行（`lint.check.mjs` 规则 5 会拦未接线的套件）。
+- `check` 的具体组成以 `package.json` 的 `check` 脚本为准（本文不复述，避免与 scripts 漂移）；CI 同样只跑 `check`，所以新增测试要挂进某个 `test:*` 脚本，该套件再挂进 `check` 才会在 CI 里执行——不挂 `check` 的专题套件仍要本地跑（`lint.check.mjs` 规则 5 要求每个 `test:*` 要么接线、要么进豁免清单）。
 - **mock ESM 模块依赖**：要替换模块级 import（如 `SubLLM` 的四个 provider client、工具的 `paimonFuction`）时用 `node:test` 的 `mock.module()`，注册必须在动态 `import` 目标模块之前，运行加 `--experimental-test-module-mocks`（示例见 `test/subllmMedia.test.mjs`、`test/recognitionMedia.test.mjs`）。
 - **模块新增命名导出后，同步所有测试桩**：`mock.module()` 的 `namedExports` 缺了新增导出时注册不会报错，只有真跑到该路径才以 `TypeError`/`SyntaxError` 炸出（本次就漏过两处）。`utils/toolForward.js` 的桩已集中为 `test/fixtures/toolForwardMock.mjs` 工厂——给该模块新增导出只需改工厂一处；其他模块新增导出后请 `grep -rn "mock.module" test/` 核对使用点。`utils/config.js` 的桩没有工厂，要求是：具名导出至少 `Config` 与 `providerDefaults`（`guoba.support.js` 顶部就 import 这两个），且 `Config` 自带 `getConfig`/`save`/`commit`——锅巴的保存路径走 `Config.commit(candidate)` 而不是 `save`。
 - 断言脚本（非 node:test 结构）作为"文件级"测试加入对应 npm script 即可。

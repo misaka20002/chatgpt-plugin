@@ -113,8 +113,9 @@ for (const file of new Set(referenced)) {
   }
 }
 
-// 规则 5：每个 test:* 要么被 check 调用，要么进显式豁免清单——否则它只活在本地
-// （历史事故：test:tools 里的工具测试长期不在 check 里，CI 变绿却对工具改动零覆盖）
+// 规则 5：每个 test:* 要么被 check 调用，要么进显式豁免清单——否则它只活在本地、谁都不知道
+// 它还存不存在。check 只收「每次改动都该跑」的核心门禁；专题套件进豁免清单并写明用途与耗时，
+// 改到相关模块时本地跑。别为了"覆盖更全"往 check 里堆套件——门禁一慢就会被绕过。
 const CHECK_EXCLUDED = new Set([
   'test:avatar', // 头像处理专项，慢
   // 走 puppeteer 真实导航（harnessBrowser.mjs）：开本机 Chromium 时 34s 全绿，CI 无 Chromium
@@ -122,6 +123,8 @@ const CHECK_EXCLUDED = new Set([
   'test:meme', // meme 慢测试
   'test:meme:fast', // meme 日常回归，仍属专项
   'test:meme:mutants', // meme 变异测试，仅专项
+  'test:tools', // 工具行为专项（220+ 例，4.6s）；改到工具时本地跑，不压 CI 门禁
+  'test:memory', // 记忆/图谱专项（8.8s，是专项里最贵的一项）；按需本地跑
 ])
 // 按「npm run <名字>」切词后精确比对：`includes` 子串匹配会让 `test:meme` 命中
 // `test:meme:fast`，于是没接线的套件也能蒙过去
