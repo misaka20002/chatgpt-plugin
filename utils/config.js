@@ -88,7 +88,6 @@ const defaultConfig = {
   // plus: false,
   // useGPT4: false,
   promptPrefixOverride: 'Your answer shouldn\'t be too verbose. Prefer to answer in Chinese.',
-  headless: false,
   chromePath: '',
   proxy: '',
   debug: true,

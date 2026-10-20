@@ -20,7 +20,7 @@
   - `<meta http-equiv="refresh">`（实测能把渲染页导航到外站）与 `<link rel="preconnect">`（实测能建连）是 **CSP 管不到的两类，只能靠清洗删标签**；而跨源 `<svg><use href="http://…">` 在 Chromium 里本就不发请求（不是策略挡的，别把它算成成绩）。
   - **`innerHTML` 插入的 `<script>` 按 HTML 规范既不执行、也不发请求**（本模板是 `contentDiv.innerHTML = md.render(...)` 写 DOM）。所以"脚本没跑"的第一层是这条规范行为，`script-src` 不含 `'unsafe-inline'` 是第二层，清洗删标签是第三层；**真正活的脚本向量是 `onerror=` 这类行内事件处理器**（实测：CSP 在场不导航，摘掉 CSP 就导航）。也正因如此，`script-src file:` 那条"能加载任意本地 .js"的宽面在本模板里不可达，不要据此去收紧策略。
   - 任何档位的 `img-src` 都没有 `file:`：本地图片/媒体一律不加载（实测 `naturalWidth=0`）；`data:` 是**允许**的，别顺手把它一起收掉。
-- **验证方式**：`npm run test:render`（`mathRender.check.mjs` 回归 + `mathRender.security.check.mjs` 探针安全套件），断言会红的证明走 `node test/render/mutate-check.mjs apply|restore`（M5/M6/M7/M8 分别打掉清洗、img-src 分档、script-src 与工具侧授权）。本机 node 拉不起 Chromium（子进程退出码 0、无输出）时，用 PowerShell 起一个带 `--remote-debugging-port=9333` 的 Edge，再设 `PUPPETEER_BROWSER_URL=http://127.0.0.1:9333` 让套件连它（两个 check 脚本都支持；connect-first 沿用旧生产实现 `utils/browser.js` 的策略——该文件现已无引用，见其文件头）。
+- **验证方式**：`npm run test:render`（`mathRender.check.mjs` 回归 + `mathRender.security.check.mjs` 探针安全套件），断言会红的证明走 `node test/render/mutate-check.mjs apply|restore`（M5/M6/M7/M8 分别打掉清洗、img-src 分档、script-src 与工具侧授权）。本机 node 拉不起 Chromium（子进程退出码 0、无输出）时，用 PowerShell 起一个带 `--remote-debugging-port=9333` 的 Edge，再设 `PUPPETEER_BROWSER_URL=http://127.0.0.1:9333` 让套件连它（两个 check 脚本都支持；connect-first 即先连 `PUPPETEER_BROWSER_URL`，连不上再自己 launch）。
 
 ## 元素截图与模板约束
 

@@ -8,6 +8,7 @@
  *  4. 读取：非文本内容、403、超时、字节上限、重定向与跳数上限
  *  5. 搜索：百度取 mu、DuckDuckGo 解 uddg（纯函数，不触网）
  *  6. 搜索：引擎降级、并发抓正文时单条失败不影响其余、max_results 边界
+ *  7. 搜索：20 秒总预算的两条出口（引擎轮询吃满、抓正文前耗尽）——假时钟快进，不真等
  *
  * 运行：npm run test:tools（或 node --test test/localWebTools.test.js）
  */
@@ -48,6 +49,23 @@ function html(body, { status = 200, headers = {} } = {}) {
 
 function redirect(location, status = 302) {
   return new Response(null, { status, headers: { location } })
+}
+
+/**
+ * 假时钟：替换 `Date.now`，把 20 秒总预算「快进」掉。
+ *
+ * 生产代码判断剩余时间只读 `Date.now()`，所以不需要 mock 定时器，也不用真等 20 秒——
+ * 桩每被调用一次就往前拨一段，剩下的时间自然变成 0。
+ * @returns {{ advance: (ms: number) => void, restore: () => void }}
+ */
+function fakeClock() {
+  const real = Date.now
+  let now = real()
+  Date.now = () => now
+  return {
+    advance: ms => { now += ms },
+    restore: () => { Date.now = real }
+  }
 }
 
 describe('网页读取', () => {
@@ -214,6 +232,51 @@ describe('搜索', () => {
     assert.match(out, /第一条的正文/)
     assert.match(out, /\[第二条\]\(https:\/\/93\.184\.216\.37\/bad\)/)
     assert.match(out, /\[第三条\]\(https:\/\/93\.184\.216\.38\/boom\)/)
+  })
+
+  test('总预算：第一个引擎就吃满 20 秒后，后两个引擎不再执行', async () => {
+    const clock = fakeClock()
+    try {
+      stubFetch(() => {
+        clock.advance(20000)
+        return html('被限流', { status: 500 })
+      })
+
+      const out = await new Misaka_WebSearchTool().func({ query: '关键词' })
+
+      assert.equal(calls.length, 1, '预算已用完，不该再打第二个引擎')
+      assert.match(out, /Bing: HTTP 500/)
+      assert.match(out, /DuckDuckGo: 总预算 20 秒已用完，未执行/)
+      assert.match(out, /百度: 总预算 20 秒已用完，未执行/)
+    } finally {
+      clock.restore()
+    }
+  })
+
+  test('总预算：引擎用光预算后不再为正文发请求', async () => {
+    const clock = fakeClock()
+    const warned = []
+    const realWarn = globalThis.logger.warn
+    globalThis.logger.warn = message => warned.push(String(message))
+    try {
+      stubFetch(call => {
+        if (call.url.includes('cn.bing.com')) {
+          clock.advance(20000)
+          return html('<li class="b_algo"><h2><a href="https://93.184.216.36/ok">唯一结果</a></h2><p>摘要一</p></li>')
+        }
+        throw new Error('不该再发请求')
+      })
+
+      const out = await new Misaka_WebSearchTool().func({ query: '关键词', max_results: 3 })
+
+      assert.equal(calls.length, 1, '抓正文不在预算里，不该再发请求')
+      assert.match(out, /唯一结果/)
+      assert.match(out, /摘要一/)
+      assert.equal(warned.filter(line => line.includes('总预算已用完')).length, 1, '被跳过的正文要留下原因')
+    } finally {
+      globalThis.logger.warn = realWarn
+      clock.restore()
+    }
   })
 
   test('max_results 越界直接报错，不发请求', async () => {

@@ -3,7 +3,7 @@
 // 为什么需要这一层：部分 Windows 环境（受管终端 / 沙箱）里 node 自己 spawn Chromium 会被静默掐死
 // ——子进程退出码 0、stderr 为空，puppeteer 只报 `Failed to launch the browser process: Code: 0`，
 // 看不出任何原因；而由 PowerShell `Start-Process` 拉起的 Edge 是活的（`--remote-debugging-port` 可访问）。
-// 所以统一支持「优先连接、连不上再 launch」，与生产 `utils/browser.js` 的策略一致。
+// 所以统一支持「优先连接、连不上再 launch」。
 //
 // 用法（连已启动的实例）：
 //   PUPPETEER_BROWSER_URL=http://127.0.0.1:9333 node test/render/xxx.check.mjs
