@@ -373,7 +373,7 @@ ${translateLangLabels}
       }
     }
     if (!url) {
-      await this.reply('不支持合成', true)
+      // 查不到组合时静默跳过，不再往群里发提示
       return false
     }
     // let response = await fetch(url)
