@@ -43,6 +43,7 @@ import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
 import { groupReply } from '../utils/groupReply.js'
 import { avatarReply } from '../utils/avatarReply.js'
+import { isModerationRefusalError, pickRefusalReply } from '../utils/refusal.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -1043,6 +1044,18 @@ export class chatgpt extends plugin {
         // 字数超限直接返回
         return false
       }
+      if (chatMessage?.refused) {
+        // 审核拒绝不是故障：回温和词库文案，且不把被拒答的轮次写进会话历史
+        const reason = typeof chatMessage.text === 'string' && chatMessage.text.trim() && chatMessage.text.trim() !== '模型拒绝回答'
+          ? `：${hidePrivacyInfo(chatMessage.text.trim()).slice(0, 200)}`
+          : ''
+        logger.warn(`[ChatGPT] 模型拒绝回答${reason}`)
+        await this.reply(pickRefusalReply(config), true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
+        if (e.checkAndExecuteContent?.length) {
+          await this.reply(e.checkAndExecuteContent)
+        }
+        return false
+      }
       if (use === 'responses') {
         // 无状态模式不保存 response.id，避免下一轮误把它发往官网。
         if (chatMessage.actualStore && chatMessage.id) {
@@ -1671,6 +1684,15 @@ export class chatgpt extends plugin {
       }
       if (withAvatar) await avatarReply.send(e, response, chatMessage.actualProviderId || profile.id)
     } catch (err) {
+      // 审核拒绝不是故障：只回温和词库文案，不打堆栈、不渲染报错图、不拼「出现错误」
+      if (isModerationRefusalError(err)) {
+        logger.warn(`[ChatGPT] ${hidePrivacyInfo(err?.message || '模型拒绝回答')}`)
+        await this.reply(pickRefusalReply(config), true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
+        if (e.checkAndExecuteContent?.length) {
+          await this.reply(e.checkAndExecuteContent)
+        }
+        return
+      }
       logger.error(err)
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)

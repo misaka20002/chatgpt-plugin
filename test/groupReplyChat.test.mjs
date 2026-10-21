@@ -33,7 +33,7 @@ Config.getConfig = () => Object.fromEntries(Object.entries(Config).filter(([, va
 mock.module('../utils/config.js', { namedExports: { Config } })
 globalThis.Bot = { uin: [] }
 globalThis.redis = { get: async () => null }
-globalThis.logger = { info() {}, error(error) { throw error } }
+globalThis.logger = { info() {}, warn() {}, error(error) { throw error } }
 const { chatgpt } = await import('../apps/chat.js')
 const { groupReply } = await import('../utils/groupReply.js')
 const { avatarReply } = await import('../utils/avatarReply.js')
@@ -287,6 +287,31 @@ test('备用成功写入主会话，下轮携带正文仍选主模型；连接�
   await chat.abstractChat(e, '失败问题', undefined, false, { automatic: true })
   assert.equal(writes.length, 2)
   assert.match(replies.at(-1), /全部尝试失败/)
+
+  // 审核拒绝：Gemini 抛错路径与 api/responses/claude 的 refused 返回路径都走温和词库，且不写历史
+  Config.tts_First_person = '憨憨'
+  const warnings = []
+  t.mock.method(logger, 'warn', message => warnings.push(message))
+  scriptedResponse = async () => {
+    throw Object.assign(new Error('模型拒绝回答：PROHIBITED_CONTENT'), {
+      noRetry: true,
+      refused: true,
+      refusalReason: 'PROHIBITED_CONTENT'
+    })
+  }
+  await chat.abstractChat(e, '敏感图片问题', undefined, false, { automatic: true })
+  assert.equal(writes.length, 2)
+  assert.equal(typeof replies.at(-1), 'string')
+  assert.ok(replies.at(-1).includes('憨憨'))
+  assert.equal(/出现错误|PROHIBITED_CONTENT|模型拒绝回答/.test(replies.at(-1)), false)
+  assert.match(warnings.at(-1), /模型拒绝回答：PROHIBITED_CONTENT/)
+
+  scriptedResponse = async () => ({ refused: true, text: '模型拒绝回答' })
+  await chat.abstractChat(e, '另一敏感问题', undefined, false, { automatic: true })
+  assert.equal(writes.length, 2)
+  assert.equal(typeof replies.at(-1), 'string')
+  assert.ok(replies.at(-1).includes('憨憨'))
+  assert.equal(/出现错误|PROHIBITED_CONTENT|模型拒绝回答/.test(replies.at(-1)), false)
 })
 
 for (const type of ['api', 'responses', 'claude', 'gemini']) {

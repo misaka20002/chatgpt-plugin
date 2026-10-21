@@ -376,7 +376,13 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       logger.info(`[Chatgpt][Gemini] 打印 Token 日志失败: ${err.message}`);
     }
 
-    if (response.promptFeedback?.blockReason) throw Object.assign(new Error(`模型拒绝回答：${response.promptFeedback.blockReason}`), { noRetry: true })
+    if (response.promptFeedback?.blockReason) {
+      throw Object.assign(new Error(`模型拒绝回答：${response.promptFeedback.blockReason}`), {
+        noRetry: true,
+        refused: true,
+        refusalReason: response.promptFeedback.blockReason
+      })
+    }
 
     // 检查 candidates 是否存在
     if (!response.candidates || response.candidates.length === 0) {
@@ -391,7 +397,13 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     const finishReason = candidate.finishReason || 'UNKNOWN'
     if (groundingMetadata?.webSearchQueries?.length || groundingMetadata?.groundingChunks?.length || responseContent?.parts?.some(part => part.executableCode || part.codeExecutionResult)) this.onToolStart()
     const blockedReasons = ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'OTHER']
-    if (blockedReasons.includes(finishReason)) throw Object.assign(new Error(`模型拒绝回答：${finishReason}`), { noRetry: true })
+    if (blockedReasons.includes(finishReason)) {
+      throw Object.assign(new Error(`模型拒绝回答：${finishReason}`), {
+        noRetry: true,
+        refused: true,
+        refusalReason: finishReason
+      })
+    }
 
     // 当模型没按要求写对参数时
     if (finishReason === 'MALFORMED_FUNCTION_CALL') {
