@@ -340,8 +340,12 @@ ${translateLangLabels}
   async combineEmoj(e) {
     if (!Config.emojiBaseSwitch)
       return false;
-    let left = e.msg.codePointAt(0).toString(16).toLowerCase()
-    let right = e.msg.codePointAt(2).toString(16).toLowerCase()
+    // 按字素切分，避免肤色修饰符 / 变体选择符 / ZWJ 组合被误判成两个表情
+    const graphemes = [...new Intl.Segmenter('zh', { granularity: 'grapheme' }).segment(e.msg)].map(item => item.segment)
+    if (graphemes.length !== 2)
+      return false
+    let left = graphemes[0].codePointAt(0).toString(16).toLowerCase()
+    let right = graphemes[1].codePointAt(0).toString(16).toLowerCase()
     if (left === right) {
       return false
     }
@@ -373,7 +377,7 @@ ${translateLangLabels}
       }
     }
     if (!url) {
-      await this.reply('不支持合成', true)
+      // 查不到组合时静默跳过，不再往群里发提示
       return false
     }
     // let response = await fetch(url)
