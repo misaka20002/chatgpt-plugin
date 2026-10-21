@@ -830,6 +830,24 @@ export class chatgpt extends plugin {
     return true;
   }
 
+  /**
+   * 审核拒绝的统一出口：只回温和词库文案，不打堆栈、不渲染报错图。
+   *
+   * 拒绝发生在模型返回阶段（用户输入已提交），是预期内的内容策略结果而非程序故障，
+   * 因此不走 abstractChat 的普通报错分支。
+   *
+   * @param {object} e 消息事件
+   * @param {object} config 当前会话的 provider 配置
+   * @param {string} message 写进日志的拒绝原因
+   */
+  async replyModerationRefusal(e, config, message = '模型拒绝回答') {
+    logger.warn(`[ChatGPT] ${message}`)
+    await this.reply(pickRefusalReply(config), true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
+    if (e.checkAndExecuteContent?.length) {
+      await this.reply(e.checkAndExecuteContent)
+    }
+  }
+
   async abstractChat(e, prompt, use, forcePictureMode = false, { automatic = false } = {}) {
     const providerSource = structuredClone(Config.getConfig())
     let profile
@@ -1046,14 +1064,9 @@ export class chatgpt extends plugin {
       }
       if (chatMessage?.refused) {
         // 审核拒绝不是故障：回温和词库文案，且不把被拒答的轮次写进会话历史
-        const reason = typeof chatMessage.text === 'string' && chatMessage.text.trim() && chatMessage.text.trim() !== '模型拒绝回答'
-          ? `：${hidePrivacyInfo(chatMessage.text.trim()).slice(0, 200)}`
-          : ''
-        logger.warn(`[ChatGPT] 模型拒绝回答${reason}`)
-        await this.reply(pickRefusalReply(config), true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
-        if (e.checkAndExecuteContent?.length) {
-          await this.reply(e.checkAndExecuteContent)
-        }
+        const text = typeof chatMessage.text === 'string' ? chatMessage.text.trim() : ''
+        const reason = text && text !== '模型拒绝回答' ? `：${hidePrivacyInfo(text).slice(0, 200)}` : ''
+        await this.replyModerationRefusal(e, config, `模型拒绝回答${reason}`)
         return false
       }
       if (use === 'responses') {
@@ -1684,13 +1697,8 @@ export class chatgpt extends plugin {
       }
       if (withAvatar) await avatarReply.send(e, response, chatMessage.actualProviderId || profile.id)
     } catch (err) {
-      // 审核拒绝不是故障：只回温和词库文案，不打堆栈、不渲染报错图、不拼「出现错误」
       if (isModerationRefusalError(err)) {
-        logger.warn(`[ChatGPT] ${hidePrivacyInfo(err?.message || '模型拒绝回答')}`)
-        await this.reply(pickRefusalReply(config), true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
-        if (e.checkAndExecuteContent?.length) {
-          await this.reply(e.checkAndExecuteContent)
-        }
+        await this.replyModerationRefusal(e, config, hidePrivacyInfo(err?.message || '模型拒绝回答'))
         return
       }
       logger.error(err)

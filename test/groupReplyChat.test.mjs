@@ -283,15 +283,21 @@ test('备用成功写入主会话，下轮携带正文仍选主模型；连接�
 
   scriptedResponse = async () => { throw new Error('全部尝试失败') }
   // 允许入口正常处理模型错误，其他断言仍执行真实持久化路径。
-  t.mock.method(logger, 'error', () => {})
+  const errors = []
+  t.mock.method(logger, 'error', error => errors.push(error))
   await chat.abstractChat(e, '失败问题', undefined, false, { automatic: true })
   assert.equal(writes.length, 2)
   assert.match(replies.at(-1), /全部尝试失败/)
+  assert.ok(errors.length > 0, '普通报错仍应打 logger.error')
+  const errorsBefore = errors.length
 
-  // 审核拒绝：Gemini 抛错路径与 api/responses/claude 的 refused 返回路径都走温和词库，且不写历史
+  // 审核拒绝：Gemini 抛错路径与 api/responses/claude 的 refused 返回路径都走温和词库，
+  // 不打 logger.error、不渲染报错图、不写历史；图片模式开启时也一样。
   Config.tts_First_person = '憨憨'
   const warnings = []
   t.mock.method(logger, 'warn', message => warnings.push(message))
+  const rendered = []
+  t.mock.method(chat, 'renderImage', async (...args) => { rendered.push(args) })
   scriptedResponse = async () => {
     throw Object.assign(new Error('模型拒绝回答：PROHIBITED_CONTENT'), {
       noRetry: true,
@@ -299,16 +305,20 @@ test('备用成功写入主会话，下轮携带正文仍选主模型；连接�
       refusalReason: 'PROHIBITED_CONTENT'
     })
   }
-  await chat.abstractChat(e, '敏感图片问题', undefined, false, { automatic: true })
+  await chat.abstractChat(e, '敏感图片问题', undefined, true, { automatic: true })
   assert.equal(writes.length, 2)
+  assert.equal(errors.length, errorsBefore)
+  assert.equal(rendered.length, 0)
   assert.equal(typeof replies.at(-1), 'string')
   assert.ok(replies.at(-1).includes('憨憨'))
   assert.equal(/出现错误|PROHIBITED_CONTENT|模型拒绝回答/.test(replies.at(-1)), false)
   assert.match(warnings.at(-1), /模型拒绝回答：PROHIBITED_CONTENT/)
 
   scriptedResponse = async () => ({ refused: true, text: '模型拒绝回答' })
-  await chat.abstractChat(e, '另一敏感问题', undefined, false, { automatic: true })
+  await chat.abstractChat(e, '另一敏感问题', undefined, true, { automatic: true })
   assert.equal(writes.length, 2)
+  assert.equal(errors.length, errorsBefore)
+  assert.equal(rendered.length, 0)
   assert.equal(typeof replies.at(-1), 'string')
   assert.ok(replies.at(-1).includes('憨憨'))
   assert.equal(/出现错误|PROHIBITED_CONTENT|模型拒绝回答/.test(replies.at(-1)), false)

@@ -11,10 +11,12 @@ test('isModerationRefusalError 准确区分模型安全拒绝与普通运行时�
   assert.equal(isModerationRefusalError(geminiBlocked), true)
   assert.equal(isModerationRefusalError(new Error('模型拒绝回答：SAFETY')), true)
   assert.equal(isModerationRefusalError(new Error('模型拒绝回答')), true)
+  assert.equal(isModerationRefusalError('模型拒绝回答：SAFETY'), true)
   assert.equal(isModerationRefusalError({ refused: true, text: '' }), true)
 
   assert.equal(isModerationRefusalError(new Error('API 返回的 candidates 为空')), false)
   assert.equal(isModerationRefusalError(new Error('502 Bad Gateway')), false)
+  assert.equal(isModerationRefusalError('错误：模型拒绝回答：SAFETY'), false)
   assert.equal(isModerationRefusalError(null), false)
   assert.equal(isModerationRefusalError(undefined), false)
 })
