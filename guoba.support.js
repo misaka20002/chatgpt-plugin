@@ -340,8 +340,8 @@ export function supportGuoba() {
         },
         {
           field: 'is_recallMsg',
-          label: '撤回错误消息',
-          bottomHelpMessage: '是否撤回大模型调用出错时的错误消息，此开关重启生效；如果你的云崽平台出现撤回错误消息时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
+          label: '撤回失败消息',
+          bottomHelpMessage: '是否撤回群聊内LLM调用出错、语音出错、拒绝回答时的消息；若你的云崽平台撤回提示时把用户消息也一起撤回了，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',
           component: 'Switch'
         },
         {

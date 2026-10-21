@@ -58,6 +58,20 @@ import {
 } from '../utils/paimonFuction.js'
 
 /**
+ * 「没得到回答」（模型报错或拒绝回答）的提示在群聊里延时撤回的秒数。
+ * 拒绝回答和报错对用户是同一件事，共用同一个秒数，避免两条路径各留一套口径。
+ */
+const FAILED_REPLY_RECALL_SECONDS = 60
+
+/**
+ * 失败提示的撤回沿用 is_recallMsg 开关，不新增配置项。
+ * 私聊返回 0：撤回后对话窗口什么都不剩，用户反而看不出发生过什么；群聊有旁观者才需要清理噪音。
+ */
+function failedReplyRecallSeconds(config, e) {
+  return config.is_recallMsg && e.isGroup ? FAILED_REPLY_RECALL_SECONDS : 0
+}
+
+/**
  * 每个对话保留的时长。单个对话内ai是保留上下文的。超时后销毁对话，再次对话创建新的对话。
  * 单位：秒
  * @type {number}
@@ -1090,6 +1104,10 @@ export class chatgpt extends plugin {
         if (findProvider(Config.getConfig(), profile.id) && connectionVersion(resolveProvider(profile.id)) === profileVersion) await redis.set(key, JSON.stringify(previousConversation), config.conversationPreserveTime > 0 ? { EX: config.conversationPreserveTime } : {})
       }
       let response = typeof chatMessage?.text === 'string' ? chatMessage.text.replace('\n\n\n', '\n') : ''
+      // 各 provider 的拒绝回答有两种落点：api/responses/claude 作为正常结果返回（refused 标记），
+      // gemini 直接抛错走 catch。这里统一按「没得到回答」处理，让拒绝提示和报错一样在群聊延时撤回；
+      // 拒绝原因（含安全分类标签）保持原样发给用户，不做替换。
+      const refusedRecallSeconds = chatMessage?.refused ? failedReplyRecallSeconds(config, e) : 0
       let postProcessors = await collectProcessors('post')
       /** thinking 累积器，不断追加新的思考内容，以支持 Chain-of-Thought (CoT) 推理的模型 */
       let thinking = chatMessage?.thinking_text || ''
@@ -1483,7 +1501,7 @@ export class chatgpt extends plugin {
         if (config.auto_makeForwardMsg && response.length > config.auto_makeForwardMsg) {
           await this.reply(await makeForwardMsg(e, splitString_Enter(fullText, config.auto_makeForwardMsg), '完整回复'))
         } else {
-          await this.reply(fullText, e.isGroup)
+          await this.reply(fullText, e.isGroup, { recallMsg: refusedRecallSeconds })
         }
         avatarTextSent = true
       }
@@ -1542,7 +1560,7 @@ export class chatgpt extends plugin {
             /** 包含at对象的多次回复 */
             const logicalGroups = convertSentenceToArray(responseText);
             for (let i = 0; i < logicalGroups.length; i++) {
-              await this.reply(logicalGroups[i]);
+              await this.reply(logicalGroups[i], false, { recallMsg: refusedRecallSeconds });
               await sleep_zz(Math.random() * 5000 + 2000);
             }
           }
@@ -1565,7 +1583,7 @@ export class chatgpt extends plugin {
             if (config.auto_makeForwardMsg && responseText.join('')?.length > config.auto_makeForwardMsg)
               this.reply(await makeForwardMsg(this.e, splitString_Enter(responseText, config.auto_makeForwardMsg), `回复 @${e.sender.card || e.sender.nickname}`));
             else
-              await this.reply(responseText, e.isGroup)
+              await this.reply(responseText, e.isGroup, { recallMsg: refusedRecallSeconds })
           }
           if (quotemessage.length > 0) {
             this.reply(await makeForwardMsg(this.e, quotemessage.map(msg => `${msg.text} - ${msg.url}`)))
@@ -1576,9 +1594,10 @@ export class chatgpt extends plugin {
         }
         const sendable = await generateAudio(this.e, ttsResponse, emotion, emotionDegree)
         if (sendable) {
-          await this.reply(sendable)
+          // 语音模式下拒绝回答等内容只以语音送出，纯文字分支根本走不到，撤回只能挂在这条语音上
+          await this.reply(sendable, false, { recallMsg: refusedRecallSeconds })
         } else {
-          await this.reply(`${config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: !config.is_recallMsg ? 0 : 30 })
+          await this.reply(`${config.tts_First_person}的儿童电话手表的麦克风好像坏了，发不出语音QAQ~`, false, { recallMsg: failedReplyRecallSeconds(config, e) })
         }
       } else if (forcePictureMode || userSetting.usePicture || (config.autoUsePicture && response.length > config.autoUsePictureThreshold)) {
         try {
@@ -1624,7 +1643,7 @@ export class chatgpt extends plugin {
           /** 包含at对象的多次回复 */
           const logicalGroups = convertSentenceToArray(responseText);
           for (let i = 0; i < logicalGroups.length; i++) {
-            await this.reply(logicalGroups[i]);
+            await this.reply(logicalGroups[i], false, { recallMsg: refusedRecallSeconds });
             await sleep_zz(Math.random() * 5000 + 2000);
           }
         }
@@ -1649,6 +1668,7 @@ export class chatgpt extends plugin {
           }
           else {
             this.reply(responseText, e.isGroup, {
+              recallMsg: refusedRecallSeconds,
               btnData: {
                 use,
                 suggested: chatMessage.suggestedResponses
@@ -1674,14 +1694,14 @@ export class chatgpt extends plugin {
       logger.error(err)
       if (err === 'Error: {"detail":"Conversation not found"}') {
         await this.destroyConversations(err)
-        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
+        await this.reply('当前对话异常，已经清除，请重试', true, { recallMsg: failedReplyRecallSeconds(config, e) })
       } else {
         let errorMessage = err?.message || err?.data?.message || (typeof (err) === 'object' ? JSON.stringify(err) : err) || '未能确认错误类型！'
         errorMessage = hidePrivacyInfo(errorMessage);
         if (forcePictureMode || userSetting.usePicture || (config.autoUsePicture && errorMessage.length > config.autoUsePictureThreshold)) {
           await this.renderImage(e, use, `出现异常,错误信息如下 \n \`\`\`${errorMessage}\`\`\``, prompt)
         } else {
-          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
+          await this.reply(`出现错误：${errorMessage.substring(0, 200)}`, true, { recallMsg: failedReplyRecallSeconds(config, e) })
         }
         if (e.checkAndExecuteContent?.length) {
           await this.reply(e.checkAndExecuteContent);

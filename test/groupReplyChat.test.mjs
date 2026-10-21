@@ -5,10 +5,12 @@ import assert from 'node:assert/strict'
 mock.module('../../../lib/plugins/plugin.js', { defaultExport: class {} })
 mock.module('../../../lib/common/common.js', { defaultExport: {} })
 mock.module('../utils/tts/microsoft-azure.js', { defaultExport: {} })
+/** 语音开关与合成结果由用例按需改写；默认不启用语音，保持其它用例的既有路径 */
+const harness = { useTTS: false, audio: undefined }
 mock.module('../utils/common.js', { namedExports: {
-  completeJSON() {}, formatDate() {}, formatDate2() {}, generateAudio() {}, getDefaultReplySetting() {},
+  completeJSON() {}, formatDate() {}, formatDate2() {}, generateAudio: async () => harness.audio, getDefaultReplySetting() {},
   getImageOcrText() {}, parseSourceImg: async () => false, getUin: e => e.self_id,
-  getUserData: async () => ({ mode: 'responses' }), getUserReplySetting: async () => ({}),
+  getUserData: async () => ({ mode: 'responses' }), getUserReplySetting: async () => (harness.useTTS ? { useTTS: true } : {}),
   isImage() {}, makeForwardMsg() {}, normalizeChatMode: mode => mode, randomString() {}, render() {}, renderUrl() {}
 } })
 mock.module('../utils/conversation.js', { namedExports: { deleteConversation() {}, getConversations() {}, getLatestMessageIdByConversationId() {} } })
@@ -19,7 +21,7 @@ mock.module('../utils/proxy.js', { namedExports: { getProxy() {} } })
 mock.module('../utils/chat.js', { namedExports: { generateSuggestedResponse() {} } })
 mock.module('../utils/postprocessors/BasicProcessor.js', { namedExports: { collectProcessors: () => [] } })
 mock.module('../utils/paimonFuction.js', { namedExports: {
-  hidePrivacyInfo: text => text, removeCQCode() {}, recognitionResultsByGemini() {},
+  hidePrivacyInfo: text => text, removeCQCode: text => text, recognitionResultsByGemini() {},
   convertSentenceToArray() {}, extractCharacterName() {}, splitString_Enter() {}, processCQMessage: text => text
 } })
 mock.module('../utils/chatCooldown.js', { defaultExport: { check: async () => ({ canChat: true }), end() {} } })
@@ -338,3 +340,93 @@ test(`${type} 不续接升级前历史，成功问答按 3600 秒和 50 条写�
   assert.equal(messages.at(-1).content, '回答26')
 })
 }
+
+// 拒绝回答此前走正常回复路径，永久留在群里；gemini 抛错却会被撤回。
+// 这里按「没得到回答」统一：群聊延时撤回、私聊保留、受 is_recallMsg 控制，正常回答不受影响。
+test('模型拒绝回答的文案按失败提示撤回：群聊 60 秒、私聊不撤、受开关控制', async t => {
+  const previous = { ...Config }
+  redis.set = async () => {}
+  t.after(() => {
+    delete redis.set
+    scriptedResponse = undefined
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+  })
+  Object.assign(Config, {
+    defaultProviderId: 'main', enableMemory: false, is_recallMsg: true,
+    modelProviders: { api: [], responses: [{ id: 'main', name: '主', responsesModel: 'main-model' }], claude: [], gemini: [] },
+    blockWords: [], promptBlockWords: []
+  })
+  const chat = Object.create(chatgpt.prototype)
+  const replies = []
+  chat.reply = async (value, quote, options) => { replies.push({ value, options }) }
+  chat.cacheContent = async () => {}
+  scriptedResponse = async () => ({ text: '模型拒绝回答', refused: true, actualProviderId: 'main' })
+
+  const group = { user_id: '123', sender: { user_id: '123' }, message: [], isGroup: true }
+  chat.e = group
+  await chat.abstractChat(group, '敏感问题', undefined, false, { automatic: true })
+  assert.deepEqual(replies.at(-1).value, ['模型拒绝回答'])
+  assert.equal(replies.at(-1).options.recallMsg, 60)
+
+  const friend = { user_id: '123', sender: { user_id: '123' }, message: [], isGroup: false }
+  chat.e = friend
+  await chat.abstractChat(friend, '敏感问题', undefined, false, { automatic: true })
+  assert.equal(replies.at(-1).options.recallMsg, 0)
+
+  Config.is_recallMsg = false
+  chat.e = group
+  await chat.abstractChat(group, '敏感问题', undefined, false, { automatic: true })
+  assert.equal(replies.at(-1).options.recallMsg, 0)
+
+  Config.is_recallMsg = true
+  scriptedResponse = async () => ({ text: '正常回答', actualProviderId: 'main' })
+  await chat.abstractChat(group, '普通问题', undefined, false, { automatic: true })
+  assert.equal(replies.at(-1).options.recallMsg, 0)
+})
+
+// 语音模式下拒绝文案不以文字送出（alsoSendText 默认关、阈值 299），撤回只能挂在语音上；
+// 文字分支的 recallMsg 覆盖不到那里，所以单独守一遍。报错与合成失败同步改成 60 秒。
+test('语音模式下拒绝回答的语音会撤回，报错与合成失败同样按失败提示撤回', async t => {
+  const previous = { ...Config }
+  redis.set = async () => {}
+  t.after(() => {
+    delete redis.set
+    scriptedResponse = undefined
+    harness.useTTS = false
+    harness.audio = undefined
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+  })
+  Object.assign(Config, {
+    defaultProviderId: 'main', enableMemory: false, is_recallMsg: true,
+    ttsRegex: '', tts_First_person: '派蒙',
+    modelProviders: { api: [], responses: [{ id: 'main', name: '主', responsesModel: 'main-model' }], claude: [], gemini: [] },
+    blockWords: [], promptBlockWords: []
+  })
+  const chat = Object.create(chatgpt.prototype)
+  const replies = []
+  chat.reply = async (value, quote, options) => { replies.push({ value, options }) }
+  chat.cacheContent = async () => {}
+  const e = { user_id: '123', sender: { user_id: '123' }, message: [], isGroup: true }
+  chat.e = e
+
+  harness.useTTS = true
+  harness.audio = { type: 'record', file: 'refusal.amr' }
+  scriptedResponse = async () => ({ text: '模型拒绝回答', refused: true, actualProviderId: 'main' })
+  await chat.abstractChat(e, '敏感问题', undefined, false, { automatic: true })
+  assert.deepEqual(replies.at(-1).value, harness.audio)
+  assert.equal(replies.at(-1).options.recallMsg, 60)
+
+  harness.audio = undefined
+  await chat.abstractChat(e, '敏感问题', undefined, false, { automatic: true })
+  assert.match(replies.at(-1).value, /麦克风好像坏了/)
+  assert.equal(replies.at(-1).options.recallMsg, 60)
+
+  harness.useTTS = false
+  t.mock.method(globalThis.logger, 'error', () => {})
+  scriptedResponse = async () => { throw new Error('上游 500') }
+  await chat.abstractChat(e, '出错问题', undefined, false, { automatic: true })
+  assert.match(replies.at(-1).value, /出现错误：上游 500/)
+  assert.equal(replies.at(-1).options.recallMsg, 60)
+})
