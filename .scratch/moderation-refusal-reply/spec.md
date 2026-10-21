@@ -59,12 +59,14 @@ Status: done（2026-10-21，本地分支 `fix/moderation-refusal-reply`，待推
   那会让「普通报错一字未改」变成十几行纯缩进变更，`git diff` 上无法自证未改。实际采用
   `if (isModerationRefusalError(err)) { …; return }`，其后原有代码保持原缩进与原文，diff 中该区块只有新增行。
 - **统一出口 `replyModerationRefusal`**：两处出口原本各写 8 行同构逻辑（`warn` + 词库回复 + 补发），
-  差别只在日志文案怎么拼：返回路径按 `text` 是否为空决定带不带原因，抛错路径直接用 `err.message`。
-  抽成一个类方法后，拼接差异收敛到调用点，发送与日志格式只剩一份。这是评审后追加的重构，不影响对外行为。
+  差别只在日志文案怎么拼：返回路径按剥前缀后的 `refusalDetail(text)` 是否为空决定带不带原因，
+  抛错路径直接用 `err.message`。抽成一个类方法后，拼接差异收敛到调用点，发送与日志格式只剩一份。
+  这是评审后追加的重构，不影响对外行为。
 - **日志截断 200 字**：上游需求未要求，但中转站可能返回带正文的长拒答文本，避免刷日志；与同文件
   `errorMessage.substring(0, 200)` 的既有约定一致。
-- **保留的设计**：`pickRefusalReply` 的字符串入参、`refusalReason` 字段、词库第 3/5/7 条的「安全检查/安全限制」措辞
-  均直接来自上游需求文档（`refusal_strategy_plan` 的词库表格），不属于本次自行发挥。
+- **保留的设计**：`pickRefusalReply` 的字符串入参、`refusalReason` 字段、词库第 3/5/7 条分别提到
+  「安全检查」「安全限制」「安全策略」的措辞，均直接来自上游需求文档（`refusal_strategy_plan` 的词库表格），
+  不属于本次自行发挥。
 
 ## 验证口径
 
