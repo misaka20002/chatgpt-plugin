@@ -83,7 +83,27 @@ function groupHistoryFixture() {
   return { selected, latest, historyCalls }
 }
 
+const groupAutoReplyPrompt = '【群聊自主回复】\n本次回复由群聊自主回复触发，不代表群友正在与你对话。请结合群聊历史、@和引用，判断待回复消息是对谁说的；对象不明时，不要默认是你。若消息是对他人说的，可以第三方身份自然参与，但不要冒认他人的身份、发言或行为。不要输出判断过程。'
+
 for (const provider of ['api', 'responses', 'claude', 'gemini']) {
+  test(`${provider} 仅群聊自主回复在系统提示词末尾附加交流对象说明`, async () => {
+    const { selected } = groupHistoryFixture()
+    await core.sendMessage(selected.raw_message, {}, provider, selected, {
+      enableSmart: false, groupAutoReply: true,
+      settings: { enableGroupContext: true, groupContextFromLatest: true }
+    })
+    const system = requests.at(-1).options.system || requests.at(-1).options.systemMessage || requests.at(-1).options.instructions
+    assert.ok(system.endsWith(groupAutoReplyPrompt))
+    assert.equal(system.split('【群聊自主回复】').length - 1, 1)
+    assert.match(system, /最近消息/)
+
+    await core.sendMessage(selected.raw_message, {}, provider, selected, {
+      enableSmart: false, settings: { enableGroupContext: true, groupContextFromLatest: true }
+    })
+    const normalSystem = requests.at(-1).options.system || requests.at(-1).options.systemMessage || requests.at(-1).options.instructions
+    assert.doesNotMatch(normalSystem, /【群聊自主回复】/)
+  })
+
   test(`${provider} 自主回复使用群内最新补充信息，普通回复仍从原消息读取记录`, async () => {
     const { selected, latest, historyCalls } = groupHistoryFixture()
     await core.sendMessage(selected.raw_message, {}, provider, selected, {
@@ -150,11 +170,12 @@ for (const provider of ['api', 'responses']) {
     remainingContextFailures = 2
     t.after(() => { remainingContextFailures = 0 })
     await core.sendMessage(selected.raw_message, {}, provider, selected, {
-      enableSmart: false, settings: { enableGroupContext: true, groupContextFromLatest: true }
+      enableSmart: false, groupAutoReply: true, settings: { enableGroupContext: true, groupContextFromLatest: true }
     })
     assert.deepEqual(historyCalls, [20, 15, 10].map(count => ({ seq: 0, count })))
     for (const request of requests.slice(requestStart)) {
       assert.match(request.options.systemMessage || request.options.instructions, /打游戏突然没声音了，但是麦克风还能用/)
+      assert.ok((request.options.systemMessage || request.options.instructions).endsWith(groupAutoReplyPrompt))
     }
     assert.equal(selected.message_id, 'selected-message')
     assert.equal(selected.seq, 101)
@@ -189,7 +210,7 @@ for (const type of ['api', 'responses', 'claude', 'gemini']) {
       return { text: '备用完成', id: 'backup-response' }
     }
     try {
-      const result = await core.sendMessage('接着说', { messages: [{ role: 'user', content: '旧问题' }, { role: 'assistant', content: '旧回答' }], previousResponseId: 'main-remote-id', actualProviderId: primary.id }, primary.id, event, { enableSmart: false, allowFallback: true })
+      const result = await core.sendMessage('接着说', { messages: [{ role: 'user', content: '旧问题' }, { role: 'assistant', content: '旧回答' }], previousResponseId: 'main-remote-id', actualProviderId: primary.id }, primary.id, event, { enableSmart: false, allowFallback: true, groupAutoReply: true })
       assert.equal(result.actualProviderId, backup.id)
       const attempts = requests.slice(before)
       assert.equal(attempts.length, 3)
@@ -198,6 +219,8 @@ for (const type of ['api', 'responses', 'claude', 'gemini']) {
       assert.equal(last.clientOptions.apiBaseUrl || last.clientOptions.baseUrl, 'https://backup.invalid/v1')
       const system = request => request.options.system || request.options.systemMessage || request.options.instructions
       assert.equal(system(last), system(attempts[0]))
+      assert.ok(system(last).endsWith(groupAutoReplyPrompt))
+      assert.equal(system(last).split('【群聊自主回复】').length - 1, 1)
       assert.doesNotMatch(system(last), /不应采用/)
       if (type === 'responses') {
         assert.equal(last.options.previousResponseId, undefined)

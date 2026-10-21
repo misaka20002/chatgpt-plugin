@@ -1033,7 +1033,7 @@ export class chatgpt extends plugin {
 
       // 自主回复可能选中较早的消息：引用身份保留在 e，回答上下文另从群内最新记录读取。
       const options = automatic && e.isGroup
-        ? { settings: { enableGroupContext: true, groupContextFromLatest: true } }
+        ? { groupAutoReply: true, settings: { enableGroupContext: true, groupContextFromLatest: true } }
         : {}
       let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, profile.id, e, { ...options, allowFallback: true, providerSource })
       if (chatMessage?.noMsg) {

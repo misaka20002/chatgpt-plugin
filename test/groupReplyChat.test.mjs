@@ -113,6 +113,7 @@ test('自主回复复用正常聊天入口和全局提供商，不传禁用工�
   assert.equal(target.message_id, 'selected-message')
   assert.equal(target.seq, 101)
   assert.deepEqual(options.settings, { enableGroupContext: true, groupContextFromLatest: true })
+  assert.equal(options.groupAutoReply, true)
   assert.equal(Config.enableGroupContext, false)
   assert.equal(options?.disableTools, undefined)
   assert.equal(options?.enableSmart, undefined)

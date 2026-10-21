@@ -108,6 +108,12 @@ export const roleMap = {
 
 const defaultPropmtPrefix = ', a large language model trained by OpenAI. You answer as concisely as possible for each response (e.g. don’t be verbose). It is very important that you answer as concisely as possible, so please remember this. If you are generating a list, do not have too many items. Keep the number of items short.'
 
+const groupAutoReplyPrompt = '【群聊自主回复】\n本次回复由群聊自主回复触发，不代表群友正在与你对话。请结合群聊历史、@和引用，判断待回复消息是对谁说的；对象不明时，不要默认是你。若消息是对他人说的，可以第三方身份自然参与，但不要冒认他人的身份、发言或行为。不要输出判断过程。'
+
+function appendGroupAutoReplyPrompt(system, opt) {
+  return opt.groupAutoReply ? `${system}\n${groupAutoReplyPrompt}` : system
+}
+
 function getRetryGroupContextLengths(baseLength = 0) {
   if (!Number.isFinite(baseLength) || baseLength <= 0) {
     return [0]
@@ -378,7 +384,7 @@ class Core {
         const quoted = await collectQuotedImages(e, opt.prepared)
         applyQuotedMedias(option, quoted.medias)
         // 缓存只存基础 system；提示按本次尝试单独追加（prepared 跨主备复用）
-        option.system = resolveTurnSystem(opt.prepared, option.system, quoted.failed > 0)
+        option.system = appendGroupAutoReplyPrompt(resolveTurnSystem(opt.prepared, option.system, quoted.failed > 0), opt)
         return await client.sendMessage(promptForClaude, option)
       }
     } else if (use === 'gemini') { // 使用接口 ##############################
@@ -459,7 +465,7 @@ class Core {
       option.sf_markdownPic = Config.sf_markdownPic
       option.auto_makeForwardMsg = Config.auto_makeForwardMsg
 
-      option.system = resolveTurnSystem(opt.prepared, option.system, quotedFailed)
+      option.system = appendGroupAutoReplyPrompt(resolveTurnSystem(opt.prepared, option.system, quotedFailed), opt)
       return await client.sendMessage(prompt, option)
     } else if (use === 'responses') { // OpenAI Responses API ##############################
       const completionParams = {}
@@ -476,7 +482,7 @@ class Core {
         })
         instructions = mergeSystemPrompt(instructions, e, { replyTimestamps: conversation.replyTimestamps })
         if (extraSystemMessage) instructions += extraSystemMessage
-        return instructions
+        return appendGroupAutoReplyPrompt(instructions, opt)
       }
 
       const client = new ResponsesAPI({
@@ -653,7 +659,7 @@ class Core {
         if (extraSystemMessage) {
           system += extraSystemMessage
         }
-        return system
+        return appendGroupAutoReplyPrompt(system, opt)
       }
       // 引用图先取：失败提示按每次尝试单独追加（缓存只存基础 system）
       const quoted = await collectQuotedImages(e, opt.prepared)
