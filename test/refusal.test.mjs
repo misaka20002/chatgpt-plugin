@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { REFUSAL_REPLIES, isModerationRefusalError, pickRefusalReply } from '../utils/refusal.js'
+import { REFUSAL_REPLIES, isModerationRefusalError, pickRefusalReply, refusalDetail } from '../utils/refusal.js'
 
 test('isModerationRefusalError 准确区分模型安全拒绝与普通运行时错误', () => {
   const geminiBlocked = Object.assign(new Error('模型拒绝回答：PROHIBITED_CONTENT'), {
@@ -19,6 +19,17 @@ test('isModerationRefusalError 准确区分模型安全拒绝与普通运行时�
   assert.equal(isModerationRefusalError('错误：模型拒绝回答：SAFETY'), false)
   assert.equal(isModerationRefusalError(null), false)
   assert.equal(isModerationRefusalError(undefined), false)
+})
+
+test('refusalDetail 剥掉拒绝前缀，避免日志拼成双前缀', () => {
+  assert.equal(refusalDetail('模型拒绝回答：PROHIBITED_CONTENT'), 'PROHIBITED_CONTENT')
+  assert.equal(refusalDetail('模型拒绝回答：SAFETY'), 'SAFETY')
+  assert.equal(refusalDetail('模型拒绝回答'), '')
+  assert.equal(refusalDetail('  模型拒绝回答: BLOCKLIST  '), 'BLOCKLIST')
+  assert.equal(refusalDetail('我无法协助这个请求'), '我无法协助这个请求')
+  assert.equal(refusalDetail(undefined), '')
+  assert.equal(refusalDetail(null), '')
+  assert.equal(refusalDetail({ text: '模型拒绝回答' }), '')
 })
 
 test('pickRefusalReply 按 tts_First_person 替换称呼且不含报错字样或英文拦截码', () => {

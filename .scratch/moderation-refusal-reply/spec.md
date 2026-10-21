@@ -37,14 +37,19 @@ Status: done（2026-10-21，本地分支 `fix/moderation-refusal-reply`，待推
 ## 行为契约
 
 - `utils/refusal.js` 导出 `REFUSAL_REPLIES`（冻结数组）、`isModerationRefusalError(err)`、
-  `pickRefusalReply(firstPersonOrConfig, random)`；零依赖，可直接在纯 Node 下单测。
+  `pickRefusalReply(firstPersonOrConfig, random)`、`refusalDetail(text)`；零依赖，可直接在纯 Node 下单测。
 - `isModerationRefusalError` 对以下输入返回 `true`：`{ refused: true }` 任意对象、
   `Error('模型拒绝回答：PROHIBITED_CONTENT')`、`Error('模型拒绝回答')`、字符串 `'模型拒绝回答：SAFETY'`；
-  对 `Error('API 返回的 candidates 为空')`、`Error('502 Bad Gateway')`、`null`、`undefined` 返回 `false`。
+  对 `Error('API 返回的 candidates 为空')`、`Error('502 Bad Gateway')`、`'错误：模型拒绝回答：SAFETY'`、
+  `null`、`undefined` 返回 `false`。
+- `refusalDetail` 剥掉 `模型拒绝回答` 前缀与首尾空白：返回路径上 provider 的 `text` 可能是占位文案、
+  已带前缀的拦截码（`模型拒绝回答：SAFETY`）或模型自己的拒答话术，统一剥前缀后日志不会出现
+  「模型拒绝回答：模型拒绝回答：SAFETY」。
 - `pickRefusalReply` 的 `random` 参数用于测试注入；越界或非整数索引回退第 0 条。
-- `apps/chat.js` 的两处出口都经 `replyModerationRefusal(e, config, message)` 统一发送（单一出口：
-  `logger.warn('[ChatGPT] ' + message)` + 词库文案 + `checkAndExecuteContent` 补发），
-  `recallMsg` 沿用文件内既有写法。
+- `apps/chat.js` 的两处出口都经 `replyModerationRefusal(e, config, logMessage)` 统一发送（单一出口：
+  `logger.warn('[ChatGPT] ' + logMessage)` + 词库文案 + `checkAndExecuteContent` 补发），
+  `recallMsg` 沿用文件内既有写法。两条路径的日志形态一致：`[ChatGPT] 模型拒绝回答` 或
+  `[ChatGPT] 模型拒绝回答：<原因>`。
 - 下游契约不变：`CustomGoogleGeminiClient.prototype.sendMessage` 在拦截时仍抛
   `Error('模型拒绝回答：…')` 且带 `{ noRetry: true }`，`test/providerClients.test.mjs` 的四协议不重试断言继续成立。
 
@@ -53,8 +58,9 @@ Status: done（2026-10-21，本地分支 `fix/moderation-refusal-reply`，待推
 - **catch 分支用前置守卫而非 if/else**：上游提示词给的写法是把原 `catch` 体整体塞进 `else` 并重新缩进，
   那会让「普通报错一字未改」变成十几行纯缩进变更，`git diff` 上无法自证未改。实际采用
   `if (isModerationRefusalError(err)) { …; return }`，其后原有代码保持原缩进与原文，diff 中该区块只有新增行。
-- **统一出口 `replyModerationRefusal`**：两处出口原本各写 6 行相同逻辑且日志格式已漂移（一处带原因、一处不带），
-  抽成一个类方法后两处行为一致。这是评审后追加的重构，不影响对外行为。
+- **统一出口 `replyModerationRefusal`**：两处出口原本各写 8 行同构逻辑（`warn` + 词库回复 + 补发），
+  差别只在日志文案怎么拼：返回路径按 `text` 是否为空决定带不带原因，抛错路径直接用 `err.message`。
+  抽成一个类方法后，拼接差异收敛到调用点，发送与日志格式只剩一份。这是评审后追加的重构，不影响对外行为。
 - **日志截断 200 字**：上游需求未要求，但中转站可能返回带正文的长拒答文本，避免刷日志；与同文件
   `errorMessage.substring(0, 200)` 的既有约定一致。
 - **保留的设计**：`pickRefusalReply` 的字符串入参、`refusalReason` 字段、词库第 3/5/7 条的「安全检查/安全限制」措辞

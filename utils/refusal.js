@@ -34,6 +34,21 @@ export function isModerationRefusalError(err) {
 }
 
 /**
+ * 从拒绝文本中取出原因部分，去掉「模型拒绝回答」前缀与首尾空白，供日志拼接使用。
+ *
+ * 返回路径上不同 provider 的 text 形态不一：可能是占位文案、`模型拒绝回答：SAFETY`
+ * 这类已带前缀的拦截码，也可能是模型自己写的拒答话术。统一剥掉前缀，避免日志出现
+ * 「模型拒绝回答：模型拒绝回答：SAFETY」这种重复。
+ *
+ * @param {unknown} text
+ * @returns {string}
+ */
+export function refusalDetail(text) {
+  if (typeof text !== 'string') return ''
+  return text.trim().replace(/^模型拒绝回答[:：]?/, '').trim()
+}
+
+/**
  * 从拒绝词库中随机抽取一条回复，并将“派蒙”替换为当前配置的 AI 第一人称。
  *
  * @param {string|{tts_First_person?: string}} [firstPersonOrConfig]

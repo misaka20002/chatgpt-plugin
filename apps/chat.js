@@ -43,7 +43,7 @@ import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
 import { groupReply } from '../utils/groupReply.js'
 import { avatarReply } from '../utils/avatarReply.js'
-import { isModerationRefusalError, pickRefusalReply } from '../utils/refusal.js'
+import { isModerationRefusalError, pickRefusalReply, refusalDetail } from '../utils/refusal.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -838,10 +838,10 @@ export class chatgpt extends plugin {
    *
    * @param {object} e 消息事件
    * @param {object} config 当前会话的 provider 配置
-   * @param {string} message 写进日志的拒绝原因
+   * @param {string} logMessage 写进日志的整条拒绝原因
    */
-  async replyModerationRefusal(e, config, message = '模型拒绝回答') {
-    logger.warn(`[ChatGPT] ${message}`)
+  async replyModerationRefusal(e, config, logMessage) {
+    logger.warn(`[ChatGPT] ${logMessage}`)
     await this.reply(pickRefusalReply(config), true, { recallMsg: !config.is_recallMsg ? 0 : (e.isGroup ? 30 : 0) })
     if (e.checkAndExecuteContent?.length) {
       await this.reply(e.checkAndExecuteContent)
@@ -1064,9 +1064,8 @@ export class chatgpt extends plugin {
       }
       if (chatMessage?.refused) {
         // 审核拒绝不是故障：回温和词库文案，且不把被拒答的轮次写进会话历史
-        const text = typeof chatMessage.text === 'string' ? chatMessage.text.trim() : ''
-        const reason = text && text !== '模型拒绝回答' ? `：${hidePrivacyInfo(text).slice(0, 200)}` : ''
-        await this.replyModerationRefusal(e, config, `模型拒绝回答${reason}`)
+        const detail = refusalDetail(chatMessage.text)
+        await this.replyModerationRefusal(e, config, `模型拒绝回答${detail ? `：${hidePrivacyInfo(detail).slice(0, 200)}` : ''}`)
         return false
       }
       if (use === 'responses') {

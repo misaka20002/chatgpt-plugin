@@ -298,6 +298,7 @@ test('备用成功写入主会话，下轮携带正文仍选主模型；连接�
   t.mock.method(logger, 'warn', message => warnings.push(message))
   const rendered = []
   t.mock.method(chat, 'renderImage', async (...args) => { rendered.push(args) })
+  const repliesBefore = replies.length
   scriptedResponse = async () => {
     throw Object.assign(new Error('模型拒绝回答：PROHIBITED_CONTENT'), {
       noRetry: true,
@@ -309,19 +310,43 @@ test('备用成功写入主会话，下轮携带正文仍选主模型；连接�
   assert.equal(writes.length, 2)
   assert.equal(errors.length, errorsBefore)
   assert.equal(rendered.length, 0)
+  assert.equal(replies.length, repliesBefore + 1)
   assert.equal(typeof replies.at(-1), 'string')
   assert.ok(replies.at(-1).includes('憨憨'))
   assert.equal(/出现错误|PROHIBITED_CONTENT|模型拒绝回答/.test(replies.at(-1)), false)
-  assert.match(warnings.at(-1), /模型拒绝回答：PROHIBITED_CONTENT/)
+  assert.equal(warnings.at(-1), '[ChatGPT] 模型拒绝回答：PROHIBITED_CONTENT')
 
+  // 返回路径：占位文案不重复拼接原因
   scriptedResponse = async () => ({ refused: true, text: '模型拒绝回答' })
   await chat.abstractChat(e, '另一敏感问题', undefined, true, { automatic: true })
   assert.equal(writes.length, 2)
   assert.equal(errors.length, errorsBefore)
   assert.equal(rendered.length, 0)
+  assert.equal(replies.length, repliesBefore + 2)
   assert.equal(typeof replies.at(-1), 'string')
   assert.ok(replies.at(-1).includes('憨憨'))
   assert.equal(/出现错误|PROHIBITED_CONTENT|模型拒绝回答/.test(replies.at(-1)), false)
+  assert.equal(warnings.at(-1), '[ChatGPT] 模型拒绝回答')
+
+  // 返回路径：已带前缀的拦截码不拼成双前缀
+  scriptedResponse = async () => ({ refused: true, text: '模型拒绝回答：SAFETY' })
+  await chat.abstractChat(e, '再一个敏感问题', undefined, true, { automatic: true })
+  assert.equal(replies.length, repliesBefore + 3)
+  assert.ok(replies.at(-1).includes('憨憨'))
+  assert.equal(warnings.at(-1), '[ChatGPT] 模型拒绝回答：SAFETY')
+
+  // 返回路径：模型自带话术进日志，且照常补发 checkAndExecuteContent
+  e.checkAndExecuteContent = ['补充指令']
+  scriptedResponse = async () => ({ refused: true, text: '我无法协助这个请求' })
+  await chat.abstractChat(e, '最后一个敏感问题', undefined, true, { automatic: true })
+  assert.equal(writes.length, 2)
+  assert.equal(errors.length, errorsBefore)
+  assert.equal(rendered.length, 0)
+  assert.equal(replies.length, repliesBefore + 5)
+  assert.ok(replies.at(-2).includes('憨憨'))
+  assert.deepEqual(replies.at(-1), ['补充指令'])
+  assert.equal(warnings.at(-1), '[ChatGPT] 模型拒绝回答：我无法协助这个请求')
+  delete e.checkAndExecuteContent
 })
 
 for (const type of ['api', 'responses', 'claude', 'gemini']) {
