@@ -48,8 +48,13 @@ let helpData = [
       },
       {
         icon: 'smiley-wink',
-        title: '#chatgpt设置模型 / #chatgpt设置Key / #chatgpt设置地址',
-        desc: '主人修改当前提供商；新增、删除条目请使用锅巴。'
+        title: '#chatgpt设置模型 / #chatgpt获取可用模型',
+        desc: '主人修改当前提供商模型；新增、删除条目请使用锅巴。'
+      },
+      {
+        icon: 'switch',
+        title: '#chatgpt设置Key / #chatgpt设置地址',
+        desc: '主人修改当前提供商参数；更多条目请使用锅巴。'
       },
       {
         icon: 'list',
