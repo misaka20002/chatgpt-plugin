@@ -351,9 +351,11 @@ const defaultConfig = {
   // 智能模式 V2 记忆系统配置（群聊采集须由 Bot 主人在锅巴或当前群显式授权）
   enableMemory: false, // 是否启用记忆系统（唯一总开关，同时开放 Memory_Tool 与 userProfile）
   enableAtGraph: true, // 是否开放 #at图谱 指令；仍需启用记忆系统并授权当前群
-  maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）的 V2 记忆上限
+  maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）各自独立，默认 100；Guoba 最低 50
+  maxMemoriesPerGroup: 50, // 每群公共 group 记忆的独立整理容量目标，默认 50；Guoba 最低 20（>95% 夜间压缩可按 Token 预算分片）
   memoryMinImportance: 0.4, // 注入对话的最低重要性阈值（0-1）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数
+  memoryRecallProvider: '', // 空值=不使用 LLM 判断；current 或已配置 Provider ID=子模型筛选
   allowMemberDeleteOwnMemory: true, // 允许成员删除自己的记忆（默认开启）
   memoryGroupCapture: {
     groups: [], // 授权采集的群列表 [{groupId, switchOn}]，锅巴 GSubForm 管理或 #群记忆开启

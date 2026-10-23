@@ -71,6 +71,23 @@ test('固定判断模型迁移；改名保留引用，同类重名与跨协议�
   assert.equal(f.run().modelProviders.gemini[0].name, '我的账号')
 })
 
+test('记忆召回判断已引用的模型不能删除，解除引用才可删', t => {
+  const f = fixture(t, {})
+  const result = f.run(`
+    const candidate = structuredClone(Config.getConfig())
+    candidate.memoryRecallProvider = candidate.modelProviders.claude[0].id
+    Config.commit(candidate)
+    const invalid = structuredClone(candidate)
+    invalid.modelProviders.claude = []
+    assert.throws(() => Config.commit(invalid), /记忆召回判断引用的模型提供商不存在/)
+    assert.equal(Config.getConfig().memoryRecallProvider, candidate.memoryRecallProvider)
+    invalid.memoryRecallProvider = ''
+    Config.commit(invalid)
+  `)
+  assert.equal(result.memoryRecallProvider, '')
+  assert.equal(result.modelProviders.claude.length, 0)
+})
+
 test('解除引用后可清空，保存失败不改变内存或磁盘', t => {
   const f = fixture(t, {})
   f.run(`

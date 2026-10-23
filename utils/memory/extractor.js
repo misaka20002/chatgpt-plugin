@@ -144,7 +144,7 @@ export function toPromptRows(raws) {
  * @param {Function} [options.onChunkProgress] 每成功一片回调全量已完成片（调用方用于持久化断点）
  * @returns {Promise<{candidates: Array, skipped: Array, usage: Object}>}
  */
-export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, resumeChunks = [], onChunkProgress }) {
+export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, resumeChunks = [], onChunkProgress, historyLoader }) {
   const inputTokenLimit = cfg.inputTokenLimit || 30000
   // 每片模型调用失败后的即时重试次数（网络瞬时故障快速吸收）；退避 2s×2^(n-1)
   const chunkRetries = Number(cfg.chunkRetries) || 2
@@ -173,10 +173,12 @@ export async function runExtraction({ rows, ctx, evidenceMap, cfg = {}, llm, res
     }
 
     const windowLabel = `${ctx.windowLabel || ctx.day || 'unknown'}（分片 ${i + 1}/${chunks.length}）`
+    const history = typeof historyLoader === 'function' ? await historyLoader(chunk) : ''
     const prompt = buildExtractionPrompt({
       groupId: ctx.groupId,
       windowLabel,
       rows: chunk,
+      history,
     })
 
     // 片级结果独立：某一片反复失败只影响本片，成功片结果由 onChunkProgress 持久化，

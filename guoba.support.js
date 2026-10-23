@@ -1763,17 +1763,27 @@ export function supportGuoba() {
         {
           field: 'maxMemoriesPerUser',
           label: '单用户最大记忆数量',
-          bottomHelpMessage: '每用户在每个作用域（跨群 user、每个群的 user_group）最多保存的原子事实数（默认 100），超过后按 重要性×时效 淘汰得分最低的一条',
+          bottomHelpMessage: '每位用户的跨群个人 user 与各群个人 user_group 分别使用该容量目标，默认 100、最小 50。实时保存允许暂时超过上限；凌晨 4 点有效数量严格超过 95% 时，该作用域额外请求一次 LLM 尝试整理至 70% 及以下。若无法安全压缩完成，只记录警告、不补发 POST、不按重要性强制删除。',
           component: 'InputNumber',
           componentProps: {
-            min: 10,
+            min: 50,
+            step: 1
+          }
+        },
+        {
+          field: 'maxMemoriesPerGroup',
+          label: '群公共最大记忆数量',
+          bottomHelpMessage: '每群公共 group 记忆独立使用该容量目标，默认 50、最小 20，不与个人记忆共享。实时可超额；凌晨 4 点有效数量严格超过 95% 时，该群额外请求一次 LLM 尝试压缩至 70% 及以下；未达标只记录警告，不追加请求。',
+          component: 'InputNumber',
+          componentProps: {
+            min: 20,
             step: 1
           }
         },
         {
           field: 'memoryMinImportance',
           label: '记忆最低重要性',
-          bottomHelpMessage: '注入对话的记忆最低重要性阈值（0-1），低于此值且与当前问题不相关的记忆不注入',
+          bottomHelpMessage: '只作用于「不使用 LLM 判断」且非全量模式：与当前问题相关的非常驻记忆仍须达到此重要性阈值（0-1）',
           component: 'InputNumber',
           componentProps: {
             min: 0.05,
@@ -1784,11 +1794,20 @@ export function supportGuoba() {
         {
           field: 'memoryContextLimit',
           label: '对话记忆数量限制',
-          bottomHelpMessage: '每次对话最多注入多少条相关记忆，按 问题相关性+重要性+置信度 排序',
+          bottomHelpMessage: '通常是每次对话最多注入的记忆条数；当此值大于或等于「单用户最大记忆数量」（例如两者均为100）时，跳过全部筛选直接注入有权访问的所有记忆，不请求额外 LLM。注意个人上限按作用域计算，加上群公共记忆时实际注入数可能超过此值',
           component: 'InputNumber',
           componentProps: {
             min: 1,
             step: 1
+          }
+        },
+        {
+          field: 'memoryRecallProvider',
+          label: '记忆召回判断模型',
+          bottomHelpMessage: '选择已配置接口，聊天时额外调用一次模型判断哪些记忆有助于回答中文问题；不使用时维持原有文字匹配。判断失败自动回退旧匹配；当「对话记忆数量限制」大于等于「单用户最大记忆数量」时直接导入全部可访问记忆，无需额外调用',
+          component: 'Select',
+          componentProps: {
+            options: [{ label: '不使用 LLM 判断（原有文字匹配）', value: '' }, { label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
           }
         },
         {

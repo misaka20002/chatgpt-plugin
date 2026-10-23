@@ -24,6 +24,7 @@ const RAWIDX = (groupId) => `${PREFIX}:rawIdx:${groupId}`
 const TASK = (groupId, day) => `${PREFIX}:task:${groupId}:${day}`
 const POLICY = (groupId) => `${PREFIX}:policy:${groupId}`
 const META = `${PREFIX}:meta`
+const SCOPE_LOCK = (scope, ownerId, groupId) => `${PREFIX}:scopeLock:${scope}:${ownerId}:${groupId || '-'}`
 
 const SCOPES = ['user', 'user_group', 'group']
 const KINDS = ['identity', 'preference', 'relationship', 'plan', 'group_rule', 'experience', 'episode']
@@ -82,11 +83,13 @@ function dayKeyOf(tsSec) {
 }
 
 /**
- * 手工维护的记忆（manual，主人通过管理指令/维护流程写入）：
- * 不受模型 retract 与单值替换影响；关闭来源群时只移除证据、保留记忆。
- * Memory_Tool 是模型在普通自述场景自动调用的写入来源，不属于手工确认：
- * 用户换工作/明确否定时，必须可被新值替换、可被 retract 撤回。
- * profile-scan（画像工具模型自动提取）同样不属于手工确认。
+ * manual 是存储层预留的来源标记，不代表插件已经开放「主人手动新增/修改/锁定记忆」。
+ * 当前管理指令仅支持查看、删除、清空等操作，没有把新记忆写成 source='manual' 的生产入口；
+ * 需求方已明确本轮不新增手动写入/修改功能，后续不要误报为已实现。
+ * 若历史数据存在 source='manual'：模型 retract、单值替换不能覆盖它，关闭来源群时仅移除证据。
+ * Memory_Tool（包括主人在智能对话中要求记录）和 profile-scan 均为模型派生记忆，
+ * 不属于 manual，仍须允许按后续事实正常更新或撤回。
+ * 凌晨独立压缩同样不得自动归档 manual；手工管理删除仍按原权限执行。
  */
 function isManualMemory(memory) {
   return memory.source === 'manual'
@@ -194,6 +197,30 @@ export class MemoryStore {
     if (!this.redis) throw new Error('MemoryStore: 无可用 redis 客户端')
   }
 
+  /** 作用域级写入互斥：实时写入与夜间合并/归档共享此锁。 */
+  async _withScopeLock(scope, ownerId, groupId, work) {
+    const key = SCOPE_LOCK(scope, ownerId, groupId)
+    const token = genMemoryId()
+    let acquired = false
+    for (let attempt = 0; attempt < 60; attempt++) {
+      if (await this.redis.set(key, token, { NX: true, PX: 120000 }) === 'OK') { acquired = true; break }
+      await new Promise(resolve => setTimeout(resolve, 25))
+    }
+    if (!acquired) throw new Error('记忆作用域正被其他操作占用，请稍后重试')
+    try {
+      return await work()
+    } finally {
+      if (typeof this.redis.eval === 'function') {
+        await this.redis.eval("if redis.call('GET',KEYS[1]) == ARGV[1] then return redis.call('DEL',KEYS[1]) else return 0 end", {
+          keys: [key], arguments: [token],
+        })
+      } else if (await this.redis.get(key) === token) {
+        // 单元测试 Redis mock；真实 Redis 必须通过上述原子 Lua 释放。
+        await this.redis.del(key)
+      }
+    }
+  }
+
   /* ================= 记忆写入 ================= */
 
   /**
@@ -225,7 +252,8 @@ export class MemoryStore {
     const results = []
     const merged = new Map()
 
-    // 同批合并：operation:scope:owner:group:factKeyToken → 证据并集
+    // 同批精确去重始终执行，不受任何容量压缩阈值影响；operation/scope/主体/群/键/值一致才合并证据。
+    // 不同 factKey 或 factValue 的语义相近事实，不能在此靠字符串相似度武断合并。
     for (const raw of candidates) {
       const checked = validateCandidateShape(raw)
       if (!checked.ok) { results.push({ ok: false, candidate: raw, reason: checked.reason }); continue }
@@ -252,6 +280,22 @@ export class MemoryStore {
    * @returns {Promise<{ok: boolean, action: string, memoryId?: string, reason?: string}>}
    */
   async applyFact(candidate, ctx = {}) {
+    try {
+      const checkedScope = validateCandidateShape(candidate)
+      if (!checkedScope.ok) return { ok: false, action: 'invalid', reason: checkedScope.reason }
+      const scope = checkedScope.data.scope
+      const ownerId = String(scope === 'group' ? (ctx.groupId || '') : (checkedScope.data.subjectId || ctx.subjectId || ''))
+      const groupId = scope === 'user' ? '' : String(ctx.groupId || '')
+      if (!ownerId) return { ok: false, action: 'invalid', reason: '记忆主体缺失' }
+      if (scope !== 'user' && !groupId) return { ok: false, action: 'invalid', reason: `${scope} 作用域必须在群聊中使用` }
+      return await this._withScopeLock(scope, ownerId, groupId, () => this._applyFactUnlocked(candidate, ctx))
+    } catch (err) {
+      logger?.error?.(`[MemoryV2] applyFact 失败: ${err.message}`)
+      return { ok: false, action: 'error', reason: err.message }
+    }
+  }
+
+  async _applyFactUnlocked(candidate, ctx = {}) {
     try {
       const redis = this.redis
       const now = nowMs()
@@ -318,7 +362,8 @@ export class MemoryStore {
         if (manualConflict) return { ok: false, action: 'ignored', reason: '单值槽位被手工确认记忆占据，忽略新值' }
       }
 
-      // 1) 同值强化（合并证据 + 置信度提升）
+      // 1) 全时精确去重：同主体、同作用域、同 factKey + factValue 时复用旧记忆，合并证据并强化。
+      // 这条保障不依赖独立压缩触发条件；跨键语义重复交由离线提炼时的历史事实对照。
       const sameValue = active.find(m => m.factValue === c.factValue)
       if (sameValue) {
         const addedEvidence = await this._mergeEvidence(sameValue, evidence, ctx.groupId)
@@ -349,14 +394,8 @@ export class MemoryStore {
         for (const t of archivables) await this._archive(t, 'superseded', now)
       }
 
-      // 3) 新增
-      // 个人记忆上限检查（user 与 user_group 均限制，防止多群画像无限增长）
-      if (c.scope === 'user' || c.scope === 'user_group') {
-        const cap = Number(ctx.maxMemoriesPerUser) || 100
-        const count = await this._countActiveByScope(c.scope, ownerId, groupId)
-        if (count >= cap) await this._evictLowest(c.scope, ownerId, groupId)
-      }
-
+      // 3) 新增：实时与离线提炼均保留合格事实，不按 importance 淘汰。
+      // 各作用域超过容量的 95% 才由凌晨独立压缩任务决定保留集合。
       const memory = {
         id: genMemoryId(),
         scope: c.scope,
@@ -451,6 +490,7 @@ export class MemoryStore {
         await redis.sAdd(evdKey, serialized)
         added++
         if (grpKey) await redis.sAdd(grpKey, memory.id)
+        if (ev.g && ev.g !== groupId) await redis.sAdd(GRP(ev.g), memory.id)
       }
     }
     return added
@@ -501,24 +541,199 @@ export class MemoryStore {
     return count
   }
 
-  /** 按 重要性×时间衰减 淘汰最低分（user 作用域） */
-  async _evictLowest(scope, ownerId, groupId) {
-    const redis = this.redis
-    const ids = await redis.sMembers(IDX(scope, ownerId, groupId))
-    const now = nowMs()
-    const nowS = nowSec()
-    let lowest = null
-    let lowestScore = Infinity
-    for (const id of ids) {
-      const m = await this._getMemory(id)
-      if (!m || m.status !== 'active') continue
-      if (m.validTo > 0 && m.validTo <= nowS) continue // 已过期：不参与淘汰竞争
-      const ageDays = (now - m.createdAt) / 86400000
-      const decay = Math.max(0.1, 1 - (ageDays / 30) * 0.1)
-      const score = (m.importance || 0) * decay
-      if (score < lowestScore) { lowestScore = score; lowest = m }
+  /** 历史证据统计供 LLM 比较可靠性，不传私聊或群聊消息原文。 */
+  async summarizeMemoryEvidence(memoryId) {
+    const raw = await this.redis.sMembers(EVD(memoryId))
+    const groups = new Set()
+    const senders = new Set()
+    let latest = 0
+    let validCount = 0
+    for (const value of raw) {
+      try {
+        const ev = JSON.parse(value)
+        validCount++
+        if (ev.g) groups.add(String(ev.g))
+        if (ev.s) senders.add(String(ev.s))
+        latest = Math.max(latest, Number(ev.t) || 0)
+      } catch { /* 历史损坏证据不纳入计数 */ }
     }
-    if (lowest) await this._deleteMemory(lowest)
+    return { count: validCount, groupCount: groups.size, senderCount: senders.size, lastEvidenceAt: latest }
+  }
+
+  /** 当前有效记忆数：排除已归档和已经超过 validTo 的事实。 */
+  async countActiveByScope(scope, ownerId, groupId = '') {
+    return this._countActiveByScope(scope, ownerId, groupId)
+  }
+
+  /** 列出有效记忆作用域。只扫描索引键，不按所有群成员发送请求。 */
+  async listCompressionScopes({ maxMemoriesPerUser = 100, maxMemoriesPerGroup = 50 } = {}) {
+    const result = []
+    if (!this.redis.scanIterator) throw new Error('Redis 不支持作用域索引扫描')
+    const now = nowSec()
+    const seen = new Set()
+    for await (const key of this.redis.scanIterator({ MATCH: `${PREFIX}:idx:*`, COUNT: 1000 })) {
+      const prefix = `${PREFIX}:idx:`
+      if (!String(key).startsWith(prefix)) continue
+      const parts = String(key).slice(prefix.length).split(':')
+      if (parts.length !== 3) continue
+      const [scope, ownerId, gid] = parts
+      if (!SCOPES.includes(scope) || !ownerId) continue
+      const groupId = gid === '-' ? '' : gid
+      if (scope === 'user' && groupId) continue
+      if (scope !== 'user' && !groupId) continue
+      if (scope === 'group' && ownerId !== groupId) continue
+      if (seen.has(key)) continue
+      seen.add(key)
+      const capValue = scope === 'group' ? maxMemoriesPerGroup : maxMemoriesPerUser
+      const cap = Number(capValue)
+      if (!Number.isInteger(cap) || cap <= 0) continue
+      // 已归档的旧项也保留在 idx 中；SCARD 是无假阴性的快速筛选，不能直接当有效数量。
+      const indexedCount = typeof this.redis.sCard === 'function'
+        ? await this.redis.sCard(key) : (await this.redis.sMembers(key)).length
+      if (indexedCount <= cap * 0.95) continue
+      const memories = (await this.listByScope({ scope, ownerId, groupId }))
+        .filter(m => !(m.validTo > 0 && m.validTo <= now) &&
+          m.scope === scope && String(m.ownerId) === ownerId && String(m.groupId || '') === groupId)
+        .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+      if (memories.length > cap * 0.95) {
+        result.push({ scope, ownerId, groupId, cap, target: Math.floor(cap * 0.7), memories })
+      }
+    }
+    return result
+  }
+
+  /** 每天每作用域最多尝试一次独立压缩 POST。Redis SET NX 防止重复调度或多进程重复请求。 */
+  async claimCompressionAttempt(scope, ownerId, groupId = '') {
+    const day = dayKeyOf(nowSec())
+    const key = `${PREFIX}:compressionAttempt:${day}:${scope}:${ownerId}:${groupId || '-'}`
+    return await this.redis.set(key, '1', { NX: true, EX: 2 * 86400 }) === 'OK'
+  }
+
+  /** 压缩归档使用原始 JSON 的 Redis 原子 CAS，防止并发实时更新时覆写事实。 */
+  async _archiveCompressionIfSame(memory, reason, detail) {
+    const key = `${PREFIX}:item:${memory.id}`
+    const expected = JSON.stringify(memory)
+    const archived = {
+      ...memory,
+      status: 'archived',
+      source: reason,
+      originalSource: memory.source,
+      archiveReason: detail,
+      archivedAt: nowSec(),
+      updatedAt: nowMs(),
+    }
+    const next = JSON.stringify(archived)
+    if (typeof this.redis.eval === 'function') {
+      const script = "if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end; redis.call('SET', KEYS[1], ARGV[2]); return 1"
+      return Number(await this.redis.eval(script, { keys: [key], arguments: [expected, next] })) === 1
+    }
+    // 轻量单元测试 MockRedis 的回退。真实 node-redis 使用上面的 Redis 原子 CAS。
+    if (await this.redis.get(key) !== expected) return false
+    await this.redis.set(key, next)
+    return true
+  }
+
+  /**
+   * 模型给出完整保留清单；验证输入快照、身份、覆盖与 manual 后才进行归档。
+   * 任一校验失败时不改动历史；LLM 不能自行扩大作用域、指定额外 ID 或写入新事实。
+   */
+  async applyCompressionPlan(scopeInfo, plan) {
+    const { scope, ownerId, groupId } = scopeInfo
+    try {
+      return await this._withScopeLock(scope, ownerId, groupId, () => this._applyCompressionPlanUnlocked(scopeInfo, plan))
+    } catch (err) {
+      return { status: 'busy', reason: err.message }
+    }
+  }
+
+  async _applyCompressionPlanUnlocked({ scope, ownerId, groupId, memories, partialScope = false }, plan) {
+    if (!plan || !Array.isArray(plan.keepIds) || !Array.isArray(plan.mergePlans) || !Array.isArray(plan.archiveIds)) {
+      return { status: 'invalid', reason: '压缩输出缺少 keepIds/mergePlans/archiveIds' }
+    }
+    const current = (await this.listByScope({ scope, ownerId, groupId }))
+      .filter(m => !(m.validTo > 0 && m.validTo <= nowSec()))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    // 分片压缩只能修改本片已提交给模型的 ID；同时复核这些 ID 的实际内容。
+    const allowed = new Set(memories.map(m => m.id))
+    const reviewed = partialScope ? current.filter(m => allowed.has(m.id)) : current
+    if (reviewed.length !== memories.length || JSON.stringify(reviewed) !==
+        JSON.stringify([...memories].sort((a, b) => String(a.id).localeCompare(String(b.id))))) {
+      return { status: 'stale', reason: '本片历史记忆在模型请求期间发生变化，放弃归档' }
+    }
+    const existing = new Map(reviewed.map(m => [m.id, m]))
+    const seen = new Set()
+    const keep = new Set()
+    const archive = new Map()
+    const merges = []
+    const mark = (id) => {
+      if (typeof id !== 'string' || !existing.has(id) || seen.has(id)) return false
+      seen.add(id)
+      return true
+    }
+    for (const id of plan.keepIds) {
+      if (!mark(id)) return { status: 'invalid', reason: '保留 ID 不合法或重复' }
+      keep.add(id)
+    }
+    for (const item of plan.archiveIds) {
+      if (!item || !mark(item.id) || typeof item.reason !== 'string' || item.reason.trim().length < 4 ||
+          item.reason.length > 250 || isManualMemory(existing.get(item.id))) {
+        return { status: 'invalid', reason: '归档 ID、理由或 manual 权限不合法' }
+      }
+      archive.set(item.id, { reason: item.reason })
+    }
+    for (const item of plan.mergePlans) {
+      if (!item || !Array.isArray(item.removeIds) || item.removeIds.length === 0 ||
+          typeof item.keepId !== 'string' || !keep.has(item.keepId) ||
+          typeof item.reason !== 'string' || item.reason.trim().length < 4 || item.reason.length > 250) {
+        return { status: 'invalid', reason: '合并结构、保留项或理由不合法' }
+      }
+      for (const id of item.removeIds) {
+        if (!mark(id) || isManualMemory(existing.get(id))) {
+          return { status: 'invalid', reason: '合并移除项不合法或受保护' }
+        }
+        const a = existing.get(item.keepId)
+        const b = existing.get(id)
+        // 跨事实值的语义合并交模型判断；服务端要求同一个原子事实槽位，防止丢失另一属性。
+        // 跨 factKey 等价场景需专用别名规范化和独立确认，不能让模型任意合并。
+        const sameSlot = a.factKey === b.factKey && a.factValue === b.factValue
+        const sameText = a.kind === b.kind && String(a.text || '').replace(/\s+/g, '') === String(b.text || '').replace(/\s+/g, '')
+        if (!sameSlot && !sameText) {
+          return { status: 'invalid', reason: '无法确认合并项是同一原子事实，保留原事实' }
+        }
+        merges.push({ keepId: item.keepId, removeId: id, reason: item.reason })
+      }
+    }
+    if (seen.size !== existing.size) return { status: 'invalid', reason: '模型没有对所有历史记忆给出保留或归档决定' }
+
+    // 不把 Redis 部分写入伪装成事务：每条写入前再核对当前值；并发发生时拒绝后续操作。
+    // 此处是单作用域的保守执行器，先迁移重复证据再归档其来源记录。
+    let changed = 0
+    for (const action of merges) {
+      const saved = await this._getMemory(action.keepId)
+      const removed = await this._getMemory(action.removeId)
+      if (JSON.stringify(saved) !== JSON.stringify(existing.get(action.keepId)) ||
+          JSON.stringify(removed) !== JSON.stringify(existing.get(action.removeId))) {
+        return { status: 'partial', reason: '合并期间记录更新，停止操作', changed }
+      }
+      const raw = await this.redis.sMembers(EVD(action.removeId))
+      const evidence = raw.map(s => { try { return JSON.parse(s) } catch { return null } }).filter(Boolean)
+      await this._mergeEvidence(saved, evidence, '')
+      if (!await this._archiveCompressionIfSame(removed, 'compressed_duplicate', action.reason)) {
+        return { status: 'partial', reason: '迁移证据后源记录发生变化，已保留源记录', changed }
+      }
+      changed++
+    }
+    for (const [id, item] of archive) {
+      const saved = await this._getMemory(id)
+      if (JSON.stringify(saved) !== JSON.stringify(existing.get(id))) {
+        return { status: 'partial', reason: '归档期间记录更新，停止操作', changed }
+      }
+      if (!await this._archiveCompressionIfSame(saved, 'compressed_capacity', item.reason)) {
+        return { status: 'partial', reason: '归档时发现并发更新，已保留记录', changed }
+      }
+      changed++
+    }
+    return { status: 'applied', changed, reason: '' }
   }
 
   /* ================= 记忆读取 ================= */
@@ -652,6 +867,7 @@ export class MemoryStore {
       for await (const key of redis.scanIterator({ MATCH: `${PREFIX}:rawIdx:*`, COUNT: 3000 })) keys.push(key)
       for await (const key of redis.scanIterator({ MATCH: `${PREFIX}:policy:*`, COUNT: 3000 })) keys.push(key)
       for await (const key of redis.scanIterator({ MATCH: `${PREFIX}:meta`, COUNT: 3000 })) keys.push(key)
+      for await (const key of redis.scanIterator({ MATCH: `${PREFIX}:compressionAttempt:*`, COUNT: 3000 })) keys.push(key)
       // 旧 Hash
       for await (const key of redis.scanIterator({ MATCH: 'CHATGPT:MEMORY:USER:*', COUNT: 3000 })) keys.push(key)
     }
@@ -779,7 +995,7 @@ export class MemoryStore {
       if (!m) continue
       if (m.status !== 'active') {
         // archived 的记忆：validTo（秒）或 updatedAt（毫秒→秒）超过宽限期则删除
-        const expireAt = m.validTo || Math.floor((m.updatedAt || 0) / 1000)
+        const expireAt = m.archivedAt || m.validTo || Math.floor((m.updatedAt || 0) / 1000)
         if (expireAt && expireAt <= now - graceDays * 86400) {
           await this._deleteMemory(m); removed++
         }

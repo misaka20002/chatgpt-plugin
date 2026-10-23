@@ -81,6 +81,7 @@ export function normalizeProviders(config, defaults) {
     [config.translateSource === 'baidu' ? '' : config.translateSource, '翻译'],
     [config.groupReply?.provider === 'current' ? '' : config.groupReply?.provider, '群聊判断'],
     [config.avatarReply?.provider === 'current' ? '' : config.avatarReply?.provider, '角色动图'],
+    [config.memoryRecallProvider === 'current' ? '' : config.memoryRecallProvider, '记忆召回判断'],
     [config.sandboxSubAgentProvider === 'current' ? '' : config.sandboxSubAgentProvider, '子代理']
   ]) requireRef(id, label, type)
   return config

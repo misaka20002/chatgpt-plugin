@@ -1013,6 +1013,8 @@ export class chatgpt extends plugin {
         const memoryPrompt = await buildMemoryPrompt(e, prompt, {
           config: {
             memoryContextLimit: config.memoryContextLimit,
+            maxMemoriesPerUser: config.maxMemoriesPerUser,
+            memoryRecallProvider: config.memoryRecallProvider,
             memoryMinImportance: config.memoryMinImportance,
           }
         })

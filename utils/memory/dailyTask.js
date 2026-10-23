@@ -20,6 +20,8 @@ import { Config } from '../config.js'
 import { MemoryStore } from './store.js'
 import { runExtraction, toPromptRows, isRetryableLLMError } from './extractor.js'
 import { contentHash } from './capture.js'
+import { compressMemoryScope } from './compression.js'
+import { tokenize, relevanceScore } from './recall.js'
 
 const DEFAULT_CRON = '0 0 4 * * ? *'
 // 总尝试上限（跨 runDaily 日累计；配合每日 MAX_ATTEMPTS_PER_RUN 次额度）
@@ -107,7 +109,25 @@ export class DailyConsolidation {
         const groupReport = await this.processGroupDaily(g.groupId, cfg)
         report.groups.push({ groupId: g.groupId, ...groupReport })
       }
-      // 清理过期记忆
+      // 同步按作用域检查容量：不要求当天在群里发言，只对严格 >95% 的作用域增加独立 POST。
+      // 每个作用域本轮最多一次；压缩没到 70% 只告警，不重试请求。
+      try {
+        const scopes = await this.store.listCompressionScopes({
+          maxMemoriesPerUser: Config.maxMemoriesPerUser,
+          maxMemoriesPerGroup: Config.maxMemoriesPerGroup,
+        })
+        report.compression = []
+        for (const scopeInfo of scopes) {
+          report.compression.push({
+            scope: scopeInfo.scope, ownerId: scopeInfo.ownerId, groupId: scopeInfo.groupId,
+            ...await compressMemoryScope({ store: this.store, scopeInfo, cfg, llm: cfg.compressionLLM || cfg.llm }),
+          })
+        }
+      } catch (err) {
+        logger?.warn?.(`[MemoryV2] 每日记忆压缩扫描失败，保留原记忆：${err.message}`)
+        report.compressionError = err.message
+      }
+      // 无论压缩模型成功与否，确定性过期清理都独立执行。
       const removed = await this.store.deleteExpired(30)
       report.expiredRemoved = removed
       logger?.info?.(`[MemoryV2] 每日提炼完成: ${JSON.stringify(report)}`)
@@ -361,6 +381,42 @@ export class DailyConsolidation {
         ctx: { groupId: String(groupId), day, windowLabel: `${day} 全天` },
         evidenceMap,
         llm: cfg.llm, // 测试注入/自定义提取调用
+        // 将本片发言者及当前群的历史事实作为不可信数据放入原提炼 POST，不按成员新增请求。
+        historyLoader: async (chunk) => {
+          const ids = [...new Set(chunk.map(row => String(row.senderId)).filter(Boolean))]
+          const items = new Map()
+          for (const uid of ids) {
+            const existing = await store.listRecallCandidates(uid, String(groupId))
+            for (const m of existing) {
+              if (m.scope === 'group' || (m.scope === 'user' || m.scope === 'user_group') && String(m.ownerId) === uid) {
+                items.set(m.id, { id: m.id, scope: m.scope, subjectId: m.scope === 'group' ? '' : m.ownerId,
+                  factKey: m.factKey, factValue: m.factValue, text: m.text })
+              }
+            }
+          }
+          // 优先选取与当前发言者语义相关的旧事实，避免按长度优先丢弃较长的相关记忆。
+          const queries = new Map()
+          for (const row of chunk) {
+            const uid = String(row.senderId)
+            queries.set(uid, `${queries.get(uid) || ''} ${row.text || ''}`.slice(-6000))
+          }
+          const selected = [...items.values()].sort((a, b) => {
+            const relevance = m => {
+              const query = m.scope === 'group' ? [...queries.values()].join(' ') : (queries.get(m.subjectId) || '')
+              return relevanceScore(m, tokenize(query))
+            }
+            return relevance(b) - relevance(a) || JSON.stringify(a).length - JSON.stringify(b).length
+          })
+          const out = []
+          let size = 2
+          for (const m of selected) {
+            const serialized = JSON.stringify(m)
+            if (size + serialized.length + 1 > 8000) break
+            out.push(serialized)
+            size += serialized.length + 1
+          }
+          return `[${out.join(',')}]`
+        },
         resumeChunks,
         // 每成功一片即持久化断点：窗口级重试/崩溃恢复后只补跑未完成片
         onChunkProgress: async (done) => {

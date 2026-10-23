@@ -27,7 +27,11 @@ class MockRedis {
   }
 
   async get(k) { const v = this.data.get(k); return typeof v === 'string' ? v : null }
-  async set(k, v) { this.data.set(k, String(v)); return 'OK' }
+  async set(k, v, options = {}) {
+    if (options?.NX && this.data.has(k)) return null
+    this.data.set(k, String(v))
+    return 'OK'
+  }
   async del(...keys) { let n = 0; for (const k of keys) if (this.data.delete(k)) n++; return n }
   async expire(k, seconds) { this.data.set(`__ttl:${k}`, Date.now() + seconds * 1000); return 1 }
   async exists(k) { return this.data.has(k) ? 1 : 0 }
@@ -66,6 +70,7 @@ class MockRedis {
     return n
   }
   async sMembers(k) { const s = this.data.get(k); return s instanceof Set ? [...s] : [] }
+  async sCard(k) { const s = this.data.get(k); return s instanceof Set ? s.size : 0 }
 
   async zAdd(k, memberOrObj, score) {
     if (!(this.data.get(k) instanceof Map)) this.data.set(k, new Map())
@@ -136,6 +141,7 @@ function resetConfig() {
     maxMemoriesPerUser: 100,
     memoryMinImportance: 0.4,
     memoryContextLimit: 8,
+    memoryRecallProvider: '',
     allowMemberDeleteOwnMemory: true,
     memoryGroupCapture: {
       groups: [{ groupId: '100', switchOn: true }],
@@ -177,6 +183,485 @@ async function writeFact(store, groupId, candidate, rows) {
 
 const clearStore = async () => { for (const k of [...mockRedis.data.keys()]) mockRedis.data.delete(k) }
 
+test('实时记忆新增即使超过个人容量也保留全部已存事实', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  for (const scope of ['user', 'user_group']) {
+    for (let i = 0; i < 2; i++) {
+      const id = `${scope}_${i}`
+      const result = await store.applyFact({
+        scope, subjectId: 'u-cap', speakerId: 'u-cap', kind: 'preference',
+        factKey: `preference.topic_${i}`, factValue: `topic_${i}`,
+        text: `用户喜欢话题${i}`, confidence: 0.9, importance: i === 0 ? 0.1 : 0.9,
+        evidenceMessageIds: [id],
+      }, { groupId: '100', source: 'Memory_Tool', maxMemoriesPerUser: 1,
+        evidenceMap: { [id]: { groupId: '100', senderId: 'u-cap', time: 1780000000 } } })
+      assert.equal(result.ok, true)
+    }
+    const saved = await store.listByScope({ scope, ownerId: 'u-cap', groupId: scope === 'user' ? '' : '100' })
+    assert.equal(saved.length, 2, `${scope} 不得在实时写入时按重要性淘汰旧记忆`)
+  }
+})
+
+
+test('凌晨超 95% 才单作用域发一次压缩 POST，达到 70% 或不足均不补发', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const seed = async (scope, count) => {
+    for (let i = 0; i < count; i++) {
+      const id = `${scope}-${i}`
+      const group = scope === 'group'
+      const result = await store.applyFact({
+        scope, subjectId: group ? '' : 'u-compress', speakerId: 'u-compress',
+        kind: 'preference', factKey: `preference.topic_${i}`, factValue: `topic_${i}`,
+        text: `独立事实${i}`, importance: 0.4, confidence: 0.9,
+        evidenceMessageIds: [id],
+      }, { groupId: '100', source: 'Memory_Tool',
+        evidenceMap: { [id]: { groupId: '100', senderId: 'u-compress', role: 'admin', time: 1780000000 } },
+      })
+      assert.equal(result.ok, true)
+    }
+  }
+  await seed('user', 95)
+  await seed('group', 47)
+  const dc = new DailyConsolidation({ store })
+  let posts = 0
+  const llm = async input => {
+    posts++
+    const { memories, target } = JSON.parse(input)
+    return { text: JSON.stringify({
+      keepIds: memories.slice(0, target).map(m => m.id),
+      mergePlans: [],
+      archiveIds: memories.slice(target).map(m => ({ id: m.id, reason: '容量取舍：保存覆盖更广的历史事实' })),
+    }) }
+  }
+  let result = await dc.runDaily({ compressionLLM: llm, llm: async () => ({ text: '{"candidates":[]}' }) })
+  assert.equal(posts, 0, '95/100 与 47/50 均未严格超过 95%')
+  assert.equal(result.compression.length, 0)
+
+  // 添加真正的第 96 条，并独立验证另一个作用域触发条件。
+  await store.applyFact({
+    scope: 'user', subjectId: 'u-compress', speakerId: 'u-compress',
+    kind: 'preference', factKey: 'preference.last', factValue: 'last',
+    text: '最后的独立事实', importance: 0.5, confidence: 0.9, evidenceMessageIds: ['last-user'],
+  }, { groupId: '100', source: 'Memory_Tool',
+    evidenceMap: { 'last-user': { groupId: '100', senderId: 'u-compress', time: 1780000000 } } })
+  await store.applyFact({
+    scope: 'group', subjectId: '', speakerId: 'u-compress',
+    kind: 'preference', factKey: 'preference.last', factValue: 'last',
+    text: '群公共最后一条', importance: 0.5, confidence: 0.9, evidenceMessageIds: ['last-group'],
+  }, { groupId: '100', source: 'Memory_Tool',
+    evidenceMap: { 'last-group': { groupId: '100', senderId: 'u-compress', role: 'admin', time: 1780000000 } } })
+  result = await dc.runDaily({ compressionLLM: llm, llm: async () => ({ text: '{"candidates":[]}' }) })
+  assert.equal(posts, 2, 'user 与 group 各只发一次独立压缩请求')
+  assert.equal(result.compression.length, 2)
+  assert.equal(await store.countActiveByScope('user', 'u-compress', ''), 70)
+  assert.equal(await store.countActiveByScope('group', '100', '100'), 35)
+  assert.equal(result.expiredRemoved, 0)
+})
+
+test('压缩未达到 70% 只 logger.warn，不补发 POST 或按重要性继续删除', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  for (let i = 0; i < 48; i++) {
+    const id = `group-partial-${i}`
+    await store.applyFact({
+      scope: 'group', subjectId: '', speakerId: 'u1', kind: 'group_rule',
+      factKey: `group.note_${i}`, factValue: `v_${i}`, text: `群事实${i}`,
+      importance: i / 100, confidence: 0.9, evidenceMessageIds: [id],
+    }, { groupId: '100', source: 'Memory_Tool',
+      evidenceMap: { [id]: { groupId: '100', senderId: 'u1', role: 'admin', time: 1780000000 } } })
+  }
+  const dc = new DailyConsolidation({ store })
+  let posts = 0
+  const warnings = []
+  const oldWarn = globalThis.logger.warn
+  globalThis.logger.warn = m => warnings.push(String(m))
+  try {
+    const report = await dc.runDaily({
+      compressionLLM: async input => {
+        posts++
+        const ids = JSON.parse(input).memories.map(m => m.id)
+        return { text: JSON.stringify({
+          keepIds: ids.slice(0, 40), mergePlans: [],
+          archiveIds: ids.slice(40).map(id => ({ id, reason: '容量取舍：部分归档' })),
+        }) }
+      },
+      llm: async () => ({ text: '{"candidates":[]}' }),
+    })
+    assert.equal(posts, 1)
+    assert.equal(await store.countActiveByScope('group', '100', '100'), 40)
+    assert.equal(report.compression[0].after, 40)
+    assert.ok(warnings.some(w => w.includes('压缩未达到目标') && w.includes('40/50')))
+  } finally {
+    globalThis.logger.warn = oldWarn
+  }
+})
+
+
+test('压缩计划拒绝越权 ID、保护 manual、拒绝模型调用期间已变化的快照', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  const add = async (scope, factKey, source, mid, subjectId = 'u1') =>
+    store.applyFact({
+      scope, subjectId, speakerId: subjectId, kind: 'preference',
+      factKey, factValue: 'same', text: '用户喜欢阅读', importance: 0.5,
+      confidence: 0.9, evidenceMessageIds: [mid],
+    }, { groupId: '100', source, evidenceMap: {
+      [mid]: { groupId: '100', senderId: subjectId, time: 1780000000 },
+    } })
+  const a = await add('user', 'preference.reading', 'manual', 'manual1')
+  const b = await add('user', 'preference.books', 'Memory_Tool', 'derived1')
+  const c = await add('user_group', 'preference.books', 'Memory_Tool', 'group1')
+  for (const row of [a, b, c]) assert.equal(row.ok, true)
+  const scopes = await store.listCompressionScopes({ maxMemoriesPerUser: 2, maxMemoriesPerGroup: 50 })
+  const target = scopes.find(s => s.scope === 'user')
+  assert.equal(target.memories.length, 2)
+
+  const danger = await store.applyCompressionPlan(target, {
+    keepIds: [b.memoryId], mergePlans: [],
+    archiveIds: [{ id: a.memoryId, reason: '容量取舍：误删手工确认' }],
+  })
+  assert.equal(danger.status, 'invalid')
+  assert.equal((await store.getMemory(a.memoryId)).status, 'active')
+
+  const cross = await store.applyCompressionPlan(target, {
+    keepIds: [a.memoryId], mergePlans: [],
+    archiveIds: [{ id: c.memoryId, reason: '容量取舍：跨群不许删除' }],
+  })
+  assert.equal(cross.status, 'invalid')
+  assert.equal((await store.getMemory(c.memoryId)).status, 'active')
+
+  await add('user', 'preference.books', 'Memory_Tool', 'derived2')
+  const stale = await store.applyCompressionPlan(target, {
+    keepIds: [a.memoryId], mergePlans: [],
+    archiveIds: [{ id: b.memoryId, reason: '容量取舍：已变化快照' }],
+  })
+  assert.equal(stale.status, 'stale')
+  assert.equal((await store.getMemory(b.memoryId)).status, 'active')
+})
+
+test('跨 factKey 同一原子文本可安全合并历史证据，非等价事实拒绝合并', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  const add = async (key, value, text, mid) =>
+    store.applyFact({
+      scope: 'user', subjectId: 'u2', speakerId: 'u2', kind: 'preference',
+      factKey: key, factValue: value, text, importance: 0.5, confidence: 0.9,
+      evidenceMessageIds: [mid],
+    }, { groupId: '100', source: 'Memory_Tool',
+      evidenceMap: { [mid]: { groupId: '100', senderId: 'u2', time: 1780000000 } } })
+  const a = await add('preference.book', 'reading', '用户喜欢阅读', 'book1')
+  const b = await add('preference.reading', 'books', '用户喜欢阅读', 'book2')
+  const c = await add('preference.favorite_author', 'writer', '用户喜欢某位作家', 'book3')
+  const scopes = await store.listCompressionScopes({ maxMemoriesPerUser: 3 })
+  const scope = scopes.find(s => s.scope === 'user')
+  const wrong = await store.applyCompressionPlan(scope, {
+    keepIds: [a.memoryId],
+    mergePlans: [{ keepId: a.memoryId, removeIds: [b.memoryId, c.memoryId], reason: '尝试错误合并独立事实' }],
+    archiveIds: [],
+  })
+  assert.equal(wrong.status, 'invalid')
+  assert.equal((await store.getMemory(c.memoryId)).status, 'active')
+  const plan = {
+    keepIds: [a.memoryId, c.memoryId], mergePlans: [
+      { keepId: a.memoryId, removeIds: [b.memoryId], reason: '语义完全等价且事实文本相同' },
+    ], archiveIds: [],
+  }
+  assert.equal((await store.applyCompressionPlan(scope, plan)).status, 'applied')
+  assert.equal((await store.getMemory(b.memoryId)).status, 'archived')
+  assert.equal(await store.countActiveByScope('user', 'u2', ''), 2)
+  const evidence = await mockRedis.sMembers(`CHATGPT:MEMORY:V2:evd:${a.memoryId}`)
+  assert.equal(evidence.length, 2, '合并后仍有两条不同来源证据')
+  assert.equal((await store.getMemory(c.memoryId)).status, 'active')
+})
+
+
+test('凌晨原群级提炼请求直接包含相关旧事实，无额外成员 POST', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  const row = { messageId: 'history-evidence', senderId: 'u-history', text: '我喜欢原神', time: 1780000000 }
+  const inserted = await store.applyFact({
+    scope: 'user', subjectId: 'u-history', speakerId: 'u-history', kind: 'preference',
+    factKey: 'preference.game', factValue: 'genshin', text: '用户喜欢原神',
+    confidence: 0.9, importance: 0.8, evidenceMessageIds: [row.messageId],
+  }, { groupId: '100', source: 'Memory_Tool', evidenceMap: mkEvidenceMap('100', [row]) })
+  assert.equal(inserted.ok, true)
+  const day = yesterdayKey()
+  await store.saveRawMessage({
+    groupId: '100', messageId: 'today-h', senderId: 'u-history', senderName: 'A',
+    text: '我最近还在玩原神', time: dayToTs(day) + 3600, isCommand: false,
+    contentHash: 'history-content',
+  }, 30)
+  let calls = 0
+  const dc = new DailyConsolidation({ store })
+  await dc.runDaily({
+    llm: async prompt => {
+      calls++
+      assert.match(prompt, /【历史记忆对照】/)
+      assert.match(prompt, /preference\.game/)
+      assert.match(prompt, /genshin/)
+      assert.match(prompt, /today-h/)
+      return { text: '{"candidates":[]}' }
+    },
+    compressionLLM: async () => { throw new Error('没有达到 95%，不应独立压缩') },
+  })
+  assert.equal(calls, 1, '群聊窗口只发一次提炼请求，不因用户个数重复发送')
+})
+
+
+test('同一作用域当日压缩后仍 >95% 时不发第二次 POST', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  for (let i = 0; i < 48; i++) {
+    const mid = `once-${i}`
+    const res = await store.applyFact({
+      scope: 'group', subjectId: '', speakerId: 'u1', kind: 'group_rule',
+      factKey: `group.count_${i}`, factValue: `v_${i}`, text: `群独立事实${i}`,
+      importance: 0.2, confidence: 0.9, evidenceMessageIds: [mid],
+    }, { groupId: '100', source: 'Memory_Tool',
+      evidenceMap: { [mid]: { groupId: '100', senderId: 'u1', role: 'admin', time: 1780000000 } } })
+    assert.equal(res.ok, true)
+  }
+  let calls = 0
+  const dc = new DailyConsolidation({ store })
+  const cfg = {
+    llm: async () => ({ text: '{"candidates":[]}' }),
+    compressionLLM: async input => {
+      calls++
+      return { text: JSON.stringify({
+        keepIds: JSON.parse(input).memories.map(m => m.id), mergePlans: [], archiveIds: [],
+      }) }
+    },
+  }
+  const first = await dc.runDaily(cfg)
+  const second = await dc.runDaily(cfg)
+  assert.equal(first.compression[0].after, 48)
+  assert.equal(second.compression[0].status, 'attempted_today')
+  assert.equal(calls, 1, '即使模型未压至 70%，本日重复触发也不得增加 POST')
+  assert.equal(await store.countActiveByScope('group', '100', '100'), 48)
+})
+
+
+test('低负载作用域扫描只查索引基数，不读取不可能超过 95% 的历史项', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  const low = await writeFact(store, '100', {
+    scope: 'user', subjectId: 'u-low', speakerId: 'u-low', kind: 'preference',
+    factKey: 'preference.low', factValue: 'a', text: '用户偏好 A', confidence: 0.9, importance: 0.6,
+  }, [{ messageId: 'lo-1', senderId: 'u-low' }])
+  assert.equal(low.res.ok, true)
+  let reads = 0
+  const originalGet = mockRedis.get.bind(mockRedis)
+  mockRedis.get = async key => {
+    if (String(key).includes('item:')) reads++
+    return originalGet(key)
+  }
+  try {
+    const scopes = await store.listCompressionScopes({ maxMemoriesPerUser: 100, maxMemoriesPerGroup: 50 })
+    assert.equal(scopes.length, 0)
+    assert.equal(reads, 0, 'SCARD 证明无可能触发时无需读取每条记忆本体')
+  } finally {
+    mockRedis.get = originalGet
+  }
+})
+
+test('历史压缩提交时与实时强化共用作用域互斥，避免覆盖新证据', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  const mk = async (key, id) => store.applyFact({
+    scope: 'user', subjectId: 'u-lock', speakerId: 'u-lock', kind: 'preference',
+    factKey: key, factValue: key, text: '用户喜欢阅读', importance: 0.6, confidence: 0.9,
+    evidenceMessageIds: [id],
+  }, { groupId: '100', source: 'Memory_Tool',
+    evidenceMap: { [id]: { groupId: '100', senderId: 'u-lock', time: 1780000000 } },
+  })
+  const a = await mk('preference.read_a', 'lka')
+  const b = await mk('preference.read_b', 'lkb')
+  assert.equal(a.ok && b.ok, true)
+  const scope = (await store.listCompressionScopes({ maxMemoriesPerUser: 2 })).find(s => s.scope === 'user')
+  let resume, signal
+  const gate = new Promise(resolve => { resume = resolve })
+  const entered = new Promise(resolve => { signal = resolve })
+  const originalMerge = store._mergeEvidence.bind(store)
+  let paused = false
+  store._mergeEvidence = async (memory, evidence, groupId) => {
+    if (!paused && memory.id === a.memoryId && evidence.length) {
+      paused = true
+      signal()
+      await gate
+    }
+    return originalMerge(memory, evidence, groupId)
+  }
+  const merge = store.applyCompressionPlan(scope, {
+    keepIds: [a.memoryId], archiveIds: [],
+    mergePlans: [{ keepId: a.memoryId, removeIds: [b.memoryId], reason: '对同一阅读事实合并证据' }],
+  })
+  await entered
+  let writeFinished = false
+  const update = store.applyFact({
+    scope: 'user', subjectId: 'u-lock', speakerId: 'u-lock', kind: 'preference',
+    factKey: 'preference.read_a', factValue: 'preference.read_a',
+    text: '用户最近仍然喜欢阅读', confidence: 0.9, importance: 0.7,
+    evidenceMessageIds: ['lk-new'],
+  }, { groupId: '100', source: 'Memory_Tool',
+    evidenceMap: { 'lk-new': { groupId: '100', senderId: 'u-lock', time: 1780000010 } },
+  }).then(value => { writeFinished = true; return value })
+  try {
+    await new Promise(resolve => setTimeout(resolve, 30))
+    assert.equal(writeFinished, false, '压缩持锁期间实时更新应等待')
+  } finally {
+    resume()
+  }
+  const [merged, written] = await Promise.all([merge, update])
+  assert.equal(merged.status, 'applied')
+  assert.equal(written.ok, true)
+  assert.equal((await store.getMemory(b.memoryId)).status, 'archived')
+  assert.match((await store.getMemory(a.memoryId)).text, /最近仍然/)
+  assert.equal((await mockRedis.sMembers(`CHATGPT:MEMORY:V2:evd:${a.memoryId}`)).length, 3)
+})
+
+test('独立压缩 POST 包含证据摘要，超过预算时随机分片继续请求', async () => {
+  await clearStore()
+  const { compressMemoryScope } = await import('../utils/memory/compression.js')
+  const store = new MemoryStore(mockRedis)
+  const first = await store.applyFact({
+    scope: 'user', subjectId: 'u-proof', speakerId: 'u-proof', kind: 'preference',
+    factKey: 'preference.proof', factValue: 'proof', text: '用户喜欢研究语言学',
+    importance: 0.7, confidence: 0.9, evidenceMessageIds: ['evidence-1'],
+  }, { groupId: '100', source: 'Memory_Tool',
+    evidenceMap: { 'evidence-1': { groupId: '100', senderId: 'u-proof', time: 1780000000 } },
+  })
+  assert.equal(first.ok, true)
+  await store.applyFact({
+    scope: 'user', subjectId: 'u-proof', speakerId: 'u-proof', kind: 'preference',
+    factKey: 'preference.proof', factValue: 'proof', text: '用户喜欢研究语言学',
+    importance: 0.7, confidence: 0.9, evidenceMessageIds: ['evidence-2'],
+  }, { groupId: '200', source: 'Memory_Tool',
+    evidenceMap: { 'evidence-2': { groupId: '200', senderId: 'u-proof', time: 1780100000 } },
+  })
+  const mem = (await store.listByScope({ scope: 'user', ownerId: 'u-proof' }))
+  let body
+  const done = await compressMemoryScope({
+    store, scopeInfo: { scope: 'user', ownerId: 'u-proof', groupId: '', cap: 1, target: 0, memories: mem },
+    llm: async value => { body = JSON.parse(value); return { text: JSON.stringify({
+      keepIds: mem.map(m => m.id), archiveIds: [], mergePlans: [],
+    }) } },
+  })
+  assert.equal(done.status, 'applied')
+  assert.equal(body.memories[0].evidence.count, 2)
+  assert.equal(body.memories[0].evidence.groupCount, 2)
+  assert.equal(body.memories[0].evidence.lastEvidenceAt, 1780100000)
+
+  const records = Array.from({ length: 98 }, (_, i) => ({
+    ...mem[0], id: `very-long-${i}`, text: '非常复杂的历史背景'.repeat(75),
+  }))
+  let called = 0
+  const skipped = await compressMemoryScope({
+    store, scopeInfo: { scope: 'user', ownerId: 'u-massive', groupId: '', cap: 100, target: 70, memories: records },
+    cfg: { inputTokenLimit: 30000 },
+    llm: async () => { called++; throw new Error('模拟分片模型失败') },
+  })
+  assert.equal(skipped.status, 'partial')
+  assert.ok(called > 1, '整体超过 Token 预算时必须拆为多个请求而不是直接放弃')
+  assert.equal(skipped.posted, called)
+  assert.equal(skipped.unhandled, 0, '可以完整容纳的单条事实不能丢弃')
+})
+
+test('提炼窗口历史根据本发言者聊天语义匹配优先保留相关事实', async () => {
+  await clearStore()
+  resetConfig()
+  const store = new MemoryStore(mockRedis)
+  for (let i = 0; i < 75; i++) {
+    const id = `short-${i}`
+    const saved = await store.applyFact({
+      scope: 'user', subjectId: 'u-focus', speakerId: 'u-focus', kind: 'preference',
+      factKey: `preference.unrelated_${i}`, factValue: `u_${i}`,
+      text: `用户在日常生活中常浏览植物养护论坛${i}，这条历史没有提及任何游戏剧情和角色背景。`,
+      importance: 0.5, confidence: 0.9, evidenceMessageIds: [id],
+    }, { groupId: '100', source: 'Memory_Tool',
+      evidenceMap: { [id]: { groupId: '100', senderId: 'u-focus', time: 1780000000 } },
+    })
+    assert.equal(saved.ok, true)
+  }
+  const key = 'preference.genshin_raiden_quest'
+  const relevant = await store.applyFact({
+    scope: 'user', subjectId: 'u-focus', speakerId: 'u-focus', kind: 'preference',
+    factKey: key, factValue: 'raiden_quest', text: '用户喜欢原神雷电将军传说任务的剧情展开'.repeat(12),
+    importance: 0.6, confidence: 0.9, evidenceMessageIds: ['focus-relevant'],
+  }, { groupId: '100', source: 'Memory_Tool',
+    evidenceMap: { 'focus-relevant': { groupId: '100', senderId: 'u-focus', time: 1780000000 } },
+  })
+  assert.equal(relevant.ok, true)
+  const day = yesterdayKey()
+  await store.saveRawMessage({
+    groupId: '100', messageId: 'focus-today', senderId: 'u-focus', senderName: '发言者',
+    text: '原神雷电将军传说任务的剧情为什么这么有趣',
+    time: dayToTs(day) + 3600, isCommand: false, contentHash: 'focus-today-hash',
+  }, 30)
+  let posts = 0
+  await new DailyConsolidation({ store }).runDaily({
+    llm: async prompt => {
+      posts++
+      assert.match(prompt, /preference\.genshin_raiden_quest/, '历史截取预算应该优先相关项')
+      return { text: '{"candidates":[]}' }
+    },
+    compressionLLM: async () => { throw new Error('此用例未到95%') },
+  })
+  assert.equal(posts, 1)
+})
+
+
+test('多片压缩以每片独立 ID 清单执行，最终达 70% 且不追加补救轮次', async () => {
+  await clearStore()
+  const store = new MemoryStore(mockRedis)
+  for (let i = 0; i < 96; i++) {
+    const mid = 'split-proof-' + i
+    const result = await store.applyFact({
+      scope: 'user', subjectId: 'u-split', speakerId: 'u-split', kind: 'preference',
+      factKey: 'preference.split_' + i, factValue: 'item_' + i,
+      text: '用户喜欢话题' + i + '，有一些独特细节信息',
+      importance: 0.5, confidence: 0.9, evidenceMessageIds: [mid],
+    }, { groupId: '100', source: 'Memory_Tool',
+      evidenceMap: { [mid]: { groupId: '100', senderId: 'u-split', time: 1780000000 } },
+    })
+    assert.equal(result.ok, true)
+  }
+  const scope = (await store.listCompressionScopes({ maxMemoriesPerUser: 100 }))
+    .find(row => row.scope === 'user' && row.ownerId === 'u-split')
+  assert.equal(scope.memories.length, 96)
+  const { compressMemoryScope } = await import('../utils/memory/compression.js')
+  const ids = new Set()
+  const calls = []
+  const result = await compressMemoryScope({
+    store, scopeInfo: scope, cfg: { inputTokenLimit: 1024 },
+    llm: async input => {
+      const data = JSON.parse(input)
+      calls.push(data)
+      for (const m of data.memories) {
+        assert.equal(ids.has(m.id), false, '同一记忆不得重复进入不同分片')
+        ids.add(m.id)
+      }
+      return { text: JSON.stringify({
+        keepIds: data.memories.slice(0, data.target).map(m => m.id),
+        mergePlans: [],
+        archiveIds: data.memories.slice(data.target).map(m => ({
+          id: m.id, reason: '容量取舍：保留历史多样性',
+        })),
+      }) }
+    },
+  })
+  assert.ok(calls.length > 1)
+  assert.equal(ids.size, 96)
+  assert.equal(result.status, 'applied')
+  assert.equal(result.after, 70)
+  assert.equal(result.posted, calls.length)
+  assert.equal(await store.countActiveByScope('user', 'u-split', ''), 70)
+})
 /* ================= 用例 ================= */
 
 test('原子提取：失业/求职/喜欢角色/玩游戏原因分别保存，不合并为聊天摘要', async () => {
@@ -584,6 +1069,104 @@ test('端到端召回：相关问题召回正确事实，无关对话不注入�
   assert.ok(!prompt3.includes('入坑原神'), '无关对话不应注入游戏原因')
 })
 
+
+test('全量导入：上限 50/50 或超过容量时跳过 LLM 与词匹配，包含长记忆', async () => {
+  const memories = [
+    { id: 'a', scope: 'user', ownerId: 'u1', factKey: 'preference.game', factValue: 'genshin', text: '用户喜欢原神' + '芙'.repeat(1700), importance: 0.1, status: 'active' },
+    { id: 'b', scope: 'user_group', ownerId: 'u1', groupId: '100', factKey: 'interest.anime', factValue: 'anime', text: '用户喜欢动画', importance: 0.2, status: 'active' },
+    { id: 'c', scope: 'group', ownerId: '100', groupId: '100', factKey: 'group.rule', factValue: 'chat', text: '本群喜欢闲聊', importance: 0.1, status: 'active' },
+  ]
+  const store = { async listRecallCandidates() { return memories } }
+  for (const limit of [50, 51]) {
+    let calls = 0
+    const prompt = await buildMemoryPrompt({ user_id: 'u1', group_id: '100' }, '今天吃什么', {
+      store, config: { maxMemoriesPerUser: 50, memoryContextLimit: limit, memoryRecallProvider: 'current', memoryMinImportance: 1 },
+      llm: () => { calls++; throw new Error('不应该调用 LLM') },
+    })
+    assert.equal(calls, 0)
+    for (const m of memories) assert.ok(prompt.includes(m.text), '低重要性且无关的记忆也完整保留')
+    assert.equal(prompt.split('\n').filter(line => line.startsWith('- {')).length, 3)
+  }
+})
+
+test('原有模式：禁用 LLM 且未达到全量阈值仍使用 bigram，提示不超过旧版上限', async () => {
+  const memories = [
+    { id: 'a', scope: 'user', ownerId: 'u1', factKey: 'preference.game', factValue: 'genshin', text: '用户喜欢原神' + '芙'.repeat(1700), importance: 0.8, status: 'active' },
+    { id: 'b', scope: 'user', ownerId: 'u1', factKey: 'preference.coffee', factValue: 'hand', text: '喜欢手冲咖啡', importance: 0.8, status: 'active' },
+  ]
+  let calls = 0
+  const prompt = await buildMemoryPrompt({ user_id: 'u1' }, '聊聊原神', {
+    store: { async listRecallCandidates() { return memories } },
+    config: { memoryContextLimit: 8, maxMemoriesPerUser: 50, memoryRecallProvider: '' },
+    llm: () => { calls++; throw new Error('不应请求 LLM') },
+  })
+  assert.equal(calls, 0)
+  assert.match(prompt, /原神/)
+  assert.doesNotMatch(prompt, /手冲咖啡/)
+  assert.ok(prompt.length < 1900, '旧模式继续使用 1500 字正文上限')
+})
+
+test('LLM 召回中文语义：仅信任授权候选序号，保留常驻画像并限制数量', async () => {
+  const memories = [
+    { id: 'name', scope: 'user', ownerId: 'u1', factKey: 'identity.nickname', factValue: '小白', text: '昵称小白', importance: 0.7 },
+    { id: 'layoff', scope: 'user', ownerId: 'u1', factKey: 'career.status', factValue: 'laid_off', text: '用户之前被公司裁员', importance: 0.7 },
+    { id: 'coffee', scope: 'user', ownerId: 'u1', factKey: 'preference.coffee', factValue: 'tea', text: '用户平时喝茶', importance: 0.7 },
+  ]
+  let calls = 0
+  const prompt = await buildMemoryPrompt({ user_id: 'u1' }, '我什么时候失业的？', {
+    store: { async listRecallCandidates() { return memories } },
+    config: { maxMemoriesPerUser: 100, memoryContextLimit: 2, memoryRecallProvider: 'provider-1' },
+    llm: async (input, options) => {
+      calls++
+      assert.equal(options.provider, 'provider-1')
+      assert.match(options.systemPrompt, /不可信数据/)
+      const parsed = JSON.parse(input)
+      assert.equal(parsed.memories.length, 2)
+      assert.equal(parsed.limit, 1)
+      return { text: '{"indices":[0,0,1]}' }
+    },
+  })
+  assert.equal(calls, 1)
+  assert.match(prompt, /昵称小白/)
+  assert.match(prompt, /被公司裁员/)
+  assert.doesNotMatch(prompt, /平时喝茶/)
+})
+
+test('LLM 返回空列表表示无关联，非法序号和异常自动回退原召回逻辑', async () => {
+  const memories = [{ id: 'a', scope: 'user', ownerId: 'u1', factKey: 'career.status', factValue: 'unemployed', text: '用户失业了', importance: 0.8 }]
+  const base = {
+    store: { async listRecallCandidates() { return memories } },
+    config: { maxMemoriesPerUser: 100, memoryContextLimit: 2, memoryRecallProvider: 'current' },
+  }
+  const event = { user_id: 'u1' }
+  assert.equal(await buildMemoryPrompt(event, '今天吃什么', { ...base, llm: async () => ({ text: '{"indices":[]}' }) }), '')
+  for (const llm of [async () => ({ text: '{"indices":[99]}' }), async () => { throw new Error('超时') }, async () => ({ text: 'not-json' })]) {
+    const prompt = await buildMemoryPrompt(event, '我什么时候失业的', { ...base, llm })
+    assert.match(prompt, /用户失业了/)
+  }
+})
+
+test('LLM 选择候选前保持非主人 @他人的跨群权限过滤', async () => {
+  const memory = { id: 'private', scope: 'user', ownerId: 'target', factKey: 'secret', factValue: 'hidden', text: '私有事实', importance: 1 }
+  const groupMemory = { id: 'group', scope: 'user_group', ownerId: 'target', groupId: '100', factKey: 'preference', factValue: 'tea', text: '喜欢喝茶', importance: 0.7 }
+  const store = { async listRecallCandidates(uid, gid, opts) {
+    assert.equal(uid, 'target')
+    assert.equal(gid, '100')
+    assert.equal(opts.excludeUser, true)
+    return [groupMemory]
+  } }
+  const event = { user_id: 'u1', group_id: '100', message: [{ type: 'at', qq: 'target' }], isMaster: false }
+  const prompt = await buildMemoryPrompt(event, '他喜欢什么', {
+    store, config: { maxMemoriesPerUser: 50, memoryContextLimit: 1, memoryRecallProvider: 'current' },
+    llm: async input => {
+      assert.doesNotMatch(input, /私有事实/)
+      return '{"indices":[0]}'
+    },
+  })
+  assert.match(prompt, /喜欢喝茶/)
+  assert.doesNotMatch(prompt, /私有事实/)
+})
+
 test('工具链：Memory_Tool 服务端补充证据，伪造归属被拒绝', async () => {
   await clearStore()
   const store = new MemoryStore(mockRedis)
@@ -794,7 +1377,7 @@ test('factKey 别名归一化：完整别名映射到同一槽位，且不做后
   assert.equal(retract.action, 'retracted', '别名撤回应命中 canonical 槽位')
 })
 
-test('user_group 也受记忆上限约束（P2-4 回归）', async () => {
+test('user_group 实时写入允许超过整理容量目标', async () => {
   await clearStore()
   const store = new MemoryStore(mockRedis)
   const gid = '100'
@@ -814,7 +1397,7 @@ test('user_group 也受记忆上限约束（P2-4 回归）', async () => {
     )
   }
   const ug = await store.listByScope({ scope: 'user_group', ownerId: '10001', groupId: gid })
-  assert.equal(ug.length, 3, `user_group 应限制在 3 条，实际 ${ug.length}`)
+  assert.equal(ug.length, 4, `user_group 应保存四条并等待凌晨整理，实际 ${ug.length}`)
 })
 
 test('@目标成员召回：主人完整召回，非主人不泄露对方跨群 user 记忆', async () => {
@@ -1860,7 +2443,7 @@ test('私聊不得写 user_group：避免空 groupId 索引产生的孤儿数据
   assert.match(String(res.reason), /必须在群聊中使用/)
 })
 
-test('配额统计与淘汰排除已过期记忆（次级生命周期问题回归）', async () => {
+test('容量统计排除过期记录，实时不再淘汰有效事实', async () => {
   await clearStore()
   const store = new MemoryStore(mockRedis)
   const gid = '303'
@@ -1882,9 +2465,8 @@ test('配额统计与淘汰排除已过期记忆（次级生命周期问题回�
   assert.equal(aliveRes.ok, true)
   assert.equal(await store._countActiveByScope('user', '10001', ''), 1)
 
-  await store._evictLowest('user', '10001', '')
-  assert.ok(await store.getMemory(expiredRes.memoryId), '已过期记忆不参与淘汰竞争（交给清理任务）')
-  assert.equal(await store.getMemory(aliveRes.memoryId), null, '应淘汰未过期里分最低的记忆')
+  assert.ok(await store.getMemory(expiredRes.memoryId), '已过期记忆留待确定性清理任务')
+  assert.ok(await store.getMemory(aliveRes.memoryId), '低重要性但有效的记忆不因实时写入淘汰')
 })
 
 test('提炼分片：被拒项不进断点且脱敏、越界证据被拒、坏 schema 不算空结果（P1-1/6/10 回归）', async () => {
