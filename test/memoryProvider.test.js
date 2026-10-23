@@ -94,19 +94,31 @@ test('锅巴记忆召回模型：默认关闭、接口选项、保存与重载',
   const saved = run(`
     const field = guoba.schemas.find(s => s.field === 'memoryRecallProvider')
     assert.equal(field.label, '记忆召回判断模型')
-    assert.deepEqual(field.componentProps.options.map(o => o.value), ['', 'current', 'prov-aaa'])
+    // '' 之后紧跟「按权重导入」哨兵 'all'，再是跟随全局与已配置接口
+    assert.deepEqual(field.componentProps.options.map(o => o.value), ['', 'all', 'current', 'prov-aaa'])
     // 召回条数上限不再有"达到个人容量就全量注入"的语义，文案必须改成推荐值
     const limitField = guoba.schemas.find(s => s.field === 'memoryContextLimit')
     assert.match(limitField.bottomHelpMessage, /20 条以内/)
     assert.doesNotMatch(limitField.bottomHelpMessage, /全部注入|有权访问的所有记忆|跳过全部筛选/)
+    assert.equal(limitField.componentProps.min, 5)
+    // 记忆最低重要性阈值已整体删除（2026-10-24），面板不应再暴露该字段
+    assert.equal(guoba.schemas.some(s => s.field === 'memoryMinImportance'), false)
     assert.equal((await guoba.getConfigData()).memoryRecallProvider, '')
+    // 'all' 是召回模式哨兵，不能被 provider 引用校验当成不存在的提供商
+    await guoba.setConfigData({ memoryRecallProvider: 'all' }, {
+      Result: { ok() {}, error(message) { throw new Error(message) } }
+    })
+  `)
+  assert.equal(saved.memoryRecallProvider, 'all', '哨兵值必须能保存')
+  assert.equal(run('').memoryRecallProvider, 'all', '哨兵值必须能通过加载校验')
+  const savedApi = run(`
     await guoba.setConfigData({ memoryRecallProvider: 'prov-aaa', memoryContextLimit: 100, maxMemoriesPerUser: 100 }, {
       Result: { ok() {}, error(message) { throw new Error(message) } }
     })
   `)
-  assert.equal(saved.memoryRecallProvider, 'prov-aaa')
-  assert.equal(saved.memoryContextLimit, 100)
-  assert.equal(saved.maxMemoriesPerUser, 100)
+  assert.equal(savedApi.memoryRecallProvider, 'prov-aaa')
+  assert.equal(savedApi.memoryContextLimit, 100)
+  assert.equal(savedApi.maxMemoriesPerUser, 100)
   assert.equal(run('').memoryRecallProvider, 'prov-aaa')
   assert.equal(run(`
     await guoba.setConfigData({ memoryRecallProvider: '' }, { Result: { ok() {}, error(message) { throw new Error(message) } } })

@@ -139,7 +139,6 @@ function resetConfig() {
   setConfig({
     enableMemory: true,
     maxMemoriesPerUser: 100,
-    memoryMinImportance: 0.4,
     memoryContextLimit: 8,
     memoryRecallProvider: '',
     allowMemberDeleteOwnMemory: true,
@@ -1084,16 +1083,16 @@ test('端到端召回：相关问题召回正确事实，无关对话不注入�
   const e = { user_id: '10001', group_id: groupId }
 
   // 1. "我什么时候失业的" → 应召回失业事实
-  const prompt1 = await buildMemoryPrompt(e, '我什么时候失业的', { store, config: { memoryContextLimit: 8, memoryMinImportance: 0.4 } })
+  const prompt1 = await buildMemoryPrompt(e, '我什么时候失业的', { store, config: { memoryContextLimit: 8 } })
   assert.match(prompt1, /失业/, '应召回失业事实')
   assert.match(prompt1, /不可信数据/, '应标记为不可信历史数据')
 
   // 2. "我打算什么时候找工作" → 应召回求职计划
-  const prompt2 = await buildMemoryPrompt(e, '我打算什么时候开始找工作投简历', { store, config: { memoryContextLimit: 8, memoryMinImportance: 0.4 } })
+  const prompt2 = await buildMemoryPrompt(e, '我打算什么时候开始找工作投简历', { store, config: { memoryContextLimit: 8 } })
   assert.match(prompt2, /投简历找工作|找工作计划/, '应召回求职计划')
 
   // 3. 无关对话 → 不注入整份记忆（无相关命中，且非 resident 画像）
-  const prompt3 = await buildMemoryPrompt(e, '今天晚饭吃什么好呢', { store, config: { memoryContextLimit: 8, memoryMinImportance: 0.4 } })
+  const prompt3 = await buildMemoryPrompt(e, '今天晚饭吃什么好呢', { store, config: { memoryContextLimit: 8 } })
   // 昵称是 resident 画像可常驻；但失业/角色/游戏原因不应出现
   assert.ok(!prompt3.includes('失业'), '无关对话不应注入失业记忆')
   assert.ok(!prompt3.includes('雷电将军'), '无关对话不应注入角色记忆')
@@ -1112,7 +1111,7 @@ test('对话记忆数量限制是唯一条数上限：100/100 不再全量注入
   ]
   const prompt = await buildMemoryPrompt({ user_id: 'u1' }, '聊聊原神', {
     store: { async listRecallCandidates() { return memories } },
-    config: { maxMemoriesPerUser: 100, memoryContextLimit: 100, memoryMinImportance: 0 },
+    config: { maxMemoriesPerUser: 100, memoryContextLimit: 100 },
     llm: () => { throw new Error('未配置召回判断模型，不应调用 LLM') },
   })
   assert.ok(prompt.includes(long), '超长记忆必须完整注入，不再按 1500 字截断')
@@ -1128,7 +1127,7 @@ test('条数上限可证伪：40 条全相关时 20/20 配置只注入 20 条', 
   const prompt = await buildMemoryPrompt({ user_id: 'u1' }, '原神里我喜欢哪些角色', {
     store: { async listRecallCandidates() { return memories } },
     // limit == cap：旧版会走全量注入把 40 条全塞进来，新版只按 limit 截
-    config: { memoryContextLimit: 20, maxMemoriesPerUser: 20, memoryMinImportance: 0 },
+    config: { memoryContextLimit: 20, maxMemoriesPerUser: 20 },
   })
   const injected = prompt.split('\n').filter(line => line.startsWith('- {')).length
   assert.equal(injected, 20, `注入条数必须等于条数上限，实际 ${injected}`)
@@ -1182,6 +1181,109 @@ test('提炼分片预算是常量 50000：4.4 万 token 一片、5.6 万切两�
   }
   assert.equal(await chunkCount(35), 1, '43900 token 应当一片装完')
   assert.equal(await chunkCount(45), 2, '56430 token 必须切成两片')
+})
+
+test('仅文字匹配不再按重要性过滤：低重要性但命中的记忆也会入选', async () => {
+  const memories = [
+    { id: 'low', scope: 'user', ownerId: 'u1', factKey: 'preference.tea', factValue: 'tea', text: '用户喜欢喝茶', importance: 0.05, status: 'active' },
+  ]
+  const prompt = await buildMemoryPrompt({ user_id: 'u1' }, '我喜欢喝什么茶', {
+    store: { async listRecallCandidates() { return memories } },
+    // 故意带上已删除的键：旧实现会读它并据此过滤（0.05 < 0.4 → 一条都不注入），
+    // 新实现忽略该键，所以这条断言能真正证伪"阈值没删干净"。
+    config: { memoryContextLimit: 8, memoryMinImportance: 0.4 },
+  })
+  assert.match(prompt, /用户喜欢喝茶/, '旧的 0.4 重要性阈值会把它整条过滤掉')
+})
+
+test('按权重导入：按个人:群公共 9:1 填满上限，不调用模型', async () => {
+  const personal = Array.from({ length: 30 }, (_, i) => ({
+    id: `all-p-${i}`, scope: 'user', ownerId: 'u1', factKey: `preference.p_${i}`, factValue: `v_${i}`,
+    text: `用户偏好${i}`, importance: 0.5, updatedAt: 1000 + i, status: 'active',
+  }))
+  const group = Array.from({ length: 10 }, (_, i) => ({
+    id: `all-g-${i}`, scope: 'group', ownerId: '100', groupId: '100',
+    factKey: `group.rule_${i}`, factValue: `v_${i}`,
+    text: `群规则${i}`, importance: 0.5, updatedAt: 1000 + i, status: 'active',
+  }))
+  let calls = 0
+  const prompt = await buildMemoryPrompt({ user_id: 'u1', group_id: '100' }, '随便聊聊', {
+    store: { async listRecallCandidates() { return [...personal, ...group] } },
+    config: { memoryContextLimit: 20, memoryRecallProvider: 'all' },
+    llm: () => { calls++; throw new Error('按权重导入不应调用模型') },
+  })
+  assert.equal(calls, 0, '按权重导入不调用任何模型')
+  const rows = prompt.split('\n').filter(line => line.startsWith('- {'))
+  assert.equal(rows.length, 20, '必须填满到上限')
+  const scopes = rows.map(line => JSON.parse(line.slice(2, line.indexOf('}') + 1)).scope)
+  assert.equal(scopes.filter(s => s === 'group').length, 2, '群公共占 10%')
+  assert.equal(scopes.filter(s => s !== 'group').length, 18)
+})
+
+test('按权重导入：一侧不足由另一侧补满，群池为空时全用个人', async () => {
+  const mk = (count, scope, prefix) => Array.from({ length: count }, (_, i) => ({
+    id: `fill-${prefix}-${i}`, scope, ownerId: scope === 'group' ? '100' : 'u1',
+    groupId: scope === 'user' ? '' : '100', factKey: `${prefix}.k${i}`, factValue: `v${i}`,
+    text: `${prefix}事实${i}`, importance: 0.5, updatedAt: 1000 + i, status: 'active',
+  }))
+  const run = async memories => {
+    const prompt = await buildMemoryPrompt({ user_id: 'u1', group_id: '100' }, '随便聊聊', {
+      store: { async listRecallCandidates() { return memories } },
+      config: { memoryContextLimit: 20, memoryRecallProvider: 'all' },
+      llm: () => { throw new Error('按权重导入不应调用模型') },
+    })
+    return prompt.split('\n').filter(line => line.startsWith('- {')).map(line => {
+      const locator = line.slice(2, line.indexOf('}') + 1)
+      return JSON.parse(locator).scope
+    })
+  }
+
+  // 群公共只有 1 条：补不满 2 条目标，用个人记忆补到 20
+  const oneGroup = await run([...mk(30, 'user', 'pa'), ...mk(1, 'group', 'gr')])
+  assert.equal(oneGroup.length, 20)
+  assert.equal(oneGroup.filter(s => s === 'group').length, 1)
+  assert.equal(oneGroup.filter(s => s !== 'group').length, 19)
+
+  // 没有任何群公共：全部用个人
+  const noGroup = await run(mk(30, 'user', 'pa'))
+  assert.equal(noGroup.length, 20)
+  assert.equal(noGroup.filter(s => s === 'group').length, 0)
+
+  // 个人不足（3 条）且无群公共：有多少注入多少，不报错
+  const fewPersonal = await run(mk(3, 'user', 'pa'))
+  assert.equal(fewPersonal.length, 3)
+
+  // 反方向：个人只有 5 条、群池充足 → 群公共补满剩余名额
+  const fewPersonalManyGroup = await run([...mk(5, 'user', 'pa'), ...mk(30, 'group', 'gr')])
+  assert.equal(fewPersonalManyGroup.length, 20)
+  assert.equal(fewPersonalManyGroup.filter(s => s === 'user').length, 5)
+  assert.equal(fewPersonalManyGroup.filter(s => s === 'group').length, 15)
+})
+
+test('按权重导入同样受 @他人 权限约束：主人可取对方跨群 user，普通成员只取本群', async () => {
+  const crossGroup = {
+    id: 'tu', scope: 'user', ownerId: 'target', factKey: 'identity.name', factValue: 't',
+    text: '对方跨群事实', importance: 0.9, status: 'active',
+  }
+  const inGroup = {
+    id: 'tg', scope: 'user_group', ownerId: 'target', groupId: '100',
+    factKey: 'group_role.x', factValue: 'v', text: '对方本群事实', importance: 0.5, status: 'active',
+  }
+  const store = {
+    async listRecallCandidates(uid, gid, opts) {
+      assert.equal(uid, 'target')
+      return opts.excludeUser ? [inGroup] : [crossGroup, inGroup]
+    },
+  }
+  const event = isMaster => ({ user_id: 'u1', group_id: '100', isMaster, message: [{ type: 'at', qq: 'target' }] })
+  const config = { memoryContextLimit: 20, memoryRecallProvider: 'all' }
+
+  const masterPrompt = await buildMemoryPrompt(event(true), '他是谁', { store, config })
+  assert.match(masterPrompt, /对方跨群事实/, '主人 @他人 可完整召回（既有权限）')
+
+  const memberPrompt = await buildMemoryPrompt(event(false), '他是谁', { store, config })
+  assert.doesNotMatch(memberPrompt, /对方跨群事实/, '普通成员不得拿到对方跨群 user 记忆')
+  assert.match(memberPrompt, /对方本群事实/)
 })
 
 test('LLM 召回中文语义：仅信任授权候选序号，保留常驻画像并限制数量', async () => {
@@ -1279,7 +1381,7 @@ test('召回排序：相关性优先于重要性', async () => {
   // 用非常驻画像键的高重要性无关记忆，验证"相关度优先"
   const highImportance = { factKey: 'preference.coffee', factValue: 'hand_brew', text: '用户喜欢手冲咖啡', scope: 'user', status: 'active', importance: 0.9, confidence: 0.9 }
   const relevant = { factKey: 'preference.favorite_character', factValue: 'raiden_shogun', text: '用户最喜欢的角色是雷电将军', scope: 'user', status: 'active', importance: 0.5, confidence: 0.9 }
-  const ranked = rankMemories([highImportance, relevant], '我最喜欢什么角色', { limit: 8, minImportance: 0 })
+  const ranked = rankMemories([highImportance, relevant], '我最喜欢什么角色', { limit: 8 })
   assert.equal(ranked[0], relevant, '相关问题应优先召回相关记忆而非高重要性无关记忆')
   const rel = relevanceScore(relevant, ['喜欢', '角色'])
   assert.ok(rel > 0)
@@ -1493,18 +1595,18 @@ test('@目标成员召回：主人完整召回，非主人不泄露对方跨群 
 
   // 主人 @10002 问昵称 → 完整召回（含跨群 user）
   const eMaster = { user_id: '10001', group_id: gid, isMaster: true, message: [{ type: 'at', qq: '10002' }] }
-  const promptMaster = await buildMemoryPrompt(eMaster, '他叫什么名字', { store, config: { memoryContextLimit: 8, memoryMinImportance: 0.4 } })
+  const promptMaster = await buildMemoryPrompt(eMaster, '他叫什么名字', { store, config: { memoryContextLimit: 8 } })
   assert.match(promptMaster, /小鱼/, '主人应召回被@成员的记忆')
   assert.ok(!promptMaster.includes('玉玉'), '不应注入提问者自己的昵称')
 
   // 非主人 @10002 → 不泄露对方跨群 user 记忆（昵称是 user 作用域）
   const eMember = { user_id: '10001', group_id: gid, isMaster: false, message: [{ type: 'at', qq: '10002' }] }
-  const promptMember = await buildMemoryPrompt(eMember, '他叫什么名字', { store, config: { memoryContextLimit: 8, memoryMinImportance: 0.4 } })
+  const promptMember = await buildMemoryPrompt(eMember, '他叫什么名字', { store, config: { memoryContextLimit: 8 } })
   assert.ok(!promptMember.includes('小鱼'), '非主人 @他人不应召回对方跨群 user 记忆')
 
   // @机器人（self_id）→ 不切换主体，仍召回提问者本人
   const eBot = { user_id: '10001', group_id: gid, self_id: '999', message: [{ type: 'at', qq: '999' }] }
-  const promptBot = await buildMemoryPrompt(eBot, '我叫什么名字', { store, config: { memoryContextLimit: 8, memoryMinImportance: 0.4 } })
+  const promptBot = await buildMemoryPrompt(eBot, '我叫什么名字', { store, config: { memoryContextLimit: 8 } })
   assert.match(promptBot, /玉玉/, '@机器人不应切换主体，应召回提问者本人')
 })
 

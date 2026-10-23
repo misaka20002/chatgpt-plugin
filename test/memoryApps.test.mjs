@@ -144,6 +144,28 @@ test('两个记忆状态指令共用同一份容量与整理阈值说明', async
   const capacityLines = statusMsg.split('\n').filter(line => line.includes('上限：'))
   assert.equal(capacityLines.length, 2)
   for (const line of capacityLines) assert.ok(statsMsg.includes(line), `两处说明不一致：${line}`)
+  // 召回模式必须可见（ADR 0006 的"可观测"承诺）
+  assert.match(statsMsg, /召回模式：仅文字匹配/)
+  // 重要性阈值已删除，状态里不应再出现该配置
+  assert.doesNotMatch(statsMsg, /最低重要性/)
+})
+
+test('#记忆统计 把召回接口 ID 显示成接口名称，而不是原始 ID', async () => {
+  const cfg = Config.getConfig()
+  const savedMode = cfg.memoryRecallProvider
+  const savedProviders = cfg.modelProviders
+  try {
+    cfg.modelProviders = { ...(savedProviders || {}), api: [{ id: 'prov-x', type: 'api', name: '测试接口' }] }
+    cfg.memoryRecallProvider = 'prov-x'
+    const e = mkEvent('#记忆统计')
+    await new memoryManage(e).memoryStats(e)
+    const msg = e.replies.at(-1)
+    assert.match(msg, /指定接口判断（.*测试接口/, `应显示接口名称：${msg}`)
+    assert.doesNotMatch(msg, /prov-x/, '不应把原始 ID 展示给用户')
+  } finally {
+    cfg.memoryRecallProvider = savedMode
+    cfg.modelProviders = savedProviders
+  }
 })
 
 test('观察器 rule 必须匹配任何消息文本（含多行、空串）', async () => {

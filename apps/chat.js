@@ -1014,7 +1014,6 @@ export class chatgpt extends plugin {
           config: {
             memoryContextLimit: config.memoryContextLimit,
             memoryRecallProvider: config.memoryRecallProvider,
-            memoryMinImportance: config.memoryMinImportance,
           }
         })
         if (memoryPrompt) {

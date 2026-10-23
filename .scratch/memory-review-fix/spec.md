@@ -141,3 +141,49 @@ Decision date: 2026-10-23
 - 验证：`npm run test:memory` 126/126（含新增 4 条：100/100 不再全量注入 + 长记忆不截断、limit ≥ cap 仍走召回判断模型、默认 50000 不切两片、两个状态指令共用说明）；`npm run check` EXIT=0（语法预检 / 路径卫生 / lint / config / providers / thinking / emoji / media / group-reply 全绿）。
 - 2026-10-23 第二轮两轴评审修复：压缩预算改为显式 `inputLimit`（不再从提炼 cfg 继承，两常量真正独立）；`apps/chat.js` 删掉死的 `maxMemoriesPerUser`；`applyCandidates` 复用 `_resolveWriteTarget`；条数断言改为可证伪的「40 条全相关时 20/20 只注入 20 条」；分片预算补常量断言与 43890/56430 双边界；`configuration.md` / `memory.md` / `plan.md` / guoba 文案四处措辞与代码对齐；`memory-llm-recall/spec.md` 两处「尚未实施」清理。
 - 验证：`npm run test:memory` 129/129；`npm run check` EXIT=0。
+
+## 2026-10-23 追加：记忆召回「按权重导入」模式
+
+**需求**：在「记忆召回判断模型」下拉里新增一项「按权重导入」。选中后**不调用任何模型**，用该成员的个人记忆与本群公共记忆把 `对话记忆数量限制` 填满，个人 : 群公共 ≈ 9 : 1，群公共至少 1 条。
+
+**决策**
+
+1. 配比：`groupTarget = max(1, round(limit × 0.1))`（上限为群池实际条数），`personalTarget = limit - groupTarget`；任一侧不足由另一侧补满，两侧合计仍不足则注入全部；群池为空全用个人。
+2. 池的边界：个人池 = 该主体 `user` + 本群 `user_group`，群池 = 本群 `group`，都来自既有的 `listRecallCandidates`，**不含任何其他群友的记忆**，权限链路不改。
+3. 排序复用 `score()`（相关度×10 + 重要性×3 + 置信度×2 + 状态 + 作用域），`updatedAt`/`id` 做稳定次序。
+4. 常驻画像**不做**特殊占位：填满模式下按分数自然入选，占位会挤掉群公共名额、破坏 9:1。
+5. 哨兵值 `'all'`；`providerProfiles.js` 的引用校验必须像 `'current'` 一样豁免，否则加载即抛"引用的模型提供商不存在"。
+6. 锅巴：选项插在「不使用 LLM 判断（仅文字匹配）」的下一格，文案注明"≈9:1 填满上限，可能含无关记忆"；`对话记忆数量限制` 最小值由 1 改为 **5**（消除 limit=1 时群公共占满唯一名额的反直觉配置）。
+7. 不新增日志：该模式只取调用方**本就授权可见**的候选——主人 @他人 时包含对方跨群 `user`（既有权限），普通成员 @他人 只有 `user_group`；不存在越权填入他人记忆的路径，因此不需要 info 级记录。
+8. 与已删除的「自动全量」区别（写进 ADR 0006）：显式选择、严格受 `memoryContextLimit` 约束、有来源配比、面板可见。
+
+**验收**
+
+- `''` → 仅相关条目；`'all'` → 恰好 `limit` 条（候选足够时），个人 18 / 群公共 2（limit=20），不调用模型。
+- 群公共仅 1 条 → 19 + 1；无群公共 → 全个人；个人只有 3 条且无群公共 → 注入 3 条不报错；**反方向**：个人 5 条 + 群公共 30 条 → 5 + 15。
+- @他人权限不变：主人 @他人 时 `'all'` 可取对方跨群 `user`，普通成员只取对方 `user_group`。
+- 锅巴选项值顺序 `['', 'all', 'current', ...providerIds]`；`min` = 5；`'all'` 能保存且能通过加载校验；`#记忆统计` 显示当前召回模式。
+
+**验证**：`npm run test:memory` 131/131；`npm run check` 通过。
+
+## 2026-10-24 追加：删除 `memoryMinImportance`，统一排序器
+
+**需求**：文字匹配现在很难匹到记忆，阈值只会进一步砍掉已匹配的条目；移除该配置，文字匹配到的全部参与排序，超过 `最大对话记忆数量` 时按 `score()` 取前 N。
+
+**决策**
+
+1. 删除 `memoryMinImportance` 全链路：`config.js` 默认键与 `1–10 → 0–1` 旧值归一化、`chat.js` 传参、锅巴字段、`#记忆统计` 的"对话最低重要性"行、`rankMemories` 的 `options.minImportance` 参数。磁盘上的死键由既有的 `removeExtraKeys` 在加载时剔除，不主动改写文件。
+2. bigram 路径的入选条件只剩 `rel > 0`（文字上有命中）；命中后不再设重要性门槛，全部交给 `score()` 排序再按 `limit` 截断。
+3. 常驻画像（姓名/称呼等，≤2 条）继续无条件注入并计入上限——阈值删除不影响它。
+4. 排序口径统一：新增内部 `rankByScore(list, queryTokens, { requireHit })`，"算一次分 → 排序"只此一处；`rankMemories`（`requireHit: true`）与按权重导入的 `selectAllByRatio`（不要求命中）共用。
+5. `utils/userMemory.js` 的 `minImportance` 是遗留 Hash 路径的独立参数，与本配置无关，不动。
+
+**验收**
+
+- 低重要性（0.05）但文字命中的记忆会被注入（旧 0.4 阈值会整条砍掉）。
+- 文字无命中的记忆仍不注入（bigram 模式），常驻画像例外照旧。
+- 锅巴不再有「记忆最低重要性」字段；`#记忆统计` 不再有该行；`memoryMinImportance` 全仓无引用。
+- 按权重导入/仅文字匹配两处共用同一个排序器；bigram 路径的**同分次序**由"依赖 V8 稳定排序的入参顺序"改为显式的 `updatedAt` 降序 + `id` 升序（良性变化，但不再与旧实现逐字节一致）。
+- 锅巴不再暴露「记忆最低重要性」字段、`#记忆统计` 不再有该行。
+
+**验证**：`npm run test:memory` 134/134；`npm run check` 通过。

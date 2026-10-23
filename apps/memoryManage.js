@@ -5,6 +5,8 @@ import { getStore } from '../utils/memory/v2.js'
 import { groupCapture } from '../utils/memory/capture.js'
 import { dailyConsolidation, normalizeCron } from '../utils/memory/dailyTask.js'
 import { MEMORY_INPUT_TOKEN_LIMIT } from '../utils/memory/extractor.js'
+import { RECALL_MODE_ALL } from '../utils/memory/recallMode.js'
+import { findProvider, providerLabel } from '../utils/providerProfiles.js'
 import { canDeleteOwnMemory } from '../utils/memory/policy.js'
 
 const KIND_LABELS = {
@@ -32,6 +34,16 @@ function capacityLines() {
     `个人记忆上限：${Config.maxMemoriesPerUser} 条（user / user_group，超 95% 夜间整理至 70%）`,
     `群公共上限：${Config.maxMemoriesPerGroup} 条（每群 group，超 95% 夜间整理至 70%）`,
   ]
+}
+
+/** 召回模式的用户可读名：空串=仅文字匹配，all=按权重导入，current/接口 ID=模型判断 */
+function recallModeLabel(value) {
+  if (!value) return '仅文字匹配'
+  if (value === RECALL_MODE_ALL) return '按权重导入（个人:群公共≈9:1 填满上限）'
+  if (value === 'current') return '跟随全局对话模型判断'
+  const row = findProvider(Config.getConfig(), value)
+  // 接口被删除/改 id 时配置校验会拦住，但状态展示不能因此抛错
+  return `指定接口判断（${row ? providerLabel(row) : `已失效的接口 ${value}`}）`
 }
 
 export class memoryManage extends plugin {
@@ -599,8 +611,7 @@ export class memoryManage extends plugin {
       }
       msg += `\n配置信息：\n`
       msg += capacityLines().map(line => `  ${line}\n`).join('')
-      msg += `  对话最低重要性：${Config.memoryMinImportance}\n`
-      msg += `  对话记忆数量：${Config.memoryContextLimit} 条\n`
+      msg += `  对话记忆数量：${Config.memoryContextLimit} 条（召回模式：${recallModeLabel(Config.memoryRecallProvider)}）\n`
       msg += `  授权采集群：${(Config.memoryGroupCapture?.groups || []).filter(g => g?.switchOn).length} 个`
       await e.reply(msg, true)
     } catch (err) {

@@ -6,6 +6,7 @@ import { avatarOptions } from './utils/avatar/catalog.js'
 import { speakers, vits_emotion_map } from './utils/tts.js'
 import { supportConfigurations as azureRoleList } from './utils/tts/microsoft-azure.js'
 import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/mcpServersGuoba.js'
+import { RECALL_MODE_ALL } from './utils/memory/recallMode.js'
 import lodash from "lodash";
 
 // 支持锅巴
@@ -1761,6 +1762,24 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'memoryGroupCapture.provider',
+          label: '提炼模型来源',
+          bottomHelpMessage: '用于群记忆的提炼（每日自动与手动触发）；保存后即时生效，无需重启',
+          component: 'Select',
+          componentProps: {
+            options: [{ label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
+          }
+        },
+        {
+          field: 'memoryGroupCapture.cronTime',
+          label: '每日提炼时间',
+          bottomHelpMessage: '每日批量提炼的 Cron 表达式（EasyCron），默认 0 0 4 * * ? *；修改后重启生效',
+          component: 'EasyCron',
+          componentProps: {
+            placeholder: '请输入或选择Cron表达式',
+          },
+        },
+        {
           field: 'maxMemoriesPerUser',
           label: '单用户最大记忆数量',
           bottomHelpMessage: '每位用户的跨群个人 user 与各群个人 user_group 分别使用该容量目标；每日提炼时数量超过 95% 将尝试整理通过 LLM 至 70% 及以下',
@@ -1780,58 +1799,42 @@ export function supportGuoba() {
             step: 1
           }
         },
+        // 运行时事实（不上面板，供维护者对照）：
+        // - 仅文字匹配：相关性得分 > 0（正文、标签、factKey、factValue 任一命中）的条目全部参与排序，按 score 取前 N；
+        // - 按权重导入（memoryRecallProvider = 'all'）：不筛相关度，按 score 填满 N，
+        //   其中个人(user + user_group) : 群公共 ≈ 9:1；群池非空时至少 1 条，群池为空则全用个人，
+        //   一侧不足由另一侧补位；
+        // - 姓名/称呼等常驻画像（≤2 条）在「仅文字匹配」与「模型判断」下无条件注入；
+        //   按权重导入不做特殊占位（它们只作为个人池里高权重的普通条目参与排序）；
+        // - 注入正文不按字符截断，单条正文写入时上限 500 字。
         {
           field: 'memoryContextLimit',
-          label: '对话记忆数量限制',
-          bottomHelpMessage: '每次对话最多注入的记忆条数，默认 8。注入正文不再按字符截断，这个值直接决定记忆占用的上下文长度，为保证对话质量与上下文预算，推荐 20 条以内。它只是上限：除姓名/称呼等常驻画像（最多 2 条，仍计入上限）外，只注入与当前问题相关或由召回判断模型选中的条目',
+          label: '最大记忆召回数量',
+          bottomHelpMessage: '每次对话最多注入的记忆条数；为保证对话质量与上下文预算，推荐 20 条以内；除此之外Bot也拥有主动读取/修正记忆的工具',
           component: 'InputNumber',
           componentProps: {
-            min: 1,
+            min: 5,
             step: 1
           }
         },
         {
           field: 'memoryRecallProvider',
-          label: '记忆召回判断模型',
-          bottomHelpMessage: '选择已配置接口，聊天时额外调用一次模型判断哪些记忆有助于回答中文问题；或使用 仅文字匹配',
+          label: '记忆召回判断方式',
+          bottomHelpMessage: '可选择已配置的接口，聊天时额外调用一次小模型判断哪些记忆有助于回答问题；或使用 仅文字匹配 / 按权重导入；其中 仅文字匹配 仅支持 中英文',
           component: 'Select',
           componentProps: {
-            options: [{ label: '不使用 LLM 判断（仅文字匹配）', value: '' }, { label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
-          }
-        },
-        {
-          field: 'memoryMinImportance',
-          label: '记忆最低重要性',
-          bottomHelpMessage: '只作用于 记忆召回判断模型 选 仅文字匹配 时：与当前问题相关的非常驻记忆仍须达到此重要性阈值（0-1）',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.05,
-            step: 0.05,
-            max: 1
-          }
-        },
-        {
-          field: 'memoryGroupCapture.cronTime',
-          label: '每日提炼时间',
-          bottomHelpMessage: '每日批量提炼的 Cron 表达式（EasyCron），默认 0 0 4 * * ? *（每天凌晨4点提炼已结束的北京时间自然日）；修改后重启生效',
-          component: 'EasyCron',
-          componentProps: {
-            placeholder: '请输入或选择Cron表达式',
-          },
-        },
-        {
-          field: 'memoryGroupCapture.provider',
-          label: '提炼模型来源',
-          bottomHelpMessage: '用于群记忆的提炼（每日自动与手动触发）；保存后即时生效，无需重启',
-          component: 'Select',
-          componentProps: {
-            options: [{ label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
+            options: [
+              { label: '不使用 LLM 判断（仅文字匹配）', value: '' },
+              { label: '不使用 LLM 判断（按权重导入）', value: RECALL_MODE_ALL },
+              { label: '跟随全局对话模型', value: 'current' },
+              ...providerOptions
+            ]
           }
         },
         {
           field: 'memoryGroupCapture.groups',
           label: '授权采集群',
-          bottomHelpMessage: '群聊采集必须由 Bot 主人在此显式授权或群内 #群记忆开启；仅采集授权群的非指令、非Bot纯文本，原文默认保留30天；⚠️ 关闭某群的"开启采集"开关仅停止后续采集，不会删除已采集的原文与记忆，如需来源级清理请在群内使用 #群记忆关闭 指令',
+          bottomHelpMessage: '群聊采集必须由 Bot 主人在此显式授权或群内 #群记忆开启；仅采集授权群的非指令、非Bot纯文本；⚠️ 注意：关闭某群的"开启采集"开关仅停止后续采集，不会删除已采集的原文与记忆，如需来源级清理请在群内使用 #群记忆关闭 指令',
           component: 'GSubForm',
           componentProps: {
             multiple: true,
