@@ -362,10 +362,7 @@ const defaultConfig = {
     cronTime: '0 0 4 * * ? *', // 每日提炼 EasyCron，修改后重启生效
     provider: 'current', // 提炼使用的模型供应商条目 ID 或 'current'（跟随全局对话模型）；锅巴「提炼模型来源」，保存后即时生效
     rawRetentionDays: 30, // 群原文保留天数
-    eventRetentionDays: 90, // 未指定期限的临时事件默认保留天数
-    inputTokenLimit: 30000, // 提取模型输入 Token 上限
-    // 输出上限不再单独配置：提炼用的子模型直接跟随 provider 的「回复内容最大Token数」
-    // 最低置信度也不再是配置项：固定为 extractor.js 的 MEMORY_MIN_CONFIDENCE（0.7）
+    eventRetentionDays: 90,
   },
 
   // MCP 协议配置

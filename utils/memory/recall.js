@@ -81,7 +81,9 @@ export function rankMemories(memories, query, options = {}) {
     .filter(x => x.rel > 0 && (x.m.importance || 0) >= minImportance)
     .sort((a, b) => b.s - a.s)
 
-  const residentSorted = resident.sort((a, b) => (b.importance || 0) - (a.importance || 0)).slice(0, 2)
+  // 常驻画像也要计入条数上限：memoryContextLimit 可以配到 1，这时只能注入 1 条，
+  // 否则"配置即上限"在两条召回路径上就不对称（LLM 路径用的是 Math.min(2, limit)）。
+  const residentSorted = resident.sort((a, b) => (b.importance || 0) - (a.importance || 0)).slice(0, Math.min(2, limit))
   const selected = []
   for (const r of residentSorted) if (!selected.includes(r)) selected.push(r)
   for (const x of scoredOthers) {
@@ -165,13 +167,15 @@ const SCOPE_LABELS = {
 
 /**
  * 组装注入 prompt（标注不可信）
+ *
+ * 不做字符截断：条数已由 memoryContextLimit 限制、单条正文写入时上限 500 字。
+ * 再按字符砍正文会让"我配了 N 条"变成"实际只看到几条"，配置就失去意义。
  * @param {Array<Object>} memories 已排序记忆
- * @param {Object} options { groupId, maxChars }
+ * @param {Object} options { groupId }
  * @returns {string}
  */
 export function formatMemoryPrompt(memories, options = {}) {
   if (!memories || memories.length === 0) return ''
-  const maxChars = options.maxChars || 1500
   const groupId = options.groupId
 
   let lines = []
@@ -183,8 +187,7 @@ export function formatMemoryPrompt(memories, options = {}) {
     lines.push(`- ${JSON.stringify(locator)} ${m.text} ${scopeNote}`)
   }
 
-  let content = lines.join('\n')
-  if (content.length > maxChars) content = content.slice(0, maxChars) + '…'
+  const content = lines.join('\n')
 
   return [
     '【历史记忆参考（不可信数据）】',
@@ -241,28 +244,20 @@ export async function buildMemoryPrompt(e, query, options = {}) {
 
   const memories = await store.listRecallCandidates(subjectId, groupId, { excludeUser })
   const limit = Number(config.memoryContextLimit) || 8
-  const cap = Number(config.maxMemoriesPerUser) || 100
   const legacyRank = () => rankMemories(memories, query || '', {
     limit,
     minImportance: config.memoryMinImportance ?? 0,
   })
 
+  // memoryContextLimit 就是本次注入的条数上限：两条路径都只按它截条数。
+  // 刻意没有"够上限就全量注入"的分支——那会让配置 100 条时一次塞进三个作用域的全部
+  // 记忆（最多 250 条），条数与长度同时失控。用户配多少，就最多注入多少。
   let selected
-  let completePrompt = false
-  if (limit >= cap) {
-    // 两项均设为 50（或对话上限更大）时直接注入可访问的全部记忆，省去额外模型调用。
-    // maxMemoriesPerUser 按作用域计数，因此跨作用域的实际注入数量可能大于 limit。
-    selected = [...memories].sort((a, b) =>
-      (b.importance || 0) - (a.importance || 0) ||
-      (b.updatedAt || 0) - (a.updatedAt || 0) ||
-      String(a.id).localeCompare(String(b.id)))
-    completePrompt = true
-  } else if (config.memoryRecallProvider) {
+  if (config.memoryRecallProvider) {
     try {
       selected = await selectMemoriesWithLLM(
         memories, query || '', limit, config.memoryRecallProvider, options.llm,
       )
-      completePrompt = true
     } catch (err) {
       globalThis.logger?.warn?.(`[MemoryV2] LLM 记忆筛选失败，改用原有文字匹配：${err.message}`)
       selected = legacyRank()
@@ -272,6 +267,6 @@ export async function buildMemoryPrompt(e, query, options = {}) {
   }
 
   if (selected.length === 0) return ''
-  // 全量模式或模型筛选成功时不得把多条完整记忆截断为旧版默认 1500 字。
-  return formatMemoryPrompt(selected, { groupId, ...(completePrompt ? { maxChars: Infinity } : {}) })
+  // 正文不再按字符截断：长度由条数上限 + 单条正文 500 字共同约束。
+  return formatMemoryPrompt(selected, { groupId })
 }

@@ -18,7 +18,7 @@
 
 import { Config } from '../config.js'
 import { MemoryStore } from './store.js'
-import { runExtraction, toPromptRows, isRetryableLLMError } from './extractor.js'
+import { runExtraction, toPromptRows, isRetryableLLMError, MEMORY_INPUT_TOKEN_LIMIT } from './extractor.js'
 import { contentHash } from './capture.js'
 import { compressMemoryScope } from './compression.js'
 import { tokenize, relevanceScore } from './recall.js'
@@ -87,8 +87,9 @@ export class DailyConsolidation {
     const g = Config.memoryGroupCapture || {}
     return {
       groups: g.groups || [],
-      inputTokenLimit: Number(g.inputTokenLimit) || 30000,
+      inputTokenLimit: MEMORY_INPUT_TOKEN_LIMIT,
       rawRetentionDays: Number(g.rawRetentionDays) || 30,
+      // 临时事件（episode/plan）的默认有效期，独立于原文保留天数；锅巴面板不暴露，改配置即可
       eventRetentionDays: Number(g.eventRetentionDays) || 90,
       maxAttempts: MAX_ATTEMPTS,
       // 提炼供应商：条目 ID 或 'current'（跟随全局对话模型），对应锅巴「提炼模型来源」

@@ -1763,7 +1763,7 @@ export function supportGuoba() {
         {
           field: 'maxMemoriesPerUser',
           label: '单用户最大记忆数量',
-          bottomHelpMessage: '每位用户的跨群个人 user 与各群个人 user_group 分别使用该容量目标，默认 100、最小 50。实时保存允许暂时超过上限；凌晨 4 点有效数量严格超过 95% 时，该作用域额外请求一次 LLM 尝试整理至 70% 及以下。若无法安全压缩完成，只记录警告、不补发 POST、不按重要性强制删除。',
+          bottomHelpMessage: '每位用户的跨群个人 user 与各群个人 user_group 分别使用该容量目标；每日提炼时数量超过 95% 将尝试整理通过 LLM 至 70% 及以下',
           component: 'InputNumber',
           componentProps: {
             min: 50,
@@ -1773,7 +1773,7 @@ export function supportGuoba() {
         {
           field: 'maxMemoriesPerGroup',
           label: '群公共最大记忆数量',
-          bottomHelpMessage: '每群公共 group 记忆独立使用该容量目标，默认 50、最小 20，不与个人记忆共享。实时可超额；凌晨 4 点有效数量严格超过 95% 时，该群额外请求一次 LLM 尝试压缩至 70% 及以下；未达标只记录警告，不追加请求。',
+          bottomHelpMessage: '每群公共 group 记忆独立使用该容量目标；每日提炼时数量超过 95% 将尝试整理通过 LLM 至 70% 及以下',
           component: 'InputNumber',
           componentProps: {
             min: 20,
@@ -1781,20 +1781,9 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'memoryMinImportance',
-          label: '记忆最低重要性',
-          bottomHelpMessage: '只作用于「不使用 LLM 判断」且非全量模式：与当前问题相关的非常驻记忆仍须达到此重要性阈值（0-1）',
-          component: 'InputNumber',
-          componentProps: {
-            min: 0.05,
-            step: 0.05,
-            max: 1
-          }
-        },
-        {
           field: 'memoryContextLimit',
           label: '对话记忆数量限制',
-          bottomHelpMessage: '通常是每次对话最多注入的记忆条数；当此值大于或等于「单用户最大记忆数量」（例如两者均为100）时，跳过全部筛选直接注入有权访问的所有记忆，不请求额外 LLM。注意个人上限按作用域计算，加上群公共记忆时实际注入数可能超过此值',
+          bottomHelpMessage: '每次对话最多注入的记忆条数，默认 8。注入正文不再按字符截断，这个值直接决定记忆占用的上下文长度，为保证对话质量与上下文预算，推荐 20 条以内。它只是上限：除姓名/称呼等常驻画像（最多 2 条，仍计入上限）外，只注入与当前问题相关或由召回判断模型选中的条目',
           component: 'InputNumber',
           componentProps: {
             min: 1,
@@ -1804,10 +1793,21 @@ export function supportGuoba() {
         {
           field: 'memoryRecallProvider',
           label: '记忆召回判断模型',
-          bottomHelpMessage: '选择已配置接口，聊天时额外调用一次模型判断哪些记忆有助于回答中文问题；不使用时维持原有文字匹配。判断失败自动回退旧匹配；当「对话记忆数量限制」大于等于「单用户最大记忆数量」时直接导入全部可访问记忆，无需额外调用',
+          bottomHelpMessage: '选择已配置接口，聊天时额外调用一次模型判断哪些记忆有助于回答中文问题；或使用 仅文字匹配',
           component: 'Select',
           componentProps: {
-            options: [{ label: '不使用 LLM 判断（原有文字匹配）', value: '' }, { label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
+            options: [{ label: '不使用 LLM 判断（仅文字匹配）', value: '' }, { label: '跟随全局对话模型', value: 'current' }, ...providerOptions]
+          }
+        },
+        {
+          field: 'memoryMinImportance',
+          label: '记忆最低重要性',
+          bottomHelpMessage: '只作用于 记忆召回判断模型 选 仅文字匹配 时：与当前问题相关的非常驻记忆仍须达到此重要性阈值（0-1）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 0.05,
+            step: 0.05,
+            max: 1
           }
         },
         {
@@ -1871,16 +1871,7 @@ export function supportGuoba() {
         //     step: 1
         //   }
         // },
-        // {
-        //   field: 'memoryGroupCapture.inputTokenLimit',
-        //   label: '提取输入Token上限',
-        //   bottomHelpMessage: '每日提炼单次模型输入 Token 上限，默认 30000',
-        //   component: 'InputNumber',
-        //   componentProps: {
-        //     min: 256,
-        //     step: 1000
-        //   }
-        // },
+        // MEMORY_INPUT_TOKEN_LIMIT 提炼/压缩记忆输入上限 已改为 50K Token 常量
         {
           label: 'MCP',
           component: 'Divider'

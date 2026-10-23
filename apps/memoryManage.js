@@ -4,6 +4,7 @@ import { makeForwardMsg } from '../utils/common.js'
 import { getStore } from '../utils/memory/v2.js'
 import { groupCapture } from '../utils/memory/capture.js'
 import { dailyConsolidation, normalizeCron } from '../utils/memory/dailyTask.js'
+import { MEMORY_INPUT_TOKEN_LIMIT } from '../utils/memory/extractor.js'
 import { canDeleteOwnMemory } from '../utils/memory/policy.js'
 
 const KIND_LABELS = {
@@ -20,6 +21,17 @@ const SCOPE_LABELS = {
   user: '🌐跨群个人',
   user_group: '👥本群个人',
   group: '🏘️群公共'
+}
+
+/**
+ * 容量目标与夜间整理阈值：#记忆统计 与 #群记忆状态 共用同一份文案，避免两处各写一遍后漂移。
+ * 口径：单个作用域有效条数**严格大于** cap×0.95 才触发，目标 ≤ floor(cap×0.7)。
+ */
+function capacityLines() {
+  return [
+    `个人记忆上限：${Config.maxMemoriesPerUser} 条（user / user_group，超 95% 夜间整理至 70%）`,
+    `群公共上限：${Config.maxMemoriesPerGroup} 条（每群 group，超 95% 夜间整理至 70%）`,
+  ]
 }
 
 export class memoryManage extends plugin {
@@ -182,14 +194,16 @@ export class memoryManage extends plugin {
       lines.push(`本群：${currentAuthorized ? '✅ 已授权采集' : '❌ 未授权'}`)
     }
     lines.push(`每日提炼时间：${cfg.cronTime || '0 0 4 * * ? *'}（修改后重启生效）`)
-    lines.push(`原文保留：${cfg.rawRetentionDays ?? 30} 天 | 事件保留：${cfg.eventRetentionDays ?? 90} 天`)
-    lines.push(`提取 Token：输入 ${cfg.inputTokenLimit ?? 30000}（输出上限跟随模型配置）`)
+    lines.push(`原文保留：${cfg.rawRetentionDays ?? 30} 天 | 事件保留：${cfg.eventRetentionDays ?? 90} 天（临时 episode/plan 的默认有效期）`)
+    lines.push(`提取 Token：输入 ${MEMORY_INPUT_TOKEN_LIMIT}（常量，不可配置；输出上限跟随模型配置）`)
     lines.push('')
     lines.push('📊 记忆统计（V2）')
     lines.push(`总事实数：${stats.total} 条`)
     lines.push(`  user(跨群)：${stats.byScope?.user || 0} 条`)
     lines.push(`  user_group(本群个人)：${stats.byScope?.user_group || 0} 条`)
     lines.push(`  group(群公共)：${stats.byScope?.group || 0} 条`)
+    lines.push('')
+    lines.push(...capacityLines())
 
     if (gid) {
       const tasks = await store.listTasks(gid).catch(() => [])
@@ -584,7 +598,7 @@ export class memoryManage extends plugin {
         msg += `类型分布：\n${byKindLines}\n`
       }
       msg += `\n配置信息：\n`
-      msg += `  单用户上限：${Config.maxMemoriesPerUser} 条\n`
+      msg += capacityLines().map(line => `  ${line}\n`).join('')
       msg += `  对话最低重要性：${Config.memoryMinImportance}\n`
       msg += `  对话记忆数量：${Config.memoryContextLimit} 条\n`
       msg += `  授权采集群：${(Config.memoryGroupCapture?.groups || []).filter(g => g?.switchOn).length} 个`

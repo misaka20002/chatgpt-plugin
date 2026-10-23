@@ -203,7 +203,9 @@ export class MemoryStore {
     const token = genMemoryId()
     let acquired = false
     for (let attempt = 0; attempt < 60; attempt++) {
-      if (await this.redis.set(key, token, { NX: true, PX: 120000 }) === 'OK') { acquired = true; break }
+      // 锁租约统一写 `{ NX, EX }`（AGENTS.md 跨模块不变式）；PX 与 EX 语义等价，
+      // 但混用会让排查锁时长的人来回换算秒与毫秒。
+      if (await this.redis.set(key, token, { NX: true, EX: 120 }) === 'OK') { acquired = true; break }
       await new Promise(resolve => setTimeout(resolve, 25))
     }
     if (!acquired) throw new Error('记忆作用域正被其他操作占用，请稍后重试')
@@ -255,12 +257,12 @@ export class MemoryStore {
     // 同批精确去重始终执行，不受任何容量压缩阈值影响；operation/scope/主体/群/键/值一致才合并证据。
     // 不同 factKey 或 factValue 的语义相近事实，不能在此靠字符串相似度武断合并。
     for (const raw of candidates) {
-      const checked = validateCandidateShape(raw)
-      if (!checked.ok) { results.push({ ok: false, candidate: raw, reason: checked.reason }); continue }
-      const c = checked.data
-      const ownerId = c.scope === 'group' ? ctx.groupId : c.subjectId
-      const groupId = c.scope === 'user' ? '' : ctx.groupId
-      const token = `${c.operation}:${c.scope}:${ownerId}:${groupId}:${c.factKey}:${c.factValue}`
+      // 与 applyFact 共用同一套形状校验与归属推导：分组键必须等于真正落库的 owner/group，
+      // 否则会出现"分组时算 A、写入时算 B"的重复条目。
+      const resolved = this._resolveWriteTarget(raw, ctx)
+      if (!resolved.ok) { results.push({ ok: false, candidate: raw, reason: resolved.reason }); continue }
+      const { c, scope, ownerId, groupId } = resolved
+      const token = `${c.operation}:${scope}:${ownerId}:${groupId}:${c.factKey}:${c.factValue}`
       if (!merged.has(token)) merged.set(token, { ...c, subjectId: ownerId, evidenceMessageIds: [] })
       const target = merged.get(token)
       for (const id of c.evidenceMessageIds) if (!target.evidenceMessageIds.includes(id)) target.evidenceMessageIds.push(id)
@@ -274,6 +276,28 @@ export class MemoryStore {
   }
 
   /**
+   * 由候选（不可信）与 ctx（可信）解析写入目标：形状校验 + 作用域归属推导。
+   *
+   * 加锁前需要锁键、锁内需要再复核，所以调用两次；规则只有这一份实现，
+   * 避免两处各自推导 ownerId/groupId 时悄悄分叉。
+   * @returns {{ok: true, c: Object, scope: string, ownerId: string, groupId: string} | {ok: false, reason: string}}
+   */
+  _resolveWriteTarget(candidate, ctx = {}) {
+    const checked = validateCandidateShape(candidate)
+    if (!checked.ok) return { ok: false, reason: checked.reason }
+    const c = checked.data
+    const scope = c.scope
+    const ownerId = String(scope === 'group' ? (ctx.groupId || '') : (c.subjectId || ctx.subjectId || ''))
+    const groupId = scope === 'user' ? '' : String(ctx.groupId || '')
+    if (!ownerId) return { ok: false, reason: '记忆主体缺失' }
+    // user_group / group 必须在群语境里：私聊（ctx.groupId 为空）写入会落到 `...:user_group:<uid>:-`，
+    // 而 _insertMemory 只在有 groupId 时建 GRP 反向索引，clearUser 又靠扫 GRP:* 找 user_group →
+    // 会出现"召回得到、清不掉"的孤儿数据
+    if (scope !== 'user' && !groupId) return { ok: false, reason: `${scope} 作用域必须在群聊中使用` }
+    return { ok: true, c, scope, ownerId, groupId }
+  }
+
+  /**
    * 应用单条候选（add/reinforce/update/retract 语义）
    * @param {Object} candidate 模型给出的候选（不可信）
    * @param {Object} ctx 服务端可信上下文；`ctx.isBotMaster` 的授权语义见上方"ctx 可信字段约定"
@@ -281,13 +305,9 @@ export class MemoryStore {
    */
   async applyFact(candidate, ctx = {}) {
     try {
-      const checkedScope = validateCandidateShape(candidate)
-      if (!checkedScope.ok) return { ok: false, action: 'invalid', reason: checkedScope.reason }
-      const scope = checkedScope.data.scope
-      const ownerId = String(scope === 'group' ? (ctx.groupId || '') : (checkedScope.data.subjectId || ctx.subjectId || ''))
-      const groupId = scope === 'user' ? '' : String(ctx.groupId || '')
-      if (!ownerId) return { ok: false, action: 'invalid', reason: '记忆主体缺失' }
-      if (scope !== 'user' && !groupId) return { ok: false, action: 'invalid', reason: `${scope} 作用域必须在群聊中使用` }
+      const target = this._resolveWriteTarget(candidate, ctx)
+      if (!target.ok) return { ok: false, action: 'invalid', reason: target.reason }
+      const { scope, ownerId, groupId } = target
       return await this._withScopeLock(scope, ownerId, groupId, () => this._applyFactUnlocked(candidate, ctx))
     } catch (err) {
       logger?.error?.(`[MemoryV2] applyFact 失败: ${err.message}`)
@@ -299,20 +319,11 @@ export class MemoryStore {
     try {
       const redis = this.redis
       const now = nowMs()
-      const checked = validateCandidateShape(candidate)
-      if (!checked.ok) return { ok: false, action: 'invalid', reason: checked.reason }
-      const c = checked.data
-
-      const ownerId = String(c.scope === 'group' ? ctx.groupId : (c.subjectId || ctx.subjectId || ''))
-      if (!ownerId) return { ok: false, action: 'invalid', reason: '缺少 ownerId(subjectId)' }
-      const groupId = c.scope === 'user' ? '' : String(ctx.groupId || '')
-
-      // user_group / group 必须在群语境里：私聊（ctx.groupId 为空）写入会落到 `...:user_group:<uid>:-`，
-      // 而 _insertMemory 只在有 groupId 时建 GRP 反向索引，clearUser 又靠扫 GRP:* 找 user_group →
-      // 会出现"召回得到、清不掉"的孤儿数据
-      if (c.scope !== 'user' && !groupId) {
-        return { ok: false, action: 'invalid', reason: `${c.scope} 作用域必须在群聊中使用` }
-      }
+      const target = this._resolveWriteTarget(candidate, ctx)
+      if (!target.ok) return { ok: false, action: 'invalid', reason: target.reason }
+      const c = target.c
+      const ownerId = target.ownerId
+      const groupId = target.groupId
 
       // 证据归属二次校验（即使 extractor 已校验，store 也不信任）
       const evidence = this._buildEvidence(c.evidenceMessageIds, ctx)
@@ -490,6 +501,9 @@ export class MemoryStore {
         await redis.sAdd(evdKey, serialized)
         added++
         if (grpKey) await redis.sAdd(grpKey, memory.id)
+        // 证据来自其他群时也补建该群的 GRP 反向索引：clearGroup 靠它找到「曾在本群留下证据」
+        // 的记忆，规则与 _insertMemory 一致。该索引只表示"与该群有过证据交集"，
+        // 不参与召回、不改变跨群读取/写入权限（召回只读 idx:{scope}:{owner}:{gid}）。
         if (ev.g && ev.g !== groupId) await redis.sAdd(GRP(ev.g), memory.id)
       }
     }
@@ -527,7 +541,8 @@ export class MemoryStore {
     try { return JSON.parse(raw) } catch { return null }
   }
 
-  async _countActiveByScope(scope, ownerId, groupId) {
+  /** 当前有效记忆数：排除已归档和已经超过 validTo 的事实。 */
+  async countActiveByScope(scope, ownerId, groupId = '') {
     const redis = this.redis
     const ids = await redis.sMembers(IDX(scope, ownerId, groupId))
     const now = nowSec()
@@ -548,6 +563,7 @@ export class MemoryStore {
     const senders = new Set()
     let latest = 0
     let validCount = 0
+    let corrupt = 0
     for (const value of raw) {
       try {
         const ev = JSON.parse(value)
@@ -555,21 +571,32 @@ export class MemoryStore {
         if (ev.g) groups.add(String(ev.g))
         if (ev.s) senders.add(String(ev.s))
         latest = Math.max(latest, Number(ev.t) || 0)
-      } catch { /* 历史损坏证据不纳入计数 */ }
+      } catch {
+        // 单条证据损坏只丢它自己，统计仍要返回可用部分；计数后统一告警，
+        // 逐条 logger 会在一次压缩里刷出成百条重复日志。
+        corrupt++
+      }
     }
+    if (corrupt > 0) logger?.warn?.(`[MemoryV2] 记忆 ${memoryId} 有 ${corrupt} 条证据 JSON 损坏，已跳过统计`)
     return { count: validCount, groupCount: groups.size, senderCount: senders.size, lastEvidenceAt: latest }
   }
 
-  /** 当前有效记忆数：排除已归档和已经超过 validTo 的事实。 */
-  async countActiveByScope(scope, ownerId, groupId = '') {
-    return this._countActiveByScope(scope, ownerId, groupId)
+  /**
+   * 读取作用域内有效记忆：排除已过期的 active 项，按 id 稳定排序。
+   * 触发扫描、模型输入与压缩提交必须用同一顺序与同一过滤规则，
+   * 否则逐条比对快照会因为「一边已过滤过期项」而假性 stale。
+   */
+  async _activeSortedByScope({ scope, ownerId, groupId }) {
+    const now = nowSec()
+    return (await this.listByScope({ scope, ownerId, groupId }))
+      .filter(m => !(m.validTo > 0 && m.validTo <= now))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)))
   }
 
   /** 列出有效记忆作用域。只扫描索引键，不按所有群成员发送请求。 */
   async listCompressionScopes({ maxMemoriesPerUser = 100, maxMemoriesPerGroup = 50 } = {}) {
     const result = []
     if (!this.redis.scanIterator) throw new Error('Redis 不支持作用域索引扫描')
-    const now = nowSec()
     const seen = new Set()
     for await (const key of this.redis.scanIterator({ MATCH: `${PREFIX}:idx:*`, COUNT: 1000 })) {
       const prefix = `${PREFIX}:idx:`
@@ -591,10 +618,8 @@ export class MemoryStore {
       const indexedCount = typeof this.redis.sCard === 'function'
         ? await this.redis.sCard(key) : (await this.redis.sMembers(key)).length
       if (indexedCount <= cap * 0.95) continue
-      const memories = (await this.listByScope({ scope, ownerId, groupId }))
-        .filter(m => !(m.validTo > 0 && m.validTo <= now) &&
-          m.scope === scope && String(m.ownerId) === ownerId && String(m.groupId || '') === groupId)
-        .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+      const memories = (await this._activeSortedByScope({ scope, ownerId, groupId }))
+        .filter(m => m.scope === scope && String(m.ownerId) === ownerId && String(m.groupId || '') === groupId)
       if (memories.length > cap * 0.95) {
         result.push({ scope, ownerId, groupId, cap, target: Math.floor(cap * 0.7), memories })
       }
@@ -650,9 +675,7 @@ export class MemoryStore {
     if (!plan || !Array.isArray(plan.keepIds) || !Array.isArray(plan.mergePlans) || !Array.isArray(plan.archiveIds)) {
       return { status: 'invalid', reason: '压缩输出缺少 keepIds/mergePlans/archiveIds' }
     }
-    const current = (await this.listByScope({ scope, ownerId, groupId }))
-      .filter(m => !(m.validTo > 0 && m.validTo <= nowSec()))
-      .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    const current = await this._activeSortedByScope({ scope, ownerId, groupId })
     // 分片压缩只能修改本片已提交给模型的 ID；同时复核这些 ID 的实际内容。
     const allowed = new Set(memories.map(m => m.id))
     const reviewed = partialScope ? current.filter(m => allowed.has(m.id)) : current
@@ -693,10 +716,15 @@ export class MemoryStore {
         }
         const a = existing.get(item.keepId)
         const b = existing.get(id)
-        // 跨事实值的语义合并交模型判断；服务端要求同一个原子事实槽位，防止丢失另一属性。
-        // 跨 factKey 等价场景需专用别名规范化和独立确认，不能让模型任意合并。
+        // 合并成立的两个条件：同一个原子事实槽位（factKey 与 factValue 都相同），
+        // 或同 kind 且正文去掉空白后完全一致（模型换了一套键名描述同一件事）。
+        //
+        // 已知代价（2026-10-23 与用户确认后接受）：跨 factKey 合并时保留项不继承被删项的
+        // factKey/factValue，被删项的槽位随之消失——之后按该槽位撤回不会命中，需按保留项的键撤回。
+        // 真正无损需要槽位别名/继承，属独立议题，不在压缩路径里临时发明。
         const sameSlot = a.factKey === b.factKey && a.factValue === b.factValue
-        const sameText = a.kind === b.kind && String(a.text || '').replace(/\s+/g, '') === String(b.text || '').replace(/\s+/g, '')
+        const sameText = a.kind === b.kind &&
+          String(a.text || '').replace(/\s+/g, '') === String(b.text || '').replace(/\s+/g, '')
         if (!sameSlot && !sameText) {
           return { status: 'invalid', reason: '无法确认合并项是同一原子事实，保留原事实' }
         }
@@ -716,7 +744,13 @@ export class MemoryStore {
         return { status: 'partial', reason: '合并期间记录更新，停止操作', changed }
       }
       const raw = await this.redis.sMembers(EVD(action.removeId))
-      const evidence = raw.map(s => { try { return JSON.parse(s) } catch { return null } }).filter(Boolean)
+      // 坏证据只丢它自己，但不能静默：合并是"迁移证据"，少一条就少一个来源。
+      const evidence = []
+      let corrupt = 0
+      for (const value of raw) {
+        try { evidence.push(JSON.parse(value)) } catch { corrupt++ }
+      }
+      if (corrupt > 0) logger?.warn?.(`[MemoryV2] 合并 ${action.removeId} 时有 ${corrupt} 条证据 JSON 损坏，已跳过`)
       await this._mergeEvidence(saved, evidence, '')
       if (!await this._archiveCompressionIfSame(removed, 'compressed_duplicate', action.reason)) {
         return { status: 'partial', reason: '迁移证据后源记录发生变化，已保留源记录', changed }

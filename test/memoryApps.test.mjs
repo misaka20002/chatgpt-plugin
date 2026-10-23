@@ -49,6 +49,8 @@ let hasMemories = true
 mock.module('../utils/memory/v2.js', {
   namedExports: {
     getStore: () => ({
+      stats: async () => ({ total: 0, byScope: {} }),
+      listTasks: async () => [],
       listRecallCandidates: async (...args) => {
         storeCalls.listed.push(args)
         return recallQueue.shift() ?? []
@@ -117,6 +119,31 @@ const memory = (id, updatedAt, text) => ({
   confidence: 0.9,
   importance: 0.5,
   source: 'group-window:100:2026-09-20',
+})
+
+test('两个记忆状态指令共用同一份容量与整理阈值说明', async () => {
+  const statsEvent = mkEvent('#记忆统计')
+  await new memoryManage(statsEvent).memoryStats(statsEvent)
+  const statsMsg = statsEvent.replies.at(-1)
+
+  const statusEvent = mkEvent('#群记忆状态')
+  const statusPlugin = new memoryManage(statusEvent)
+  const statusReplies = []
+  // 群状态走 this.reply（基类方法），事件上的 reply 不会被调用，这里接管并记录
+  statusPlugin.reply = async m => { statusReplies.push(String(m)) }
+  await statusPlugin.groupMemoryStatus(statusEvent)
+  const statusMsg = statusReplies.at(-1)
+
+  for (const msg of [statsMsg, statusMsg]) {
+    assert.match(msg, new RegExp(`个人记忆上限：${Config.maxMemoriesPerUser} 条`))
+    assert.match(msg, new RegExp(`群公共上限：${Config.maxMemoriesPerGroup} 条`))
+    assert.match(msg, /95%/)
+    assert.match(msg, /70%/)
+  }
+  // 内容必须一致（共用同一个 helper），避免两个指令各改一半
+  const capacityLines = statusMsg.split('\n').filter(line => line.includes('上限：'))
+  assert.equal(capacityLines.length, 2)
+  for (const line of capacityLines) assert.ok(statsMsg.includes(line), `两处说明不一致：${line}`)
 })
 
 test('观察器 rule 必须匹配任何消息文本（含多行、空串）', async () => {

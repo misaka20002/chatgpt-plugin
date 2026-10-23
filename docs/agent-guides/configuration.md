@@ -38,4 +38,4 @@
 - **`Number(x) ?? 默认值` 在 x 缺失时得到 NaN 而不是默认值**：`Number(undefined)` 返回 NaN，`??` 只回退 null/undefined——`Number(Config.xxx) ?? 0.7` 在配置缺失时阈值/上限会变 NaN 导致校验失效。**读取数字配置用 `||` 回退**（`Number(...) || 0.7`）。但 `||` 会把合法的 `0` 也当缺失，**只适用于"0 不是合法取值"的字段**；0 有业务意义的配置（如 `meme_CD <= 0` 表示关闭 CD）必须显式判空 + 范围校验，例如 `const n = Number(Config.x); const v = Number.isFinite(n) ? n : 默认值`，别套 `||`。
 - 锅巴 GSubForm 保存的是数组（如 `memoryGroupCapture.groups`），读取用 `Array.isArray` 防护。
 
-`inputTokenLimit` / `eventRetentionDays` / `maxMemoriesPerUser` 的 0 不是合法值，可使用 `Number(...) || 默认值`；`minConfidence` 已移除，见 [记忆指南](memory.md)。
+`eventRetentionDays` / `maxMemoriesPerUser` 的 0 不是合法值，可使用 `Number(...) || 默认值`；`minConfidence` 已移除，见 [记忆指南](memory.md)；`inputTokenLimit` 已不是配置项（改为 `extractor.js` 的 `MEMORY_INPUT_TOKEN_LIMIT` 常量，锅巴无入口）。
