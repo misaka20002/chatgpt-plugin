@@ -272,7 +272,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
     if (this.tools?.length > 0) {
       body.tools.push({
-        function_declarations: this.tools.map(tool => tool.function())
+        functionDeclarations: this.tools.map(tool => tool.function())
         // codeExecution: {}
       })
 
@@ -287,17 +287,17 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
       // 防止死循环。
       delete opt.toolMode
-      body.tool_config = {
-        function_calling_config: {
+      body.toolConfig = {
+        functionCallingConfig: {
           mode
         }
       }
     }
     if (opt.search) {
-      body.tools.push({ google_search: {} })
+      body.tools.push({ googleSearch: {} })
     }
     if (opt.codeExecution) {
-      body.tools.push({ code_execution: {} })
+      body.tools.push({ codeExecution: {} })
     }
     // if (opt.media) {
     //   delete body.tools
