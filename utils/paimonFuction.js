@@ -631,35 +631,10 @@ export function getMediaTargetUrl(e) {
 }
 
 /**
- * 处理 raw_message 中的 CQ 码
- * - 删除所有非 CQ:at 的 CQ 码
- * - 如果传入的 qq 号与某个 CQ:at 中的 qq 匹配，删除第一个匹配到的 CQ:at
- *
- * @param {string} rawMessage - 原始消息字符串
- * @param {string} targetQQ - （可选）要匹配并删除的 QQ 号，删除第一个匹配到的 CQ:at （用于 At Bot 启动的对话）
- * @returns {string} 处理后的消息字符串
+ * 兼容旧导入路径：实现已迁到 utils/cqCode.js（纯字符串处理，不该拉起媒体与客户端依赖）。
+ * 新代码请直接从 cqCode.js 导入。
  */
-export function processCQMessage(rawMessage, targetQQ) {
-  // 删除所有非 CQ:at 的 CQ 码
-  let result = rawMessage.replace(/\[CQ:(?!at\b)[^\]]*\]/g, '');
-  // 找到第一个 qq 匹配的 CQ:at，删除它
-  if (targetQQ !== undefined && targetQQ !== null) {
-    const qqStr = String(targetQQ);
-    // 匹配 CQ:at，捕获其中的 qq 字段
-    const cqAtRegex = /\[CQ:at,qq=(\d+)[^\]]*\]/g;
-    let firstMatchDeleted = false;
-    result = result.replace(cqAtRegex, (match, qq) => {
-      if (!firstMatchDeleted && qq === qqStr) {
-        firstMatchDeleted = true;
-        return ''; // 删除第一个匹配到的
-      }
-      return match; // 其余保留
-    });
-  }
-  // 清理多余空格
-  result = result.replace(/\s+/g, ' ').trim();
-  return result;
-}
+export { processCQMessage } from './cqCode.js'
 
 /**
  * @description: 获取指定用户的详细信息对象

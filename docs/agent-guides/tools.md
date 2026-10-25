@@ -27,6 +27,21 @@
 
 `imageUrl`/`videoUrl` 来自模型的 tool arguments，属**不可信输入**，因此工具的专用识别路径以 `untrustedSource` 调用（例外见[引用图原生多模态](#引用图原生多模态)：地址与本次事件的媒体地址完全一致时改用 `trustedMediaSource`，**只**放开私网/benchmark 拦截，本地文件、`base64://` 与媒体类型校验仍按不可信收紧），其余情况的具体约束是：`url2Base64` 的 `allowLocalFile`/`allowPrivateNetwork` 置 false —— 只允许公网 http(s)，拒绝 `file://`、本地绝对路径、`base64://`；地址判定必须把 IPv6 **按 128 位真实解析**后再判定（只匹配 `::ffff:1.2.3.4` 这种 dotted 写法会漏掉 `::ffff:7f00:1` 等同义的十六进制绕过，`::7f00:1` 这类 IPv4-compatible 写法同理）——IPv6 侧拦截 `::`/`::1`、mapped/compatible、`fe80::/10`、`fec0::/10`（RFC 3879 已废弃的 site-local）、`fc00::/7`、`ff00::/8`、`64:ff9b:1::/48`（RFC 8215 域内 IPv4/IPv6 translation 前缀；公网 WKP `64:ff9b::/96` 不拦），并保守拒绝纯数字/`0x` 主机名（inet_aton 兼容的整数 IPv4 写法）；DNS 解析结果与**每一跳重定向**都校验 loopback/私网/link-local/保留地址；严格模式还必须把本次连接**固定**到已校验的地址（`resolveSafeRemoteMediaUrl` 返回目标 → `createPinnedAgent`），否则 `newFetch` 建连时会二次解析域名，可被 DNS rebinding 绕过——注意该 agent 会覆盖 `Config.proxy`，即严格模式是直连（代理侧的目标解析无法由本机保证）。下载走 `newFetch` + `redirect: 'manual'` + 流式字节上限（声明长度与累计值两处都卡），严格模式要求响应类型匹配请求的媒体大类（`mediaKind`：图片要 `image/*`、视频要 `video/*`），明确声明为 HTML/JSON 等非媒体类型时在读 body 前拒绝。QQ 视频下载可能返回 `application/octet-stream` 或缺少 `Content-Type`：仅视频路径允许在上述字节上限内下载，再复用宿主已有的 `file-type` 按文件签名确认 `video/*`（兼容 v16 的 CommonJS `fromBuffer` 与 v17+ 的 ESM `fileTypeFromBuffer`，不能假定宿主已升级），将检测出的 MIME 传给模型；无法检测、非视频或检测失败仍拒绝，不能凭 URL 后缀放行，也不放宽图片类型校验。识别要求（prompt）以 `Object.hasOwn(options, 'prompt')` 判断是否显式传入：**显式传空串时不得回退到 `e.msg`**，只有旧调用方完全没传该字段时才沿用 `e.msg`。识别失败的处理：识别函数内部用 `throwOnError` 区分失败（工具传 true），**工具边界仍统一返回 `'Error: …'`**（与本仓库多数工具一致，不改变既有返回风格），既避免 `识别出错：…` 被模型当成识别结果，也不引入新的返回约定；结果回填前统一加「不可信媒体内容」标记并截断长度（媒体描述本质是第三方数据，提示词注入风险真实存在）。视频识别仅接受明确指定的 Gemini 条目，工具不尝试当前对话模型，也不扩大 `SubLLM` 的视频协议面。
 
+## 合并转发（引用自动展开与读取工具）
+
+**两条路，一套实现**（决策见 [ADR 0007](../adr/0007-quoted-forward-expands-before-core.md)）：引用的合并转发在入 core 前自动展开；聊天记录里其它的转发由智能模式工具 `view_forward_msg` 按 `[CQ:forward,id=…]` 主动读取。拉取、渲染、预算、媒体登记都在 `utils/forwardMessage.js`，两条路共用。
+
+- **能力入口**：适配器把 `getForwardMsg` 绑在 `e.group` / `e.friend` 上（`get_forward_msg({ message_id })`），**事件本身没有**这个方法。两者都没有时按「适配器不支持」处理，给模型一行提示，不抛异常。
+- **引用路径的落点**：`parseSourceImg` 遍历被引用消息段时只把 `forward` 段的 id 记到 `e.sourceForwards`，**不在这里拉取**；`apps/chat.js` 在入 core 前调用 `expandQuotedForwards(e)`，拼接顺序固定为「引用文本 → 引用转发 → 用户正文」。没有 forward 段时零接口调用、零提示行。
+- **渲染**：Markdown 引用块，节点为 `昵称(QQ 123456)：内容`；图片 `![图片](url)`、视频 `[视频](url)`、语音 `[语音]`、文件 `[文件：name]`、卡片 `[卡片消息]`、表情 `[表情]`、at `@昵称`、回复 `[回复]`。URL 含括号或空白时改用 `<url>` 包住，避免 Markdown 链接被截断。
+- **预算**：节点 50（外层 + 嵌套合计，超出追加节点上限标记）、字符 20000（超出截断并追加 `[已截断]`）、嵌套只展开 1 层（再深 `[合并转发]` 占位）、单次 `get_forward_msg` 10 秒超时。超时用 `Promise.race` 实现，**底层请求无法取消**，迟到结果直接丢弃；互引的转发靠 seen 集合防环。
+- **失败要可见**：适配器不支持 / 超时或接口异常 / 空转发各给一行不同的中文提示，写进 prompt。只静默会让模型凭空编造转发内容。失败提示与展开文本一起随 prompt 进入会话历史，所以 20000 字上限不是可选项。
+- **媒体信任**：只有 image / video 段真正携带的 http(s) 地址会以 Markdown 链接呈现，并登记到 `e.forwardMediaUrls`；`collectEventMediaUrls` 纳入该字段，`recognize_media` 收到同一地址时才沿用 `trustedMediaSource`（只放开私网/CGNAT/benchmark）。**文本节点里的 URL 永远不登记**——否则一句「看 https://内网地址」就能借转发的壳拿到可信身份。登记去重、上限 100 条。
+- **工具与开关**：`view_forward_msg` 只有一个必填参数 `forwardId`，返回同一套渲染结果并前置英文不可信声明；错误按缺参 / 能力不可用 / 超时 / 接口失败 / 空转发分别返回 `Error: …`。注册只受 `viewForwardMsgTool`（锅巴「工具新增-读取合并转发」，默认关闭）控制，收集函数只在智能模式调用；无身份闸（只读、群内可见），群聊与私聊都能用。
+- **CQ 保留**：工具开关打开时，输入侧 `processCQMessage` 保留 `[CQ:forward,id=…]`（模型才有 id 可传）；**输出侧 `removeCQCodeFocus` 不变**——本插件没有按 CQ 发送合并转发的通道，保留只会把裸 CQ 文本发到群里。`processCQMessage` 已迁到 `utils/cqCode.js`（纯字符串处理，避免调用方与测试拉起 provider 依赖），`utils/paimonFuction.js` 保留同名再导出。
+- **别照抄 AstrBot**：参考实现没有节点/字符上限；它的「嵌套层数」其实是两个数（内嵌 content 递归 6、按 id 的 BFS 只有 32 次拉取且层级压平）。理由与取舍见 `.scratch/merged-forward/research.md`。
+- **未在真实协议端验证**：NapCat 的 `get_forward_msg` 是否接受现有 `{ message_id }` 入参（AstrBot 会依次尝试 `message_id` / `id` 的字符串与数字写法）、转发节点里的图片段是否稳定带 `url`、QQ 多媒体地址有效期。图片段没有 `url` 时只能渲染 `[图片]` 占位。
+
 ## 引用图原生多模态
 
 `mediaRecognitionSource = Orignal` 时，`e.img` 里的引用图以 base64 直接内联给四个 provider（`api` / `responses` / `claude` / `gemini`），不再只靠文字识别。**视频不在其中**：只有 Gemini 支持视频输入，仍走 `recognitionResultsByGemini`（`videoProviderId` 必须是 gemini 条目），主对话的四个分支从不内联视频。

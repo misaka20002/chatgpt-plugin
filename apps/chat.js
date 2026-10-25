@@ -43,6 +43,7 @@ import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
 import { groupReply } from '../utils/groupReply.js'
 import { avatarReply } from '../utils/avatarReply.js'
+import { expandQuotedForwards } from '../utils/forwardMessage.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -54,8 +55,8 @@ import {
   convertSentenceToArray,
   extractCharacterName,
   splitString_Enter,
-  processCQMessage,
 } from '../utils/paimonFuction.js'
+import { processCQMessage } from '../utils/cqCode.js'
 
 /**
  * 「没得到回答」（模型报错或拒绝回答）的提示在群聊里延时撤回的秒数。
@@ -622,7 +623,7 @@ export class chatgpt extends plugin {
       }
       if (e.user_id == getUin(e)) return false
       if (!groupReply.markHandled(e)) return false
-      prompt = isTrss ? processCQMessage(e.raw_message, getUin(e)) : msg.trim()
+      prompt = isTrss ? processCQMessage(e.raw_message, getUin(e), { keepForward: Boolean(Config.viewForwardMsgTool) }) : msg.trim()
       try {
         if (e.isGroup && !isTrss) {
           let mm = this.e.bot.gml
@@ -717,7 +718,7 @@ export class chatgpt extends plugin {
     //   }
     //   return false
     // }
-    let prompt = isTrss ? processCQMessage(e.raw_message, getUin(e)) : msg.trim()
+    let prompt = isTrss ? processCQMessage(e.raw_message, getUin(e), { keepForward: Boolean(Config.viewForwardMsgTool) }) : msg.trim()
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
       logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
@@ -879,10 +880,14 @@ export class chatgpt extends plugin {
     /** 呆毛版：对话获取At用户头像 ocr/识图 */
     const isImg = await parseSourceImg(e)
 
-    // 导入 引用消息 msg
+    // 导入 引用消息 msg；引用的合并转发紧跟其后，顺序为「引用文本 → 引用转发 → 用户正文」
+    const quotedForward = await expandQuotedForwards(e)
+    const quotedPreface = [e.sourceMsg, quotedForward].filter(Boolean).join('\n\n')
     if (e.sourceMsg) {
-      prompt = e.sourceMsg + '\n\n' + prompt;
       e.msg_bak_2 = e.sourceMsg + '\n\n' + e.msg_bak_2;
+    }
+    if (quotedPreface) {
+      prompt = quotedPreface + '\n\n' + prompt;
     }
 
     if (config.imgOcr && !!isImg) {
@@ -917,7 +922,8 @@ export class chatgpt extends plugin {
       if (hasMedia) {
         let imgRecognitionByGeminiText = await recognitionResultsByGemini(e, e.img || [], (e.get_Video || []).map(v => v.url))
         if (imgRecognitionByGeminiText) {
-          prompt = (e.senderNickname ? `${e.senderNickname}(ID:${e.senderUser_id})` : "") + (e.sourceMsg || "") + '消息中多媒体内容识别信息："' + imgRecognitionByGeminiText + '"\n' + prompt
+          // e.sourceMsg 已在入 core 前单独前置（引用文本 → 引用转发 → 正文），这里不再重复
+          prompt = (e.senderNickname ? `${e.senderNickname}(ID:${e.senderUser_id})` : "") + '消息中多媒体内容识别信息："' + imgRecognitionByGeminiText + '"\n' + prompt
         }
       }
     }

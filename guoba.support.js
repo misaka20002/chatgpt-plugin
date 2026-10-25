@@ -1504,6 +1504,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'viewForwardMsgTool',
+          label: '工具新增-读取合并转发',
+          bottomHelpMessage: '智能模式中允许 AI 主动读取聊天记录里的合并转发；引用转发会自动展开，不受此开关控制。依赖适配器提供 get_forward_msg，开启后消息文本中的 [CQ:forward,id=...] 不再被移除',
+          component: 'Switch'
+        },
+        {
           field: 'poke_userIDs',
           label: '工具新增-戳一戳',
           bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',

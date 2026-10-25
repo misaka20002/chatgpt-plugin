@@ -21,3 +21,41 @@ export function unescapeCqCode(s) {
     .replace(/&#0*93;/g, ']')
     .replace(/&amp;/gi, '&')
 }
+
+/**
+ * 处理 raw_message 中的 CQ 码
+ * - 删除所有非 CQ:at 的 CQ 码
+ * - keepForward 为 true 时额外保留 [CQ:forward,id=...]，供「读取合并转发」工具使用
+ * - 如果传入的 qq 号与某个 CQ:at 中的 qq 匹配，删除第一个匹配到的 CQ:at
+ *
+ * 只做字符串处理，放在本模块而非媒体/客户端链路里：调用方（apps/chat.js）与测试都不必拉起
+ * 整条 provider 依赖。
+ *
+ * @param {string} rawMessage - 原始消息字符串
+ * @param {string} targetQQ - （可选）要匹配并删除的 QQ 号，删除第一个匹配到的 CQ:at （用于 At Bot 启动的对话）
+ * @param {{keepForward?: boolean}} [options] keepForward 保留合并转发 CQ 码（只在工具开启时）
+ * @returns {string} 处理后的消息字符串
+ */
+export function processCQMessage(rawMessage, targetQQ, { keepForward = false } = {}) {
+  // 删除所有非 CQ:at 的 CQ 码；工具开启时连 forward 一起保留，模型才有 id 可传
+  let result = keepForward
+    ? rawMessage.replace(/\[CQ:(?!at\b|forward\b)[^\]]*\]/g, '')
+    : rawMessage.replace(/\[CQ:(?!at\b)[^\]]*\]/g, '')
+  // 找到第一个 qq 匹配的 CQ:at，删除它
+  if (targetQQ !== undefined && targetQQ !== null) {
+    const qqStr = String(targetQQ)
+    // 匹配 CQ:at，捕获其中的 qq 字段
+    const cqAtRegex = /\[CQ:at,qq=(\d+)[^\]]*\]/g
+    let firstMatchDeleted = false
+    result = result.replace(cqAtRegex, (match, qq) => {
+      if (!firstMatchDeleted && qq === qqStr) {
+        firstMatchDeleted = true
+        return '' // 删除第一个匹配到的
+      }
+      return match // 其余保留
+    })
+  }
+  // 清理多余空格
+  result = result.replace(/\s+/g, ' ').trim()
+  return result
+}

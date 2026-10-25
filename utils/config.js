@@ -334,6 +334,7 @@ const defaultConfig = {
   enableDefaultMessageTriggerTool: false,
   mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
+  viewForwardMsgTool: false,
   ScheduleTask_Tool: true,
   ScheduleTask_MaxPerUser: 1,
   ScheduleTask_CronMaxPerUser: 0,

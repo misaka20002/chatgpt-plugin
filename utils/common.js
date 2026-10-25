@@ -11,6 +11,7 @@ import { convertSpeaker, generateVitsAudio, speakers as vitsRoleList } from './t
 import AzureTTS, { supportConfigurations as azureRoleList } from './tts/microsoft-azure.js'
 import { translate } from './translate.js'
 import { removeCQCode } from './paimonFuction.js'
+import { collectForwardIds } from './forwardMessage.js'
 import uploadRecord from './uploadRecord.js'
 import Version from './version.js'
 import fetch, { FormData, fileFromSync } from 'node-fetch'
@@ -821,6 +822,11 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
     }
     if (Boolean(get_File.length)) {
       e.get_File = get_File
+    }
+    // 被引用消息里的合并转发只记 id：拉取与渲染在入 core 前统一做（见 ADR 0007）
+    const forwardIds = collectForwardIds(reply)
+    if (forwardIds.length) {
+      e.sourceForwards = forwardIds
     }
     if (text.length > 0) {
       // 如果有发送者昵称,添加到引用文本前,使用markdown引用格式

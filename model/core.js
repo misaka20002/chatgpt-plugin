@@ -81,6 +81,7 @@ import { RemoteSandboxTool } from '../utils/tools/RemoteSandboxTool.js'
 import { VercelSandboxTool } from '../utils/tools/VercelSandboxTool.js'
 import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
 import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
+import { ViewForwardMsgTool } from '../utils/tools/ViewForwardMsgTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
@@ -1114,6 +1115,7 @@ async function collectTools(e) {
     { condition: Config.enableMemory, ToolClass: UserProfileTool },
     { condition: Config.enableEmojiLikeTool, ToolClass: EmojiLikeTool },
     { condition: Config.mediaRecognitionGeminiTool, ToolClass: RecognitionResultsByGeminiTool },
+    { condition: Config.viewForwardMsgTool, ToolClass: ViewForwardMsgTool },
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },

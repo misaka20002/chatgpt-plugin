@@ -55,6 +55,8 @@ export function resolveTurnSystem(prepared, system, failed, { useCache = true } 
  *
  * 事件带来的地址由适配器从 QQ 消息段里取出，模型无法指定，按来源可信处理；
  * 统一 unescape 后再比较，避免 CQ 字符串（raw_message）与消息段数组两种写法对不上。
+ * 合并转发展开时收集的媒体段地址（`e.forwardMediaUrls`）同属这一层，
+ * 但只含 image/video 段真正携带的地址——文本节点里的 URL 不会被登记进来。
  *
  * @param {object} e 云崽事件对象
  * @returns {Set<string>} 已还原 CQ 实体的地址集合
@@ -67,6 +69,7 @@ export function collectEventMediaUrls(e) {
   }
   if (Array.isArray(e?.img)) e.img.forEach(push)
   if (Array.isArray(e?.get_Video)) e.get_Video.forEach(item => push(item?.url))
+  if (Array.isArray(e?.forwardMediaUrls)) e.forwardMediaUrls.forEach(push)
   return urls
 }
 
@@ -76,13 +79,22 @@ export function collectEventMediaUrls(e) {
  * 模型可能在工具参数里回传事件里的 QQ 图地址（例如从群聊上下文的 raw_message 抄来），
  * 这种地址与「模型自己编的地址」风险不同：解析结果由 QQ CDN 决定，模型只能挑选。
  *
+ * 合并转发的图片可能带括号或空白，渲染时用 `<url>` 包住 Markdown 目标；
+ * 模型原样回传时会把这个尖括号一起带回来，比较前先剥掉一层。
+ *
  * @param {object} e 云崽事件对象
  * @param {string} url 待判定地址
  * @returns {boolean}
  */
 export function isTrustedEventMediaUrl(e, url) {
   if (typeof url !== 'string' || !url) return false
-  return collectEventMediaUrls(e).has(unescapeCqCode(url))
+  return collectEventMediaUrls(e).has(unescapeCqCode(stripWrappingAngle(url)))
+}
+
+/** 剥掉 Markdown 目标的一层尖括号（只处理整串被包住的情况） */
+function stripWrappingAngle(url) {
+  const value = url.trim()
+  return value.startsWith('<') && value.endsWith('>') ? value.slice(1, -1).trim() : value
 }
 
 /**

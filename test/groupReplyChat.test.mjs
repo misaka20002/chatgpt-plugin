@@ -22,7 +22,7 @@ mock.module('../utils/chat.js', { namedExports: { generateSuggestedResponse() {}
 mock.module('../utils/postprocessors/BasicProcessor.js', { namedExports: { collectProcessors: () => [] } })
 mock.module('../utils/paimonFuction.js', { namedExports: {
   hidePrivacyInfo: text => text, removeCQCode: text => text, recognitionResultsByGemini() {},
-  convertSentenceToArray() {}, extractCharacterName() {}, splitString_Enter() {}, processCQMessage: text => text
+  convertSentenceToArray() {}, extractCharacterName() {}, splitString_Enter() {}
 } })
 mock.module('../utils/chatCooldown.js', { defaultExport: { check: async () => ({ canChat: true }), end() {} } })
 const requests = []
@@ -429,4 +429,47 @@ test('语音模式下拒绝回答的语音会撤回，报错与合成失败同�
   await chat.abstractChat(e, '出错问题', undefined, false, { automatic: true })
   assert.match(replies.at(-1).value, /出现错误：上游 500/)
   assert.equal(replies.at(-1).options.recallMsg, 60)
+})
+
+// 引用转发的展开发生在入 core 之前（ADR 0007）：顺序必须是 引用文本 → 引用转发 → 用户正文，
+// 并且只拉一次。这里用真实 forwardMessage 与假事件跑通整条拼接链路。
+test('引用转发按「引用文本 → 引用转发 → 用户正文」进入 prompt', async t => {
+  const previous = { ...Config }
+  const calls = []
+  redis.set = async () => {}
+  t.after(() => {
+    delete redis.set
+    requests.length = 0
+    scriptedResponse = undefined
+    for (const key of Object.keys(Config)) delete Config[key]
+    Object.assign(Config, previous)
+  })
+  Object.assign(Config, {
+    defaultProviderId: 'main', enableMemory: false, is_recallMsg: false,
+    blockWords: [], promptBlockWords: [],
+    modelProviders: { api: [], responses: [{ id: 'main', name: '主', responsesModel: 'main-model' }], claude: [], gemini: [] }
+  })
+  const chat = Object.create(chatgpt.prototype)
+  chat.reply = async () => {}
+  chat.cacheContent = async () => {}
+  const e = {
+    user_id: '123', sender: { user_id: '123' }, message: [], isGroup: true,
+    sourceMsg: '> 引用文本',
+    sourceForwards: ['F1'],
+    group: {
+      async getForwardMsg(id) {
+        calls.push(id)
+        return [{ sender: { nickname: '张三', user_id: '1' }, message: [{ type: 'text', text: '转发内容' }] }]
+      }
+    }
+  }
+  chat.e = e
+  scriptedResponse = async () => ({ text: '好的', actualProviderId: 'main' })
+
+  await chat.abstractChat(e, '用户正文', undefined, false, { automatic: true })
+
+  const prompt = requests.at(-1)[0]
+  assert.deepEqual(calls, ['F1'], '引用转发只拉一次')
+  assert.ok(prompt.indexOf('引用文本') < prompt.indexOf('转发内容'), '引用文本在前')
+  assert.ok(prompt.indexOf('转发内容') < prompt.indexOf('用户正文'), '转发内容在用户正文之前')
 })
