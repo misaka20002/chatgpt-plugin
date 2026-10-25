@@ -1,6 +1,6 @@
 import sharp from 'sharp'
 import gifenc from 'gifenc'
-import { shortCaption, avatarRenderOptions } from './config.js'
+import { captionGraphemes, subtitleCaptions, avatarRenderOptions } from './config.js'
 
 const { GIFEncoder, quantize, applyPalette } = gifenc
 
@@ -95,21 +95,62 @@ function escapeXml(text) {
     '"': '&quot;', "'": '&apos;' })[c])
 }
 
-function bubbleSvg(caption, width, height, designHeight) {
-  const characters = [...new Intl.Segmenter('zh', { granularity: 'grapheme' }).segment(shortCaption(caption))]
-    .map(x => x.segment)
-  const lines = [characters.slice(0, 12).join(''), characters.slice(12).join('')].filter(Boolean)
-  const top = designHeight === 640 ? 520 : 408
-  const text = lines.map((line, i) => '<text x="256" y="' + (lines.length === 1 ? top + 60 : top + 42 + i * 36)
-    + '" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#5b4035">'
-    + escapeXml(line) + '</text>').join('')
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height
-    + '" viewBox="0 0 512 ' + designHeight + '">'
-    + '<path d="M80 ' + top + ' L246 ' + top + ' L256 ' + (top - 18) + ' L266 ' + top
-    + ' L432 ' + top + ' Q464 ' + top + ' 464 ' + (top + 30) + ' L464 ' + (top + 68)
-    + ' Q464 ' + (top + 96) + ' 432 ' + (top + 96) + ' L80 ' + (top + 96)
-    + ' Q48 ' + (top + 96) + ' 48 ' + (top + 68) + ' L48 ' + (top + 30) + ' Q48 ' + top + ' 80 ' + top + '"'
-    + ' fill="#fff5ed" stroke="#e5c7b6" stroke-width="2"/>' + text + '</svg>'
+// 字幕像电影一样覆盖角色下部，SVG 只承载经 XML 转义后的单行纯文本。
+const SUBTITLE_WIDTH = 512 - 48
+const SUBTITLE_MAX_FONT = 34
+const SUBTITLE_MIN_FONT = 20
+
+function subtitleText(text, fontSize, x, y) {
+  const attrs = ' text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="' + fontSize + '"'
+  const escaped = escapeXml(text)
+  const at = (dx, dy, fill, extra = '') => '<text x="' + (x + dx) + '" y="' + (y + dy) + '"' + attrs
+    + ' fill="' + fill + '"' + extra + '>' + escaped + '</text>'
+  // 叠三层：低对比阴影、黑色轮廓、白色字形。
+  return at(1, 2, '#000', ' opacity="0.55" stroke="#000" stroke-width="3" stroke-linejoin="round"')
+    + at(0, 0, 'none', ' stroke="#111" stroke-width="4" stroke-linejoin="round"')
+    + at(0, 0, '#fff')
+}
+
+async function subtitleTextWidth(text, fontSize) {
+  // 用和最终画面相同的 SVG 字体栅格化结果量真实宽度，而非按“字数×字号”估算。
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="112">'
+    + subtitleText(text, fontSize, 768, 78) + '</svg>'
+  const { info } = await sharp(Buffer.from(svg)).trim().toBuffer({ resolveWithObject: true })
+  return info.width
+}
+
+async function subtitleBitmap(caption, width, height) {
+  let text = caption
+  let fontSize = SUBTITLE_MAX_FONT
+  let measured = await subtitleTextWidth(text, fontSize)
+  if (measured > SUBTITLE_WIDTH) {
+    fontSize = Math.max(SUBTITLE_MIN_FONT, Math.floor(fontSize * SUBTITLE_WIDTH / measured))
+    measured = await subtitleTextWidth(text, fontSize)
+  }
+  while (measured > SUBTITLE_WIDTH && fontSize > SUBTITLE_MIN_FONT) {
+    measured = await subtitleTextWidth(text, --fontSize)
+  }
+  if (measured > SUBTITLE_WIDTH) {
+    const glyphs = captionGraphemes(text)
+    while (measured > SUBTITLE_WIDTH && glyphs.length > 1) {
+      glyphs.pop()
+      text = glyphs.join('')
+      measured = await subtitleTextWidth(text, fontSize)
+    }
+  }
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height
+    + '" viewBox="0 0 512 512">' + subtitleText(text, fontSize, 256, 478) + '</svg>'
+  return sharp(Buffer.from(svg)).png().toBuffer()
+}
+
+function subtitleSwitchFrame(captions, totalFrames, fps) {
+  if (captions.length < 2) return totalFrames
+  const minimum = Math.ceil(0.7 * fps)
+  const extra = totalFrames - minimum * 2
+  const chars = text => captionGraphemes(text).length
+  const lengthA = chars(captions[0])
+  const lengthB = chars(captions[1])
+  return minimum + Math.round(extra * lengthA / (lengthA + lengthB))
 }
 
 // GIF 只支持 1 位透明度：alpha ≤ 127 的像素统一成 (0,0,0,0)，其余置为完全不透明。
@@ -171,10 +212,12 @@ export async function renderAvatarGif(resource, cue, options = {}) {
   const { size, duration, fps } = avatarRenderOptions(options)
   const transition = options.transition === true
   const [width, height] = size.split('x').map(Number)
-  const designHeight = height * 512 / width
-  const stageBottom = designHeight === 640 ? 472 : 384
-  const imageSize = designHeight === 640 ? 448 : 360
-  const bubble = await sharp(Buffer.from(bubbleSvg(cue.caption, width, height, designHeight))).png().toBuffer()
+  const stageBottom = 483
+  const imageSize = 404
+  const captions = subtitleCaptions(cue?.captions ?? cue?.caption)
+  if (!captions.length) captions.push('我在这里呀')
+  const subtitles = await Promise.all(captions.map(text => subtitleBitmap(text, width, height)))
+  const switchFrame = subtitleSwitchFrame(captions, duration * fps, fps)
   const base = resource.pictures[0]
   const scale = Math.min(imageSize / base.width, imageSize / base.height)
   const images = resource.pictures.map(p => Buffer.from(p.data).toString('base64'))
@@ -196,9 +239,11 @@ export async function renderAvatarGif(resource, cue, options = {}) {
       samples.push(opaqueOnly(mixSamples(picture, feature, 0.5)))
     }
   }
-  samples.push(opaqueOnly(await sharp(bubble)
-    .resize({ width: 256, height: 256, fit: 'inside', withoutEnlargement: true })
-    .ensureAlpha().raw().toBuffer()))
+  for (const subtitle of subtitles) {
+    samples.push(opaqueOnly(await sharp(subtitle)
+      .resize({ width: 256, height: 256, fit: 'inside', withoutEnlargement: true })
+      .ensureAlpha().raw().toBuffer()))
+  }
   // rgb565 精度（8/4/8 级色格）比 rgba4444（17 级色格）细，逐帧颜色微移时不易跨格跳色。
   const total = samples.reduce((n, sample) => n + sample.length, 0)
   const combined = new Uint8Array(total)
@@ -207,8 +252,10 @@ export async function renderAvatarGif(resource, cue, options = {}) {
     combined.set(sample, offset)
     offset += sample.length
   }
-  const colors = quantize(total ? combined : new Uint8Array([0, 0, 0, 255]), 255, { format: 'rgb565' })
-  // 索引 0 固定为透明项（GIF 背景色与帧间清屏依赖它）；参与最近色匹配的只有后面的不透明色。
+  // 黑色描边与白色字形显式保留调色板色位，避免被大量立绘像素量化成灰色。
+  const colors = quantize(total ? combined : new Uint8Array([0, 0, 0, 255]), 253, { format: 'rgb565' })
+  colors.push([0, 0, 0], [255, 255, 255])
+  // 索引 0 固定为透明项；其余仅是不透明颜色。
   const palette = [[0, 0, 0, 0], ...colors]
   const encoder = GIFEncoder()
   // 单帧最多两层：溶解帧上层带 opacity 渐显；其余帧与旧结构一致（单层、无 opacity）。
@@ -226,14 +273,13 @@ export async function renderAvatarGif(resource, cue, options = {}) {
     const frame = avatarFrame(resource, cue, i * 1000 / fps, duration * 1000, { transition })
     let avatar = layer(frame.pictureIndex)
     if (frame.overlayIndex != null) avatar += layer(frame.overlayIndex, frame.overlayOpacity)
-    // 模板、变换和图片类型固定；模型输出只作为经过 XML 转义的气泡文本。
+    // 字幕始终作为最上层，角色不再为气泡单独缩入旧的留白区。
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
-      + ' width="' + width + '" height="' + height + '" viewBox="0 0 512 ' + designHeight
-      + '">'
-      + '<defs><clipPath id="avatar"><rect x="16" y="8" width="480" height="' + (stageBottom + 16) + '"/></clipPath></defs>'
-      + '<g clip-path="url(#avatar)"><g transform="translate(' + (256 + frame.x) + ' ' + (stageBottom + frame.y)
-      + ') rotate(' + frame.rotation + ') scale(' + scale + ')">' + avatar + '</g></g></svg>'
-    const rgba = await sharp(Buffer.from(svg)).composite([{ input: bubble }]).ensureAlpha().raw().toBuffer()
+      + ' width="' + width + '" height="' + height + '" viewBox="0 0 512 512">'
+      + '<g transform="translate(' + (256 + frame.x) + ' ' + (stageBottom + frame.y)
+      + ') rotate(' + frame.rotation + ') scale(' + scale + ')">' + avatar + '</g></svg>'
+    const rgba = await sharp(Buffer.from(svg))
+      .composite([{ input: subtitles[i < switchFrame ? 0 : 1] }]).ensureAlpha().raw().toBuffer()
     // 透明输出：alpha 二值化后按最近色映射到不透明调色板，透明像素指向索引 0。
     binarizeAlpha(rgba, width, height)
     const index = applyPalette(rgba, colors, 'rgb565')

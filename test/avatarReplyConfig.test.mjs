@@ -39,7 +39,8 @@ test('配置、锅巴和主人命令按 Bot/群持久化，关闭后旧授权行
     "const schema = guoba.schemas.find(s => s.field === 'avatarReply.groups')",
     "assert.equal(schema.component, 'GSubForm')",
     "assert.deepEqual(schema.componentProps.schemas.map(s => s.field), ['botId', 'groupId', 'switchOn', 'avatarId', 'size', 'duration', 'fps'])",
-    "await guoba.setConfigData({ 'avatarReply.expressionTransition': false, 'avatarReply.groups': [{ botId: '999', groupId: '100', switchOn: true, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 }, { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲' }, { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲' }, { botId: '../999', groupId: '200', switchOn: true }] }, { Result: { ok() {}, error(m) { throw new Error(m) } } })",
+    "assert.deepEqual(schema.componentProps.schemas.find(s => s.field === 'size').componentProps.options.map(o => o.value), ['512x512', '768x768', '1024x1024'])",
+    "await guoba.setConfigData({ 'avatarReply.expressionTransition': false, 'avatarReply.groups': [{ botId: '999', groupId: '100', switchOn: true, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 }, { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲', size: '512x640' }, { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲' }, { botId: '../999', groupId: '200', switchOn: true }] }, { Result: { ok() {}, error(m) { throw new Error(m) } } })",
     "const fs = await import('node:fs/promises'); await fs.mkdir('data/chatgpt/avatars/角色甲', { recursive: true }); await fs.writeFile('data/chatgpt/avatars/角色甲/peraravatar-plus-config.json', '{}')",
     "const options = schema.componentProps.schemas.find(s => s.field === 'avatarId').componentProps.options; await guoba.getConfigData(); assert.ok(options.some(o => o.value === '角色甲'))",
     "await fs.mkdir('data/chatgpt/avatars/角色乙', { recursive: true }); await fs.writeFile('data/chatgpt/avatars/角色乙/peraravatar-plus-config.json', '{}'); const { avatarOptions } = await import(" + url('../utils/avatar/catalog.js') + "); avatarOptions(); assert.ok(options.some(o => o.value === '角色乙'))"
@@ -48,8 +49,8 @@ test('配置、锅巴和主人命令按 Bot/群持久化，关闭后旧授权行
   assert.equal(saved.avatarReply.expressionTransition, false)
   assert.deepEqual(saved.avatarReply.groups, [
     { botId: '999', groupId: '100', switchOn: true, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 },
-    { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲', size: '512x640', duration: 3, fps: 10 },
-    { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲', size: '512x640', duration: 3, fps: 10 }])
+    { botId: '888', groupId: '100', switchOn: false, avatarId: '角色甲', size: '512x512', duration: 3, fps: 10 },
+    { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲', size: '512x512', duration: 3, fps: 10 }])
   assert.deepEqual(run('').avatarReply, saved.avatarReply)
   const commands = run([
     'mock.module(' + url('../../../lib/plugins/plugin.js') + ', { defaultExport: class { constructor(o) { Object.assign(this, o) } } })',
@@ -73,8 +74,8 @@ test('配置、锅巴和主人命令按 Bot/群持久化，关闭后旧授权行
   ].join('\n'))
   assert.deepEqual(commands.avatarReply.groups, [
     { botId: '999', groupId: '100', switchOn: false, avatarId: '角色甲', size: '1024x1024', duration: 5, fps: 20 },
-    { botId: '888', groupId: '100', switchOn: true, avatarId: '角色甲', size: '512x640', duration: 3, fps: 10 },
-    { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲', size: '512x640', duration: 3, fps: 10 }
+    { botId: '888', groupId: '100', switchOn: true, avatarId: '角色甲', size: '512x512', duration: 3, fps: 10 },
+    { botId: '999', groupId: '8888', switchOn: false, avatarId: '角色甲', size: '512x512', duration: 3, fps: 10 }
   ])
   assert.deepEqual(run('').avatarReply, commands.avatarReply)
 })

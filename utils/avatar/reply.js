@@ -61,7 +61,7 @@ export class AvatarReplyService {
           cue = await createAvatarCue(text, resource.expressions,
             provider === 'current' ? providerId : provider, this.generate)
         } catch (err) {
-          this.warn('[ChatGPT] 角色短句生成失败，使用首句：' + err.message)
+          this.warn('[ChatGPT] 角色字幕生成失败，使用首句：' + err.message)
         }
       }
       // 过渡开关随全局配置传入；不参与 selectionKey，渲染中途改开关不取消在途任务。

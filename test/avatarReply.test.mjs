@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 import sharp from 'sharp'
-import { avatarEnabled, normalizeAvatarReplyConfig, shortCaption, createAvatarCue } from '../utils/avatar/config.js'
+import { avatarEnabled, normalizeAvatarReplyConfig, shortCaption, subtitleCaptions, createAvatarCue, fallbackAvatarCue } from '../utils/avatar/config.js'
 import { parseAvatarResource, AvatarResourceStore } from '../utils/avatar/resource.js'
 import { avatarFrame, renderAvatarGif, expressionTimeline } from '../utils/avatar/render.js'
 import { AvatarRenderQueue } from '../utils/avatar/queue.js'
@@ -133,16 +133,69 @@ test('短句只接受限定动作/真实表情 ID，使用实际 provider，清�
     assert.equal(args.providerId, 'backup-provider')
     assert.match(args.systemPrompt, /untrusted/)
     assert.deepEqual(Object.keys(args).sort(), ['input', 'providerId', 'systemPrompt'])
-    return { text: JSON.stringify({ caption: '好呀'.repeat(30), action: 'bounce', expressionId: 'happy' }) }
+    return { text: JSON.stringify({ caption: '好呀'.repeat(12), action: 'bounce', expressionId: 'happy' }) }
   }
   const cue = await createAvatarCue('完整回复', expressions, 'backup-provider', generate)
-  assert.equal([...cue.caption].length, 24)
+  assert.deepEqual(cue.captions, ['好呀'.repeat(6), '好呀'.repeat(6)])
   for (const value of [
     { caption: '你好', action: 'execute', expressionId: null },
     { caption: '你好', action: 'idle', expressionId: 'unknown' },
     { caption: '', action: 'idle', expressionId: null }
   ]) await assert.rejects(createAvatarCue('回复', expressions, 'main', async () => JSON.stringify(value)))
+  await assert.rejects(createAvatarCue('回复', expressions, 'main', async () => JSON.stringify({
+    caption: '好呀'.repeat(30), action: 'idle', expressionId: null
+  })), /字幕段数或长度超限/)
   assert.equal(shortCaption('[CQ:at,qq=123] **你好** https://example.com'), '你好')
+})
+
+test('电影字幕按模型语义分两段并清理首尾标点，失败回退也只显示单行段落', async () => {
+  const generate = async args => {
+    assert.match(args.systemPrompt, /captions/)
+    return JSON.stringify({ captions: ['「你好呀！」', '，我们一起出去玩吧。'], action: 'idle', expressionId: null })
+  }
+  const cue = await createAvatarCue('完整回复', [], 'main', generate)
+  assert.deepEqual(cue.captions, ['你好呀', '我们一起出去玩吧'])
+  assert.equal(cue.action, 'idle')
+  assert.deepEqual(fallbackAvatarCue('欢迎回来，今天有新消息。').captions, ['欢迎回来', '今天有新消息'])
+  assert.deepEqual(fallbackAvatarCue('，；「你好呀」 、今天真不错。').captions,
+    ['你好呀', '今天真不错'], '切分后应连同空格清理句首和句尾的全部标点')
+  await assert.rejects(createAvatarCue('回复', [], 'main', async () => JSON.stringify({
+    captions: ['12345678901，后面还有更多字', '第二段。'], action: 'idle', expressionId: null
+  })), /字幕段数或长度超限/, '超长模型输出不应截成偏离原回复的字幕')
+  const withEmpty = await createAvatarCue('回复', [], 'main', async () => JSON.stringify({
+    captions: ['', '。', '第一段', '第二段'], action: 'idle', expressionId: null
+  }))
+  assert.deepEqual(withEmpty.captions, ['第一段', '第二段'], '跳过空段和纯标点，保留前两段有意义的字幕')
+})
+
+test('不可见控制字符不能成为独立字幕，组合 Emoji 的连接符仍须保留', async () => {
+  assert.deepEqual(subtitleCaptions(['\u200b', '\u200d', '\u2060', '\ufe0f', '👩‍💻出发']), ['👩‍💻出发'])
+  assert.deepEqual(subtitleCaptions('\u200b！ 你好 \u200b，前进！'), ['你好', '前进'])
+  assert.equal(shortCaption('\u200b'.repeat(30) + '你好'), '你好', '不可见字素不能挤占 24 字素额度')
+  assert.deepEqual(fallbackAvatarCue('\u200b').captions, ['我在这里呀'])
+  assert.deepEqual(subtitleCaptions(['👩‍💻', '一起努力']), ['👩‍💻', '一起努力'])
+})
+
+test('模型返回超长字幕必须使用原回复本地兜底，不把异常文案直接截进动图', async t => {
+  const original = '今天发布重要修复，已经更新完成。'
+  const generate = async () => JSON.stringify({
+    captions: ['XXXXXXXXXXXXXXXXXXXXX', '继续说无关事实'], action: 'bounce', expressionId: null
+  })
+  await assert.rejects(createAvatarCue(original, [], 'main', generate), /角色字幕/)
+  const { root } = await fixture(t)
+  const seen = [], warnings = []
+  const config = { groups: [{ botId: '999', groupId: '100', switchOn: true, avatarId: '999' }] }
+  const service = new AvatarReplyService({
+    root, getConfig: () => config,
+    generate, warn: message => warnings.push(message),
+    queue: { async render(resource, cue) { seen.push(cue); return Buffer.from('GIF test') } },
+    sendImage: async () => {}
+  })
+  const ok = await service.send({ isGroup: true, self_id: '999', group_id: '100' }, original, 'main')
+  assert.equal(ok, true)
+  assert.deepEqual(seen[0], { captions: ['今天发布重要修复', '已经更新完成'],
+    action: 'idle', expressionId: null })
+  assert.ok(warnings.some(line => line.includes('角色字幕生成失败')))
 })
 
 test('生产状态机闭眼优先于嘴型，特色表情期间保持同一立绘，动作产生位移', async () => {
@@ -254,7 +307,7 @@ test('过渡开关随全局配置传入渲染参数，selection 形状保持不�
   })
   const e = { isGroup: true, self_id: '999', group_id: '100' }
   assert.equal(await service.send(e, '回答', 'main'), true)
-  assert.deepEqual(seen[0], { avatarId: '999', size: '512x640', duration: 3, fps: 10, transition: false })
+  assert.deepEqual(seen[0], { avatarId: '999', size: '512x512', duration: 3, fps: 10, transition: false })
   config.expressionTransition = true
   assert.equal(await service.send({ ...e }, '回答', 'main'), true)
   assert.equal(seen[1].transition, true)
@@ -265,7 +318,7 @@ test('实际 GIF 解码为 30 帧/3秒/循环，像素证明正常、张嘴、�
   const output = await renderAvatarGif(resource, { caption: '你好呀 < & 我在这里', action: 'idle', expressionId: null })
   const meta = await sharp(output, { animated: true }).metadata()
   assert.equal(meta.width, 512)
-  assert.equal(meta.pageHeight, 640)
+  assert.equal(meta.pageHeight, 512)
   assert.equal(meta.pages, 30)
   assert.equal(meta.delay.reduce((a, b) => a + b, 0), 3000)
   assert.equal(meta.loop, 0)
@@ -277,6 +330,89 @@ test('实际 GIF 解码为 30 帧/3秒/循环，像素证明正常、张嘴、�
   assert.ok(blue[2] > 200 && blue[0] < 40 && blue[1] < 40, '第 2 帧应为张嘴图（蓝）')
   assert.ok(green[1] > 200 && green[0] < 40 && green[2] < 40, '第 20 帧应为闭眼图（绿）')
 })
+
+test('电影字幕在正方形角色画面下层图像上方单行硬切，短段最少显示0.7秒', async () => {
+  const source = await websiteConfig()
+  // 三种嘴型复用同一张图，让帧间差异只来自字幕而不是角色状态。
+  source.images.close = source.images.normal
+  source.mouthTiers[0].images = [source.images.normal]
+  const resource = await parseAvatarResource(JSON.stringify(source))
+  const gif = await renderAvatarGif(resource,
+    { captions: ['嗨', '我们一起去旅行吧'], action: 'idle', expressionId: null },
+    { size: '512x512', duration: 2, fps: 10 })
+  const meta = await sharp(gif, { animated: true }).metadata()
+  assert.equal(meta.width, 512)
+  assert.equal(meta.pageHeight, 512)
+  assert.equal(meta.pages, 20)
+  assert.equal(meta.delay.reduce((a, b) => a + b, 0), 2000)
+  const subtitleRegion = page => sharp(gif, { page })
+    .extract({ left: 45, top: 435, width: 422, height: 62 }).ensureAlpha().raw().toBuffer()
+  assert.deepEqual(await subtitleRegion(0), await subtitleRegion(7), '第一段至少显示 7 帧，额外时间按字数分配')
+  assert.notDeepEqual(await subtitleRegion(7), await subtitleRegion(8), '短段占 8 帧之后应立即硬切到下一段')
+  assert.deepEqual(await subtitleRegion(8), await subtitleRegion(19), '第二段持续到结束')
+  const background = [...await sharp(gif, { page: 0 }).extract({ left: 100, top: 420,
+    width: 1, height: 1 }).removeAlpha().raw().toBuffer()]
+  assert.ok(background[0] > 200 && background[1] < 50 && background[2] < 50,
+    '原底部气泡区域应该继续呈现角色像素')
+})
+
+test('白色不透明背景的实际 GIF 有清晰黑色字幕轮廓且不铺黑底条', async () => {
+  const source = await websiteConfig()
+  const png = await sharp({ create: { width: 96, height: 96, channels: 4,
+    background: { r: 255, g: 255, b: 255, alpha: 1 } } }).png().toBuffer()
+  const picture = { ref: 'data:image/png;base64,' + png.toString('base64') }
+  source.images.normal = source.images.close = picture
+  source.mouthTiers[0].images = [picture]
+  const resource = await parseAvatarResource(JSON.stringify(source))
+  const output = await renderAvatarGif(resource,
+    { captions: ['白底字幕'], action: 'idle', expressionId: null },
+    { size: '512x512', duration: 2, fps: 10 })
+  const rgba = await sharp(output, { page: 0 }).ensureAlpha().raw().toBuffer()
+  const pixel = (x, y) => [...rgba.subarray((y * 512 + x) * 4, (y * 512 + x) * 4 + 4)]
+  for (const [x, y] of [[96, 450], [416, 450], [96, 470], [416, 470], [256, 425]]) {
+    const [r, g, b, a] = pixel(x, y)
+    assert.ok(a === 255 && r > 210 && g > 210 && b > 210,
+      '白底角色的字幕周围不应出现暗色底条：' + x + ',' + y)
+  }
+  let outlinePixels = 0
+  for (let y = 443; y < 487; y++) {
+    for (let x = 170; x < 344; x++) {
+      const [r, g, b, a] = pixel(x, y)
+      if (a === 255 && r < 80 && g < 80 && b < 80) outlinePixels++
+    }
+  }
+  assert.ok(outlinePixels > 80, '白底角色上的字幕必须有可辨认的黑色轮廓')
+  assert.equal(pixel(256, 500)[3], 0, '角色下方不能额外填充字幕背景')
+})
+
+test('电影字幕超宽字形缩放或截断后仍在画面内保持一行和透明背景', async () => {
+  const source = await websiteConfig()
+  const png = await sharp({ create: { width: 96, height: 96, channels: 4,
+    background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer()
+  const image = { ref: 'data:image/png;base64,' + png.toString('base64') }
+  source.images.normal = image
+  source.images.close = image
+  source.mouthTiers[0].images = [image]
+  const resource = await parseAvatarResource(JSON.stringify(source))
+  const gif = await renderAvatarGif(resource,
+    { captions: ['👩‍💻'.repeat(12)], action: 'idle', expressionId: null },
+    { size: '512x512', duration: 2, fps: 10 })
+  const rgba = await sharp(gif, { page: 0 }).ensureAlpha().raw().toBuffer()
+  let left = 512, right = -1, top = 512, bottom = -1
+  for (let y = 0; y < 512; y++) {
+    for (let x = 0; x < 512; x++) {
+      if (rgba[(y * 512 + x) * 4 + 3] === 0) continue
+      left = Math.min(left, x)
+      right = Math.max(right, x)
+      top = Math.min(top, y)
+      bottom = Math.max(bottom, y)
+    }
+  }
+  assert.ok(right >= left, '字幕应有实际可见像素')
+  assert.ok(left >= 20 && right < 492, '字幕与描边应在画布左右边界内')
+  assert.ok(top >= 415 && bottom < 505 && bottom - top < 70, '字幕只能在画面底部占一行')
+})
+
 
 test('逐帧稳定：渐变素材在轻微位移下不产生大面积跳变（色斑闪烁回归）', async () => {
   const W = 96, H = 96
@@ -374,7 +510,8 @@ test('回复服务模型失败降级、每事件一次，发送后清理临时�
   const e = { isGroup: true, self_id: '999', group_id: '100' }
   assert.equal(await service.send(e, '第一句。完整回答', 'backup'), true)
   assert.equal(await service.send(e, '第一句。完整回答', 'backup'), false)
-  assert.equal(cues[0].caption, '第一句')
+  assert.deepEqual(cues[0].captions, ['第一句'])
+  assert.ok(logs.some(message => /角色字幕生成失败/.test(message)), '模型失败日志应使用新字幕术语')
   await assert.rejects(fs.stat(files[0]), /ENOENT/)
   service.sendImage = async (_, filename) => { files.push(filename); throw new Error('上传失败') }
   assert.equal(await service.send({ ...e }, '回答', 'backup'), false)
@@ -427,7 +564,7 @@ test('私聊用群号 8888 行取角色与档位，未配置时为空并回落�
   const empty = new AvatarReplyService({ root, warn() {},
     getConfig: () => normalizeAvatarReplyConfig({ groups: [] }) })
   assert.deepEqual(empty.selection({ isGroup: false, self_id: '999' }),
-    { avatarId: '', size: '512x640', duration: 3, fps: 10 })
+    { avatarId: '', size: '512x512', duration: 3, fps: 10 })
 })
 
 test('未选择角色文件夹时不渲染、不发送并给出日志', async t => {

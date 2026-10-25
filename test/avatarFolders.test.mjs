@@ -154,16 +154,18 @@ test('最多32种表情与累计像素边界；旧配置和档位默认兼容', 
   for (const x of config.customExpressions) x.image.ref = 'data:image/png;base64,' + big.toString('base64')
   await assert.rejects(parseAvatarResource(JSON.stringify(config)), /累计像素/)
   assert.deepEqual(normalizeAvatarReplyConfig({ groups: [{ botId: '999', groupId: '100', switchOn: true }] }).groups[0],
-    { botId: '999', groupId: '100', switchOn: true, avatarId: '', size: '512x640', duration: 3, fps: 10 })
+    { botId: '999', groupId: '100', switchOn: true, avatarId: '', size: '512x512', duration: 3, fps: 10 })
+  assert.equal(normalizeAvatarReplyConfig({ groups: [{ botId: '999', groupId: '100', size: '512x640' }] }).groups[0].size,
+    '512x512', '历史长方形设置需要无损迁移到正方形最低档')
 })
 
-test('实际编码验证三档分辨率、时长与15 FPS累计延时，画布不裁掉气泡', async t => {
+test('实际编码验证三档正方形分辨率、时长和15 FPS累计延时，字幕不添加背景底条', async t => {
   const { root, make } = await fixture(t)
   await make('测试角色')
   await refreshAvatarFolders(root)
   const resource = await new AvatarResourceStore(root).load('999', '测试角色')
-  for (const [size, duration, fps] of [['512x640', 2, 10], ['768x768', 3, 15], ['1024x1024', 5, 20]]) {
-    const output = await renderAvatarGif(resource, { caption: '测试气泡', action: 'idle', expressionId: null }, { size, duration, fps })
+  for (const [size, duration, fps] of [['512x512', 2, 10], ['768x768', 3, 15], ['1024x1024', 5, 20]]) {
+    const output = await renderAvatarGif(resource, { captions: ['测试字幕'], action: 'idle', expressionId: null }, { size, duration, fps })
     const meta = await sharp(output, { animated: true }).metadata()
     const [width, height] = size.split('x').map(Number)
     assert.equal(meta.width, width)
@@ -171,9 +173,19 @@ test('实际编码验证三档分辨率、时长与15 FPS累计延时，画布�
     assert.equal(meta.pages, duration * fps)
     assert.equal(meta.delay.reduce((a, b) => a + b, 0), duration * 1000)
     assert.equal(meta.loop, 0)
-    const pixel = [...await sharp(output).extract({ left: Math.floor(width / 2), top: height - Math.floor(height * 0.07),
-      width: 1, height: 1 }).removeAlpha().raw().toBuffer()]
-    assert.notDeepEqual(pixel, [255, 255, 255], '气泡背景应在画布内')
+    const rgba = await sharp(output, { page: 0 }).ensureAlpha().raw().toBuffer()
+    const pixel = (x, y) => [...rgba.subarray((y * width + x) * 4, (y * width + x) * 4 + 4)]
+    const at = (x, y) => pixel(Math.round(x * width / 512), Math.round(y * height / 512))
+    // 首帧是整块红色角色图；字幕周围多个位置仍须保留原始角色像素。
+    // 只查角落透明无法发现画面中部新增的气泡或半透明黑条。
+    for (const [x, y] of [[96, 440], [416, 440], [96, 466], [416, 466], [256, 425]]) {
+      const [r, g, b, alpha] = at(x, y)
+      assert.ok(alpha === 255 && r > 200 && g < 50 && b < 50,
+        '字幕周围不能被底条遮住角色像素：' + x + ',' + y)
+    }
+    for (const x of [96, 256, 416]) {
+      assert.equal(at(x, 500)[3], 0, '电影字幕不能在角色下方额外铺底条')
+    }
   }
 })
 
@@ -201,7 +213,7 @@ test('每群角色和档位传到队列，私聊显式预览及生成中修改�
   ])
   assert.deepEqual(jobs.map(x => x.count), [0, 1])
   await service.send({ self_id: '999', isMaster: true }, '预览', undefined, true, '乙')
-  assert.equal(jobs.at(-1).options.size, '512x640')
+  assert.equal(jobs.at(-1).options.size, '512x512')
   service.queue = { async render() { config.groups[0].fps = 10; return Buffer.from('gif') } }
   assert.equal(await service.send({ isGroup: true, self_id: '999', group_id: '100' }, '回复', 'main'), false)
   assert.equal(sent, 3)
