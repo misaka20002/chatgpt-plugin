@@ -2615,7 +2615,7 @@ export function supportGuoba() {
                 componentProps: { options: roleOptions }
               },
               {
-                field: 'size', label: 'GIF 分辨率', bottomHelpMessage: "推荐768*768", component: 'Select',
+                field: 'size', label: 'GIF 分辨率', bottomHelpMessage: "推荐512*512", component: 'Select',
                 componentProps: { options: AVATAR_SIZES.map(value => ({ label: value.replace('x', '×'), value })) }
               },
               {
