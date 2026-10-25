@@ -74,6 +74,13 @@ const CQ_TAG_REGEX = /\[CQ:([A-Za-z]+)((?:,[^\]]*)?)\]/g
 function replaceMediaCQ(text) {
   return String(text).replace(CQ_TAG_REGEX, (match, type, params) => {
     const normalized = String(type || '').toLowerCase()
+    // 合并转发保留为信标：与主对话同格式，便于记忆侧识别「这里曾有一条聊天记录」，
+    // 而不是像未知类型那样被归一成空串、什么都留不下
+    if (normalized === 'forward') {
+      const parsed = parseCQParams(params)
+      const id = parsed.id || parsed.file || parsed.resid
+      return id ? `<合并转发:id=${id}>` : ''
+    }
     // 卡片要从 CQ 参数里取来源，其它类型只需类型本身
     return CARD_TYPES.has(normalized)
       ? mediaPlaceholder(normalized, parseCQParams(params))

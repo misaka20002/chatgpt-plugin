@@ -271,6 +271,15 @@ const defaultConfig = {
   avatarReply: normalizeAvatarReplyConfig(),
   // 思考过程转发
   forwardReasoning: true,
+  // 合并转发读取（读取侧）
+  enableForwardMsgRead: true,
+  // 是否把「读取合并转发」工具下发给智能模式；关闭只影响工具，不影响自动拼接的转发内容
+  switch_forwardMsgTool: true,
+  forwardMaxDepth: 3,
+  forwardMaxNodes: 60,
+  forwardMaxChars: 6000,
+  forwardMaxImages: 4,
+  forwardApiTimeoutMs: 5000,
   geminiEnableGoogleSearch: false,
   geminiEnableCodeExecution: false,
   apiMaxToken: 65536,

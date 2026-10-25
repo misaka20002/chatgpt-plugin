@@ -1504,6 +1504,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'switch_forwardMsgTool',
+          label: '工具新增-读取合并转发',
+          bottomHelpMessage: '新增「读取合并转发」工具，AI 遇到 <合并转发:id=xxx> 且需要看里面的聊天记录时可主动调用（最高展开 3 层）。关闭后该工具不再下发给模型；但合并转发内容仍会被自动拼进对话（非工具链路不受影响），只是模型失去「按需再读一次」的能力',
+          component: 'Switch'
+        },
+        {
           field: 'poke_userIDs',
           label: '工具新增-戳一戳',
           bottomHelpMessage: '新增主动戳一戳其他群友的工具；如果你的适配器不支持 反戳，请转到此平台: https://github.com/AIGC-Yunzai/TRSS-Yunzai-NapC',

@@ -81,6 +81,7 @@ import { RemoteSandboxTool } from '../utils/tools/RemoteSandboxTool.js'
 import { VercelSandboxTool } from '../utils/tools/VercelSandboxTool.js'
 import { GetPixivApiLoliconTool } from '../utils/tools/GetPixivApiLoliconTool.js'
 import { RecognitionResultsByGeminiTool } from '../utils/tools/RecognitionResultsByGeminiTool.js'
+import { ReadForwardMsgTool } from '../utils/tools/ReadForwardMsgTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
@@ -1114,6 +1115,12 @@ async function collectTools(e) {
     { condition: Config.enableMemory, ToolClass: UserProfileTool },
     { condition: Config.enableEmojiLikeTool, ToolClass: EmojiLikeTool },
     { condition: Config.mediaRecognitionGeminiTool, ToolClass: RecognitionResultsByGeminiTool },
+    // 合并转发读取工具：总开关决定功能是否存在，工具开关只决定是否下发给模型。
+    // 关掉工具后，内容仍会由 chat.js 自动拼进对话，模型只是失去「按需再读」的能力。
+    {
+      condition: Config.enableForwardMsgRead !== false && Config.switch_forwardMsgTool !== false,
+      ToolClass: ReadForwardMsgTool
+    },
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
     { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },

@@ -11,6 +11,7 @@ import { convertSpeaker, generateVitsAudio, speakers as vitsRoleList } from './t
 import AzureTTS, { supportConfigurations as azureRoleList } from './tts/microsoft-azure.js'
 import { translate } from './translate.js'
 import { removeCQCode } from './paimonFuction.js'
+import { readForwardMsgTree, resolveForwardImageLimit } from './forwardMsgParser.js'
 import uploadRecord from './uploadRecord.js'
 import Version from './version.js'
 import fetch, { FormData, fileFromSync } from 'node-fetch'
@@ -790,7 +791,19 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
       }
     }
 
+    // 引用里若含合并转发，记录首个 id，循环结束后统一展开（避免同一条里多个转发段重复拉取）
+    let quotedForwardId = ''
+
     for (const val of reply) {
+      if (val.type == 'forward') {
+        const fwdId = val.id || val.data?.id || val.message_id
+        if (fwdId !== undefined && fwdId !== null && String(fwdId).trim()) {
+          const idStr = String(fwdId).trim()
+          // 与主对话同格式的信标，模型与后续解析都能识别
+          text.push(`<合并转发:id=${idStr}>`)
+          if (!quotedForwardId) quotedForwardId = idStr
+        }
+      }
       if (val.type == 'image') {
         i.push(val.url)
       }
@@ -812,6 +825,24 @@ export async function parseSourceImg(e, alsoGetAtAvatar = true) {
         })
       }
     }
+
+    // 引用的合并转发：把里面的图片并入引用图片数组，让 e.img 这条既有链路
+    // （识图 / 多模态直传）天然能看到转发里的图。失败只降级，不影响引用文本。
+    if (quotedForwardId && Config.enableForwardMsgRead !== false) {
+      try {
+        const forward = await readForwardMsgTree(e, quotedForwardId, { maxDepth: 3, recognizeImages: false })
+        const urls = Array.isArray(forward?.imageUrls) ? forward.imageUrls : []
+        const limit = resolveForwardImageLimit()
+        if (urls.length && limit > 0) {
+          for (const url of urls.slice(0, limit)) {
+            if (!i.includes(url)) i.push(url)
+          }
+        }
+      } catch (err) {
+        logger.warn('[ChatGPT][parseSourceImg] 引用合并转发读取失败: ' + (err?.message || err))
+      }
+    }
+
     if (Boolean(i.length)) {
       e.img = i;
       e.theImgIsGetFromSource = true;
