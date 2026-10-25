@@ -75,6 +75,8 @@
 **已接入且可下沉的 8 个工具合计 2181 → 625，单请求省 1556 tokens。**
 按 100+ tokens 门槛取舍：`generate_markmap`(77)、`sendEmoji`(70)、`emojiLike`(52) 属于"顺手做"；更好的做法是**一个"渲染类子代理"覆盖 math / markmap / graph**，共享一份 prompt，摊薄固定开销。
 
+> 注：`emojiLike` 已于 2026-10-26 扩成「16 个情绪 + 12 个表情名」，实测 213 tokens（节省 158），见 `toolContextAudit.md`；本表其余数字仍是当时的快照。
+
 ## 五、`Memory_Tool` 专项：参数并没有"被省略"，只是换了常驻方式
 
 你的疑问是对的：**子代理一样要产出 `factKey` / `kind` / `confidence` / `importance` / `validTo`，那份契约知识一个字段都没少**。区别在**生命周期**：

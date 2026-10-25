@@ -21,6 +21,10 @@
 - **带服务端凭证的工具要防 confused deputy**：全局 key/token 会让任意聊天用户借 Bot 身份读它有权访问的资源，必须划清边界（`GithubAPITool` 的 `custom` 在配置了 `githubAPIKey` 时仅限主人）。这类 token 应在配置说明里强制"最小权限专用 token"（见锅巴 `githubAPIKey` 的描述）。
 - **外部响应必须有资源边界，redirect 按协议处理而非一刀切**：只限制"进模型的字符数"挡不住网络与内存消耗。GitHub 的 zipball / tarball 是公库免认证的 302 下载端点，`fetch` 默认 `redirect: 'follow'` 会整包下载。做法分两半：对预期为小型 JSON/文本的接口设**响应体字节上限**（`Content-Length` 声明值与流式累计值两处都卡，超限 `cancel()`）；对 redirect **按业务协议处理，不能无条件跟随到任意域名**——工具不需要跨域 redirect 时可以拒绝，协议正常使用 redirect 时（GitHub REST 官方就要求客户端能跟随它自己的 301/302）应解析 `Location` 后校验目标 origin/路径，再决定是否跟随，并设跳数上限（`GithubAPITool` 就是 `redirect: 'manual'` + 只跟随同一 API base + 最多 3 跳）。**媒体/文件下载类工具要用业务大小上限、类型校验与流式读取，不要机械照抄 `redirect: 'error'`**。另外**body 读取要留在获取响应头的同一个 try 里**——超时也可能发生在"响应头已到、body 很慢"阶段，那时 `TimeoutError` 只在 `read()` 上抛出（实测 undici 行为）。
 
+## 贴表情（`emojiLike`）
+
+两种表达面：`emotion` 报情绪、工具在**情绪池**里随机挑一张（16 个键固定，不新增情绪）；`face` 点名**表情目录**里的具体表情（12 个物件/动作）时不随机。准入标准只有一条——语义和名字对得上；因此池里不收节日/生肖/活动/联动、皮肤包、Unicode emoji（码点会贴出空白），旧池里的错配已按同一标准归位。`face` 目录封顶 12 个是 token 决定（schema 全量进每次请求，107 → 213 tokens）。`utils/face.js` 的 `faceMap` 只追加 id、不改旧名字。理由与替代方案见 [ADR 0008](../adr/0008-emoji-like-catalog-and-pool-admission.md)。
+
 ## 按需媒体识别
 
 **按需内容识别（`recognize_media`）**：工具始终独立于普通聊天的 `mediaRecognitionSource`，识别图片及 QQ 头像只使用 `imageProviderId`，识别视频只使用 `videoProviderId`；无需两个都配置。缺少、删除、`current` 等无效条目或所选模型识别失败时直接返回 `Error: …`，**不会尝试当前对话模型，也不自动换其他识别提供商**。图片通过 `SubLLM` 支持 api / responses / claude / gemini 四协议，视频仅支持明确指定的 Gemini 条目。`recognitionResultsByGemini` 保留旧兼容函数名，其图片路径已支持四协议；独立的 Gemini 原生搜索仍读取 `geminiSearchProviderId`。普通聊天的「模型内置」（引用图直接交给对话模型）与「专用识别」（预识别后附文字）继续由 `mediaRecognitionSource` 控制，本次不更改。相关存储及模型绑定契约见[配置指南](configuration.md#多模型提供商)。

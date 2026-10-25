@@ -2,7 +2,7 @@
 
 - 扫描目录：`utils/tools/`（共 60 个 .js）
 - 识别到工具类：57 个；其余为解析失败/非工具类：2 个
-- **已接入 `collectTools`**：48 个，合计 **6427 tokens**（这才是模型真正看得到的上限）
+- **已接入 `collectTools`**：48 个，合计 **6533 tokens**（这才是模型真正看得到的上限）
 - **未接入**（类存在但没有任何 `new XxxTool()` / 开关注册）：9 个，合计 1149 tokens —— 属于死代码或尚未布线，不占上下文
 
 | # | 工具 name | 类名 | desc tokens | schema tokens | 合计 | 参数字段 | enum 数 | required | 已接入 | 文件 | 动态构造 |
@@ -35,7 +35,7 @@
 | 26 | sendDice | SendDiceTool | 52 | 65 | **117** | 2 | 0 | 2 | ✗ | utils/tools/SendDiceTool.js | - |
 | 27 | queryStarRail | QueryStarRailTool | 30 | 85 | **115** | 3 | 0 | 0 | ✓ | utils/tools/QueryStarRailTool.js | - |
 | 28 | search | SerpIkechan8370Tool | 46 | 69 | **115** | 3 | 4 | 2 | ✓ | utils/tools/SerpIkechan8370Tool.js | - |
-| 29 | emojiLike | EmojiLikeTool | 17 | 90 | **107** | 2 | 16 | 1 | ✓ | utils/tools/EmojiLikeTool.js | - |
+| 29 | emojiLike | EmojiLikeTool | 25 | 188 | **213** | 3 | 28 | 0 | ✓ | utils/tools/EmojiLikeTool.js | - |
 | 30 | sendVideo | SendVideoTool | 45 | 61 | **106** | 2 | 0 | 1 | ✓ | utils/tools/SendBilibiliTool.js | - |
 | 31 | web_search | Misaka_WebSearchTool | 44 | 61 | **105** | 2 | 0 | 1 | ✓ | utils/tools/Misaka_WebSearchTool.js | - |
 | 32 | localSandbox | LocalSandboxTool | 61 | 39 | **100** | 1 | 0 | 1 | ✓ | utils/tools/LocalSandboxTool.js | - |
@@ -71,7 +71,7 @@
 | --- | --- |
 | A 默认配置（私聊 / 群里非管理员） | **1412** |
 | B A + Bot 是管理员（群管五件套） | **1944** |
-| C B + 常用可选开关（记忆/定时/渲染/沙箱JS/图片/表情） | **4194** |
+| C B + 常用可选开关（记忆/定时/渲染/沙箱JS/图片/表情） | **4300** |
 
 ## 未纳入统计
 
@@ -80,7 +80,7 @@
 
 ## 改造后估算（主代理只暴露 {task} facade）
 
-已接入的可下沉工具当前合计 **2141 tokens** → facade 合计 **625 tokens**，节省 **1516 tokens**（每请求都命中）。
+已接入的可下沉工具当前合计 **2247 tokens** → facade 合计 **625 tokens**，节省 **1622 tokens**（每请求都命中）。
 
 未接入故不计入：musicTool(205→68)、processPicture(149→71)
 
@@ -98,7 +98,7 @@
 | generate_markmap | 147 | 70 | 77 | ✓ | Markdown 层级 → markmap 结构 |
 | sendEmoji | 136 | 66 | 70 | ✓ | 固定枚举（20 个 reaction id） |
 | kickOut | 130 | — | 不建议下沉 | ✓ | 反例：鉴权/动作目标必须来自 e 与用户原话 |
-| emojiLike | 107 | 55 | 52 | ✓ | 固定枚举（16 个 reaction id） |
+| emojiLike | 213 | 55 | 158 | ✓ | 固定枚举（16 个情绪 + 12 个表情名） |
 | imageCaption | 95 | — | 不建议下沉 | ✗ | 反例：结果要回主模型 |
 
 ## 子代理侧开销（每次调用支付一次，不属于主代理每请求占用）

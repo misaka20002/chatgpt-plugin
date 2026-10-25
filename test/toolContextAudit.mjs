@@ -354,7 +354,7 @@ const FACADES = {
     schema: { properties: { task: { type: 'string', description: '想表达的态度，如“赞同”“嘲讽”“疑惑”。' } }, required: ['task'] }
   },
   emojiLike: {
-    note: '固定枚举（16 个 reaction id）',
+    note: '固定枚举（16 个情绪 + 12 个表情名）',
     desc: '对群内指定成员的消息贴表情回应。说明对象与态度即可。',
     schema: { properties: { task: { type: 'string', description: '要点赞/回应的对象与态度。' } }, required: ['task'] }
   },
