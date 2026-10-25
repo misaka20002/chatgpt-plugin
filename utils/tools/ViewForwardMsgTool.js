@@ -20,13 +20,13 @@ export class ViewForwardMsgTool extends AbstractTool {
     properties: {
       forwardId: {
         type: 'string',
-        description: 'The merged-forward id, taken from [CQ:forward,id=...] in the chat records.'
+        description: 'Extract the id value from [CQ:forward,id=...]'
       }
     },
     required: ['forwardId']
   }
 
-  description = 'Reads a QQ merged forward (chat record) by its id and returns its nodes as Markdown text with media URLs. Use it when the chat records contain [CQ:forward,id=...] or the user asks what a forwarded record says. Quoted forwards are already expanded automatically, so do not call it for those. Do not use it for media attached to the current message; those are already provided. Afterwards you can pass the image/video URLs to recognize_media.'
+  description = 'Reads merged forwards `[CQ:forward,id=...]` to return chat records. Use only for unexpanded forwards in context. Skip quoted replies or current message media (already provided). Extracted URLs work with `recognize_media`.'
 
   func = async function (opts, e) {
     const forwardId = typeof opts?.forwardId === 'string' ? opts.forwardId.trim() : ''
