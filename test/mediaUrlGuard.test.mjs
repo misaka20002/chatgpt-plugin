@@ -408,7 +408,7 @@ test('视频类型探测不放行明确的 HTML 类型，也不放宽图片类�
   assert.equal(await url2Base64(videoUrl, false, true, { ...strictVideoOptions, mediaKind: 'image' }), null)
 })
 
-test('视频识别工具两种来源均将探测后的 MIME 与原始数据传给 Gemini', { skip: fileTypeSkip }, async () => {
+test('视频识别工具不受普通聊天来源配置影响，均将探测的 MIME 与原始数据交给指定 Gemini', { skip: fileTypeSkip }, async () => {
   const cfg = Config.getConfig()
   const originalSource = cfg.mediaRecognitionSource
   try {
@@ -423,6 +423,7 @@ test('视频识别工具两种来源均将探测后的 MIME 与原始数据传�
       assert.match(result, /^\[Untrusted media content\./)
       assert.match(result, /gemini-ok/)
       assert.equal(geminiCalls.length, 1)
+      assert.equal(cfg.mediaRecognitionSource, source, '工具不修改普通聊天的来源配置')
       assert.deepEqual(geminiCalls[0].option.media, { mimeType: 'video/mp4', data: mp4Header.toString('base64') })
     }
 
@@ -448,7 +449,7 @@ test('识别函数默认保持「返回错误字符串」旧契约（供非工�
   }
 })
 
-test('throwOnError 时识别函数抛错（工具靠它区分失败并回退）', async () => {
+test('throwOnError 时识别函数抛错（工具靠它区分失败并报错）', async () => {
   const cfg = Config.getConfig()
   const originalKey = cfg.geminiKey
   cfg.geminiKey = ''

@@ -374,11 +374,11 @@ export function supportGuoba() {
         {
           field: 'mediaRecognitionSource',
           label: '内容识别来源',
-          bottomHelpMessage: '模型内置优先使用当前对话模型，失败后转指定识别配置；专用识别直接使用下方所选配置；该模型不需要系统提示词，下同',
+          bottomHelpMessage: '仅控制普通聊天的媒体处理方式：模型内置使用当前对话模型的原生多模态能力；专用识别先使用配置的识别模型生成文字描述。按需内容识别工具不受此选项影响，始终使用指定的图片或视频识别模型提供商。',
           component: 'Select',
           componentProps: {
             options: [
-              { label: '模型内置优先', value: 'Orignal' },
+              { label: '模型内置', value: 'Orignal' },
               { label: '专用识别', value: 'Gemini' }
             ]
           }
@@ -773,7 +773,7 @@ export function supportGuoba() {
         {
           field: 'mediaMaxSizeInMB',
           label: '媒体识别大小限制',
-          bottomHelpMessage: '智能模式对话中 recognize_media Tool（按需内容识别工具，模型内置与 Gemini 两条路径共用）的最大识别大小限制，注意 token 的使用',
+          bottomHelpMessage: '媒体文件大小上限，适用于智能模式 recognize_media 按需内容识别、普通聊天「专用识别」的媒体预处理及独立 #识图；图片和群友头像使用图片识别模型提供商，视频使用视频识别模型提供商，请注意 Token 消耗。',
           helpMessage: '单位：MB',
           component: 'InputNumber',
           componentProps: {
@@ -1500,7 +1500,7 @@ export function supportGuoba() {
         {
           field: 'mediaRecognitionGeminiTool',
           label: '工具新增-按需内容识别',
-          bottomHelpMessage: '新增按需内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等；当“内容识别来源”为“模型内置”时优先使用当前对话模型识别（需该模型自身支持识图/识视频），失败时自动回退 Gemini 内容识别（需配置 对话-Gemini方式 中的接口和gemini内容识别模型）',
+          bottomHelpMessage: '新增按需内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等；需要先配置 对话-图片识别模型提供商 和 视频识别模型提供商',
           component: 'Switch'
         },
         {

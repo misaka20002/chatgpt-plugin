@@ -1,6 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { recognitionResultsByGemini, recognitionResultsByCurrentModel, hidePrivacyInfo } from '../paimonFuction.js'
+import { recognitionResultsByGemini, hidePrivacyInfo } from '../paimonFuction.js'
+import { resolveProvider } from '../providers.js'
 import { isTrustedEventMediaUrl } from '../quotedImage.js'
 
 /** 识别结果进模型前的字符上限：识图结果本应是一段话，超长只可能是异常内容 */
@@ -21,9 +22,9 @@ function wrapUntrustedMediaResult(text) {
 /**
  * Tool: 按需识别图片或视频内容（工具名保持 recognize_media 不变，避免影响已有提示词与调用）
  *
- * 识别来源跟随配置 `mediaRecognitionSource`：
- * - `Orignal`（模型内置）：优先用当前对话模型的多模态能力识别，失败（模式不支持/请求报错/返回空）时回退 Gemini 识别
- * - `Gemini`：直接使用 Gemini 识别
+ * 工具独立于普通聊天的 `mediaRecognitionSource`：
+ * 图片及 QQ 头像使用 `imageProviderId`，视频使用 `videoProviderId`；不自动换源。
+ * 普通聊天原生多模态/专用预识别仍由原配置控制。
  *
  * 媒体地址来自模型的 tool arguments（不可信），默认以 untrustedSource 模式下载；
  * 地址与本次事件里的媒体地址完全一致时（模型从上下文抄回来的 QQ 图地址）按可信来源放宽。
@@ -96,20 +97,23 @@ export class RecognitionResultsByGeminiTool extends AbstractTool {
       trustedMediaSource: trustedSource
     }
 
-    // 3. 「内容识别来源=模型内置」：优先用当前对话模型识别，失败时回退 Gemini 识别
-    if (Config.mediaRecognitionSource === 'Orignal') {
-      try {
-        const resultByCurrentModel = await recognitionResultsByCurrentModel(tempE, imgArgs, videoArgs, undefined, recognitionOptions)
-        return wrapUntrustedMediaResult(resultByCurrentModel)
-      } catch (err) {
-        logger.warn(`[智能模式][内容识别] 当前模型识别失败，回退 Gemini 识别: ${hidePrivacyInfo(err?.message || String(err))}`)
-      }
-    }
-
-    // 4. Gemini 识别（模型内置来源的回退路径，或内容识别来源为 Gemini 时的默认路径）
-    // 对外统一沿用本仓库工具的写法：失败返回 'Error: ...'（throwOnError 只在识别函数内部用于区分失败）
+    // 3. 只使用对应的明确指定提供商。先校验，避免配置错误时仍下载媒体或触发其他模型。
+    // 识别函数的兼容旧名 recognitionResultsByGemini 实际已支持四种图片提供商。
     try {
+      const isVideo = videoArgs.length > 0
+      const mediaLabel = isVideo ? '视频' : '图片'
+      const providerId = isVideo ? Config.videoProviderId : Config.imageProviderId
+      if (typeof providerId !== 'string' || !providerId.trim()) {
+        throw new Error(`未配置${mediaLabel}识别模型提供商，请先在锅巴中配置`)
+      }
+      if (providerId === 'current') {
+        throw new Error(`${mediaLabel}识别模型提供商不能设置为 current，请选择具体模型提供商`)
+      }
+      const provider = resolveProvider(providerId)
+      if (isVideo && provider.type !== 'gemini') throw new Error('视频识别只能使用 Gemini 配置')
+
       const result = await recognitionResultsByGemini(tempE, imgArgs, videoArgs, undefined, recognitionOptions)
+      if (!String(result ?? '').trim()) throw new Error('识别结果为空')
       return wrapUntrustedMediaResult(result)
     } catch (err) {
       const message = hidePrivacyInfo(err?.message || String(err)) || 'recognition failed'

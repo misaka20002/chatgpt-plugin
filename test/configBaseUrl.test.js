@@ -182,3 +182,27 @@ test('配置文件里已有的备注在重新加载后保留，缺失条目补�
   `)
   for (const snapshot of [result.loaded, result.displayed, result.written]) assert.equal(snapshot.note, '重载后还在')
 })
+
+test('锅巴内容识别相关说明准确区分普通聊天与按需工具，原有来源选项可往返保存', t => {
+  const result = runConfig(t, { mediaRecognitionSource: 'Orignal' }, `
+    const field = key => guoba.schemas.find(schema => schema.field === key)
+    const mode = field('mediaRecognitionSource')
+    assert.equal(mode.bottomHelpMessage,
+      '仅控制普通聊天的媒体处理方式：模型内置使用当前对话模型的原生多模态能力；专用识别先使用配置的识别模型生成文字描述。按需内容识别工具不受此选项影响，始终使用指定的图片或视频识别模型提供商。')
+    assert.deepEqual(mode.componentProps.options, [
+      { label: '模型内置', value: 'Orignal' },
+      { label: '专用识别', value: 'Gemini' }
+    ])
+    assert.equal(field('mediaRecognitionGeminiTool').bottomHelpMessage,
+      '新增按需内容识别工具，用于AI智能按需识别聊天记录中的图片/视频/群友头像等；需要先配置 对话-图片识别模型提供商 和 视频识别模型提供商')
+    assert.equal(field('mediaMaxSizeInMB').bottomHelpMessage,
+      '媒体文件大小上限，适用于智能模式 recognize_media 按需内容识别、普通聊天「专用识别」的媒体预处理及独立 #识图；图片和群友头像使用图片识别模型提供商，视频使用视频识别模型提供商，请注意 Token 消耗。')
+    assert.equal(loaded.mediaRecognitionSource, 'Orignal')
+    const Result = { ok() { return true }, error(message) { throw new Error(message) } }
+    assert.equal(await guoba.setConfigData({ mediaRecognitionSource: 'Gemini' }, { Result }), true)
+    assert.equal((await guoba.getConfigData()).mediaRecognitionSource, 'Gemini')
+  `)
+  assert.equal(result.current.mediaRecognitionSource, 'Gemini')
+  assert.equal(result.displayed.mediaRecognitionSource, 'Gemini')
+  assert.equal(result.written.mediaRecognitionSource, 'Gemini')
+})
