@@ -9,6 +9,7 @@ import http from 'node:http'
 import https from 'node:https'
 import { newFetch } from './proxy.js'
 import { unescapeCqCode } from './cqCode.js'
+import { rewriteForwardCQToBeacon } from './forwardMsgParser.js'
 
 /** 媒体识别的默认系统提示词：Gemini 识别与「当前模型」识别共用，避免两处文案漂移 */
 const DEFAULT_MEDIA_RECOGNITION_PROMPT = `描述这个媒体中的内容，主要包括：全局分析：描述主体内容、风格类型、核心氛围；细节识别：列出画面中所有可辨识的视觉元素，包括：角色名称（仅限90%以上确定），物体：品牌/型号/文化符号，文字：翻译并定位。回复的时候仅需要用一段话描述内容，不要诸如“全局分析”这样的标题。`
@@ -640,8 +641,18 @@ export function getMediaTargetUrl(e) {
  * @returns {string} 处理后的消息字符串
  */
 export function processCQMessage(rawMessage, targetQQ) {
+  if (typeof rawMessage !== 'string' || !rawMessage) return rawMessage || ''
+
+  // 合并转发必须抢在清理之前改写：下面的正则会把所有非 at 的 CQ 码整段删掉，
+  // [CQ:forward,id=xxx] 一旦被删，转发 id 就彻底丢了，后续无从读取。
+  // 改写成不含 "[CQ:" 前缀的信标后，那条正则匹配不到它，id 得以保留到解析阶段。
+  let result = rawMessage
+  if (Config.enableForwardMsgRead !== false) {
+    result = rewriteForwardCQToBeacon(result)
+  }
+
   // 删除所有非 CQ:at 的 CQ 码
-  let result = rawMessage.replace(/\[CQ:(?!at\b)[^\]]*\]/g, '');
+  result = result.replace(/\[CQ:(?!at\b)[^\]]*\]/g, '');
   // 找到第一个 qq 匹配的 CQ:at，删除它
   if (targetQQ !== undefined && targetQQ !== null) {
     const qqStr = String(targetQQ);

@@ -5,6 +5,7 @@ import plugin from '../../../lib/plugins/plugin.js'
 import common from '../../../lib/common/common.js'
 import _ from 'lodash'
 import { Config } from '../utils/config.js'
+import { extractForwardIdsFromEvent, readForwardMsgTree, resolveForwardImageLimit } from '../utils/forwardMsgParser.js'
 import AzureTTS from '../utils/tts/microsoft-azure.js'
 import {
   completeJSON,
@@ -613,8 +614,16 @@ export class chatgpt extends plugin {
     let msg = e.msg
     let prompt
     let forcePictureMode = false
+    // 本条消息自带的合并转发：纯转发时 msg 为空，只能靠它判断该不该放行
+    const directForwardIds = Config.enableForwardMsgRead !== false ? extractForwardIdsFromEvent(e) : []
     if (this.toggleMode === 'at') {
-      if (!msg || e.msg?.startsWith('#')) {
+      if (!msg) {
+        // 纯合并转发没有文字，但带了转发 id 就不能拒载，否则永远读不到里面的内容
+        if (!directForwardIds.length) {
+          return false
+        }
+      } else if (e.msg?.startsWith('#')) {
+        // `#` 是指令前缀，语义上不属于本轮对话，即使带转发也照旧拒载
         return false
       }
       if ((e.isGroup || e.group_id) && !(e.atme || e.atBot || (e.at === e.self_id))) {
@@ -689,7 +698,70 @@ export class chatgpt extends plugin {
     }
     if (!(await this.canGPT_blackAndWhitelist(e))) return false
 
+    // 合并转发：靠前面的白名单/限流检查挡住无谓拉取，到这里才真正读内容
+    await this.attachForwardContentToPrompt(e, prompt, directForwardIds).then(result => {
+      prompt = result.prompt
+    })
+
     await this.abstractChat(e, prompt, use, forcePictureMode)
+  }
+
+  /**
+   * 把本条消息自带的合并转发并入本轮对话。
+   *
+   * 分工：
+   * - 纯转发（prompt 只剩信标）要补一句明确指令，否则模型只看到一串 id
+   * - 转发里的图片挂到 e.img，走既有的识图 / 多模态直传链路
+   * - 启用智能模式 Tool 时只保留信标，内容交给 `read_forward_msg` 工具按需读取；
+   *   非 Tool 模式则直接把三层文本拼进 prompt，保证没有工具也能用
+   *
+   * 挂载图片与预热缓存都会发生，所以即使走 Tool 分支，第一次调用也是热的。
+   *
+   * @param {object} e 事件
+   * @param {string} prompt 当前 prompt
+   * @param {string[]} forwardIds 本条消息里的转发 id
+   * @returns {Promise<{prompt: string}>}
+   */
+  async attachForwardContentToPrompt(e, prompt, forwardIds) {
+    const ids = Array.isArray(forwardIds) ? forwardIds : []
+    if (Config.enableForwardMsgRead === false || !ids.length) return { prompt }
+
+    let nextPrompt = String(prompt ?? '')
+
+    // 纯转发：去掉信标后没有任何文字，说明用户只发了一条聊天记录
+    const withoutBeacon = nextPrompt.replace(/<合并转发:id=[^>]*>/g, '').trim()
+    if (!withoutBeacon) {
+      nextPrompt = `${nextPrompt}\n（请读取并结合上述合并转发的聊天记录内容进行回应）`
+    }
+
+    try {
+      const forward = await readForwardMsgTree(e, ids[0], { maxDepth: 3, recognizeImages: false })
+      if (!forward?.ok) {
+        logger.warn('[chatgpt] 合并转发读取失败: ' + (forward?.error || '未知原因'))
+        return { prompt: nextPrompt }
+      }
+
+      // 图片并入 e.img：让原有链路（识图 / 多模态）直接看到转发里的图
+      const urls = Array.isArray(forward.imageUrls) ? forward.imageUrls : []
+      const hasOwnImage = Array.isArray(e.img) && e.img.length > 0
+      const imageLimit = resolveForwardImageLimit()
+      if (!hasOwnImage && urls.length && imageLimit > 0) {
+        e.img = urls.slice(0, imageLimit)
+        // 不改 theImgIsGetFromSource：图来自「本条转发」而非「引用」，
+        // 保持 undefined 即可（下游判断都是真值判断），也不会覆盖 parseSourceImg 已设的 true
+      }
+
+      // 判据必须同时看「智能模式」和「工具开关」：只开智能模式但关了工具时，
+      // 工具不会下发，此时若还留着信标，模型就彻底读不到内容了。
+      const toolWillRead = Config.enableToolbox && Config.switch_forwardMsgTool !== false
+      if (!toolWillRead) {
+        nextPrompt = `${nextPrompt}\n\n以下是本条消息附带的合并转发内容：\n${forward.text}`
+      }
+    } catch (err) {
+      logger.warn('[chatgpt] 合并转发处理异常: ' + (err?.message || err))
+    }
+
+    return { prompt: nextPrompt }
   }
 
   /**
@@ -701,7 +773,14 @@ export class chatgpt extends plugin {
       return false
     }
     let msg = e.msg
-    if (!msg || e.msg?.startsWith('#')) {
+    // 纯合并转发没有文字，但同样可能是用户想让 AI 看的内容，不能一律拒载
+    const directForwardIds = Config.enableForwardMsgRead !== false ? extractForwardIdsFromEvent(e) : []
+    if (!msg) {
+      if (!directForwardIds.length) {
+        logger.info('[chatgpt] 消息为空且不含合并转发，不予理会')
+        return false
+      }
+    } else if (e.msg?.startsWith('#')) {
       logger.info('[chatgpt] 消息以#开头，，不予理会')
       return false
     }
@@ -732,6 +811,10 @@ export class chatgpt extends plugin {
       return false
     }
     if (!(await this.canGPT_blackAndWhitelist(e))) return false
+
+    // 与 at 入口共用同一套合并转发接入逻辑，避免两条路径行为分叉
+    const attached = await this.attachForwardContentToPrompt(e, prompt, directForwardIds)
+    prompt = attached.prompt
 
     await this.abstractChat(e, prompt, use, false, { automatic })
   }
