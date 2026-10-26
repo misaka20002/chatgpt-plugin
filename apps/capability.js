@@ -63,7 +63,8 @@ export class capabilityMap extends plugin {
       const { meta } = state
       const lines = [
         `能力表已更新（耗时 ${elapsed}s${meta.auditBatches ? `，分 ${meta.auditBatches} 批审核` : ''}）`,
-        `插件类：${meta.pluginCount} 个 ｜ 指令：${meta.entryCount} 条 ｜ 目录已展开：${meta.listedCount ?? meta.entryCount} 条`,
+        `插件类：${meta.pluginCount} 个 ｜ 指令：${meta.entryCount} 条`,
+        `目录展开：${meta.listedCount ?? '?'} 个类（覆盖 ${meta.listedEntryCount ?? '?'} 条）｜ 未展开：${meta.unlistedPlugins?.length || 0} 个类`,
         `数据来源：${meta.degraded ? '源码粗提（可能不完整）' : '框架插件总表'}`,
         `生成时间：${meta.generatedAt}`
       ]

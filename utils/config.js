@@ -355,7 +355,7 @@ const defaultConfig = {
 
   // 插件能力地图（只读扫描本机其他插件的指令，供对话 AI 检索）
   enableCapabilityMap: true, // 总开关：关闭后不注入目录、不注册查询工具、定时任务不执行
-  capabilityDirectoryLimit: 300, // 注入提示词的指令条数上限，超出按插件分组截断
+  capabilityDirectoryLimit: 100, // 注入提示词的插件类个数上限（两级目录第一级）；实测 100 类约 1000 token
   capabilityAuditProvider: '', // 审核/翻译用哪个供应商，空值跟随当前 provider
   capabilityAuditModel: '', // 审核/翻译用哪个模型，空值用该供应商的主模型
   capabilityAuditConcurrency: 3, // 审核并发批数：1=串行（实测 1161 条串行 8分30秒），3 路约 3 分钟；上限 5

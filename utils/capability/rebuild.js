@@ -123,10 +123,12 @@ async function rebuild () {
     pluginCount: rendered.pluginCount,
     entryCount: rendered.entryCount,
     listedCount: rendered.listedCount,
+    listedEntryCount: rendered.listedEntryCount,
     unlistedPlugins: rendered.unlistedPlugins,
     directory: rendered.directory,
     entries: audited.entries.map(entry => ({
       plugin: entry.plugin,
+      pluginKey: entry.pluginKey,
       command: entry.command,
       description: entry.description,
       pluginDsc: entry.pluginDsc,

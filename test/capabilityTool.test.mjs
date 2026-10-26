@@ -51,9 +51,10 @@ test('按指令名命中，并带上归属插件', async () => {
 
 test('按关键词命中多条', async () => {
   const text = await run('公告')
+  // 「公告」命中插件类名，按两级目录展开该类全部指令
+  assert.match(text, /插件类【公告插件】共 2 条指令/)
   assert.match(text, /#看公告/)
   assert.match(text, /#发公告/)
-  assert.match(text, /找到 2 条相关指令/)
 })
 
 test('权限位写进结果，避免让普通成员去试管理员指令', async () => {

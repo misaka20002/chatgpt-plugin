@@ -8,9 +8,6 @@ import { redactText } from './redact.js'
  * 双过滤之外的所有加工（正则转写法、合并、目录截断）都在这里，便于单测。
  */
 
-/** 目录里一行描述的最大长度，超了截断（提示词里的固定成本靠它控住） */
-const DIRECTORY_DESC_LIMIT = 60
-
 /**
  * 把触发正则还原成用户实际要打的写法。
  *
@@ -90,6 +87,8 @@ export function buildCapabilityEntries (snapshot, hints = {}) {
       const command = commandFromReg(rule.reg)
       entries.push({
         plugin: pluginName,
+        // 注册类名（可能同名多个包）不够定位，key 保留原始注册单位，供核对与按包聚合
+        pluginKey: plugin.key,
         pluginDsc,
         reg: rule.reg,
         command,
@@ -113,26 +112,13 @@ export function buildCapabilityEntries (snapshot, hints = {}) {
 export function renderCapabilityForm (entries, { generatedAt, degraded = false, limit = CAPABILITY_DIRECTORY_LIMIT } = {}) {
   const all = Array.isArray(entries) ? entries : []
   const groups = groupByPlugin(all)
-  const maxEntries = clampLimit(limit)
+  // 上限口径 = 目录里展开的**插件类**个数（两级目录的第一级），不是指令条数
+  const maxGroups = clampLimit(limit)
 
-  const listed = []
-  const unlisted = []
-  for (const group of groups) {
-    if (listed.length + group.entries.length <= maxEntries) {
-      listed.push(...group.entries)
-    } else {
-      unlisted.push(group.plugin)
-    }
-  }
-  // 一条都没列出来时（单插件条目就超上限），至少按条截断，别让目录整个空着
-  if (!listed.length && maxEntries > 0) {
-    const flattened = groups.flatMap(group => group.entries).slice(0, maxEntries)
-    listed.push(...flattened)
-    const listedSet = new Set(listed)
-    for (const group of groups) {
-      if (group.entries.some(entry => !listedSet.has(entry))) unlisted.push(group.plugin)
-    }
-  }
+  // 目录按指令数降序，保证展开的都是信息量最大的那一批
+  const ranked = [...groups].sort((a, b) => b.entries.length - a.entries.length)
+  const listedGroups = ranked.slice(0, maxGroups)
+  const unlisted = ranked.slice(maxGroups).map(group => group.plugin)
 
   const header = [
     '# 本机插件能力表单',
@@ -154,17 +140,11 @@ export function renderCapabilityForm (entries, { generatedAt, degraded = false, 
     body.push('')
   }
 
-  if (unlisted.length) {
-    body.push(`> 目录已按上限截断，还有 ${unlisted.length} 个插件未展开：${previewList(unlisted, 12)}`, '')
-  }
-
-  const directoryLines = listed.map(entry => {
-    const command = entry.command || '(无固定触发词)'
-    const desc = clamp(describeCapabilityEntry(entry), DIRECTORY_DESC_LIMIT)
-    return `- 【${entry.plugin}】${command} — ${desc}`
-  })
+  // 目录只到「插件类 + 条数」这一级：单条指令的细节靠查询工具按需取。
+  // 这样每次请求的固定成本跟着插件类数量走，而不是跟着指令总数走。
+  const directoryLines = listedGroups.map(group => `- 【${group.plugin}】${group.entries.length} 条`)
   const tail = unlisted.length
-    ? [`- （还有 ${unlisted.length} 个插件未展开：${previewList(unlisted, 8)}）`]
+    ? [`- （另有 ${unlisted.length} 个插件类未展开，可按类名或关键词查询）`]
     : []
 
   return {
@@ -173,7 +153,8 @@ export function renderCapabilityForm (entries, { generatedAt, degraded = false, 
     unlistedPlugins: unlisted,
     pluginCount: groups.length,
     entryCount: all.length,
-    listedCount: listed.length
+    listedCount: listedGroups.length,
+    listedEntryCount: listedGroups.reduce((total, group) => total + group.entries.length, 0)
   }
 }
 
@@ -222,6 +203,47 @@ function normalizeQuery (text) {
 }
 
 /**
+ * 两级目录下的检索：先看是不是在问某个插件类，再退回关键词。
+ *
+ * 命中的是插件类名时返回该类下的全部指令（截断到 pluginEntryLimit）——
+ * 这是两级目录能省 token 的前提：目录里只有类名与条数，AI 想知道细节必须按类展开。
+ *
+ * @param {Array<object>} entries
+ * @param {string} query
+ * @param {{ entryLimit?: number, pluginEntryLimit?: number }} [options]
+ * @returns {{ mode: 'plugin'|'entry'|'none', plugin?: string, matches: Array<object>, total: number }}
+ */
+export function searchCapabilities (entries, query, { entryLimit = CAPABILITY_MAX_CANDIDATES, pluginEntryLimit = 30 } = {}) {
+  const raw = typeof query === 'string' ? query.trim() : ''
+  if (!raw) return { mode: 'none', matches: [], total: 0 }
+
+  const normalized = normalizeQuery(raw)
+  const groups = groupByPlugin(Array.isArray(entries) ? entries : [])
+  const hitGroups = groups.filter(group => {
+    const name = normalizeQuery(group.plugin)
+    return name && (name.includes(normalized) || normalized.includes(name))
+  })
+
+  if (hitGroups.length === 1) {
+    const group = hitGroups[0]
+    return {
+      mode: 'plugin',
+      plugin: group.plugin,
+      matches: group.entries.slice(0, pluginEntryLimit),
+      total: group.entries.length
+    }
+  }
+
+  if (hitGroups.length > 1) {
+    const merged = hitGroups.flatMap(group => group.entries).slice(0, entryLimit)
+    return { mode: 'entry', matches: merged, total: hitGroups.reduce((total, group) => total + group.entries.length, 0) }
+  }
+
+  const { matches, total } = matchCapabilities(entries, raw, { limit: entryLimit })
+  return { mode: 'entry', matches, total }
+}
+
+/**
  * 条目的一句话说明。工具与表单共用，避免同一条指令在两处显示不同的描述。
  * @param {object} entry
  * @returns {string}
@@ -259,9 +281,4 @@ function groupByPlugin (entries) {
     map.get(plugin).entries.push(entry)
   }
   return order.map(plugin => map.get(plugin))
-}
-
-function clamp (text, max) {
-  const value = String(text || '')
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value
 }

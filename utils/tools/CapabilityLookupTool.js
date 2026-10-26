@@ -2,7 +2,7 @@ import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
 import { startCapabilityRebuild } from '../capability/rebuild.js'
 import { readCapabilityState, isCapabilityStale } from '../capability/store.js'
-import { matchCapabilities, describeCapabilityEntry } from '../capability/form.js'
+import { searchCapabilities, describeCapabilityEntry } from '../capability/form.js'
 
 /**
  * 详情查询工具。
@@ -43,20 +43,22 @@ export class CapabilityLookupTool extends AbstractTool {
     if (isCapabilityStale(state.meta)) startCapabilityRebuild()
 
     const entries = state.meta.entries
-    const { matches, total } = matchCapabilities(entries, query)
-    if (!matches.length) {
+    const result = searchCapabilities(entries, query)
+    if (!result.matches.length) {
       return `未在本机已安装的第三方插件里找到与「${query}」相关的指令。这不代表该功能不存在：框架内置指令（如 #帮助、#插件列表）与未安装的插件都不在这份目录里，请如实告知用户不确定，不要编造指令。`
     }
 
-    const lines = matches.map((entry, index) => {
+    const lines = result.matches.map((entry, index) => {
       const command = entry.command || '（无固定触发词）'
       const permission = entry.permission ? `（需要 ${entry.permission} 权限）` : ''
       return `${index + 1}. 【${entry.plugin}】${command}${permission} —— ${describeCapabilityEntry(entry)}`
     })
 
-    const head = total > matches.length
-      ? `找到 ${total} 条相关指令，以下是最可能的 ${matches.length} 条：`
-      : `找到 ${matches.length} 条相关指令：`
+    const head = result.mode === 'plugin'
+      ? `插件类【${result.plugin}】共 ${result.total} 条指令${result.total > result.matches.length ? `，以下是最相关的 ${result.matches.length} 条` : ''}：`
+      : result.total > result.matches.length
+        ? `找到 ${result.total} 条相关指令，以下是最可能的 ${result.matches.length} 条：`
+        : `找到 ${result.matches.length} 条相关指令：`
 
     return truncate([
       head,

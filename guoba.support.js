@@ -1757,12 +1757,12 @@ export function supportGuoba() {
         },
         {
           field: 'capabilityDirectoryLimit',
-          label: '注入提示词的最大指令条数',
-          bottomHelpMessage: '超出上限时按插件分组截断，AI 会被告知「还有 N 个插件未展开」。条数越多越占输入 token，推荐 300（上限 600）',
+          label: '目录展开的插件类数上限',
+          bottomHelpMessage: '两级目录只注入「插件类名 + 指令条数」，按指令数降序展开前 N 个类。实测 100 类约 1000 token/次请求（旧版注入 300 条指令约 8000 token）。未展开的类仍可用类名或关键词查询',
           component: 'InputNumber',
           componentProps: {
             min: 20,
-            max: 600
+            max: 200
           }
         },
         {

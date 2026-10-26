@@ -5,7 +5,8 @@ import {
   commandFromReg,
   buildCapabilityEntries,
   renderCapabilityForm,
-  matchCapabilities
+  matchCapabilities,
+  searchCapabilities
 } from '../utils/capability/form.js'
 import {
   redactText,
@@ -162,30 +163,56 @@ describe('表单与目录渲染', () => {
     assert.match(form, /可能不完整/)
   })
 
-  test('目录超上限时按插件分组截断，并留下未展开声明', () => {
+  test('目录是两级：只列插件类与条数，按指令数降序展开', () => {
     const entries = buildCapabilityEntries(SNAPSHOT)
-    const { directory, unlistedPlugins, listedCount } = renderCapabilityForm(entries, { limit: 3 })
+    const { directory, unlistedPlugins, listedCount, listedEntryCount } = renderCapabilityForm(entries, { limit: 1 })
 
-    assert.equal(listedCount, 3)
+    assert.equal(listedCount, 1)
+    assert.equal(listedEntryCount, 3)
     assert.deepEqual(unlistedPlugins, ['公告插件'])
-    assert.match(directory, /【签到插件】/)
-    assert.doesNotMatch(directory, /【公告插件】/)
-    assert.match(directory, /还有 1 个插件未展开/)
-    // 表单本身是完整记录，截断只作用于目录
-    assert.match(directory, /#签到/)
+    // 目录里不该出现具体指令——细节靠查询工具按需取
+    assert.match(directory, /^- 【签到插件】3 条$/m)
+    assert.doesNotMatch(directory, /#签到/)
+    assert.match(directory, /另有 1 个插件类未展开/)
   })
 
-  test('上限小于最小分组时按条兜底，仍填满预算', () => {
-    const { directory, listedCount } = renderCapabilityForm(buildCapabilityEntries(SNAPSHOT), { limit: 2 })
+  test('上限够大时全部类都展开，没有未展开声明', () => {
+    const { directory, unlistedPlugins, listedCount } = renderCapabilityForm(buildCapabilityEntries(SNAPSHOT), { limit: 10 })
     assert.equal(listedCount, 2)
-    assert.equal(directory.split('\n').filter(line => line.startsWith('- 【')).length, 2)
+    assert.deepEqual(unlistedPlugins, [])
+    assert.equal(directory.split('\n').filter(Boolean).length, 2)
+    assert.doesNotMatch(directory, /未展开/)
+  })
+})
+
+describe('两级检索：先按插件类展开，再退回关键词', () => {
+  const entries = buildCapabilityEntries(SNAPSHOT).map((entry, index) => ({
+    ...entry,
+    description: ['每日签到', '打卡记录', '查询积分', '发布群公告', '查看群公告'][index]
+  }))
+
+  test('传插件类名，返回该类全部指令', () => {
+    const result = searchCapabilities(entries, '签到插件')
+    assert.equal(result.mode, 'plugin')
+    assert.equal(result.plugin, '签到插件')
+    assert.equal(result.total, 3)
+    assert.equal(result.matches.length, 3)
   })
 
-  test('目录每行都带插件名，AI 才能指出归属', () => {
-    const { directory } = renderCapabilityForm(buildCapabilityEntries(SNAPSHOT), { limit: 10 })
-    const lines = directory.split('\n').filter(Boolean)
-    assert.equal(lines.length, 5)
-    for (const line of lines) assert.match(line, /^- 【.+?】/)
+  test('插件类指令过多时按 pluginEntryLimit 截断', () => {
+    const result = searchCapabilities(entries, '签到插件', { pluginEntryLimit: 2 })
+    assert.equal(result.total, 3)
+    assert.equal(result.matches.length, 2)
+  })
+
+  test('不是插件类名时退回关键词检索', () => {
+    const result = searchCapabilities(entries, '群公告')
+    assert.equal(result.mode, 'entry')
+    assert.equal(result.matches.length, 2)
+  })
+
+  test('空查询什么都不返回', () => {
+    assert.deepEqual(searchCapabilities(entries, '  ').matches, [])
   })
 })
 
