@@ -128,6 +128,12 @@ export async function createAvatarCue(text, expressions, providerId, generate) {
     + 'captions 是按语义自然断句的数组，至多2段，每段至多12个可见字符，总计至多24个，'
     + '每段独立单行显示；段落开头和结尾不要有标点，不能把整段原回复照搬。'
     + 'action 只能是 ' + AVATAR_ACTIONS.join(',') + '；expressionId 只能是输入表情的 id 或 null。'
+    + '动作要符合回复的实际语气，默认优先 idle：自然待机，仍有轻微左右摆动、呼吸和说话，适合普通聊天、轻松提问、俏皮反问、轻微疑惑及日常玩笑。'
+    + 'bounce 代表明显开心或兴奋时的上下跳动；shake 代表强烈激动或颤动时的快速左右抖动；'
+    + 'wobble 代表夸张困惑或晕眩时的明显左右摇摆；nod 代表明确点头肯定；'
+    + 'headshake 代表明确摇头否定；recoil 代表明显受惊的后缩。'
+    + '只有回复确实表达较强情绪或明确动作时才选择非 idle，不要为了活泼强行加动作。'
+    + '不要仅因问号、感叹号或普通疑惑就选择明显的摇晃。'
   const input = JSON.stringify({ reply: String(text).slice(0, 6000),
     expressions: expressions.map(x => ({ id: x.id, label: x.label })) })
   const result = await generate({ systemPrompt, input, providerId })

@@ -148,6 +148,33 @@ test('短句只接受限定动作/真实表情 ID，使用实际 provider，清�
   assert.equal(shortCaption('[CQ:at,qq=123] **你好** https://example.com'), '你好')
 })
 
+test('辅助模型的动作提示说明七种动作，普通疑问优先 idle 且不改写表情选择', async () => {
+  const expressions = [{ id: 'confused', label: '困惑' }]
+  const cue = await createAvatarCue('一条轻松的反问', expressions, 'avatar-model', async ({ systemPrompt, input }) => {
+    assert.deepEqual(JSON.parse(input).expressions, expressions)
+    assert.match(systemPrompt, /默认优先 idle/)
+    assert.match(systemPrompt, /idle[^。；]*轻微左右摆动/)
+    assert.match(systemPrompt, /普通聊天[^。；]*轻松提问[^。；]*俏皮反问[^。；]*轻微疑惑/)
+    assert.match(systemPrompt, /不要[^。；]*问号[^。；]*感叹号[^。；]*明显的摇晃/)
+    for (const [action, meaning] of [
+      ['bounce', '上下跳动'],
+      ['shake', '快速左右抖动'],
+      ['wobble', '明显左右摇摆'],
+      ['nod', '点头'],
+      ['headshake', '摇头'],
+      ['recoil', '后缩']
+    ]) {
+      assert.match(systemPrompt, new RegExp(action + '[^。；]*' + meaning), action + ' 应有明确动作释义')
+    }
+    assert.match(systemPrompt, /只有[^。；]*才选择非 idle/)
+    assert.match(systemPrompt, /expressionId 只能是输入表情的 id 或 null/)
+    assert.ok(!systemPrompt.includes('你在叫派蒙吗'), '提示词不应添加特定回复示例')
+    return JSON.stringify({ captions: ['怎么啦'], action: 'wobble', expressionId: 'confused' })
+  })
+  assert.deepEqual(cue, { captions: ['怎么啦'], action: 'wobble', expressionId: 'confused' },
+    '提示词仅引导模型，不能硬编码改写 action 或特色表情 ID')
+})
+
 test('电影字幕按模型语义分两段并清理首尾标点，失败回退也只显示单行段落', async () => {
   const generate = async args => {
     assert.match(args.systemPrompt, /captions/)
