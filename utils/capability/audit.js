@@ -38,17 +38,16 @@ const AUDIT_SYSTEM = [
  * @param {{
  *   chat?: (prompt: string) => Promise<{ text: string }>,
  *   provider?: string,
- *   model?: string,
  *   concurrency?: number,
  *   onProgress?: (done: number, total: number) => void
  * }} [options]
  * @returns {Promise<{ approved: boolean, issues: string[], entries: Array<object>, batches: number }>}
  */
-export async function auditCapabilityEntries (entries, { chat, provider, model, concurrency = 3, onProgress } = {}) {
+export async function auditCapabilityEntries (entries, { chat, provider, concurrency = 3, onProgress } = {}) {
   const list = Array.isArray(entries) ? entries : []
   if (!list.length) return { approved: true, issues: [], entries: [], batches: 0 }
 
-  const ask = chat || await createSubLLMChat({ provider, model })
+  const ask = chat || await createSubLLMChat({ provider })
 
   const chunks = []
   for (let offset = 0; offset < list.length; offset += CHUNK_SIZE) {
@@ -156,11 +155,14 @@ export function parseAuditOutput (text) {
   return { descriptions, issues }
 }
 
-async function createSubLLMChat ({ provider, model }) {
+/**
+ * 审核用哪个模型，由 provider 条目自己决定（模型名在「提供商」里配置）。
+ * 这里只选供应商，不另设模型字段——否则同一个模型要维护两份配置，必然漂移。
+ */
+async function createSubLLMChat ({ provider }) {
   const { SubLLM } = await import('../../model/SubLLM.js')
   const client = new SubLLM({
     provider: provider || undefined,
-    model: model || undefined,
     systemPrompt: AUDIT_SYSTEM,
     temperature: 0.1,
     timeoutMs: 180000
