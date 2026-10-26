@@ -358,6 +358,7 @@ const defaultConfig = {
   capabilityDirectoryLimit: 300, // 注入提示词的指令条数上限，超出按插件分组截断
   capabilityAuditProvider: '', // 审核/翻译用哪个供应商，空值跟随当前 provider
   capabilityAuditModel: '', // 审核/翻译用哪个模型，空值用该供应商的主模型
+  capabilityAuditConcurrency: 3, // 审核并发批数：1=串行（实测 1161 条串行 8分30秒），3 路约 3 分钟；上限 5
   maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）各自独立，默认 100；Guoba 最低 50
   maxMemoriesPerGroup: 50, // 每群公共 group 记忆的独立整理容量目标，默认 50；Guoba 最低 20（>95% 夜间压缩可按 Token 预算分片）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数

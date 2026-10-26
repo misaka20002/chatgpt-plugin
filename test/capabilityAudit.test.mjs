@@ -113,6 +113,67 @@ describe('不通过一律放行不了', () => {
   })
 })
 
+describe('并发分批', () => {
+  function manyEntries (count) {
+    return Array.from({ length: count }, (_, index) => ({
+      plugin: '签到插件',
+      pluginDsc: '每日签到',
+      reg: `^#签到${index}$`,
+      command: `#签到${index}`,
+      hintFields: []
+    }))
+  }
+
+  const echoChat = async prompt => {
+    const payload = JSON.parse(prompt)
+    return {
+      text: JSON.stringify({
+        descriptions: payload.map(item => ({ i: item.i, text: `执行 ${item.reg}`, confidence: 'high' })),
+        issues: []
+      })
+    }
+  }
+
+  test('200 条分成 3 批，全部翻译到位且顺序不乱', async () => {
+    const entries = manyEntries(200)
+    const progress = []
+    const result = await auditCapabilityEntries(entries, {
+      chat: echoChat,
+      concurrency: 3,
+      onProgress: (done, total) => progress.push(`${done}/${total}`)
+    })
+
+    assert.equal(result.approved, true)
+    assert.equal(result.batches, 3)
+    assert.equal(result.entries.length, 200)
+    // 顺序必须与输入一致：并发不改变索引映射
+    assert.equal(result.entries[0].description, '执行 ^#签到0$')
+    assert.equal(result.entries[199].description, '执行 ^#签到199$')
+    assert.deepEqual(progress, ['1/3', '2/3', '3/3'])
+  })
+
+  test('并发度按输入收敛：1 路也照跑', async () => {
+    const result = await auditCapabilityEntries(manyEntries(10), { chat: echoChat, concurrency: 1 })
+    assert.equal(result.approved, true)
+    assert.equal(result.batches, 1)
+  })
+
+  test('某一批请求失败不影响其余批次的翻译', async () => {
+    let call = 0
+    const flakyChat = async prompt => {
+      call += 1
+      if (call === 1) throw new Error('rate limited')
+      return echoChat(prompt)
+    }
+    const result = await auditCapabilityEntries(manyEntries(200), { chat: flakyChat, concurrency: 1 })
+
+    assert.equal(result.approved, false)
+    assert.match(result.issues.join(' '), /rate limited/)
+    // 后两批仍然翻出来了
+    assert.equal(result.entries[100].description, '执行 ^#签到100$')
+  })
+})
+
 describe('输出解析', () => {
   test('能从夹带说明文字的回复里抠出 JSON', () => {
     const parsed = parseAuditOutput('好的，结果如下：{"descriptions":[{"i":0,"text":"x","confidence":"high"}],"issues":[]} 以上。')

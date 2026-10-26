@@ -68,6 +68,7 @@ export function startCapabilityRebuild ({ force = false } = {}) {
 }
 
 async function rebuild () {
+  const startedAt = Date.now()
   const snapshot = await loadPluginSnapshot()
   const hints = await collectConfigHints(snapshot)
   const baseEntries = buildCapabilityEntries(snapshot, hints)
@@ -81,8 +82,16 @@ async function rebuild () {
 
   const audited = await auditCapabilityEntries(baseEntries, {
     provider: Config.capabilityAuditProvider || undefined,
-    model: Config.capabilityAuditModel || undefined
+    model: Config.capabilityAuditModel || undefined,
+    concurrency: Config.capabilityAuditConcurrency,
+    onProgress: (done, total) => {
+      globalThis.logger?.mark?.(`${LOG_PREFIX} 审核进度 ${done}/${total} 批`)
+    }
   })
+  const auditMs = Date.now() - startedAt
+  globalThis.logger?.mark?.(
+    `${LOG_PREFIX} ${baseEntries.length} 条指令分 ${audited.batches} 批审核，耗时 ${(auditMs / 1000).toFixed(1)}s，并发 ${Config.capabilityAuditConcurrency || 3}`
+  )
 
   if (!audited.approved) {
     lastFailureAt = Date.now()
@@ -107,6 +116,8 @@ async function rebuild () {
   const meta = {
     version: CAPABILITY_FORMAT_VERSION,
     generatedAt,
+    durationMs: Date.now() - startedAt,
+    auditBatches: audited.batches,
     degraded: snapshot.degraded,
     approved: true,
     pluginCount: rendered.pluginCount,
@@ -125,7 +136,11 @@ async function rebuild () {
   }
 
   saveCapabilityState({ form: rendered.form, meta })
-  globalThis.logger?.mark?.(`${LOG_PREFIX} 能力表已更新：${meta.pluginCount} 个插件 / ${meta.entryCount} 条指令${meta.degraded ? '（降级）' : ''}`)
+  // 成功即解除失败冷却，否则「失败一次 → 修好 → 30 分钟内不许重建」会误伤
+  lastFailureAt = 0
+  globalThis.logger?.mark?.(
+    `${LOG_PREFIX} 能力表已更新：${meta.pluginCount} 个插件类 / ${meta.entryCount} 条指令，总耗时 ${(meta.durationMs / 1000).toFixed(1)}s${meta.degraded ? '（降级）' : ''}`
+  )
   return { meta, form: rendered.form }
 }
 

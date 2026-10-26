@@ -28,6 +28,9 @@ describe('commandFromReg：把触发正则还原成用户实际要打的写法',
     ['^#at图谱(?:\\s*[\\s\\S]*)?$', '#at图谱'],
     ['^#(图片)?chat(?!1|glm|gpt)[\\s\\S]*', '#chat'],
     ['^#chatgpt(导出)聊天记录$', '#chatgpt导出聊天记录'],
+    // 转义还原后留下的尾部标点要去掉：实测线上出现 `#运行日志.`、`#Bot验证..`
+    ['^#运行日志\\.$', '#运行日志'],
+    ['^#Bot验证\\.\\.$', '#Bot验证'],
     ['^[^#][sS]*', '']
   ]
 
@@ -128,6 +131,27 @@ describe('表单与目录渲染', () => {
   test('没有翻译时退回插件级描述并标「描述粗略」', () => {
     const { form } = renderCapabilityForm(buildCapabilityEntries(SNAPSHOT), { generatedAt: '2026-10-27T00:00:00.000Z' })
     assert.match(form, /每日签到领积分（描述粗略）/)
+  })
+
+  test('空壳正则不产生指令条目', () => {
+    const snapshot = {
+      degraded: false,
+      plugins: [
+        {
+          key: 'junk-plugin',
+          name: '垃圾插件',
+          dsc: '空壳',
+          rules: [
+            { reg: '(?:)', permission: '' },
+            { reg: '()', permission: '' },
+            { reg: '^#有效$', permission: '' }
+          ]
+        }
+      ]
+    }
+    const entries = buildCapabilityEntries(snapshot)
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0].command, '#有效')
   })
 
   test('降级快照在表单上看得到「可能不完整」', () => {

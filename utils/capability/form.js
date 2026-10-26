@@ -53,10 +53,19 @@ export function commandFromReg (reg) {
   body = body.replace(/[()?*+:]/g, '')
   // 空白收掉：用户打的指令里不该有排版空格
   body = body.replace(/\s+/g, '')
+  // 转义还原后常留下尾部标点（`^#运行日志\.$` → `#运行日志.`），实际指令不带它
+  body = body.replace(/\.{2,}/g, '.')
+  body = body.replace(/[.。·…、,，]+$/g, '')
 
   if (!body) return ''
   if (!body.startsWith('#')) body = `#${body}`
   return body
+}
+
+/** 空壳正则（`(?:)`、`()`、`^$`）不构成任何用户可见指令，直接跳过 */
+function isMeaninglessReg (reg) {
+  const value = String(reg || '').trim()
+  return !value || /^\(\??:?\)$/.test(value) || value === '^$'
 }
 
 /**
@@ -77,6 +86,7 @@ export function buildCapabilityEntries (snapshot, hints = {}) {
     const hintFields = Array.isArray(hints?.[plugin.key]) ? hints[plugin.key] : []
 
     for (const rule of plugin.rules || []) {
+      if (isMeaninglessReg(rule.reg)) continue
       const command = commandFromReg(rule.reg)
       entries.push({
         plugin: pluginName,
@@ -127,7 +137,7 @@ export function renderCapabilityForm (entries, { generatedAt, degraded = false, 
   const header = [
     '# 本机插件能力表单',
     '',
-    `> 生成时间：${generatedAt || '未知'} ｜ 插件数：${groups.length} ｜ 指令数：${all.length}`,
+    `> 生成时间：${generatedAt || '未知'} ｜ 插件类：${groups.length} ｜ 指令数：${all.length}`,
     `> 数据来源：${degraded ? '源码粗提（**可能不完整**）' : '框架插件总表'}`,
     '> 说明：只收录第三方插件的用户可见指令，不含本插件自己的指令、框架内置指令与内部工具。',
     ''
