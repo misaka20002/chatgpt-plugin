@@ -1752,7 +1752,7 @@ export function supportGuoba() {
         {
           field: 'enableCapabilityMap',
           label: '启用插件能力地图',
-          bottomHelpMessage: '只读扫描本机其他插件的指令，生成能力表让 AI 知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。只读其他插件、不执行任何指令；本地只会写一份自己的缓存表（data/chatgpt/capability）。手动重建： #chatgpt刷新功能表',
+          bottomHelpMessage: '让 AI 知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。⚠️ 本功能**不会自动扫描**：只有主人发送 #chatgpt刷新功能表 才会生成或更新能力表（一次通常约 3 分钟，并消耗审核 token）；不发就一直用上次生成的旧表。功能本身只读其他插件、不执行任何指令，只在本地写一份自己的缓存（data/chatgpt/capability）。',
           component: 'Switch'
         },
         {
@@ -1777,7 +1777,7 @@ export function supportGuoba() {
         {
           field: 'capabilityAuditModel',
           label: '能力表审核模型',
-          bottomHelpMessage: '留空则用所选供应商的主模型。审核只在生成那一刻执行（首次 / 每 7 天 / 手动刷新），不是每轮对话，刷新一次算一次费用',
+          bottomHelpMessage: '留空则用所选供应商的主模型。审核只在发送 #chatgpt刷新功能表 那一刻执行一次，不是每轮对话；刷新一次算一次费用。没有定时任务，也不会自行重建',
           component: 'Input'
         },
         {

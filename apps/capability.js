@@ -1,19 +1,21 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
-import { ensureCapabilityState } from '../utils/capability/rebuild.js'
+import { rebuildCapabilityState } from '../utils/capability/rebuild.js'
 import { readCapabilityState } from '../utils/capability/store.js'
 import { previewList } from '../utils/capability/form.js'
 
 /**
- * 能力地图的入口：手动刷新指令 + 每 7 天的过期检查。
+ * 能力地图的入口：**只有主人手动发指令才重建**。
  *
- * 只做两件事，不含取表/合并/审核逻辑——那些在 utils/capability/ 下，可以脱离框架测试。
+ * 刻意不注册定时任务，也不做过期自动重建：一次重建要调主模型审核一千多条指令，
+ * 是一笔真金白银的支出。什么时候花这笔钱由主人按指令决定，不能在凌晨自己发生。
+ * 代价是表单不会自己变新——装了新插件要记得发一次刷新。
  */
 export class capabilityMap extends plugin {
   constructor () {
     super({
       name: 'ChatGPT-Plugin 能力地图',
-      dsc: '扫描本机其他插件的指令，生成能力表单供对话 AI 检索',
+      dsc: '扫描本机其他插件的指令，生成能力表单供对话 AI 检索（仅手动重建）',
       event: 'message',
       priority: 500,
       rule: [
@@ -24,15 +26,6 @@ export class capabilityMap extends plugin {
         }
       ]
     })
-
-    this.task = [
-      {
-        // 每天凌晨 4:30 检查一次，只有过期才真重建（7 天节奏由 TTL 控制，不是 cron 控制）
-        cron: '0 30 4 * * ?',
-        name: 'ChatGPT插件能力表过期重建',
-        fnc: this.rebuildIfStale.bind(this)
-      }
-    ]
   }
 
   async refresh (e) {
@@ -46,7 +39,7 @@ export class capabilityMap extends plugin {
     try {
       const before = readCapabilityState()?.meta?.generatedAt || ''
       const startedAt = Date.now()
-      await ensureCapabilityState({ force: true })
+      await rebuildCapabilityState()
       const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1)
       const state = readCapabilityState()
       const after = state?.meta?.generatedAt || ''
@@ -54,7 +47,7 @@ export class capabilityMap extends plugin {
       // 没换新表有两种可能：审核未通过（沿用旧版，告警已私聊）、或本机没有第三方插件
       if (!after || after === before) {
         const detail = state?.meta
-          ? `当前仍使用 ${state.meta.generatedAt} 生成的版本（${state.meta.pluginCount} 个插件 / ${state.meta.entryCount} 条指令）。`
+          ? `当前仍使用 ${state.meta.generatedAt} 生成的版本（${state.meta.pluginCount} 个插件类 / ${state.meta.entryCount} 条指令）。`
           : '当前没有任何可用版本。'
         await e.reply(`本次未生成新表（审核未通过，或本机没有第三方插件）。${detail}耗时 ${elapsed}s。`, true)
         return true
@@ -69,7 +62,7 @@ export class capabilityMap extends plugin {
         `生成时间：${meta.generatedAt}`
       ]
       if (meta.unlistedPlugins?.length) {
-        lines.push(`未展开插件（${meta.unlistedPlugins.length} 个）：${previewList(meta.unlistedPlugins, 10)}`)
+        lines.push(`未展开的类（仍可查询）：${previewList(meta.unlistedPlugins, 10)}`)
       }
       await e.reply(lines.join('\n'), true)
     } catch (err) {
@@ -77,11 +70,5 @@ export class capabilityMap extends plugin {
       await e.reply(`Error: 重建失败 —— ${err.message}`, true)
     }
     return true
-  }
-
-  /** 定时入口：只有过期才真重建，避免每天扫一遍 */
-  async rebuildIfStale () {
-    if (Config.enableCapabilityMap === false) return
-    await ensureCapabilityState({ force: false })
   }
 }
