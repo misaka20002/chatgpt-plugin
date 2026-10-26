@@ -6,15 +6,18 @@ import { refreshAvatarFolders } from '../utils/avatar/refresh.js'
 
 export class avatarReplyManagement extends plugin {
   constructor() {
-    super({ name: 'ChatGPT 角色动图', event: 'message', priority: 450, rule: [
-      { reg: /^#chatgpt角色(预览|开启|关闭|状态)(?:\s+.+)?$/, fnc: 'manage', permission: 'master' },
-      { reg: /^#chatgpt刷新角色文件夹$/, fnc: 'refresh', permission: 'master' }
-    ] })
+    super({
+      name: 'ChatGPT 角色动图', event: 'message', priority: 450, rule: [
+        { reg: /^#chatgpt角色(预览|开启|关闭|状态)(?:\s+.+)?$/, fnc: 'manage', permission: 'master' },
+        { reg: /^#chatgpt刷新角色文件夹$/, fnc: 'refresh', permission: 'master' }
+      ]
+    })
   }
 
   async refresh(e) {
     if (!e.isMaster) return true
     try {
+      e.reply('开始扫描角色文件夹并生成Json，每个文件夹请等待30秒...', true)
       const results = await refreshAvatarFolders()
       await e.reply('角色文件夹刷新完成：\n' + (results.map(x => x.avatarId + '：' + x.status
         + (x.error ? '，' + x.error : '，特色表情 ' + x.expressions + ' 种')).join('\n') || '没有角色文件夹'), true)
