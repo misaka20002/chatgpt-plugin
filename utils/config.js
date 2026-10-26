@@ -280,7 +280,7 @@ const defaultConfig = {
   geminiForceToolKeywords: [],
   githubAPI: 'https://api.github.com',
   githubAPIKey: '',
-  version: 'v2.8.4',
+  version: 'v2.8.6',
 
   // turnOnBilitv: false,
   // bilitv_max_duration_min: 10

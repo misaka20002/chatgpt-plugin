@@ -2,7 +2,9 @@ import plugin from '../../../lib/plugins/plugin.js'
 import { Config } from '../utils/config.js'
 import { render } from '../utils/common.js'
 let version = Config.version
-let helpData = [
+// 聊天内帮助图与 Web 帮助页共用这一份数据：server/index.js 直接导入它，
+// 不再读 resources/help.json（那份已删除）。改动条目时两处会同时生效。
+export let helpData = [
   {
     group: '聊天',
     list: [
@@ -12,20 +14,15 @@ let helpData = [
         desc: '与机器人聊天'
       },
       {
-        icon: 'chat',
-        title: '#chatgpt切换模型',
-        desc: '主人通过数字列表依次选择主模型和同协议备用模型；两步完成后生效。所有用户跟随全局选择。'
-      },
-      {
         icon: 'chat-private',
         title: '私聊与我对话',
         desc: '与机器人聊天'
       },
-      {
-        icon: 'destroy',
-        title: '#chatgpt删除对话+对话id或@用户',
-        desc: '删除指定对话，并清空与用户的关联信息。@用户时支持多个用户'
-      },
+      // {
+      //   icon: 'destroy',
+      //   title: '#chatgpt删除对话+对话id或@用户',
+      //   desc: '删除指定对话，并清空与用户的关联信息。@用户时支持多个用户'
+      // },
       {
         icon: 'destroy',
         title: '#(结束|新开|摧毁|毁灭|完结)对话',
@@ -45,16 +42,6 @@ let helpData = [
         icon: 'confirm',
         title: '#chatgpt(导出)聊天记录',
         desc: '图片形式导出当前提供商的聊天记录'
-      },
-      {
-        icon: 'smiley-wink',
-        title: '#chatgpt设置模型 / #chatgpt获取可用模型',
-        desc: '主人修改当前提供商模型；新增、删除条目请使用锅巴。'
-      },
-      {
-        icon: 'switch',
-        title: '#chatgpt设置Key / #chatgpt设置地址',
-        desc: '主人修改当前提供商参数；更多条目请使用锅巴。'
       },
       {
         icon: 'list',
@@ -90,7 +77,7 @@ let helpData = [
         icon: 'sound',
         title: '#chatgpt语音模式',
         desc: '机器人以语音形式回答'
-      },      
+      },
       {
         icon: 'chat',
         title: '#tts语音帮助',
@@ -122,21 +109,6 @@ let helpData = [
         desc: '开启或关闭机器人收到消息后的确认回复消息。'
       },
       {
-        icon: 'switch',
-        title: '#chatgpt切换/API/ChatGLM/Claude/Gemini',
-        desc: '切换使用的后端为或OpenAI API/自建ChatGLM/Slack Claude/Gemini'
-      },
-      {
-        icon: 'confirm',
-        title: '#chatgpt必应切换(精准|创意)',
-        desc: '切换Bing风格。'
-      },
-      {
-        icon: 'confirm',
-        title: '#chatgpt必应(开启|关闭)建议回复',
-        desc: '开关Bing模式下的建议回复。'
-      },
-      {
         icon: 'list',
         title: '#(关闭|打开)群聊上下文',
         desc: '开启后将会发送近期群聊中的对话给机器人提供参考'
@@ -157,39 +129,19 @@ let helpData = [
     group: '设置',
     list: [
       {
-        icon: 'token',
-        title: '#chatgpt设置（必应）token',
-        desc: '设置ChatGPT或bing的Token'
+        icon: 'chat',
+        title: '#chatgpt切换模型',
+        desc: '主人通过数字列表依次选择主模型和同协议备用模型；两步完成后生效。所有用户跟随全局选择。'
       },
       {
-        icon: 'coin',
-        title: '#OpenAI剩余额度',
-        desc: '查询OpenAI API剩余试用额度'
+        icon: 'smiley-wink',
+        title: '#chatgpt设置模型 / #chatgpt获取可用模型',
+        desc: '主人修改当前提供商模型；新增、删除条目请使用锅巴。'
       },
       {
-        icon: 'key',
-        title: '#chatgpt设置APIKey',
-        desc: '设置APIKey'
-      },
-      {
-        icon: 'eat',
-        title: '#chatgpt设置(API|Sydney)设定',
-        desc: '设置AI的默认风格设定'
-      },
-      {
-        icon: 'eat',
-        title: '#chatgpt查看(API|Sydney)设定',
-        desc: '查看AI当前的风格设定，文本形式返回，设定太长可能发不出来'
-      },
-      {
-        icon: 'token',
-        title: '#chatgpt设置后台刷新token',
-        desc: '用于获取刷新令牌，以便获取sessKey。'
-      },
-      {
-        icon: 'key',
-        title: '#chatgpt设置sessKey',
-        desc: '使用sessKey作为APIKey，适用于未手机号验证的用户'
+        icon: 'switch',
+        title: '#chatgpt设置Key / #chatgpt设置地址',
+        desc: '主人修改当前提供商参数；更多条目请使用锅巴。'
       },
       {
         icon: 'token',
@@ -201,56 +153,61 @@ let helpData = [
   {
     group: '设定',
     list: [
-      {
-        icon: 'smiley-wink',
-        title: '#chatgpt设定列表',
-        desc: '查看所有设定列表，以转发消息形式'
-      },
-      {
-        icon: 'eat',
-        title: '#chatgpt查看设定【设定名】',
-        desc: '查看指定名字的设定内容。其中API默认和Sydney默认为锅巴面板配置的设定'
-      },
+      // {
+      //   icon: 'smiley-wink',
+      //   title: '#chatgpt设定列表',
+      //   desc: '【暂不可用】查看所有设定列表，以转发消息形式'
+      // },
+      // {
+      //   icon: 'eat',
+      //   title: '#chatgpt查看设定【设定名】',
+      //   desc: '查看指定名字的设定内容。其中API默认和Sydney默认为锅巴面板配置的设定'
+      // },
       {
         icon: 'coin',
         title: '#chatgpt添加设定',
-        desc: '添加一个设定，分此输入设定名称和设定内容。如果名字已存在，则会覆盖（相当于修改）'
+        desc: '添加一个设定，分别输入设定名称和设定内容。如果名字已存在，则会覆盖（相当于修改）'
       },
       {
         icon: 'switch',
-        title: '#chatgpt使用设定【设定名】',
-        desc: '使用某个设定。'
+        title: '#chatgpt使用设定',
+        desc: '不带设定名时用数字列表选择本地已保存的设定；应用前可先把当前设定备份成新的本地设定。'
       },
       {
-        icon: 'confirm',
-        title: '#chatgpt(上传|分享|共享)设定',
-        desc: '上传设定'
+        icon: 'destroy',
+        title: '#chatgpt删除设定',
+        desc: '不带设定名时用数字列表选择本地已保存的设定；删除前可先把原内容另存为新名字。'
       },
-      {
-        icon: 'confirm',
-        title: '#chatgpt(删除|取消|撤销)共享设定+设定名',
-        desc: '从远端删除，只能删除自己上传的设定，根据机器人主人qq号判断。'
-      },
-      {
-        icon: 'confirm',
-        title: '#chatgpt(在线)浏览设定(+关键词)(页码X)',
-        desc: '搜索公开的设定。默认返回前十条，使用页码X可以翻页，使用关键词可以检索。页码从1开始。'
-      },
-      {
-        icon: 'smiley-wink',
-        title: '#chatgpt预览设定详情(+设定名)',
-        desc: '根据设定名称预览云端设定的详情信息。'
-      },
-      {
-        icon: 'confirm',
-        title: '#chatgpt导入设定',
-        desc: '导入其他人分享的设定。注意：相同名字的设定，会覆盖本地已有的设定'
-      },
-      {
-        icon: 'help',
-        title: '#chatgpt设定帮助',
-        desc: '设定帮助'
-      }
+      // {
+      //   icon: 'confirm',
+      //   title: '#chatgpt(上传|分享|共享)设定',
+      //   desc: '【暂不可用】上传设定到云端（云端设定站已下线）'
+      // },
+      // {
+      //   icon: 'confirm',
+      //   title: '#chatgpt(删除|取消|撤销)共享设定+设定名',
+      //   desc: '从远端删除，只能删除自己上传的设定，根据机器人主人qq号判断。'
+      // },
+      // {
+      //   icon: 'confirm',
+      //   title: '#chatgpt(在线)浏览设定(+关键词)(页码X)',
+      //   desc: '搜索公开的设定。默认返回前十条，使用页码X可以翻页，使用关键词可以检索。页码从1开始。'
+      // },
+      // {
+      //   icon: 'smiley-wink',
+      //   title: '#chatgpt预览设定详情(+设定名)',
+      //   desc: '根据设定名称预览云端设定的详情信息。'
+      // },
+      // {
+      //   icon: 'confirm',
+      //   title: '#chatgpt导入设定',
+      //   desc: '【暂不可用】从云端导入其他人分享的设定（云端设定站已下线）'
+      // },
+      // {
+      //   icon: 'help',
+      //   title: '#chatgpt设定帮助',
+      //   desc: '设定帮助'
+      // }
     ]
   },
   {
@@ -281,7 +238,7 @@ let helpData = [
 ]
 
 export class help extends plugin {
-  constructor (e) {
+  constructor(e) {
     super({
       name: 'ChatGPT-Plugin 帮助',
       dsc: 'ChatGPT-Plugin 帮助面板',
@@ -296,7 +253,7 @@ export class help extends plugin {
     })
   }
 
-  async help (e) {
+  async help(e) {
     await render(e, 'chatgpt-plugin', 'help/index', { helpData, version })
   }
 }

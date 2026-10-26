@@ -9,6 +9,8 @@ import path from 'path'
 import websocketclient from 'ws'
 
 import { Config } from '../utils/config.js'
+import { helpData } from '../apps/help.js'
+import { helpEntries } from '../utils/helpView.js'
 import { UserInfo, GetUser, AddUser, ReplaceUsers } from './modules/user_data.js'
 import { getPublicIP, getUserData, getMasterQQ, normalizeChatMode, randomString, getUin } from '../utils/common.js'
 
@@ -169,15 +171,12 @@ export async function createServer () {
     return reply
   })
   // 帮助内容获取
+  // 数据源是 apps/help.js 的 helpData（聊天内帮助图用的同一份），这里只做形状转换：
+  // Web 帮助页按 { icon(FontAwesome class), title, text, list, tip } 渲染，条目是「一条指令」。
   server.post('/help', async (request, reply) => {
     const body = request.body || {}
     if (body.use) {
-      const dir = 'plugins/chatgpt-plugin/resources'
-      const filename = 'help.json'
-      const filepath = path.join(dir, filename)
-      let data = fs.readFileSync(filepath, 'utf8')
-      data = JSON.parse(data)
-      reply.send(data[body.use])
+      reply.send(helpEntries(helpData, body.use))
     }
     return reply
   })

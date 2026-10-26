@@ -3,6 +3,7 @@ import { Config } from '../utils/config.js'
 import { listProviders, providerLabel, MODEL_FIELDS, KEY_FIELDS, URL_FIELDS, PROMPT_FIELDS } from '../utils/providerProfiles.js'
 import { resolveProvider, updateProvider } from '../utils/providers.js'
 import { fetchProviderModels } from '../utils/providerModels.js'
+import { chooseFromMenu } from '../utils/menu.js'
 
 export class ProviderManagement extends plugin {
   constructor() {
@@ -49,14 +50,11 @@ export class ProviderManagement extends plugin {
   }
 
   async choose(e, rows, title, allowNone = false) {
-    await e.reply(`${title}\n${rows.map((row, i) => `${i + 1}. ${row.label || providerLabel(row)}${row.type ? `（${row[MODEL_FIELDS[row.type]] || '未设置模型'}）` : ''}`).join('\n')}\n${allowNone ? '0. 不启用回退' : '0. 取消'}\n请在 60 秒内回复数字，发送“取消”或“退出”终止。`, true)
-    const response = await this.awaitContext(false, 60)
-    if (!response || !response.isMaster || String(response.user_id ?? response.sender?.user_id) !== String(e.user_id ?? e.sender?.user_id)) throw new Error('操作已取消或超时')
-    const text = response.msg?.trim() || ''
-    if (['取消', '退出'].includes(text) || text === '0' && !allowNone) throw new Error('操作已取消')
-    if (text === '0' && allowNone) return ''
-    if (!/^[1-9]\d*$/.test(text) || Number(text) > rows.length) throw new Error('序号无效，操作已取消')
-    return rows[Number(text) - 1].id
+    // 菜单文案与「等待-校验」都在 utils/menu.js，和 #chatgpt使用设定 共用同一份。
+    return chooseFromMenu(this, e, rows.map(row => ({
+      label: `${row.label || providerLabel(row)}${row.type ? `（${row[MODEL_FIELDS[row.type]] || '未设置模型'}）` : ''}`,
+      value: row.id
+    })), title, { allowNone })
   }
 
   async switchProvider(e) {

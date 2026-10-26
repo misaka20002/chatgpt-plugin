@@ -8,7 +8,9 @@
 
 ## 现有测试
 
-- 多模型提供商：`npm run test:providers` 验证 QQ 主备两步提交、数字／权限／取消／并发配置变化、各用途来源选择、回退次数，以及真实协议客户端的拒绝和内置工具边界；`npm run test:config` 包含 `test/providerConfig.test.js` 的备份迁移、引用、重启幂等、显式空表单及磁盘失败。四协议备用连接和历史的请求组装由 `test/groupReplyCore.test.mjs` 覆盖，实际聊天保存与连接修改隔离由 `test/groupReplyChat.test.mjs` 覆盖。Web 不纳入本次验证。
+- 多模型提供商：`npm run test:providers` 验证 QQ 主备两步提交、数字／权限／取消／并发配置变化、各用途来源选择、回退次数，以及真实协议客户端的拒绝和内置工具边界；`test/promptMenu.test.mjs` 同一份菜单原语下的「使用设定」（本地列表、按序号写入默认模型、备份当前设定、取消与代答）与「删除设定」（序号删除、确认文案与撤回、备份后删、非法/重名备份名、确认期间文件消失、无默认模型仍可删）也在其中，用临时目录跑真实 `readPrompts`/`saveOnePrompt`/`deleteOnePrompt`，只 mock 配置、宿主基类、语音、`utils/common.js`（`mkdirs`/`limitString`）以及全局 `logger`/`redis` 这几个边界；`npm run test:config` 包含 `test/providerConfig.test.js` 的备份迁移、引用、重启幂等、显式空表单及磁盘失败。四协议备用连接和历史的请求组装由 `test/groupReplyCore.test.mjs` 覆盖，实际聊天保存与连接修改隔离由 `test/groupReplyChat.test.mjs` 覆盖。Web 不纳入本次验证。
+
+- 帮助数据：`npm run test:help`（`test/helpView.test.mjs`），验证 `apps/help.js` 的 `helpData` 经 `utils/helpView.js` 转成 Web 帮助页条目——打包前端写死的卡片名到分组的别名（「系统设置」合并「设置」与「其他」）、图标类名映射覆盖全部图标、未知卡片返回空数组；数据用真实 `helpData`，只 mock 配置、宿主基类与渲染边界。`resources/help.json` 已删除，聊天内帮助图与 Web 帮助页共用这一份数据。
 
 - 群聊自主回复：`npm run test:group-reply`，覆盖观察器、防抖、候选窗口、并发与关闭后停止回复，以及 Core/SubLLM 四家 provider 的无工具请求；配置与锅巴保存/重载由 `test/configGroupReply.test.js` 纳入 `npm run test:config`。
 
@@ -32,9 +34,11 @@
 - mock redis：内存 `Map` 实现（见 `test/memoryV2.test.js` 顶部），支持 `scanIterator` 生成器。
 - **注入 llm 避免框架依赖**：`extractor.runExtraction` 的 `llm` 参数；SubLLM 是惰性 import（`await import('../../model/SubLLM.js')`），纯逻辑测试不会拉起框架。画像查询固定只读 V2，不再调用或注入模型。
 - 测试环境不要 import `utils/common.js`，也不要 import `client/*`（两者都会拉起 `lib/config` 等宿主重依赖；`client/*` 必须在 `mock.module()` 里替换，见 `test/mediaUrlGuard.test.mjs` 顶部）。这类依赖链会让进程在测试结束后仍不退出，所以所有 `node --test` 脚本统一带 `--test-force-exit`：它只处理「测试都跑完了但句柄没释放」，不会掩盖真的失败。
+- **期望值写在测试里，不取自被测模块**：不要用实现里的常量、映射表或同一个函数推导期望值——实现写错，测试会跟着错。`test/helpView.test.mjs` 曾拿 `HELP_GROUP_ALIASES` 当期望值，别名映射写错仍全绿；现在「卡片 → 分组」的期望表写死在测试里，与实现分开维护。
 - 风格门禁：`node test/lint.check.mjs`（随 `check`/CI 执行）。零依赖，只收「当前零存量违规」的机械规则：JSDoc 与声明同行、日志前缀禁 camelCase 单 token（`[quotedImage]` 这类改写成 `[ChatGPT][子模块]`）、`client/`/`model/` 出现 `console.log`、测试文件必须挂进 `test:*`、脚本引用的文件必须存在、仓库根不得出现 `package-lock.json`（pnpm 工作区里跑 npm 的产物）或 `.venv`（本仓无 Python）。带存量噪音的规则（日志前缀 112 处、`utils/` 的 `console.log` 48 处、行尾空格 379 处、无注释空 `catch` 24 处、未使用变量需 AST）记在脚本头部，作为日后引入 linter 的清单——先清存量再加规则，别让门禁常红。
 - 只需手工运行的测试（如依赖本机 redis）：不挂脚本，但首行写 `manual test: <原因>`，风格检查会豁免；否则判为「写好了却永远没人跑」。
 - `check` 的具体组成以 `package.json` 的 `check` 脚本为准（本文不复述，避免与 scripts 漂移）；CI 同样只跑 `check`，所以新增测试要挂进某个 `test:*` 脚本，该套件再挂进 `check` 才会在 CI 里执行——不挂 `check` 的专题套件仍要本地跑（`lint.check.mjs` 规则 5 要求每个 `test:*` 要么接线、要么进豁免清单）。
+- **不新造门禁脚本**：机械规则（固定语法、禁用 API、文件位置、测试挂载）加进 `test/lint.check.mjs`，行为用例加进对应 `test:*` 再挂 `check`。CI 已对 `v2` 的 push 与 PR 跑 `pnpm run check`，门禁入口只有这一个；无法可靠检测的失误不写成永远绿的脚本，记在指南里就够。
 - **mock ESM 模块依赖**：要替换模块级 import（如 `SubLLM` 的四个 provider client、工具的 `paimonFuction`）时用 `node:test` 的 `mock.module()`，注册必须在动态 `import` 目标模块之前，运行加 `--experimental-test-module-mocks`（示例见 `test/subllmMedia.test.mjs`、`test/recognitionMedia.test.mjs`）。
 - **模块新增命名导出后，同步所有测试桩**：`mock.module()` 的 `namedExports` 缺了新增导出时注册不会报错，只有真跑到该路径才以 `TypeError`/`SyntaxError` 炸出（本次就漏过两处）。`utils/toolForward.js` 的桩已集中为 `test/fixtures/toolForwardMock.mjs` 工厂——给该模块新增导出只需改工厂一处；其他模块新增导出后请 `grep -rn "mock.module" test/` 核对使用点。`utils/config.js` 的桩没有工厂，要求是：具名导出至少 `Config` 与 `providerDefaults`（`guoba.support.js` 顶部就 import 这两个），且 `Config` 自带 `getConfig`/`save`/`commit`——锅巴的保存路径走 `Config.commit(candidate)` 而不是 `save`。
 - 断言脚本（非 node:test 结构）作为"文件级"测试加入对应 npm script 即可。
