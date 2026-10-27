@@ -63,9 +63,9 @@ if (Config.enableToolbox) {
 }
 logger.info('chatgpt-plugin加载成功')
 logger.info(`当前版本${Config.version}`)
-logger.info('仓库地址 https://github.com/ikechan8370/chatgpt-plugin')
-logger.info('文档地址 https://www.yunzai.chat')
-logger.info('插件群号 559567232')
+logger.info('仓库地址 https://github.com/misaka20002/chatgpt-plugin')
+// logger.info('文档地址 https://www.yunzai.chat')
+logger.info('插件群号 1022982073')
 logger.info('**************************************')
 
 export { apps }
