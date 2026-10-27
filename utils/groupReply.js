@@ -126,7 +126,7 @@ class GroupReplyManager {
       // Node 超长定时器会变成 1 毫秒，分段等待以保持较大配置值有效。
       if (Date.now() < state.nextCheckAt || (state.pending.size && Date.now() - state.lastActivity < GROUP_QUIET_MS)) return this.schedule(key, state)
       if (interval) state.nextCheckAt += (Math.floor((Date.now() - state.nextCheckAt) / interval) + 1) * interval
-      this.run(key, state).catch(err => logger.error(`[ChatGPT] 群 ${state.context.group_id} 自主回复失败：${err.message}`))
+      this.run(key, state).catch(err => logger.debug(`[ChatGPT] 群 ${state.context.group_id} 自主回复失败：${err.message}`))
         .finally(() => {
           // 模型处理过慢时跳过已错过的节拍，不在结束后补跑旧时点。
           if (interval && state.nextCheckAt < Date.now()) {
