@@ -131,19 +131,35 @@ export async function pullPatch (target, {
   const patch = normalizePatch(raw)
   if (!patch) throw new Error(`${source} 返回的地图形状不合法`)
 
-  save(patch)
+  save(patch, { sha256: target.sha256 })
   return { patch, source }
 }
 
 /**
- * 默认缓存读取：同插件 + 同指纹的文件存在即命中。
- * @param {{ pluginKey: string, fingerprint: string }} target
+ * 缓存是否还能用。
+ *
+ * 指纹只覆盖「指令写法集合」，上游只补关键词时它不变；所以必须再比对索引声明的来源哈希，
+ * 否则本地缓存永远不会过期——2026-10-28 那次「关键词同步了却查不到」就是这个原因。
+ *
+ * @param {object} raw 本地缓存文件的原文
+ * @param {string} [expected] 索引里声明的 sha256
+ * @returns {boolean}
+ */
+export function cacheIsFresh (raw, expected) {
+  if (!expected) return true
+  return raw?.plugin?.sha256 === expected
+}
+
+/**
+ * 默认缓存读取：同插件 + 同指纹 + 同来源哈希才算命中。
+ * @param {{ pluginKey: string, fingerprint: string, sha256?: string }} target
  * @returns {object | null}
  */
 function defaultReadCache (target) {
   try {
     const file = patchPath(target.pluginKey, target.fingerprint)
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+    if (!cacheIsFresh(raw, target.sha256)) return null
     return normalizePatch(raw)
   } catch {
     return null

@@ -61,30 +61,31 @@ export function readAllPatches () {
 
 /**
  * 把补丁写回成文件形状：只保留 schema/plugin/commands，其余字段一概丢弃。
- * @param {{ key: string, fingerprint: string, commands: Map<string, object> }} patch
+ * @param {{ key: string, fingerprint: string, sha256?: string, commands: Map<string, object> }} patch
  * @returns {object}
  */
 function toPatchFile (patch) {
   const commands = {}
   for (const [command, value] of patch.commands) commands[command] = value
-  return {
-    schema: 1,
-    plugin: { key: patch.key, fingerprint: patch.fingerprint },
-    commands
-  }
+  const plugin = { key: patch.key, fingerprint: patch.fingerprint }
+  // 记下来源哈希：上游只改关键词时指纹不变，靠它判断缓存有没有过期
+  if (patch.sha256) plugin.sha256 = patch.sha256
+  return { schema: 1, plugin, commands }
 }
 
 /**
  * 落盘一份补丁。
- * @param {{ key: string, fingerprint: string, commands: Map<string, object> }} patch
+ * @param {{ key: string, fingerprint: string, sha256?: string, commands: Map<string, object> }} patch
+ * @param {{ sha256?: string }} [source] 本次下载时索引声明的哈希
  * @returns {boolean}
  */
-export function savePatch (patch) {
+export function savePatch (patch, { sha256: sourceHash } = {}) {
   const file = patchPath(patch.key, patch.fingerprint)
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true })
     // 只写允许的字段：远端送来的 call/what 一律不落盘（ADR-0002：补丁不带写法与描述）
-    fs.writeFileSync(file, `${JSON.stringify(toPatchFile(patch), null, 2)}\n`, 'utf8')
+    const next = sourceHash ? { ...patch, sha256: sourceHash } : patch
+    fs.writeFileSync(file, `${JSON.stringify(toPatchFile(next), null, 2)}\n`, 'utf8')
     return true
   } catch (err) {
     globalThis.logger?.warn?.(`[Chatgpt][commandMap] 补丁落盘失败：${err.message}`)

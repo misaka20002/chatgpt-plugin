@@ -30,7 +30,7 @@ export function buildFingerprint (commands) {
 /**
  * 校验并规范化一份补丁。形状不对一律返回 null——宁可这条插件没有关键词，也不要半份脏数据。
  * @param {unknown} raw
- * @returns {{ key: string, fingerprint: string, commands: Map<string, object> } | null}
+ * @returns {{ key: string, fingerprint: string, sha256: string, commands: Map<string, object> } | null}
  */
 export function normalizePatch (raw) {
   if (!raw || typeof raw !== 'object') return null
@@ -60,6 +60,8 @@ export function normalizePatch (raw) {
   return {
     key: plugin.key.trim(),
     fingerprint: typeof plugin.fingerprint === 'string' ? plugin.fingerprint : '',
+    // 来源哈希：用来判断缓存是否已过期。指纹只覆盖写法集合，上游单改关键词时它不变
+    sha256: typeof plugin.sha256 === 'string' ? plugin.sha256 : '',
     commands
   }
 }

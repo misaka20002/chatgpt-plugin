@@ -194,3 +194,42 @@ describe('字符级兜底：说法与指令名不重叠时', () => {
     assert.equal(matches.length, 0, `误召回：${matches.map(m => m.command).join(',')}`)
   })
 })
+
+describe('同分破平：写法越短越通用', () => {
+  // 线上事故：同义词按关键词批量挂载，「点赞」同时挂在三条指令上，得分全是 1.000，
+  // 不破平就等于按索引顺序抽签，抽到了「改枪方案点赞」。
+  const TIED = mergeIndex({
+    entries: [
+      { plugin: '三角洲改枪方案V2', pluginKey: 'delta', command: '#三角洲改枪方案点赞', description: '对指定的三角洲改枪方案进行点赞或点踩', permission: '' },
+      { plugin: '椰奶点赞', pluginKey: 'yenai', command: '#点赞', description: '为发送者或指定目标的QQ个人资料卡点赞', permission: '' },
+      { plugin: 'FanSky小功能Index', pluginKey: 'fan', command: '#开启fan点赞', description: '开启或关闭自动点赞功能开关', permission: '' }
+    ],
+    patches: [
+      normalizePatch({
+        schema: 1,
+        plugin: { key: 'yenai' },
+        commands: { '#点赞': { keys: ['点赞', '赞我', '点个赞', '给我点个赞', '名片赞'], risk: 'q' } }
+      }),
+      normalizePatch({
+        schema: 1,
+        plugin: { key: 'delta' },
+        commands: { '#三角洲改枪方案点赞': { keys: ['点赞', '赞我', '点个赞', '给我点个赞', '名片赞'], risk: 'q' } }
+      }),
+      normalizePatch({
+        schema: 1,
+        plugin: { key: 'fan' },
+        commands: { '#开启fan点赞': { keys: ['点赞', '赞我', '点个赞', '给我点个赞', '名片赞'], risk: 'q' } }
+      })
+    ]
+  }).entries
+
+  test('同分时最通用的短写法排第一', () => {
+    const { matches } = recall('给我点个赞', TIED)
+    assert.equal(matches[0].command, '#点赞')
+  })
+
+  test('用户真要那条长写法时，长写法仍然能被召回', () => {
+    const { matches } = recall('三角洲改枪方案点赞', TIED)
+    assert.ok(matches.some(entry => entry.command === '#三角洲改枪方案点赞'))
+  })
+})

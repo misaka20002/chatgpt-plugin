@@ -8,17 +8,21 @@ import { redactText } from './redact.js'
  * 双过滤之外的所有加工（正则转写法、合并、目录截断）都在这里，便于单测。
  */
 
+/** 单条规则最多展开几种写法：再多就不是「用户可能这么打」，是噪音 */
+const MAX_VARIANTS = 6
+
 /**
- * 把触发正则还原成用户实际要打的写法。
+ * 把触发正则还原成用户可能打的**全部**写法。
  *
- * 这是个启发式函数，不做完备的正则解析——覆盖插件里最常见的几种写法即可：
- * 锚点、捕获组与多分支、可选组、负向断言、字符类与任意字符尾巴。
+ * 为什么不止一种：`#(全部面板更新|更新面板|面板更新)` 里每一支都是真实可用的写法，
+ * 只留第一支会让「帮我刷新面板」彻底查不到——2026-10-28 线上实例：
+ * 用户说「刷新一下面板」，候选里没有 `#更新面板`，模型只好改用自带的查面板工具。
  *
  * @param {string} reg
- * @returns {string} 形如 `#签到`；无法给出可读写法时返回空串（表示靠自然语言触发）
+ * @returns {string[]} 去重后的写法列表，最多 MAX_VARIANTS 条；无法给出可读写法时返回空数组
  */
-export function commandFromReg (reg) {
-  if (typeof reg !== 'string' || !reg.trim()) return ''
+export function commandsFromReg (reg) {
+  if (typeof reg !== 'string' || !reg.trim()) return []
   let body = reg.trim()
 
   // 防御：可能是 /.../flags 的字符串写法
@@ -31,15 +35,47 @@ export function commandFromReg (reg) {
   // 可选组整块删掉：`(图片)?chat` 的可选部分不该写进"正确用法"
   body = body.replace(/\(([^()]*)\)\?/g, '')
 
-  // 捕获组里有多分支时取第一支：`#(结束|新开|摧毁)对话` → `#结束对话`
-  let previous = ''
-  while (previous !== body) {
-    previous = body
-    body = body.replace(/\(([^()]*)\)/g, (_, inner) => inner.replace(/^\?:/, '').split('|')[0])
+  const commands = []
+  for (const variant of expandAlternations(body)) {
+    const command = cleanupCommand(variant)
+    if (!command || commands.includes(command)) continue
+    commands.push(command)
+    if (commands.length >= MAX_VARIANTS) break
   }
-  // 组外还剩多分支时同样取第一支
-  body = body.split('|')[0]
+  return commands
+}
 
+/**
+ * 把正则体拆成所有候选写法。多分支组逐层展开，组外的 `|` 也拆开。
+ * @param {string} text
+ * @returns {string[]}
+ */
+function expandAlternations (text) {
+  const results = []
+  const budget = MAX_VARIANTS * 8
+
+  const walk = current => {
+    if (results.length >= budget) return
+    const match = /\((?:\?:)?([^()]*)\)/.exec(current)
+    if (!match) {
+      results.push(...current.split('|'))
+      return
+    }
+    const head = current.slice(0, match.index)
+    const tail = current.slice(match.index + match[0].length)
+    for (const alt of match[1].split('|')) walk(head + alt + tail)
+  }
+
+  walk(text)
+  return results
+}
+
+/**
+ * 单支候选的收尾清理：去掉正则残留，补上 `#` 前缀。
+ * @param {string} body
+ * @returns {string}
+ */
+function cleanupCommand (body) {
   // 字符类连同其量词一起删：`[^#]`、`[\s\S]*`
   body = body.replace(/\[\^?[^\]]*\]\s*[*+?]?/g, '')
   // 空白类转义与其量词
@@ -57,6 +93,15 @@ export function commandFromReg (reg) {
   if (!body) return ''
   if (!body.startsWith('#')) body = `#${body}`
   return body
+}
+
+/**
+ * 单条规则的**主写法**（用户最可能打的那一个）。等价于 `commandsFromReg(reg)[0]`。
+ * @param {string} reg
+ * @returns {string}
+ */
+export function commandFromReg (reg) {
+  return commandsFromReg(reg)[0] || ''
 }
 
 /** 空壳正则（`(?:)`、`()`、`^$`）不构成任何用户可见指令，直接跳过 */
@@ -84,19 +129,22 @@ export function buildCapabilityEntries (snapshot, hints = {}) {
 
     for (const rule of plugin.rules || []) {
       if (isMeaninglessReg(rule.reg)) continue
-      const command = commandFromReg(rule.reg)
-      entries.push({
-        plugin: pluginName,
-        // 注册类名（可能同名多个包）不够定位，key 保留原始注册单位，供核对与按包聚合
-        pluginKey: plugin.key,
-        pluginDsc,
-        reg: rule.reg,
-        command,
-        permission: rule.permission || '',
-        hintFields: hintFields.slice(0, 5),
-        description: '',
-        confidence: 'none'
-      })
+      // 一条规则可能对应多种真实写法（`#(全部面板更新|更新面板|面板更新)`），
+      // 每种写法各占一条：只留第一支会让其余写法彻底搜不到
+      for (const command of commandsFromReg(rule.reg)) {
+        entries.push({
+          plugin: pluginName,
+          // 注册类名（可能同名多个包）不够定位，key 保留原始注册单位，供核对与按包聚合
+          pluginKey: plugin.key,
+          pluginDsc,
+          reg: rule.reg,
+          command,
+          permission: rule.permission || '',
+          hintFields: hintFields.slice(0, 5),
+          description: '',
+          confidence: 'none'
+        })
+      }
     }
   }
 

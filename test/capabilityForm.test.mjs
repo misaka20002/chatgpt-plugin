@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   commandFromReg,
+  commandsFromReg,
   buildCapabilityEntries,
   renderCapabilityForm
 } from '../utils/capability/form.js'
@@ -47,8 +48,44 @@ describe('commandFromReg：把触发正则还原成用户实际要打的写法',
   })
 })
 
-describe('双过滤：凭证进不了表单', () => {
-  test('凭证类字段名被识别', () => {
+describe('commandsFromReg：一条规则里的每种写法都要留下', () => {
+  test('多选一分组全部展开', () => {
+    assert.deepEqual(
+      commandsFromReg('^#(全部面板更新|更新面板|面板更新)$'),
+      ['#全部面板更新', '#更新面板', '#面板更新']
+    )
+  })
+
+  test('线上实例：miao 的面板规则能还原出 #更新面板', () => {
+    const reg = '^#(星铁|原神)?(全部面板更新|更新全部面板|获取游戏角色详情|更新面板|面板更新)\\s*(\\d{9,10})?$'
+    const commands = commandsFromReg(reg)
+    assert.ok(commands.includes('#更新面板'), `实际：${commands.join(' / ')}`)
+    assert.ok(commands.includes('#全部面板更新'))
+  })
+
+  test('组外多分支也拆开', () => {
+    assert.deepEqual(commandsFromReg('^#签到|#打卡$'), ['#签到', '#打卡'])
+  })
+
+  test('主写法仍是第一支，保持原有行为', () => {
+    const reg = '^#(结束|新开|摧毁)对话$'
+    assert.equal(commandsFromReg(reg)[0], commandFromReg(reg))
+    assert.equal(commandFromReg(reg), '#结束对话')
+  })
+
+  test('同一写法不重复，最多 6 条', () => {
+    assert.deepEqual(commandsFromReg('^#(签到|签到|签到)$'), ['#签到'])
+    const many = commandsFromReg('^#(a|b|c|d|e|f|g|h|i|j)$')
+    assert.equal(many.length, 6)
+  })
+
+  test('给出空写法时返回空数组', () => {
+    assert.deepEqual(commandsFromReg(''), [])
+    assert.deepEqual(commandsFromReg(undefined), [])
+  })
+})
+
+describe('双过滤：凭证进不了表单', () => {  test('凭证类字段名被识别', () => {
     for (const name of ['apiKey', 'access_token', 'cookie', 'password', 'webhook', 'apiBaseUrl', 'appSalt']) {
       assert.equal(isSensitiveFieldName(name), true, name)
     }
@@ -125,6 +162,20 @@ describe('表单与目录渲染', () => {
     assert.equal(entries[0].plugin, '签到插件')
     assert.equal(entries[0].command, '#签到')
     assert.equal(entries[3].permission, 'admin')
+  })
+
+  test('一条规则有多个写法时，每种写法各占一条', () => {
+    const entries = buildCapabilityEntries({
+      plugins: [{
+        key: 'profile',
+        name: '面板',
+        dsc: '角色面板',
+        rules: [{ reg: '^#(全部面板更新|更新面板|面板更新)$', fnc: 'refresh', permission: '' }]
+      }]
+    })
+    assert.deepEqual(entries.map(e => e.command), ['#全部面板更新', '#更新面板', '#面板更新'])
+    // 同一条规则派生出来的条目共用 fnc 与权限，执行时仍落到同一个处理函数
+    assert.ok(entries.every(e => e.reg === '^#(全部面板更新|更新面板|面板更新)$'))
   })
 
   test('没有翻译时退回插件级描述并标「描述粗略」', () => {

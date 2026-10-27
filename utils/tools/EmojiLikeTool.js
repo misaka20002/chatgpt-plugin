@@ -116,5 +116,9 @@ export class EmojiLikeTool extends AbstractTool {
         }
     }
 
-    description = 'React to a message with a QQ face: choose a mood (emotion) or a concrete face. Defaults to referenced message.'
+    /**
+     * 边界写进描述：这是「给某条聊天消息贴表情」，不是「给 QQ 名片点赞」。
+     * 两者中文都叫「点赞」，不写清楚模型就会拿这个工具冒充名片赞。
+     */
+    description = 'React to a single chat message with a QQ face: choose a mood (emotion) or a concrete face. Defaults to the referenced message. This only adds a reaction to a message — it does NOT like a QQ profile card / 名片 (for 名片赞 / 赞我 / 给某人点赞, run the plugin command instead).'
 }

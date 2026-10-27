@@ -150,7 +150,7 @@ export function recall (rawQuery, entries, { limit = DEFAULT_LIMIT, minScore = D
     }
   }
 
-  scored.sort((left, right) => right.score - left.score)
+  scored.sort((left, right) => right.score - left.score || commandWeight(left) - commandWeight(right))
 
   // 同一条写法可能被多个注册单位登记过，按写法去重：否则候选里出现两条一模一样的指令
   const seen = new Set()
@@ -169,6 +169,22 @@ export function recall (rawQuery, entries, { limit = DEFAULT_LIMIT, minScore = D
 /** 字符集合：兜底用，只在小查询上生效 */
 function charSet (text) {
   return new Set([...normalize(text)])
+}
+
+/**
+ * 同分时的破平权重：**写法越短越通用**。
+ *
+ * 同义词是按关键词批量挂载的，「点赞」会同时挂在 `#点赞`、`#三角洲改枪方案点赞`、
+ * `#开启fan点赞` 上，三者得分一模一样（1.000）。不打破平局就等于按索引顺序抽签——
+ * 线上实测抽到了「改枪方案点赞」，用户要的根本不是它。
+ * 用户说「点赞」时想要的是最通用的那条，短写法正是它。
+ *
+ * @param {object} entry
+ * @returns {number}
+ */
+function commandWeight (entry) {
+  const command = normalize(entry?.command || '').replace(/^#/, '')
+  return command.length
 }
 
 function countShared (left, right) {

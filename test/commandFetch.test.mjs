@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { fetchVerified, pullPatch, sha256, MIRRORS } from '../utils/commandMap/fetchMap.js'
+import { cacheIsFresh, fetchVerified, pullPatch, sha256, MIRRORS } from '../utils/commandMap/fetchMap.js'
 import { syncPatches } from '../utils/commandMap/sync.js'
 
 /**
@@ -102,6 +102,18 @@ describe('拉取补丁', () => {
     assert.equal(saved[0].commands.size, 1)
   })
 
+  test('落盘时记下来源哈希，供下次判断缓存是否过期', async () => {
+    const calls = []
+    await pullPatch(target, {
+      fetchImpl: fakeFetch([response(MAP)]),
+      readCache: () => null,
+      save: (patch, source) => calls.push({ patch, source })
+    })
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].source.sha256, GOOD)
+  })
+
   test('内容不是合法地图时不落盘', async () => {
     const saved = []
     await assert.rejects(
@@ -186,5 +198,24 @@ describe('地图同步', () => {
       () => syncPatches({ indexUrl: INDEX_URL, pluginKeys: ['delta'], fetchImpl: fakeFetch([response('{"plugins":1}')]) }),
       /索引结构不合法/
     )
+  })
+})
+
+describe('缓存过期判定', () => {
+  test('哈希一致时缓存可用', () => {
+    assert.equal(cacheIsFresh({ plugin: { sha256: 'aaa' } }, 'aaa'), true)
+  })
+
+  test('上游改了内容但指纹没变时，缓存必须作废', () => {
+    // 2026-10-28 线上事故：只补关键词不动写法，指纹不变，旧缓存却一直被当成命中
+    assert.equal(cacheIsFresh({ plugin: { sha256: 'aaa' } }, 'bbb'), false)
+  })
+
+  test('旧缓存文件没记哈希时视为过期，允许重下', () => {
+    assert.equal(cacheIsFresh({ plugin: { fingerprint: 'f1' } }, 'bbb'), false)
+  })
+
+  test('索引没有声明哈希时不做过期判断', () => {
+    assert.equal(cacheIsFresh({ plugin: {} }, ''), true)
   })
 })
