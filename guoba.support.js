@@ -1746,6 +1746,41 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          label: '智能模式 能力地图',
+          component: 'Divider'
+        },
+        {
+          field: 'enableCapabilityMap',
+          label: '启用插件能力地图',
+          bottomHelpMessage: '只读扫描本机其他插件的指令，生成能力表让 AI 知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。只读其他插件、不执行任何指令；本地只会写一份自己的缓存表（data/chatgpt/capability）。手动重建： #chatgpt刷新功能表',
+          component: 'Switch'
+        },
+        {
+          field: 'capabilityDirectoryLimit',
+          label: '注入提示词的最大指令条数',
+          bottomHelpMessage: '超出上限时按插件分组截断，AI 会被告知「还有 N 个插件未展开」。条数越多越占输入 token，推荐 300（上限 600）',
+          component: 'InputNumber',
+          componentProps: {
+            min: 20,
+            max: 600
+          }
+        },
+        {
+          field: 'capabilityAuditProvider',
+          label: '能力表审核模型来源',
+          bottomHelpMessage: '⚠️ 生成或刷新能力表时，脱敏后的指令清单会交给该模型做「描述翻译 + 脱敏审核」，可能额外消耗 token。空值跟随当前使用的供应商',
+          component: 'Select',
+          componentProps: {
+            options: [{ label: '跟随当前供应商', value: '' }, ...providerOptions]
+          }
+        },
+        {
+          field: 'capabilityAuditModel',
+          label: '能力表审核模型',
+          bottomHelpMessage: '留空则用所选供应商的主模型。审核只在生成那一刻执行（首次 / 每 7 天 / 手动刷新），不是每轮对话，刷新一次算一次费用',
+          component: 'Input'
+        },
+        {
           label: '智能模式 记忆设置',
           component: 'Divider'
         },

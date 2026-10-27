@@ -352,6 +352,12 @@ const defaultConfig = {
   // 智能模式 V2 记忆系统配置（群聊采集须由 Bot 主人在锅巴或当前群显式授权）
   enableMemory: false, // 是否启用记忆系统（唯一总开关，同时开放 Memory_Tool 与 userProfile）
   enableAtGraph: true, // 是否开放 #at图谱 指令；仍需启用记忆系统并授权当前群
+
+  // 插件能力地图（只读扫描本机其他插件的指令，供对话 AI 检索）
+  enableCapabilityMap: true, // 总开关：关闭后不注入目录、不注册查询工具、定时任务不执行
+  capabilityDirectoryLimit: 300, // 注入提示词的指令条数上限，超出按插件分组截断
+  capabilityAuditProvider: '', // 审核/翻译用哪个供应商，空值跟随当前 provider
+  capabilityAuditModel: '', // 审核/翻译用哪个模型，空值用该供应商的主模型
   maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）各自独立，默认 100；Guoba 最低 50
   maxMemoriesPerGroup: 50, // 每群公共 group 记忆的独立整理容量目标，默认 50；Guoba 最低 20（>95% 夜间压缩可按 Token 预算分片）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数
