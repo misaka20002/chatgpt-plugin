@@ -41,6 +41,11 @@ test('锅巴群聊判断表格、内置提示词、数值边界与保存后重�
     const extraPromptSchema = guoba.schemas.find(s => s.field === 'groupReply.extraSystemPrompt')
     assert.equal(extraPromptSchema.component, 'InputTextArea')
     assert.equal(extraPromptSchema.label, '补充系统提示词')
+    // 自主回复禁用工具：默认开启（禁用），老配置升级后也是禁用
+    assert.equal(initial.groupReply.disableTools, true)
+    const disableToolsSchema = guoba.schemas.find(s => s.field === 'groupReply.disableTools')
+    assert.equal(disableToolsSchema.component, 'Switch')
+    assert.equal(disableToolsSchema.label, '自主回复禁用智能模式工具')
     assert.equal(initial.enableBYM, undefined)
     assert.equal(initial.assistantLabel, undefined)
     assert.equal(initial.tts_First_person, '测试称呼')
