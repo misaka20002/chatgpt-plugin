@@ -12,3 +12,6 @@ ckproject/
 output/avatar-validation/
 # 本仓没有 Python 代码；这个目录只可能是临时验证残留（lint.check.mjs 会直接报错）
 .venv/
+
+# 运行时产物（诊断日志等），本仓不该有
+data/

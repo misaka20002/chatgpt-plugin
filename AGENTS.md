@@ -14,6 +14,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 | `apps/派蒙meme.js`、`utils/memeCategory.js`、`resources/memeList/` | [meme](docs/agent-guides/meme.md)；改模板另读渲染指南 |
 | `utils/config.js`、`guoba.support.js`、provider 输出上限、`model/SubLLM.js` 参数传递 | [配置](docs/agent-guides/configuration.md) |
 | 插件注册、动态规则、priority、定时任务、Redis 操作、遗留接口 | [运行时](docs/agent-guides/runtime.md) |
+| 与框架交互（事件的只读字段、accept 阶段、规则匹配语义、日志通道）、在这台机器上部署与排障 | [宿主契约与本机环境](docs/agent-guides/host-environment.md) |
 | 选择/编写测试、mock、临时探针、测试环境排障、CI workflow 改动与复跑、远端 PR 合并前验证 | [测试](docs/agent-guides/testing.md) |
 
 ## Agent skills
