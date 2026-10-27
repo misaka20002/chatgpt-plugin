@@ -1762,6 +1762,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'commandMapTelemetry',
+          label: '【临时】命令误用埋点',
+          bottomHelpMessage: '把「# 开头但没有任何插件匹配」的消息记进 data/chatgpt/telemetry/command-miss.jsonl，用于统计用户常打错的指令。只写本机、不联网。⚠️ 统计完成后请关掉并删除该目录',
+          component: 'Switch'
+        },
+        {
           field: 'commandMapIndexUrl',
           label: '指令地图索引地址',
           bottomHelpMessage: '地图仓库 index.json 的完整 URL（形如 https://raw.githubusercontent.com/<你>/command-maps/main/index.json）。填了之后，主人发送 #chatgpt更新指令地图 才会拉取；拉取走镜像链 + sha256 校验，没有哈希声明的补丁一律不收',

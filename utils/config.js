@@ -361,6 +361,9 @@ const defaultConfig = {
   // 别人的插件，属于比只读查询高得多的风险面，必须由主人显式打开。
   enablePluginCommand: false,
   commandMapIndexUrl: '', // 指令地图仓库的 index.json 完整地址，留空表示不拉地图
+  // 【临时】命令误用埋点：把「# 开头但没有任何插件匹配」的消息写进 data/chatgpt/telemetry。
+  // 只在本机留档、不联网。统计完、地图建好后关掉，目录一并删除。
+  commandMapTelemetry: true,
   capabilityDirectoryLimit: 100, // 注入提示词的插件类个数上限（两级目录第一级）；实测 100 类约 1000 token
   capabilityAuditProvider: '', // 审核/翻译用哪个供应商，空值跟随当前使用的供应商；模型随该供应商自己的配置
   capabilityAuditConcurrency: 3, // 审核并发批数：1=串行（实测 1157 条串行 8分30秒），3 路约 3 分钟；上限 5
