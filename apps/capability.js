@@ -41,7 +41,7 @@ export class capabilityMap extends plugin {
       return true
     }
 
-    await e.reply('开始重建插件能力表：扫描本机第三方插件 → 脱敏 → 主模型审核。可能需要一两分钟。', true)
+    await e.reply('开始重建插件能力表：扫描本机第三方插件 → 脱敏 → 主模型分批审核。实测 1161 条指令（15 批）约 3 分钟；指令更多或模型较慢会更久，完成后会再发一条结果。', true)
 
     try {
       const before = readCapabilityState()?.meta?.generatedAt || ''
@@ -62,8 +62,8 @@ export class capabilityMap extends plugin {
 
       const { meta } = state
       const lines = [
-        `能力表已更新（耗时 ${elapsed}s）`,
-        `插件：${meta.pluginCount} 个 ｜ 指令：${meta.entryCount} 条 ｜ 目录已展开：${meta.listedCount ?? meta.entryCount} 条`,
+        `能力表已更新（耗时 ${elapsed}s${meta.auditBatches ? `，分 ${meta.auditBatches} 批审核` : ''}）`,
+        `插件类：${meta.pluginCount} 个 ｜ 指令：${meta.entryCount} 条 ｜ 目录已展开：${meta.listedCount ?? meta.entryCount} 条`,
         `数据来源：${meta.degraded ? '源码粗提（可能不完整）' : '框架插件总表'}`,
         `生成时间：${meta.generatedAt}`
       ]

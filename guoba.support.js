@@ -1781,6 +1781,16 @@ export function supportGuoba() {
           component: 'Input'
         },
         {
+          field: 'capabilityAuditConcurrency',
+          label: '审核并发批数',
+          bottomHelpMessage: '同时并行几批审核请求。实测 1161 条分成 15 批：串行约 8 分 30 秒，3 路并发约 3 分钟。调高可能撞供应商速率限制，上限 5；网络或供应商限流时调回 1',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 5
+          }
+        },
+        {
           label: '智能模式 记忆设置',
           component: 'Divider'
         },
