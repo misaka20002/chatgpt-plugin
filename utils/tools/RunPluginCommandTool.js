@@ -3,7 +3,7 @@ import { Config } from '../config.js'
 import { loadCommandIndex } from '../commandMap/indexLoader.js'
 import { executeCommand, findCommandEntry } from '../commandMap/execute.js'
 import { recall } from '../commandMap/recall.js'
-import { putPending, takePending, samePending } from '../commandMap/confirm.js'
+import { putPending, takePending, peekPending, samePending, isAffirmative } from '../commandMap/confirm.js'
 
 /**
  * 在目录里找「已知写法」——即给定写法是某条已知写法的开头。
@@ -143,10 +143,16 @@ export class RunPluginCommandTool extends AbstractTool {
 
     // 主人替他人执行视为已授权，不再要求确认；其余情况 w/a 仍要回显等「是」
     if (!target && risk !== 'q') {
-      const confirmed = takePending(e)
-      if (!samePending(confirmed, command)) {
-        putPending(e, command)
+      // 确认闸的唯一凭据是用户亲口说的「是」。只判「同一指令再调一次」不行：
+      // 模型在同一轮里连调两次就能自确认，w/a 档等于没有闸（2026-10-28 审查发现）。
+      if (!isAffirmative(e)) {
+        // 还没答「是」：保证有待确认记录，把话术再问一遍。这里不消费，用户答完还要用
+        if (!samePending(peekPending(e), command)) putPending(e, command)
         return `这条指令可能改动数据：${command}\n要执行就回复「是」；两分钟内有效。`
+      }
+      // 用户答了「是」，确认的必须是同一条；取过即删，避免一次确认执行两次
+      if (!samePending(takePending(e), command)) {
+        return `Error: 没有等待确认的「${command}」。先按用户原话发起一次，等用户回复「是」再调本工具。`
       }
     }
 

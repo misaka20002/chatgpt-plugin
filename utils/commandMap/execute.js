@@ -8,7 +8,7 @@ import { commandKey } from './patch.js'
  *   1. **走框架自己的 deal()**。自己重造一套匹配必然与框架分叉：框架会按插件启用状态、
  *      事件类型过滤，还会跳过某些插件注册的空正则规则；重造的结果是把指令派给了不相干的
  *      插件——2026-10-28 线上「点赞」就是这样被派给了 example/add.js，插件全程没点赞。
- *   2. **权限交给框架**。放行与否一律由框架的规则与权限位决定（ADR-0001）。
+ *   2. **权限交给框架**。放行与否一律由框架的规则与权限位决定（`loader.filtPermission`）。
  *   3. **存在性校验先于执行**。地图可能来自别人的 fork，写法在你装的版本里未必存在；
  *      跑一遍真实匹配是唯一能拦住"调用不存在的指令"的闸门。
  *   4. **不许谎报成功**。插件有没有回话、是不是被框架拒了，都必须如实上报。
@@ -92,10 +92,18 @@ export async function executeCommand (e, call, { loader, target } = {}) {
   if (typeof originalReply === 'function') {
     Object.defineProperty(evt, 'reply', {
       value: async (...args) => {
+        // 框架拒绝权限时回的是固定话术：那不是插件干活的回话，不能算成功
+        if (typeof args[0] === 'string' && args[0].includes(FRAMEWORK_DENIED)) {
+          denied = true
+          return originalReply.apply(evt, args)
+        }
+        const res = await originalReply.apply(evt, args)
+        // 框架的 reply 会把发送失败包成 { error: [...] }，空消息返回 false。
+        // 这两种都说明「话没送到群里」，不能计入成功（2026-10-28 审查发现）。
+        if (res === false) return res
+        if (res && typeof res === 'object' && res.error) return res
         replies += 1
-        // 框架拒绝权限时的固定话术：那不是插件干活的回话，不能算成功
-        if (String(args[0] ?? '').includes(FRAMEWORK_DENIED)) denied = true
-        return originalReply.apply(evt, args)
+        return res
       },
       writable: true,
       configurable: true,
@@ -283,14 +291,6 @@ function switchIdentity (e, target) {
   // 关键：不能保留主人的 isMaster，否则等于用主人权限替别人执行
   own('isMaster', false)
   return shadow
-}
-
-function userIdOf (e) {
-  return e?.sender?.user_id || e?.user_id || ''
-}
-
-function groupIdOf (e) {
-  return e?.group_id || e?.group?.group_id || 'private'
 }
 
 function resolvePlugin (item) {

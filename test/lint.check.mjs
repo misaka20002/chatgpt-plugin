@@ -21,13 +21,17 @@
  * 5. 每个 `test:*` 必须被 `check` 调用，或在 CHECK_EXCLUDED 里写明豁免理由——否则 CI 永远不跑它。
  * 6. 仓库根不得出现 `package-lock.json` 或 `.venv`：前者是 npm 在 pnpm 工作区里跑出来的，
  *    后者是本仓已无 Python 代码的证据（临时验证的 venv 该建在系统临时目录）。
- * 7. 菜巴 schema 里的每个 `field` 必须能在 `utils/config.js` 的默认配置里找到—
- *    删配置项却忘了删面板字段（或反过来）会让用户看到点了没反应的开关。
- * 7b. 用户可见文案（锅巴 `bottomHelpMessage`、`e.reply(...)`）里的**时长断言**必须带「实测」。
+ * 7. 用户可见文案（锅巴 `bottomHelpMessage`、`e.reply(...)`）里的**时长断言**必须带「实测」。
  *    本仓已吃过一次：审核文案写「一两分钟」，实测 8 分 30 秒，四倍偏差活到上线才被日志抓住。
  * 8. 测试里不许手搓框架事件的身份字段（`isMaster` / `member`）——统一走共享夹具
  *    `test/helpers/trssEvent.mjs`。框架对这两个字段的写法是契约（不可写、不可配置），
  *    夹具一旦漂移，测试照样「通过」，线上却抛 TypeError（2026-10-28 线上真实故障）。
+ *
+ * 已评估但**未实现**的候选（写在注释里是为了让后来者知道没有这道门禁，别误以为有）：
+ * - 锅巴 schema 的每个 `field` 都要能在 `utils/config.js` 的默认配置里找到。
+ *   价值明确（删配置项忘了删面板字段，用户会看到点了没反应的开关），但没法用正则判定：
+ *   `defaultConfig` 里 `groupReply` / `avatarReply` 是函数调用，静态取不到叶子键。
+ *   要做就得引 AST 或运行时求值，成本高于收益，暂缓。
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'

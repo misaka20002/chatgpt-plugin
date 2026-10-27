@@ -198,6 +198,27 @@ describe('执行', () => {
     assert.equal(result.reason, 'no-effect')
   })
 
+  test('回话发送失败时不算成功', async () => {
+    class SendFail {
+      constructor (e) {
+        this.e = e
+        this.rule = [{ reg: /^#崩$/, fnc: 'run' }]
+      }
+
+      async run (e) { await e.reply('给你赞了10下，记得回我') }
+    }
+    const loader = makeLoader({
+      rules: [{ key: 'x', plugin: { name: 'X', rule: [{ reg: /^#崩$/, fnc: 'run' }] }, class: SendFail }]
+    })
+    const e = makeEvent()
+    // 框架的 reply 把发送失败包成 { error: [...] }，没有 message_id
+    e.reply = async () => ({ error: [new Error('群消息发送失败')] })
+
+    const result = await executeCommand(e, '#崩', { loader })
+    assert.equal(result.ok, false, '话没送到群里就不能报成功')
+    assert.equal(result.reason, 'no-effect')
+  })
+
   test('读取被 @ 者资料失败时如实返回，不裸抛到上层', async () => {
     const target = makeFailingMemberTarget(20002, new Error('群成员查询失败'))
 

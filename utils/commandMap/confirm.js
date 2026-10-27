@@ -17,6 +17,21 @@ const pending = new Map()
 const AFFIRMATIVE_RE = /^(是|是的|对|好|好的|行|可以|确认|执行|嗯|要|yes|y|ok)[\s!！。.]*$/i
 
 /**
+ * 用户这一轮说的是不是肯定回答。
+ *
+ * 这是确认闸的唯一凭据：w/a 档指令必须有人**亲口**说「是」。
+ * 只靠「同一指令再调一次」不行——模型在同一轮里连调两次就能自确认，
+ * 那样 w/a 档的确认等于没有（2026-10-28 审查发现）。
+ *
+ * @param {object} e
+ * @returns {boolean}
+ */
+export function isAffirmative (e) {
+  const msg = typeof e?.msg === 'string' ? e.msg.trim() : ''
+  return AFFIRMATIVE_RE.test(msg)
+}
+
+/**
  * 状态键：群 + 用户。私聊用固定前缀，避免和群号撞车。
  * @param {object} e
  * @returns {string}
@@ -34,6 +49,18 @@ function confirmKey (e) {
  */
 export function putPending (e, command) {
   pending.set(confirmKey(e), { command, expiresAt: Date.now() + TTL_MS })
+}
+
+/**
+ * 看一眼待确认指令，不消费。
+ * @param {object} e
+ * @returns {string | null}
+ */
+export function peekPending (e) {
+  const record = pending.get(confirmKey(e))
+  if (!record) return null
+  if (Date.now() > record.expiresAt) return null
+  return record.command
 }
 
 /**

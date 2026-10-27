@@ -1217,7 +1217,7 @@ async function collectTools(e) {
   }
 
   /**
-   * 本机插件能力目录（ADR-0003）：拼进系统提示词的硬规则 + 指令索引。
+   * 本机插件能力目录：拼进系统提示词的硬规则 + 指令索引。
    * 没有可用状态时 addon 返回空串，等于什么都没加——这是静默降级，不是错误。
    */
   if (Config.enableCapabilityMap !== false) {

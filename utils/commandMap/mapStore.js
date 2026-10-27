@@ -83,7 +83,7 @@ export function savePatch (patch, { sha256: sourceHash } = {}) {
   const file = patchPath(patch.key, patch.fingerprint)
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true })
-    // 只写允许的字段：远端送来的 call/what 一律不落盘（ADR-0002：补丁不带写法与描述）
+    // 只写允许的字段：远端送来的 call/what 一律不落盘（补丁只带关键词与风险档，不带写法与描述）
     const next = sourceHash ? { ...patch, sha256: sourceHash } : patch
     fs.writeFileSync(file, `${JSON.stringify(toPatchFile(next), null, 2)}\n`, 'utf8')
     return true

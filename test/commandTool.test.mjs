@@ -71,15 +71,42 @@ test('有副作用的指令第一次只要求确认，不执行', async () => {
   assert.match(text, /回复「是」/)
 })
 
-test('确认后再发同一指令才真正执行，且只执行一次', async () => {
+test('必须有人回「是」才执行：模型连调两次不算确认，确认后只执行一次', async () => {
   const e = makeEvent()
-  await run('#三角洲开启推送', e)
-  const text = await run('#三角洲开启推送', e)
-  assert.deepEqual(executed, ['#三角洲开启推送'])
-  assert.match(text, /已执行/)
 
+  const first = await run('#三角洲开启推送', e)
+  assert.match(first, /回复「是」/)
+
+  // 用户还没回「是」，模型在同一轮里再调一次：不能放行（防模型自确认）
+  const again = await run('#三角洲开启推送', e)
+  assert.match(again, /回复「是」/)
+  assert.deepEqual(executed, [], '没有人回「是」就不能执行')
+
+  // 用户回了「是」，再调才真正执行
+  e.msg = '是'
+  const text = await run('#三角洲开启推送', e)
+  assert.match(text, /已执行/)
+  assert.deepEqual(executed, ['#三角洲开启推送'])
+
+  // 确认被消费后不能复用
   await run('#三角洲开启推送', e)
   assert.equal(executed.length, 1, '确认被消费后不能复用')
+})
+
+test('用户回的不是肯定回答时不执行，且待确认记录不丢', async () => {
+  const e = makeEvent()
+  await run('#三角洲开启推送', e)
+
+  e.msg = '先别急，我再想想'
+  const text = await run('#三角洲开启推送', e)
+  assert.match(text, /回复「是」/)
+  assert.deepEqual(executed, [], '没答「是」不能执行')
+
+  // 记录没被消费掉：用户改口说「是」仍然能走
+  e.msg = '好的'
+  const ok = await run('#三角洲开启推送', e)
+  assert.match(ok, /已执行/)
+  assert.deepEqual(executed, ['#三角洲开启推送'])
 })
 
 test('确认的是另一条指令时要重新确认', async () => {

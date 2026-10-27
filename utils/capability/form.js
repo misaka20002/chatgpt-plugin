@@ -80,6 +80,9 @@ function cleanupCommand (body) {
   body = body.replace(/\[\^?[^\]]*\]\s*[*+?]?/g, '')
   // 空白类转义与其量词
   body = body.replace(/\\[sSdDwW]\s*[*+?]?/g, '')
+  // 量词区间：`\d{5}`、`\d{1,3}` 里的 `{5}` 不是用户打的字，留着会变成「#查询{5}」这种脏写法。
+  // 必须放在转义还原之前——此时字面量的 `\{` 还没还原，不会被误删。
+  body = body.replace(/\{\d*,?\d*\}/g, '')
   // 其余转义还原成字面量
   body = body.replace(/\\(.)/g, '$1')
   // 残留的元字符
