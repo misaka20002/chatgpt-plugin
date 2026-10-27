@@ -1,0 +1,166 @@
+import { test, mock } from 'node:test'
+import assert from 'node:assert/strict'
+
+/**
+ * 代执行工具（工具缝：注入假索引与假执行器）。
+ *
+ * 这里要守住的是确认逻辑本身：q 档不打扰、w/a 档必须等一句「是」、
+ * 换一条指令要重新确认、确认过就消费掉不重复执行。
+ */
+
+const ENTRIES = [
+  { plugin: '三角洲', pluginKey: 'delta', command: '#三角洲战绩', description: '查战绩', permission: '', risk: 'q', keys: [] },
+  { plugin: '三角洲', pluginKey: 'delta', command: '#三角洲开启推送', description: '开启推送', permission: '', risk: 'w', keys: [] },
+  { plugin: '三角洲', pluginKey: 'delta', command: '#三角洲关闭推送', description: '关闭推送', permission: '', risk: 'w', keys: [] }
+]
+
+const config = { enableCapabilityMap: true }
+const executed = []
+let executeResult = { ok: true }
+let lastTarget = null
+
+mock.module('../utils/config.js', { namedExports: { Config: config } })
+mock.module('../utils/commandMap/indexLoader.js', {
+  namedExports: { loadCommandIndex: () => ({ entries: ENTRIES, stats: {} }) }
+})
+mock.module('../utils/commandMap/execute.js', {
+  namedExports: {
+    findCommandEntry: (entries, command) => entries.find(entry => entry.command === command) || null,
+    executeCommand: async (e, command, options) => {
+      executed.push(command)
+      lastTarget = options?.target || null
+      return executeResult
+    }
+  }
+})
+
+const { RunPluginCommandTool } = await import('../utils/tools/RunPluginCommandTool.js')
+const { resetPending } = await import('../utils/commandMap/confirm.js')
+
+function makeEvent (userId = 10001, groupId = 555) {
+  return { sender: { user_id: userId }, group_id: groupId, msg: '随便' }
+}
+
+function run (command, e = makeEvent()) {
+  return new RunPluginCommandTool().func({ command }, e)
+}
+
+test.beforeEach(() => {
+  resetPending()
+  executed.length = 0
+  executeResult = { ok: true }
+  lastTarget = null
+  config.enableCapabilityMap = true
+  globalThis.Bot = { pickMember: async (_groupId, userId) => ({ user_id: userId, is_admin: false }) }
+})
+
+test('查询类指令直接执行，不打扰用户', async () => {
+  const text = await run('#三角洲战绩')
+  assert.deepEqual(executed, ['#三角洲战绩'])
+  assert.match(text, /已执行/)
+})
+
+test('有副作用的指令第一次只要求确认，不执行', async () => {
+  const e = makeEvent()
+  const text = await run('#三角洲开启推送', e)
+
+  assert.deepEqual(executed, [])
+  assert.match(text, /回复「是」/)
+})
+
+test('确认后再发同一指令才真正执行，且只执行一次', async () => {
+  const e = makeEvent()
+  await run('#三角洲开启推送', e)
+  const text = await run('#三角洲开启推送', e)
+  assert.deepEqual(executed, ['#三角洲开启推送'])
+  assert.match(text, /已执行/)
+
+  await run('#三角洲开启推送', e)
+  assert.equal(executed.length, 1, '确认被消费后不能复用')
+})
+
+test('确认的是另一条指令时要重新确认', async () => {
+  const e = makeEvent()
+  await run('#三角洲开启推送', e) // 记住「开启推送」
+  const text = await run('#三角洲关闭推送', e) // 换了指令：重新问
+
+  assert.match(text, /回复「是」/)
+  assert.deepEqual(executed, [])
+})
+
+test('不同用户的确认互不通用', async () => {
+  const first = makeEvent(10001)
+  const second = makeEvent(20002)
+  await run('#三角洲开启推送', first)
+  const text = await run('#三角洲开启推送', second)
+
+  assert.match(text, /回复「是」/)
+  assert.deepEqual(executed, [])
+})
+
+test('索引里查不到的写法按有副作用处理，先确认', async () => {
+  const text = await run('#别人乱写的指令')
+  assert.match(text, /回复「是」/)
+  assert.deepEqual(executed, [])
+})
+
+test('执行失败时把原因说清楚，不说「已执行」', async () => {
+  executeResult = { ok: false, reason: 'not-found' }
+  const text = await run('#三角洲战绩')
+  assert.match(text, /^Error: 本机没有能匹配/)
+})
+
+test('开关关闭时直接拒绝', async () => {
+  config.enableCapabilityMap = false
+  const text = await run('#三角洲战绩')
+  assert.match(text, /已关闭/)
+  assert.deepEqual(executed, [])
+})
+
+test('缺少消息上下文时拒绝，不执行裸指令', async () => {
+  const text = await new RunPluginCommandTool().func({ command: '#三角洲战绩' }, null)
+  assert.match(text, /缺少消息上下文/)
+  assert.deepEqual(executed, [])
+})
+
+
+test('主人 @ 他人：以对方身份执行，且不再要求确认', async () => {
+  const e = { ...makeEvent(), isMaster: true, message: [{ type: 'at', qq: '20002' }, { type: 'text', text: '签到' }] }
+  const text = await run('#三角洲开启推送', e)
+
+  assert.deepEqual(executed, ['#三角洲开启推送'], 'w 档也应直接执行')
+  assert.equal(lastTarget?.userId, '20002')
+  assert.match(text, /以 20002 的身份/)
+})
+
+test('非主人 @ 他人：忽略 @，只操作自己', async () => {
+  const e = { ...makeEvent(), isMaster: false, message: [{ type: 'at', qq: '20002' }, { type: 'text', text: '签到' }] }
+  await run('#三角洲战绩', e)
+
+  assert.equal(lastTarget, null)
+})
+
+test('主人 @ 的机器人自己时不算目标', async () => {
+  const e = { ...makeEvent(), isMaster: true, self_id: 99999, message: [{ type: 'at', qq: '99999' }, { type: 'text', text: '签到' }] }
+  await run('#三角洲战绩', e)
+
+  assert.equal(lastTarget, null)
+})
+
+test('拿不到对方群身份时拒绝执行', async () => {
+  globalThis.Bot = { pickMember: async () => null }
+  const e = { ...makeEvent(), isMaster: true, message: [{ type: 'at', qq: '20002' }, { type: 'text', text: '签到' }] }
+  const text = await run('#三角洲战绩', e)
+
+  assert.match(text, /^Error: 查不到 20002/)
+  assert.deepEqual(executed, [])
+})
+
+test('插件报错时把原文交给模型解释，不谎报成功', async () => {
+  executeResult = { ok: false, reason: 'handler-error', message: 'render failed at /root/TRSS-Yunzai/x.js' }
+  const text = await run('#三角洲战绩')
+
+  assert.match(text, /结果没有发出去/)
+  assert.match(text, /render failed/)
+  assert.match(text, /敏感信息/)
+})

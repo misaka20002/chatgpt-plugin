@@ -21,6 +21,10 @@
  * 5. 每个 `test:*` 必须被 `check` 调用，或在 CHECK_EXCLUDED 里写明豁免理由——否则 CI 永远不跑它。
  * 6. 仓库根不得出现 `package-lock.json` 或 `.venv`：前者是 npm 在 pnpm 工作区里跑出来的，
  *    后者是本仓已无 Python 代码的证据（临时验证的 venv 该建在系统临时目录）。
+ * 7. 菜巴 schema 里的每个 `field` 必须能在 `utils/config.js` 的默认配置里找到—
+ *    删配置项却忘了删面板字段（或反过来）会让用户看到点了没反应的开关。
+ * 7b. 用户可见文案（锅巴 `bottomHelpMessage`、`e.reply(...)`）里的**时长断言**必须带「实测」。
+ *    本仓已吃过一次：审核文案写「一两分钟」，实测 8 分 30 秒，四倍偏差活到上线才被日志抓住。
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -37,6 +41,10 @@ const NO_CONSOLE_LOG_DIRS = ['client/', 'model/']
 const JSDOC_SAME_LINE_RE = /\*\/[ \t]+(?:const|let|var|function|async[ \t]+function|export|class)\b/
 const CAMEL_LOG_PREFIX_RE = /\blogger\.(?:info|warn|error|mark|debug|blue|cyan|red)\(\s*['"`]\[([a-z][A-Za-z0-9]*)\]/
 const CONSOLE_LOG_RE = /\bconsole\.log\(/
+/** 用户可见文案的判定：锅巴字段说明与回复语句 */
+const USER_COPY_RE = /bottomHelpMessage:|e\.reply\(/
+/** 时长断言：约 N 分钟 / N 分 M 秒 / 一两分钟 / 几分钟 —— 都是「没测就写」的典型措辞 */
+const DURATION_CLAIM_RE = /约\s*\d+(?:\.\d+)?\s*分(?:钟)?|\d+\s*分\s*\d+\s*秒|一两分钟|几分钟/
 
 const violations = []
 
@@ -53,6 +61,14 @@ function scanFile(file) {
     const camelLog = CAMEL_LOG_PREFIX_RE.exec(line)
     if (camelLog && /[A-Z]/.test(camelLog[1])) {
       violations.push(`${relative}:${index + 1} 日志前缀 "${camelLog[1]}" 是 camelCase；改全小写或 "[ChatGPT][子模块]"`)
+    }
+    // 规则 7：用户文案里的时长断言必须带「实测」，否则就是凭感觉写的数
+    const trimmedLine = line.trim()
+    if (USER_COPY_RE.test(line) && !trimmedLine.startsWith('//') && !trimmedLine.startsWith('*')) {
+      const claim = DURATION_CLAIM_RE.exec(line)
+      if (claim && !line.includes('实测')) {
+        violations.push(`${relative}:${index + 1} 时长断言「${claim[0]}」没有实测依据；写实测值并注明规模，或改成「视规模而定」`)
+      }
     }
     if (!forbidConsoleLog) return
     const trimmed = line.trim()
@@ -153,4 +169,4 @@ if (violations.length) {
   for (const item of violations) console.error('  - ' + item)
   process.exit(1)
 }
-console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物')
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物、时长断言须实测')

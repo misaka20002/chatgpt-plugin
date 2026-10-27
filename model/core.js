@@ -20,6 +20,9 @@ import { KeyvFile } from 'keyv-file'
 import { msgHistoryMgr } from '../model/Onebot11_MessageHistoryManager.js'
 import { APTool } from '../utils/tools/APTool.js'
 import { mergeTrustedToolArgs } from '../utils/tools/AbstractTool.js'
+import { CapabilityLookupTool } from '../utils/tools/CapabilityLookupTool.js'
+import { RunPluginCommandTool } from '../utils/tools/RunPluginCommandTool.js'
+import { capabilityPromptAddon } from '../utils/capability/store.js'
 import { ClaudeAPIClient } from '../client/ClaudeAPIClient.js'
 import { getMessageById, upsertMessage } from '../utils/history.js'
 import { v4 as uuid } from 'uuid'
@@ -1113,6 +1116,8 @@ async function collectTools(e) {
     { condition: Config.switch_EmojiTool, ToolClass: EmojiTool },
     { condition: Config.enableMemory, ToolClass: MemoryTool },
     { condition: Config.enableMemory, ToolClass: UserProfileTool },
+    { condition: Config.enableCapabilityMap !== false, ToolClass: CapabilityLookupTool },
+    { condition: Config.enableCapabilityMap !== false, ToolClass: RunPluginCommandTool },
     { condition: Config.enableEmojiLikeTool, ToolClass: EmojiLikeTool },
     { condition: Config.mediaRecognitionGeminiTool, ToolClass: RecognitionResultsByGeminiTool },
     { condition: Config.viewForwardMsgTool, ToolClass: ViewForwardMsgTool },
@@ -1200,6 +1205,14 @@ async function collectTools(e) {
         { exec: tool.func, function: tool.function(), tool }
       ])
     )
+  }
+
+  /**
+   * 本机插件能力目录（ADR-0003）：拼进系统提示词的硬规则 + 指令索引。
+   * 没有可用状态时 addon 返回空串，等于什么都没加——这是静默降级，不是错误。
+   */
+  if (Config.enableCapabilityMap !== false) {
+    systemAddition += capabilityPromptAddon()
   }
 
   return {

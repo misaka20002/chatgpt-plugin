@@ -1612,6 +1612,12 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enableCapabilityMap',
+          label: '启用插件能力地图',
+          bottomHelpMessage: '开启即用，无需其他配置。开启后：① AI 知道本机所有插件的指令，用户打错时会指出正确写法；② 用户说「帮我签到」「查下我战绩」时，AI 直接用**该用户自己的身份**代他执行，有副作用的会先回显等「是」；③ **主人**可以 @ 某人再下指令，以对方身份执行（权限按对方算）。指令地图地址已内置在插件里，平时不联网；只有主人发 #chatgpt更新指令地图 时才会去拉一次地图，发 #chatgpt刷新功能表 时才会重新扫描本机插件。',
+          component: 'Switch'
+        },
+        {
           label: '智能模式 定时任务',
           component: 'Divider'
         },
