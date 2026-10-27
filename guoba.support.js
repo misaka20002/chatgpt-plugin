@@ -1752,7 +1752,7 @@ export function supportGuoba() {
         {
           field: 'enableCapabilityMap',
           label: '启用插件能力地图',
-          bottomHelpMessage: '让 AI 知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。⚠️ 本功能**不会自动扫描**：只有主人发送 #chatgpt刷新功能表 才会生成或更新能力表（一次通常约 3 分钟，并消耗审核 token）；不发就一直用上次生成的旧表。功能本身只读其他插件、不执行任何指令，只在本地写一份自己的缓存（data/chatgpt/capability）。',
+          bottomHelpMessage: '默认关闭。开启后，AI 才能知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。⚠️ 本功能**不会自动扫描**：只有主人发送 #chatgpt刷新功能表 才会生成或更新能力表（1157 条指令规模实测约 3 分钟，并消耗审核 token）；不发就一直用上次生成的旧表。功能本身只读其他插件、不执行任何指令，只在本地写一份自己的缓存（data/chatgpt/capability）。',
           component: 'Switch'
         },
         {
@@ -1767,18 +1767,12 @@ export function supportGuoba() {
         },
         {
           field: 'capabilityAuditProvider',
-          label: '能力表审核模型来源',
-          bottomHelpMessage: '⚠️ 生成或刷新能力表时，脱敏后的指令清单会交给该模型做「描述翻译 + 脱敏审核」，可能额外消耗 token。空值跟随当前使用的供应商',
+          label: '能力表审核用哪个供应商',
+          bottomHelpMessage: '⚠️ 刷新能力表时，脱敏后的指令清单会交给该供应商做「描述翻译 + 脱敏审核」，可能额外消耗 token。审核用哪个模型由该供应商自己的模型配置决定，这里不再单独填写；空值跟随当前使用的供应商。审核只在发送 #chatgpt刷新功能表 那一刻执行一次，不是每轮对话。',
           component: 'Select',
           componentProps: {
             options: [{ label: '跟随当前供应商', value: '' }, ...providerOptions]
           }
-        },
-        {
-          field: 'capabilityAuditModel',
-          label: '能力表审核模型',
-          bottomHelpMessage: '留空则用所选供应商的主模型。审核只在发送 #chatgpt刷新功能表 那一刻执行一次，不是每轮对话；刷新一次算一次费用。没有定时任务，也不会自行重建',
-          component: 'Input'
         },
         {
           field: 'capabilityAuditConcurrency',
