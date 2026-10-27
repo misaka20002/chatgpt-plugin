@@ -66,6 +66,7 @@
     "test:help": "node --experimental-test-module-mocks --test --test-force-exit test/helpView.test.mjs",
     "test:capability": "node --test --test-force-exit test/capabilityForm.test.mjs test/capabilityRegistry.test.mjs test/capabilityAudit.test.mjs && node --experimental-test-module-mocks --test --test-force-exit test/capabilityTool.test.mjs",
     "test:emoji": "node --experimental-test-module-mocks --test --test-force-exit test/emojiUndo.test.mjs",
-    "check": "node test/checkDeps.mjs && node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs && npm run test:config && npm run test:help && npm run test:capability && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:media && npm run test:group-reply"
+    "check": "node test/checkDeps.mjs && node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs && npm run test:config && npm run test:help && npm run test:capability && npm run test:command && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:media && npm run test:group-reply",
+    "test:command": "node --test --test-force-exit test/commandMap.test.mjs test/commandFetch.test.mjs test/commandExecute.test.mjs && node --experimental-test-module-mocks --test --test-force-exit test/commandTool.test.mjs"
   }
 }

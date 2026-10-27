@@ -1756,6 +1756,18 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
+          field: 'enablePluginCommand',
+          label: '允许 AI 代执行插件指令',
+          bottomHelpMessage: '默认关闭。开启后，AI 可以按用户的自然语言需求，用**该用户自己的身份**把指令发进插件（「帮我签个到」「查下我战绩」）。能不能执行由插件自己的权限决定，AI 不会提权；有副作用的指令会先回显并等一句「是」。⚠️ 这会让群友通过 AI 触发第三方插件的行为，请确认那些插件本身安全。',
+          component: 'Switch'
+        },
+        {
+          field: 'commandMapIndexUrl',
+          label: '指令地图索引地址',
+          bottomHelpMessage: '地图仓库 index.json 的完整 URL（形如 https://raw.githubusercontent.com/<你>/command-maps/main/index.json）。填了之后，主人发送 #chatgpt更新指令地图 才会拉取；拉取走镜像链 + sha256 校验，没有哈希声明的补丁一律不收',
+          component: 'Input'
+        },
+        {
           field: 'capabilityDirectoryLimit',
           label: '目录展开的插件类数上限',
           bottomHelpMessage: '两级目录只注入「插件类名 + 指令条数」，按指令数降序展开前 N 个类。实测 100 类约 1000 token/次请求（旧版注入 300 条指令约 8000 token）。未展开的类仍可用类名或关键词查询',
@@ -1775,8 +1787,7 @@ export function supportGuoba() {
           }
         },
         {
-          field: 'capabilityAuditConcurrency',
-          label: '审核并发批数',
+          field: 'capabilityAuditConcurrency',          label: '审核并发批数',
           bottomHelpMessage: '同时并行几批审核请求。实测 1161 条分成 15 批：串行约 8 分 30 秒，3 路并发约 3 分钟。调高可能撞供应商速率限制，上限 5；网络或供应商限流时调回 1',
           component: 'InputNumber',
           componentProps: {

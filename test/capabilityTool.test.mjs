@@ -10,10 +10,10 @@ import assert from 'node:assert/strict'
  */
 
 const ENTRIES = [
-  { plugin: '签到插件', command: '#签到', description: '每日签到领积分', permission: '', pluginDsc: '每日签到' },
-  { plugin: '签到插件', command: '#我的积分', description: '查询自己的积分', permission: '', pluginDsc: '每日签到' },
-  { plugin: '公告插件', command: '#看公告', description: '查看本群公告', permission: '', pluginDsc: '群公告' },
-  { plugin: '公告插件', command: '#发公告', description: '发布群公告', permission: 'admin', pluginDsc: '群公告' }
+  { plugin: '签到插件', pluginKey: 'sign', command: '#签到', description: '每日签到领积分', permission: '' },
+  { plugin: '签到插件', pluginKey: 'sign', command: '#我的积分', description: '查询自己的积分', permission: '' },
+  { plugin: '公告插件', pluginKey: 'notice', command: '#看公告', description: '查看本群公告', permission: '' },
+  { plugin: '公告插件', pluginKey: 'notice', command: '#发公告', description: '发布群公告', permission: 'admin' }
 ]
 
 const config = { enableCapabilityMap: true }
@@ -26,16 +26,31 @@ mock.module('../utils/capability/store.js', {
   }
 })
 
+// 地图补丁只覆盖一条指令，用来断言「有补丁时会多给参数与示例」
+const { normalizePatch } = await import('../utils/commandMap/patch.js')
+const PATCH = normalizePatch({
+  schema: 1,
+  plugin: { key: 'sign', fingerprint: 'f1' },
+  commands: {
+    '#我的积分': { keys: ['我的积分', '我多少积分'], args: { p1: '页码，可留空' }, ex: '#我的积分 2', risk: 'q' }
+  }
+})
+mock.module('../utils/commandMap/mapStore.js', {
+  namedExports: {
+    readAllPatches: () => [PATCH]
+  }
+})
+
 const { CapabilityLookupTool } = await import('../utils/tools/CapabilityLookupTool.js')
 
 function run (query) {
   return new CapabilityLookupTool().func({ query })
 }
 
-test('按指令名命中，并带上归属插件', async () => {
+test('按指令名命中，展开所属插件类并带上说明', async () => {
   const text = await run('#签到')
-  assert.match(text, /【签到插件】#签到/)
-  assert.match(text, /每日签到领积分/)
+  assert.match(text, /插件类【签到插件】共 2 条指令/)
+  assert.match(text, /#签到 \[查询\] —— 每日签到领积分/)
 })
 
 test('按关键词命中多条', async () => {
@@ -46,9 +61,18 @@ test('按关键词命中多条', async () => {
   assert.match(text, /#发公告/)
 })
 
-test('权限位写进结果，避免让普通成员去试管理员指令', async () => {
+test('权限位与风险档写进结果，避免让普通成员去试管理员指令', async () => {
   const text = await run('#发公告')
-  assert.match(text, /需要 admin 权限/)
+  assert.match(text, /需 admin/)
+  // 没有地图补丁时，带权限位的指令按保守方向判成「有副作用」
+  assert.match(text, /有副作用/)
+})
+
+test('有地图补丁时给出参数与示例', async () => {
+  const text = await run('#我的积分')
+  assert.match(text, /\[查询\]/)
+  assert.match(text, /参数：p1=页码，可留空/)
+  assert.match(text, /示例：#我的积分 2/)
 })
 
 test('查不到时明确否定，并说明「不代表不存在」', async () => {

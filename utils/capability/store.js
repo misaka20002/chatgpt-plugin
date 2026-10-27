@@ -51,7 +51,11 @@ export function saveCapabilityState ({ form, meta }) {
  *
  * @returns {string}
  */
-export function capabilityPromptAddon () {
+/**
+ * @param {{ execEnabled?: boolean }} [options] execEnabled：是否已开启代执行，决定要不要写「可以替你发出去」这条规则
+ * @returns {string}
+ */
+export function capabilityPromptAddon ({ execEnabled = false } = {}) {
   const state = readCapabilityState()
   const directory = state?.meta?.directory
   if (typeof directory !== 'string' || !directory.trim()) return ''
@@ -69,6 +73,9 @@ export function capabilityPromptAddon () {
     '2. 清单里只到插件类这一级。要回答具体指令，必须调用 lookupPluginCapability 工具：传插件类名可列出该类全部指令，传关键词可搜具体指令。',
     '3. 清单没列出，不等于不存在：可能属于未展开的插件类或框架内置指令。不要断言「没有这个功能」，可以换关键词再查一次。',
     '4. 纠正用户时给出正确写法与所属插件类；拿不准就说不确定，不要现编一个像样的指令。',
+    ...(execEnabled
+      ? ['5. 用户明确要求做某件事、并且已经用工具确认了写法与参数时，可以调用 runPluginCommand 代他执行；有副作用的指令会先要求确认，照做即可。执行后插件会自己把结果发到群里，你不用复述。']
+      : []),
     '',
     directory
   ].join('\n')
