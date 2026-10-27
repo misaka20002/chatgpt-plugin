@@ -13,11 +13,16 @@ export const CAPABILITY_FORMAT_VERSION = 1
 /** 表单有效期：7 天（审核是一次性成本，节奏由它控制） */
 export const CAPABILITY_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
-/** 注入提示词的指令条数上限（可下调，但不得超过硬上限——防止把提示词撑爆） */
-export const CAPABILITY_DIRECTORY_LIMIT = 300
+/**
+ * 目录里展开的**插件类**个数上限（两级目录的第一级）。
+ *
+ * 实测：改成两级前是 300 条指令 ≈ 8000 token/次请求；现在按插件类展开，
+ * 100 个类约 1000 token，且未展开的类仍能被工具按类名/关键词搜到。
+ */
+export const CAPABILITY_DIRECTORY_LIMIT = 100
 
 /** 硬上限：配置面板最多也只能调到这里 */
-export const CAPABILITY_DIRECTORY_MAX = 600
+export const CAPABILITY_DIRECTORY_MAX = 200
 
 /** 详情查询最多返回的候选数 */
 export const CAPABILITY_MAX_CANDIDATES = 5
