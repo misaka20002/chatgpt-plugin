@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { CAPABILITY_TTL_MS, capabilityDataDir, capabilityFormPath, capabilityMetaPath } from './paths.js'
+import { capabilityDataDir, capabilityFormPath, capabilityMetaPath } from './paths.js'
 
 /**
  * 表单的落盘与读取。
@@ -30,14 +30,6 @@ export function readCapabilityState () {
 
 export function invalidateCapabilityCache () {
   cache = null
-}
-
-/** 过期判定：没有生成时间也算过期（老格式或残缺文件） */
-export function isCapabilityStale (meta, now = Date.now()) {
-  if (!meta || typeof meta.generatedAt !== 'string') return true
-  const generatedAt = Date.parse(meta.generatedAt)
-  if (!Number.isFinite(generatedAt)) return true
-  return now - generatedAt > CAPABILITY_TTL_MS
 }
 
 /**

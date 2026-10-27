@@ -4,60 +4,38 @@ import { loadPluginSnapshot } from './registry.js'
 import { collectConfigHints } from './configScan.js'
 import { buildCapabilityEntries, renderCapabilityForm } from './form.js'
 import { auditCapabilityEntries } from './audit.js'
-import { readCapabilityState, saveCapabilityState, isCapabilityStale } from './store.js'
+import { readCapabilityState, saveCapabilityState } from './store.js'
 
 /**
  * 重建编排：取表 → 补配置线索 → 合并 → 审核翻译 → 通过才落盘。
  *
+ * 只有一条触发路径：主人手动发 `#chatgpt刷新功能表`。
+ * 没有定时任务，也没有过期自动重建——重建要调主模型审核上千条指令，
+ * 这笔钱只能由主人显式决定何时花。
+ *
  * 失败路径的规矩：
  *   - 有历史通过版本 → 继续用它，新版本作废。
  *   - 没有历史版本 → 不注入任何目录（静默降级），只私聊主人一条告警。
- *   - 失败后进入冷却期，避免「每轮对话都重烧一次审核」。
  */
 
 const LOG_PREFIX = '[Chatgpt][capability]'
-
-/** 失败冷却：审核不通过或重建抛错后，这么久内不再自动重试（手动刷新不受限） */
-const FAILURE_COOLDOWN_MS = 30 * 60 * 1000
 
 /** 告警冷却：主人最多一小时收一条 */
 const ALERT_COOLDOWN_MS = 60 * 60 * 1000
 
 let inFlight = null
-let lastFailureAt = 0
 let lastAlertAt = 0
 
 /**
- * 拿到可用的能力状态；过期则重建并等待结果。
+ * 执行一次重建并等待结果。并发调用复用同一个 promise（连点两次不会跑两遍）。
  *
- * 只给**显式命令**用（主人手动刷新）：它需要一个确定的结果来回报。
- * 对话路径不要用它——扫描 + 审核可能要一两分钟，不能卡住正在进行的对话，
- * 那种场景用 startCapabilityRebuild() 在后台跑，本轮用旧数据。
- *
- * @param {{ force?: boolean }} [options]
  * @returns {Promise<{ meta: object, form: string } | null>}
  */
-export async function ensureCapabilityState ({ force = false } = {}) {
-  const current = readCapabilityState()
-  if (!force && current && !isCapabilityStale(current.meta)) return current
-  return await startCapabilityRebuild({ force })
-}
-
-/**
- * 启动一次重建（已有在跑则复用同一个 promise），不等待完成即返回。
- *
- * @param {{ force?: boolean }} [options] force 跳过失败冷却，供手动刷新使用
- * @returns {Promise<{ meta: object, form: string } | null>}
- */
-export function startCapabilityRebuild ({ force = false } = {}) {
+export function rebuildCapabilityState () {
   if (inFlight) return inFlight
-  if (!force && Date.now() - lastFailureAt < FAILURE_COOLDOWN_MS) {
-    return Promise.resolve(readCapabilityState())
-  }
 
   inFlight = rebuild()
     .catch(err => {
-      lastFailureAt = Date.now()
       globalThis.logger?.warn?.(`${LOG_PREFIX} 重建失败，沿用旧版本：${err.message}`)
       return readCapabilityState()
     })
@@ -94,7 +72,6 @@ async function rebuild () {
   )
 
   if (!audited.approved) {
-    lastFailureAt = Date.now()
     const summary = audited.issues.slice(0, 5).join('；')
     globalThis.logger?.warn?.(`${LOG_PREFIX} 审核未通过：${summary}`)
     if (!previous) {
@@ -138,17 +115,10 @@ async function rebuild () {
   }
 
   saveCapabilityState({ form: rendered.form, meta })
-  // 成功即解除失败冷却，否则「失败一次 → 修好 → 30 分钟内不许重建」会误伤
-  lastFailureAt = 0
   globalThis.logger?.mark?.(
     `${LOG_PREFIX} 能力表已更新：${meta.pluginCount} 个插件类 / ${meta.entryCount} 条指令，总耗时 ${(meta.durationMs / 1000).toFixed(1)}s${meta.degraded ? '（降级）' : ''}`
   )
   return { meta, form: rendered.form }
-}
-
-/** 供命令层判断「这次刷新到底有没有换新表」 */
-export function capabilityGeneratedAt () {
-  return readCapabilityState()?.meta?.generatedAt || ''
 }
 
 /**

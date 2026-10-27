@@ -10,9 +10,6 @@ import { fileURLToPath } from 'node:url'
 
 export const CAPABILITY_FORMAT_VERSION = 1
 
-/** 表单有效期：7 天（审核是一次性成本，节奏由它控制） */
-export const CAPABILITY_TTL_MS = 7 * 24 * 60 * 60 * 1000
-
 /**
  * 目录里展开的**插件类**个数上限（两级目录的第一级）。
  *

@@ -1,7 +1,6 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
-import { startCapabilityRebuild } from '../capability/rebuild.js'
-import { readCapabilityState, isCapabilityStale } from '../capability/store.js'
+import { readCapabilityState } from '../capability/store.js'
 import { searchCapabilities, describeCapabilityEntry } from '../capability/form.js'
 
 /**
@@ -36,11 +35,9 @@ export class CapabilityLookupTool extends AbstractTool {
 
     const state = readCapabilityState()
     if (!state?.meta?.entries?.length) {
-      // 首次调用：后台开始生成，本轮不等待——扫描 + 审核可能要一两分钟，不能卡住对话
-      startCapabilityRebuild()
-      return 'Error: 本机能力目录正在首次生成（扫描第三方插件 + 脱敏审核），请稍后几秒再问一次。'
+      // 工具只读不重建：重建要花钱，只能由主人发指令触发
+      return 'Error: 本机能力目录还没有生成。请主人发送 #chatgpt刷新功能表 生成后再问。'
     }
-    if (isCapabilityStale(state.meta)) startCapabilityRebuild()
 
     const entries = state.meta.entries
     const result = searchCapabilities(entries, query)

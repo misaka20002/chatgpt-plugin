@@ -18,22 +18,11 @@ const ENTRIES = [
 
 const config = { enableCapabilityMap: true }
 let state = { meta: { directory: '', entries: ENTRIES } }
-let stale = false
-const rebuilds = []
 
 mock.module('../utils/config.js', { namedExports: { Config: config } })
-mock.module('../utils/capability/rebuild.js', {
-  namedExports: {
-    startCapabilityRebuild: () => {
-      rebuilds.push(Date.now())
-      return Promise.resolve(state)
-    }
-  }
-})
 mock.module('../utils/capability/store.js', {
   namedExports: {
-    readCapabilityState: () => state,
-    isCapabilityStale: () => stale
+    readCapabilityState: () => state
   }
 })
 
@@ -83,27 +72,25 @@ test('功能开关关闭时不查询', async () => {
   }
 })
 
-test('首次没有缓存：不等待生成，先把重建丢到后台', async () => {
+test('没有能力表时不自行重建，只提示主人发刷新指令', async () => {
   const saved = state
-  const before = rebuilds.length
   state = null
   try {
     const text = await run('#签到')
-    assert.match(text, /正在首次生成/)
-    assert.equal(rebuilds.length, before + 1)
+    assert.match(text, /^Error: /)
+    assert.match(text, /#chatgpt刷新功能表/)
   } finally {
     state = saved
   }
 })
 
-test('已过期：用旧数据回答，同时后台刷新', async () => {
-  const before = rebuilds.length
-  stale = true
+test('能力表再旧也照用，不触发任何自动重建', async () => {
+  const saved = state
+  state = { meta: { directory: '', entries: ENTRIES, generatedAt: '2020-01-01T00:00:00.000Z' } }
   try {
     const text = await run('#签到')
     assert.match(text, /每日签到领积分/)
-    assert.equal(rebuilds.length, before + 1)
   } finally {
-    stale = false
+    state = saved
   }
 })
