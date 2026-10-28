@@ -73,8 +73,18 @@ export function supportGuoba() {
           component: 'SOFT_GROUP_BEGIN'
         },
         {
-          label: '触发配置',
+          label: '响应配置',
           component: 'Divider'
+        },
+        {
+          field: 'botReplyWhitelist',
+          label: 'Bot 响应白名单账号',
+          bottomHelpMessage: '多开 QQ / 多适配器时，只有列表内的 Bot 账号会响应对话触发（含群聊自主回复与第一人称呼叫）；留空表示所有账号都响应。',
+          component: 'Select',
+          componentProps: {
+            mode: 'tags',
+            options: botAccountOptions()
+          }
         },
         {
           field: 'toggleMode',
@@ -86,18 +96,6 @@ export function supportGuoba() {
               { label: 'at', value: 'at' },
               { label: '#chat', value: 'prefix' }
             ]
-          }
-        },
-        {
-          field: 'botReplyWhitelist',
-          label: 'Bot 响应白名单账号',
-          bottomHelpMessage: '多开 QQ / 多适配器时，只有列表内的 Bot 账号会响应对话触发（含群聊自主回复与第一人称呼叫）；留空表示所有账号都响应。' +
-            '候选来自所有已注册适配器下的账号，也可以直接输入尚未登录的账号。' +
-            '与「对话白名单」不是一层：那个管谁能用，这个管哪个 Bot 说话。',
-          component: 'Select',
-          componentProps: {
-            mode: 'tags',
-            options: botAccountOptions()
           }
         },
         {
