@@ -66,7 +66,6 @@ import { buildOpenAIContent, buildResponsesInput } from '../utils/visionPayload.
 import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/toolForward.js'
 import { normalizeModelText } from '../utils/thinking.js'
 import { redactArgsForLog, maskSecret } from '../utils/toolArgRedaction.js'
-import { logToolCall } from '../utils/toolCallLog.js'
 import { GithubAPITool } from '../utils/tools/GithubTool.js'
 import { Misaka_WebSearchTool } from '../utils/tools/Misaka_WebSearchTool.js'
 import { TavilySearchAndExtractTool } from '../utils/tools/TavilySearchAndExtractTool.js'
@@ -850,8 +849,6 @@ class Core {
               // 控制台日志保持明文（docs/adr/0002-tool-log-channel-and-redaction.md）；redactArgsForLog 仅用于会发送到会话的合并转发
               logger.info(`[Chatgpt][API][工具调用][${name}]: ${JSON.stringify(args)}`)
               const toolArgsForForward = redactArgsForLog(name, args)
-              // 落盘一份脱敏记录：控制台在这台机器上抓不到，排障不能靠临时插探针
-              logToolCall({ provider: 'API', kind: '调用', name, args })
 
               if (!args.groupId) {
                 args.groupId = e.group_id + '' || e.sender.user_id + ''
@@ -870,7 +867,6 @@ class Core {
                     sender
                   }), e)
                   logger.info(`[Chatgpt][API][工具返回][${name}]: ${JSON.stringify(functionResult)}`)
-                  logToolCall({ provider: 'API', kind: '返回', name, result: functionResult })
                 } else {
                   functionResult = `Function ${name} not found.`
                   logger.warn(functionResult)
@@ -878,7 +874,6 @@ class Core {
               } catch (err) {
                 functionResult = `Error executing function ${name}: ${err.message}`
                 logger.error(functionResult)
-                logToolCall({ provider: 'API', kind: '异常', name, note: err?.message || String(err) })
               }
 
               toolForwardRecords.push({
@@ -993,8 +988,6 @@ async function executeResponsesToolCalls(core, e, toolCalls, funcMap, isAdmin, s
 
     logger.info(`[Chatgpt][Responses][工具调用][${name}]: ${JSON.stringify(args)}`)
     const toolArgsForForward = redactArgsForLog(name, args)
-    // 落盘一份脱敏记录：控制台在这台机器上抓不到，排障不能靠临时插探针
-    logToolCall({ provider: 'Responses', kind: '调用', name, args })
     if (!args.groupId) args.groupId = e.group_id + '' || e.sender.user_id + ''
     try {
       parseInt(args.groupId)
@@ -1007,7 +1000,6 @@ async function executeResponsesToolCalls(core, e, toolCalls, funcMap, isAdmin, s
       if (funcMap[name.trim()]) {
         functionResult = await funcMap[name.trim()].exec.bind(core)(mergeTrustedToolArgs(args, { isAdmin, sender }), e)
         logger.info(`[Chatgpt][Responses][工具返回][${name}]: ${JSON.stringify(functionResult)}`)
-        logToolCall({ provider: 'Responses', kind: '返回', name, result: functionResult })
       } else {
         functionResult = `Function ${name} not found.`
         logger.warn(functionResult)
@@ -1015,7 +1007,6 @@ async function executeResponsesToolCalls(core, e, toolCalls, funcMap, isAdmin, s
     } catch (err) {
       functionResult = `Error executing function ${name}: ${err.message}`
       logger.error(functionResult)
-      logToolCall({ provider: 'Responses', kind: '异常', name, note: err?.message || String(err) })
     }
 
     toolForwardRecords.push({

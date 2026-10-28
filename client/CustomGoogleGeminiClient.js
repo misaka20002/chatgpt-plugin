@@ -8,7 +8,6 @@ import { Config } from '../utils/config.js'
 import { syncInnerOs } from '../utils/innerOs.js';
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 import { redactArgsForLog } from '../utils/toolArgRedaction.js'
-import { logToolCall } from '../utils/toolCallLog.js'
 import { buildGeminiInlineParts, pickMediaList } from '../utils/visionPayload.js'
 
 const BASEURL = 'https://generativelanguage.googleapis.com'
@@ -479,8 +478,6 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       for (let fc of functionCall) {
         const funcName = fc.name
         logger.info(`[Chatgpt][Gemini][工具调用][${funcName}]: ${JSON.stringify(fc.args || {})}`)
-        // 落盘一份脱敏记录：控制台在这台机器上抓不到，排障不能靠临时插探针
-        logToolCall({ provider: 'Gemini', kind: '调用', name: funcName, args: fc.args || {} })
         const toolArgsForForward = _.cloneDeep(fc.args || {})
         let chosenTool = this.tools.find(t => t.name === funcName)
         /**
@@ -522,10 +519,8 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
             })
             functionResponse.response.content = await chosenTool.func(args, this.e)
             logger.info(`[Chatgpt][Gemini][工具返回][${funcName}]: ${JSON.stringify(functionResponse.response.content)}`)
-            logToolCall({ provider: 'Gemini', kind: '返回', name: funcName, result: functionResponse.response.content })
           } catch (err) {
             logger.error(err)
-            logToolCall({ provider: 'Gemini', kind: '异常', name: funcName, note: err?.message || String(err) })
             functionResponse.response.content = {
               error: `Function execute error: ${err.message}`
             }

@@ -14,7 +14,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 | `apps/派蒙meme.js`、`utils/memeCategory.js`、`resources/memeList/` | [meme](docs/agent-guides/meme.md)；改模板另读渲染指南 |
 | `utils/config.js`、`guoba.support.js`、provider 输出上限、`model/SubLLM.js` 参数传递 | [配置](docs/agent-guides/configuration.md) |
 | 插件注册、动态规则、priority、定时任务、Redis 操作、遗留接口 | [运行时](docs/agent-guides/runtime.md) |
-| 与框架交互（事件的只读字段、accept 阶段、规则匹配语义、日志通道）、多账号与适配器、在这台机器上部署与排障、本机 git 的坑 | [宿主契约与本机环境](docs/agent-guides/host-environment.md) |
+| 多账号与适配器字段（`Bot.bots` / `Bot.uin` / `Bot.adapter`）、本机 Windows 开发机的 git 与读写习惯 | [本机环境](docs/agent-guides/host-environment.md) |
 | 选择/编写测试、mock、临时探针、测试环境排障、CI workflow 改动与复跑、远端 PR 合并前验证 | [测试](docs/agent-guides/testing.md) |
 
 ## Agent skills
@@ -47,7 +47,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - **需求多轮确认后先交方案、不动代码**：结论按「待批方案」列出，等用户明确说「开始 / 动手 / 执行」再实现；回答完问题、说「按推荐来」都不算开工许可。
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
 - **子 agent 一律前台派生**（评审两轴、调研）：后台派生会被归入「自动团队」，出生即可被停止且**跳过完成通知**，结果必丢（实测 3 次无一存活）；两轴评审在同一条消息里一起发出。证据见[调查记录](.scratch/group-notice-todo/research.md)。
-- **本机是 Windows / Git Bash：文件一律走专用工具**——读用 `Read`（不知道行号时先 `Grep -n` 定位，再带 `offset`/`limit`），搜用 `Grep` / `Glob`；`sed` / `awk` / `tail` / `grep -r` / `find` 不用。长输出落 `temp/` 再读，判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不接 `tail` / `grep` 管道。git 的坑（`rev-parse --short` 只收单参数、`git grep` 无 `--branches`、`ref:path` 要加 `MSYS_NO_PATHCONV=1`、**历史取证别信 `-S` 的返回顺序**）见[宿主契约](docs/agent-guides/host-environment.md) §三。
+- **本机是 Windows / Git Bash：文件一律走专用工具**——读用 `Read`（不知道行号时先 `Grep -n` 定位，再带 `offset`/`limit`），搜用 `Grep` / `Glob`；`sed` / `awk` / `tail` / `grep -r` / `find` 不用。长输出落 `temp/` 再读，判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不接 `tail` / `grep` 管道。git 的坑：`rev-parse --short` 只收单参数、`git grep` 无 `--branches`、`ref:path` 要加 `MSYS_NO_PATHCONV=1`、**历史取证别信 `-S` 的返回顺序**，细节见[本机环境](docs/agent-guides/host-environment.md) §二。
 - **含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`。
 
 ## 运行环境与入口

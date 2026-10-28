@@ -66,6 +66,6 @@ Status: done
 
 ## Further Notes
 
-- 白名单非空时，被挡账号上每条点名消息都会打一条 `logger.info`；该级别不落文件（见 `docs/agent-guides/host-environment.md` 的日志通道表），活跃群会让 stdout 变吵。真嫌吵就降成 debug 输出，判定逻辑不用动。
+- 白名单非空时，被挡账号上每条点名消息都会打一条 `logger.info`；该级别不落文件，活跃群会让 stdout 变吵。真嫌吵就降成 debug 输出，判定逻辑不用动。
 - 被挡消息若同时含 AI 第一人称，`chatgpt()` 与 `chatgpt_for_firstperson_call()` 会各打一条：loader 在规则返回 `false` 后继续匹配同插件的下一条规则。两条都不落文件，量级只与「含第一人称的被挡消息」相关。
 - 宿主的 `accept` 阶段不能当闸门：返回 `"return"` 会终止整条消息链，连其他插件一起掐掉。这条已写进 ADR，避免后来者再试一次。

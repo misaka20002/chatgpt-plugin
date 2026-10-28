@@ -8,7 +8,6 @@ import { sendToolCallForwardMsg, sendToolRoundTextForwardMsg } from '../utils/to
 import { normalizeModelText } from '../utils/thinking.js'
 import { fetchWithConnectionRetry } from '../utils/network-retry.js'
 import { redactArgsForLog } from '../utils/toolArgRedaction.js'
-import { logToolCall } from '../utils/toolCallLog.js'
 import { buildClaudeImageBlocks, pickMediaList } from '../utils/visionPayload.js'
 
 const BASEURL = 'https://api.anthropic.com'
@@ -359,8 +358,6 @@ export class ClaudeAPIClient extends BaseClient {
         let resultContent
         let isError = false
         logger.info(`[Chatgpt][Claude][工具调用][${name}]: ${JSON.stringify(args)}`)
-        // 落盘一份脱敏记录：控制台在这台机器上抓不到，排障不能靠临时插探针
-        logToolCall({ provider: 'Claude', kind: '调用', name, args })
         try {
           if (!chosenTool) {
             isError = true
@@ -380,13 +377,11 @@ export class ClaudeAPIClient extends BaseClient {
             }
             resultContent = await chosenTool.func(execArgs, this.e)
             logger.info(`[Chatgpt][Claude][工具返回][${name}]: ${this._stringifyToolResult(resultContent)}`)
-            logToolCall({ provider: 'Claude', kind: '返回', name, result: this._stringifyToolResult(resultContent) })
           }
         } catch (err) {
           isError = true
           resultContent = `Error executing function ${name}: ${err.message}`
           logger.error(resultContent)
-          logToolCall({ provider: 'Claude', kind: '异常', name, note: err?.message || String(err) })
         }
         toolForwardRecords.push({
           platform: 'Claude',
