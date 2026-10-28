@@ -1756,6 +1756,45 @@ export function supportGuoba() {
           component: 'InputTextArea'
         },
         {
+          label: '智能模式 能力地图',
+          component: 'Divider'
+        },
+        {
+          field: 'enableCapabilityMap',
+          label: '启用插件能力地图',
+          bottomHelpMessage: '默认关闭。开启后，AI 才能知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。⚠️ 本功能**不会自动扫描**：只有主人发送 #chatgpt刷新功能表 才会生成或更新能力表（1157 条指令规模实测约 3 分钟，并消耗审核 token）；不发就一直用上次生成的旧表。功能本身只读其他插件、不执行任何指令，只在本地写一份自己的缓存（data/chatgpt/capability）。',
+          component: 'Switch'
+        },
+        {
+          field: 'capabilityDirectoryLimit',
+          label: '目录展开的插件类数上限',
+          bottomHelpMessage: '两级目录只注入「插件类名 + 指令条数」，按指令数降序展开前 N 个类。实测 100 类约 1000 token/次请求（旧版注入 300 条指令约 8000 token）。未展开的类仍可用类名或关键词查询',
+          component: 'InputNumber',
+          componentProps: {
+            min: 20,
+            max: 200
+          }
+        },
+        {
+          field: 'capabilityAuditProvider',
+          label: '能力表审核用哪个供应商',
+          bottomHelpMessage: '⚠️ 刷新能力表时，脱敏后的指令清单会交给该供应商做「描述翻译 + 脱敏审核」，可能额外消耗 token。审核用哪个模型由该供应商自己的模型配置决定，这里不再单独填写；空值跟随当前使用的供应商。审核只在发送 #chatgpt刷新功能表 那一刻执行一次，不是每轮对话。',
+          component: 'Select',
+          componentProps: {
+            options: [{ label: '跟随当前供应商', value: '' }, ...providerOptions]
+          }
+        },
+        {
+          field: 'capabilityAuditConcurrency',
+          label: '审核并发批数',
+          bottomHelpMessage: '同时并行几批审核请求。实测 1161 条分成 15 批：串行约 8 分 30 秒，3 路并发约 3 分钟。调高可能撞供应商速率限制，上限 5；网络或供应商限流时调回 1',
+          component: 'InputNumber',
+          componentProps: {
+            min: 1,
+            max: 5
+          }
+        },
+        {
           label: '智能模式 记忆设置',
           component: 'Divider'
         },
