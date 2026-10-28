@@ -70,6 +70,7 @@ function toPatchFile (patch) {
   const plugin = { key: patch.key, fingerprint: patch.fingerprint }
   // 记下来源哈希：上游只改关键词时指纹不变，靠它判断缓存有没有过期
   if (patch.sha256) plugin.sha256 = patch.sha256
+  if (patch.revision) plugin.revision = patch.revision
   return { schema: 1, plugin, commands }
 }
 
@@ -91,4 +92,39 @@ export function savePatch (patch, { sha256: sourceHash } = {}) {
     globalThis.logger?.warn?.(`[Chatgpt][commandMap] 补丁落盘失败：${err.message}`)
     return false
   }
+}
+
+/**
+ * 本地记住的云端版本号。
+ *
+ * 存在补丁目录里（`data/chatgpt/commandMaps/.revision`），跟补丁一起被清掉就一起重来，
+ * 不会出现「补丁删了但版本号还停在新版」这种既不下也不更新的死状态。
+ */
+function revisionPath () {
+  return path.join(commandMapDir(), '.revision')
+}
+
+/** @returns {number} 没同步过时返回 0 */
+export function readLocalRevision () {
+  try {
+    return Number(fs.readFileSync(revisionPath(), 'utf8').trim()) || 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * 记下这次同步到的云端版本号。
+ * @param {number} revision
+ * @returns {number} 落盘的值
+ */
+export function saveLocalRevision (revision) {
+  const value = Number(revision) || 0
+  try {
+    fs.mkdirSync(commandMapDir(), { recursive: true })
+    fs.writeFileSync(revisionPath(), `${value}\n`, 'utf8')
+  } catch (err) {
+    globalThis.logger?.warn?.(`[Chatgpt][commandMap] 版本号落盘失败：${err.message}`)
+  }
+  return value
 }

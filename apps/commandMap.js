@@ -46,7 +46,7 @@ export class commandMap extends plugin {
     try {
       const result = await syncPatches({ indexUrl, pluginKeys })
       const lines = [
-        `更新完成（耗时 ${((Date.now() - startedAt) / 1000).toFixed(1)}s）`,
+        `更新完成（版本 ${result.revision}，耗时 ${((Date.now() - startedAt) / 1000).toFixed(1)}s）`,
         `已更新 ${result.updated} 份 ｜ 云端没有 ${result.skipped} 份 ｜ 失败 ${result.failed} 份`
       ]
       if (result.errors.length) lines.push(`失败原因：${result.errors.slice(0, 3).join('；')}`)

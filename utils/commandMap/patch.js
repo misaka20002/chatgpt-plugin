@@ -62,6 +62,8 @@ export function normalizePatch (raw) {
     fingerprint: typeof plugin.fingerprint === 'string' ? plugin.fingerprint : '',
     // 来源哈希：用来判断缓存是否已过期。指纹只覆盖写法集合，上游单改关键词时它不变
     sha256: typeof plugin.sha256 === 'string' ? plugin.sha256 : '',
+    // 发布版本号：整数，单调递增。人工排查用，判断「云端有没有新版」看索引的总版本号
+    revision: Number(plugin.revision) || 0,
     commands
   }
 }
