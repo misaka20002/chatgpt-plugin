@@ -134,7 +134,17 @@ export class APTool extends AbstractTool {
       portrait: ' --width 832 --height 1216'
     };
 
+    // 入队型插件（nai-plugin-1 / nai-plugin-4 / paimonnai-plugin）把请求丢进自己的队列就返回，
+    // 此刻图还没生成、出图由插件自己发到会话，所以不能对模型报「已画好」。
+    const drawQueued = 'Draw request accepted and queued; the picture is NOT ready yet. It will be sent to the chat automatically by the drawing plugin when finished. Tell the user it is being drawn and will arrive shortly — do not claim it is done, and do not call this tool again for the same request.'
+
+    // 插件在「这次没画」的路径（额度、CD、群未开启、参数错）上返回 false；有的会自己 e.reply 原因，
+    // 有的不会（ap-plugin 的「SD绘图功能未开启」分支把 e.reply 写在了 return 之后），所以文案不能断言「已告知用户」。
+    // 只认严格 false：个别版本没有 return 语句，undefined 必须按已受理处理。
+    const drawRejected = 'Error: the drawing plugin did not accept this request, so no picture is being drawn. Do not claim a picture was drawn and do not retry automatically. The plugin may already have told the user why — do not invent a reason.'
+
     // 统一结果处理：画图成功时异步推送 Prompt Gallery
+    // 入队型插件在本函数返回时图还没生成，capturedImages 必然为空，因此它们的作品不会进画廊（既成事实，非本次引入）
     const finishDraw = (resultMsg, success) => {
       if (enableGallery && success && capturedImages.length > 0) {
         // 异步推送，不阻塞返回
@@ -172,8 +182,8 @@ export class APTool extends AbstractTool {
         new_e.msg += Math.random() < 0.50 ? '' : (Math.random() < 0.75 ? ', smea, dynoff' : ', smea');
 
         logger.info('[ChatGPT][DrawTool]开始调用nai插件绘画：\nmsg: ', new_e.msg);
-        await nai.txt2img(new_e);
-        return finishDraw('draw success, picture has been sent.', true);
+        const accepted = await nai.txt2img(new_e);
+        return finishDraw(accepted === false ? drawRejected : drawQueued, false);
       }
 
       // 使用nai插件
@@ -198,8 +208,8 @@ export class APTool extends AbstractTool {
         if (new_e.img?.length) new_e.msg += ', --reference_strength 0.3';
 
         logger.info('[ChatGPT][DrawTool]开始调用nai4插件绘画：\nmsg: ', new_e.msg);
-        await nai.text(new_e);
-        return finishDraw('draw success, picture has been sent.', true);
+        const accepted = await nai.text(new_e);
+        return finishDraw(accepted === false ? drawRejected : drawQueued, false);
       }
 
       // 使用ap插件
@@ -220,8 +230,8 @@ export class APTool extends AbstractTool {
         const strPaint = aspectRatioText[aspectRatio] ?? '';
         new_e.msg = `#绘图${strPaint} ${charactersName}, ${Config.nai3PluginToPaintPrefix}, ${processedTags}, ${qualityTags}`;
         logger.info('[ChatGPT][DrawTool]开始调用ap插件绘画：\nmsg: ', new_e.msg);
-        await ap.aiPainting(new_e);
-        return finishDraw('draw success, picture has been sent.', true);
+        const finished = await ap.aiPainting(new_e);
+        return finishDraw(finished === false ? drawRejected : 'draw success, picture has been sent.', finished !== false);
       }
 
       // 使用SF插件sf
