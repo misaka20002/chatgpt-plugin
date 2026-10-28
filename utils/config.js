@@ -205,6 +205,9 @@ const defaultConfig = {
   enablePrivateChat: false,
   whitelist: [],
   blacklist: [],
+  // Bot 响应白名单：按账号（self_id）决定哪个 Bot 响应对话触发，多开 QQ / 多适配器时防重复答话。
+  // 空数组=不启用（所有账号都响应）。与上面的 whitelist / blacklist 不是一层：那两项管提问者与群。
+  botReplyWhitelist: [],
   ttsRegex: '/匹配规则/匹配模式',
   slackUserToken: '',
   slackBotUserToken: '',

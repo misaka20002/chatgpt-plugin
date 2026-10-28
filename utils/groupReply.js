@@ -1,6 +1,7 @@
 import { resolveProvider } from './providers.js'
 import { Config } from './config.js'
 import { defaultGroupReplyDecisionPrompt, normalizeGroupReplyConfig } from './groupReplyConfig.js'
+import { isBotReplyAllowed } from './botReplyWhitelist.js'
 
 const GROUP_QUIET_MS = 10000
 
@@ -15,7 +16,11 @@ const groupKey = e => `${botId(e)}:${e.group_id}`
 const settings = () => normalizeGroupReplyConfig(Config.groupReply)
 const authorized = e => {
   const config = settings()
-  return !!e.isGroup && !!botId(e) && config.enabled && config.groups.some(g => g.groupId === String(e.group_id) && g.switchOn)
+  // 在候选准入处拦：白名单外的账号连判断都不跑，省掉一次注定白跑的模型请求。
+  // observe() 对每条群消息都会调用本函数，所以这里必须静默，日志只留在 chat.js 的三个入口。
+  // 取不到账号在这里本来就不准入（沿用既有的 !!botId 前置），所以白名单的 fail-open 不覆盖这条路径。
+  return !!e.isGroup && !!botId(e) && isBotReplyAllowed(e, { silent: true }) &&
+    config.enabled && config.groups.some(g => g.groupId === String(e.group_id) && g.switchOn)
 }
 
 // TRSS 的 bot/group/member 等属性不可枚举，普通赋值复制会丢失回复所需的上下文。

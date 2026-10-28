@@ -9,6 +9,36 @@ import { formatMcpServersForGuoba, stringifyMcpServersFromGuoba } from './utils/
 import { RECALL_MODE_ALL } from './utils/memory/recallMode.js'
 import lodash from "lodash";
 
+/**
+ * 「Bot 响应白名单」的候选账号：遍历所有已注册适配器下的账号（TRSS 的 Bot.bots）。
+ *
+ * 已保存但当前不在线的账号也补进候选——否则面板可能把它当脏值丢掉，
+ * 而「先配好白名单再上号」是很常见的顺序。
+ */
+function botAccountOptions() {
+  const options = []
+  const listed = new Set()
+  const bots = globalThis.Bot?.bots
+  for (const [selfId, bot] of Object.entries(bots || {})) {
+    const value = String(selfId).trim()
+    if (!value || listed.has(value)) continue
+    listed.add(value)
+    // 只读 info 上的普通属性：部分适配器把 nickname 写成 getter，未登录时读它会抛错
+    const nickname = bot?.info?.nickname || ''
+    const adapter = bot?.adapter?.name || bot?.adapter?.id || ''
+    const suffix = [nickname, adapter].filter(Boolean).join('｜')
+    options.push({ label: suffix ? `${value}（${suffix}）` : value, value })
+  }
+  const saved = Array.isArray(Config.botReplyWhitelist) ? Config.botReplyWhitelist : []
+  for (const item of saved) {
+    const value = String(item ?? '').trim()
+    if (!value || listed.has(value)) continue
+    listed.add(value)
+    options.push({ label: `${value}（当前未登录）`, value })
+  }
+  return options
+}
+
 // 支持锅巴
 export function supportGuoba() {
   const roleOptions = avatarOptions()
@@ -56,6 +86,18 @@ export function supportGuoba() {
               { label: 'at', value: 'at' },
               { label: '#chat', value: 'prefix' }
             ]
+          }
+        },
+        {
+          field: 'botReplyWhitelist',
+          label: 'Bot 响应白名单账号',
+          bottomHelpMessage: '多开 QQ / 多适配器时，只有列表内的 Bot 账号会响应对话触发（含群聊自主回复与第一人称呼叫）；留空表示所有账号都响应。' +
+            '候选来自所有已注册适配器下的账号，也可以直接输入尚未登录的账号。' +
+            '与「对话白名单」不是一层：那个管谁能用，这个管哪个 Bot 说话。',
+          component: 'Select',
+          componentProps: {
+            mode: 'tags',
+            options: botAccountOptions()
           }
         },
         {
@@ -2860,8 +2902,13 @@ export function supportGuoba() {
                 return Result.error(`MCP 服务器配置保存失败: ${err.message}`)
               }
             }
+            // tags 下拉交回的就是数组，这里只做去空白与去重；空列表 = 不启用
+            if (keyPath === 'botReplyWhitelist') {
+              const list = Array.isArray(value) ? value : String(value ?? '').split(/[,，;；|\s]/)
+              value = [...new Set(list.map(item => String(item).trim()).filter(Boolean))]
+            }
             // 处理黑名单
-            if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
+            else if (keyPath === 'blockWords' || keyPath === 'promptBlockWords' || keyPath === 'initiativeChatGroups' || keyPath === 'paimon_chuoyichuo_ByMsgGroups') {
               value = value.toString().split(/[,，;；\|]/)
             }
             else if (keyPath === 'blacklist' || keyPath === 'whitelist') {
