@@ -268,6 +268,11 @@ export class ChatGPTAPI {
         return content
     }
 
+    _cloneContentParts(content: string | openai.ChatCompletionContentPart[]): string | openai.ChatCompletionContentPart[] {
+        if (!Array.isArray(content))
+            return content
+        return content.map(part => ({ ...part }))
+    }
     /**
      * Sends a message to the OpenAI chat completions endpoint, waits for the response
      * to resolve, and returns the response.
@@ -817,7 +822,13 @@ export class ChatGPTAPI {
                 continue
             }
 
-            const parentRequestMessage = this._toRequestMessage(parentMessage)
+            // 工具轮：本轮用户消息的图片落库时被 _stripImages 换成了 [图片]，
+            // 这次请求按调用方给的原始 content 回放，否则模型拿到工具结果后就看不出图。
+            // 必须逐段复制：syncInnerOs 会原地改首个 text part，共享数组会把全局提示写回调用方。
+            const requestParent = opts.turnContent?.id === parentMessage.id
+                ? { ...parentMessage, originalContent: this._cloneContentParts(opts.turnContent.content) } as types.ChatMessage
+                : parentMessage
+            const parentRequestMessage = this._toRequestMessage(requestParent)
             parentMessageId = parentMessage.parentMessageId
 
             if (!parentRequestMessage) {

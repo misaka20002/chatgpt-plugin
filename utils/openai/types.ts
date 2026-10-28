@@ -62,6 +62,8 @@ export type SendMessageOptions = {
     >
     /** 面包版 思考模式/全局破限：注入到第一条 user 消息的 prompt 文本 */
     paimon_globalInnerOs?: string
+    /** 工具轮：本轮用户消息的原始 content，按消息 id 回放（库里只剩 [图片] 占位符） */
+    turnContent?: { id: string, content: string | openai.ChatCompletionContentPart[] }
 }
 
 export type MessageActionType = 'next' | 'variant'

@@ -33,6 +33,16 @@ mock.module('../utils/proxy.js', { namedExports: { newFetch: async (url, options
   requests.push(body)
   return Response.json(respond(body, requests.length))
 } } })
+// 引用图下载与转码是外部边界：只桩掉 loadQuotedImages，其余导出（含 resolveTurnSystem）保留真实实现。
+// stub 保留「没有 e.img 就没有图」的真实语义，否则会影响本文件其它用例的请求形状。
+const quotedImageModule = await import('../utils/quotedImage.js')
+const QUOTED_IMAGE_BYTES = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+mock.module('../utils/quotedImage.js', { namedExports: {
+  ...quotedImageModule,
+  loadQuotedImages: async e => (Array.isArray(e?.img) && e.img.length
+    ? { medias: [{ mimeType: 'image/png', data: QUOTED_IMAGE_BYTES }], failed: 0 }
+    : { medias: [], failed: 0 })
+} })
 globalThis.logger = { info() {}, debug() {}, warn() {}, error() {}, mark() {} }
 globalThis.redis = { get: async () => null }
 const { Config, providerDefaults } = await import('../utils/config.js')
@@ -145,4 +155,27 @@ test('Responses 官网续聊只发送增量，工具回填使用本轮 ID；账�
       assert.deepEqual(requests.at(-1).input.slice(0, 48), messages)
     }
   } finally { row.responsesStore = false }
+})
+
+test('引用图在工具轮仍随用户轮发送：api 与 gemini 都只带一次、位置不变', async () => {
+  event.img = ['https://example.invalid/quoted.png']
+  try {
+    for (const type of ['api', 'gemini']) {
+      requests.length = 0; toolExecutions = 0
+      respond = (body, n) => responses[type](n === 2 ? '工具后的回答' : '下一轮回答', n === 1)
+      const result = await core.sendMessage('这图里是什么', { messages: [] }, type, event, { enableSmart: true })
+      assert.equal(result.text, '工具后的回答')
+      assert.equal(requests.length, 2)
+      assert.equal(JSON.stringify(requests[1]).split(QUOTED_IMAGE_BYTES).length - 1, 1, `${type} 第二次请求只带一次图`)
+      const userTurn = requestMessages(type, requests[1])[0]
+      if (type === 'gemini') {
+        assert.deepEqual(userTurn.parts[1], { inline_data: { mime_type: 'image/png', data: QUOTED_IMAGE_BYTES } })
+        assert.ok(requestMessages(type, requests[1]).at(-1).parts.every(part => !part.inline_data))
+      } else {
+        assert.deepEqual(userTurn.content[1], { type: 'image_url', image_url: { url: `data:image/png;base64,${QUOTED_IMAGE_BYTES}` } })
+      }
+    }
+  } finally {
+    delete event.img
+  }
 })

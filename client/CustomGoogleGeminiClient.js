@@ -126,6 +126,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
    *     toolMode: 'AUTO' | 'ANY' | 'NONE'
    *     search: boolean,
    *     codeExecution: boolean,
+   *     turnParts: { id: string, parts: Array<object> }?,
    * }} opt
    * @returns {Promise<{conversationId: string?, parentMessageId: string, text: string, thinking_text?: string, id: string}>}
    */
@@ -157,7 +158,7 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
 
     let systemMessage = opt.system
 
-    // 存储前清除多媒体数据，并保留 mime_type 的辅助函数
+    // 落库前把内联图片换成媒体占位，并保留 mime_type
     const getMessageForSave = (msg) => {
       let saveMsg = _.cloneDeep(msg);
       if (saveMsg.parts) {
@@ -196,6 +197,12 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
     // }
     const idThis = crypto.randomUUID()
     const idModel = crypto.randomUUID()
+    /**
+     * 本轮原始内容（文本 + 内联图片），工具轮按 id 回填到最初那一轮用。
+     * 只活在本次请求：库里那条用户消息已被 getMessageForSave 换成媒体占位。
+     * @type {{ id: string, parts: Array<object> } | undefined}
+     */
+    let turnParts = opt.turnParts
     if (opt.functionResponse && !Array.isArray(opt.functionResponse)) {
       opt.functionResponse = [opt.functionResponse]
     }
@@ -221,10 +228,15 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
       }
 
     // 图片只跟用户这一轮走：functionResponse 轮再挂 inline_data 会被 Gemini 判为
-    // "Request contains an invalid argument"（AstrBot 同样只在用户消息里放图片，
-    // 工具回调轮只回 function_response）
+    // "Request contains an invalid argument"。工具轮在拼请求体时按 turnParts 把这份
+    // parts 回填到最初那一轮，回调轮本身仍然只有 function_response。
     if (!opt.functionResponse?.length) {
-      thisMessage.parts.push(...buildGeminiInlineParts(pickMediaList(opt)))
+      const inlineParts = buildGeminiInlineParts(pickMediaList(opt))
+      thisMessage.parts.push(...inlineParts)
+      // 没有工具就没有工具轮，不必为回填留一份 base64 副本（SubLLM 单图识别走的就是这条路）
+      if (inlineParts.length > 0 && this.tools?.length > 0) {
+        turnParts = { id: idThis, parts: _.cloneDeep(thisMessage.parts) }
+      }
     }
     history.push(_.cloneDeep(thisMessage))
     const maxHistoryWithCurrentMessage = maxHistory > 0 ? maxHistory + 1 : 0
@@ -244,7 +256,17 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
        * @type Array<Content>
        */
       // 本地缓存还有 text/content 和链指针；只发送 Gemini 协议字段，不能原地删除缓存的历史关联。
-      contents: history.map(({ role, parts }) => ({ role, parts })),
+      // 工具轮在同一处回填本轮原始图片：落库时 inline_data 已被 getMessageForSave 换成文本占位符，
+      // 而 generateContent 每次请求都必须自带完整上下文，不回填的话模型拿到工具结果后就看不出图。
+      // 首段文本以历史为准（syncInnerOs 可能刚写入全局提示），其余 parts 用本轮原始内容。
+      contents: history.map(({ id, role, parts }) => {
+        if (!turnParts || id !== turnParts.id) return { role, parts }
+        const restored = _.cloneDeep(turnParts.parts)
+        if (restored[0]?.text !== undefined && typeof parts?.[0]?.text === 'string') {
+          restored[0].text = parts[0].text
+        }
+        return { role, parts: restored }
+      }),
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.OFF },
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.OFF },
@@ -519,10 +541,11 @@ export class CustomGoogleGeminiClient extends GoogleGeminiClient {
         fcResults.push(functionResponse)
       }
       sendToolCallForwardMsg(this.e, toolForwardRecords, 'Gemini工具调用与返回')
-      // 工具回调轮不携带媒体：sendMessage 的 functionResponse 守卫已挡住重复发送，
-      // 这里先摘字段再 clone，避免把整段 base64 复制一遍进递归调用
+      // 工具回调轮不携带媒体：摘掉 media/medias 避免把整段 base64 复制进递归调用；
+      // 本轮原始内容必须带下去，它用于回填到最初那一轮，与回调轮本身无关
       const { media: _media, medias: _medias, ...optWithoutMedia } = opt
       let responseOpt = _.cloneDeep(optWithoutMedia)
+      if (turnParts) responseOpt.turnParts = turnParts
       responseOpt.parentMessageId = idModel
       responseOpt.functionResponse = fcResults
       responseOpt.toolChain = {
