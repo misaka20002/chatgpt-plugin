@@ -26,6 +26,9 @@
  * 8. 测试里不许手搓框架事件的身份字段（`isMaster` / `member`）——统一走共享夹具
  *    `test/helpers/trssEvent.mjs`。框架对这两个字段的写法是契约（不可写、不可配置），
  *    夹具一旦漂移，测试照样「通过」，线上却抛 TypeError（2026-10-28 线上真实故障）。
+ * 9. `docs/adr/` 与 `.scratch/` 的 markdown 里「约 N 条/个/处/种」必须同行带「实测」。
+ *    数字写进 ADR / spec 之后就没人管了：本仓吃过一次——ADR 写「21 个消息类、约 160 条 rule」，
+ *    实测 19 与 151，四份文档连带返工。规则 7 只管用户文案里的时长，管不到这里。
  *
  * 已评估但**未实现**的候选（写在注释里是为了让后来者知道没有这道门禁，别误以为有）：
  * - 锅巴 schema 的每个 `field` 都要能在 `utils/config.js` 的默认配置里找到。
@@ -123,6 +126,36 @@ for (const file of SCAN_FILES) {
   }
 }
 
+// 规则 9：ADR / spec 里的近似数量断言必须有实测依据（规则 7 只管用户文案里的时长）
+const APPROX_COUNT_RE = /约\s*\d+\s*(?:个|条|处|种)/
+const APPROX_DOC_DIRS = ['docs/adr', '.scratch']
+
+function scanApproxClaims(dir) {
+  let entries
+  try {
+    entries = readdirSync(path.join(ROOT, dir), { withFileTypes: true })
+  } catch {
+    return // 目录不存在就跳过：分支裁剪后可能出现
+  }
+  for (const entry of entries) {
+    const relative = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue
+      scanApproxClaims(relative)
+      continue
+    }
+    if (!entry.isFile() || path.extname(entry.name) !== '.md') continue
+    const lines = readFileSync(path.join(ROOT, relative), 'utf8').split('\n')
+    lines.forEach((line, index) => {
+      if (line.includes('lint-ignore') || line.includes('实测')) return
+      if (!APPROX_COUNT_RE.test(line)) return
+      violations.push(`${relative.split(path.sep).join('/')}:${index + 1} 近似数量断言没有实测依据；写实测值并注明规模，或改成「视规模而定」`)
+    })
+  }
+}
+
+for (const dir of APPROX_DOC_DIRS) scanApproxClaims(dir)
+
 const scripts = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts
 const scriptsText = Object.values(scripts).join('\n')
 
@@ -184,4 +217,4 @@ if (violations.length) {
   for (const item of violations) console.error('  - ' + item)
   process.exit(1)
 }
-console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物、时长断言须实测')
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物、时长断言须实测、近似数量须实测')
