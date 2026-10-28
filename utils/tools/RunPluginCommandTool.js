@@ -1,7 +1,7 @@
 import { AbstractTool } from './AbstractTool.js'
 import { Config } from '../config.js'
 import { loadCommandIndex } from '../commandMap/indexLoader.js'
-import { executeCommand, findCommandEntry } from '../commandMap/execute.js'
+import { executeCommand, findCommandEntry, isCallableCall } from '../commandMap/execute.js'
 import { recall } from '../commandMap/recall.js'
 import { putPending, takePending, peekPending, samePending, isAffirmative } from '../commandMap/confirm.js'
 
@@ -106,11 +106,26 @@ export class RunPluginCommandTool extends AbstractTool {
     // 只给原话时自己匹配：把「查一步、做一步」压成一次调用，
     // 否则模型经常查完就改用别的工具或直接回话（2026-10-28 线上实测）。
     if (!command) {
-      const { matches } = recall(query, entries, { limit: 3 })
+      const { matches } = recall(query, entries, { limit: 5 })
       if (!matches.length) {
         return `Error: 本机没有和「${query}」对得上的插件指令。可以用 lookupPluginCapability 换个说法再确认，仍然没有就如实告诉用户暂时做不到，不要编。`
       }
-      entry = matches[0]
+      // 候选里可能混着「索引里有、本机规则匹配不到」的伪写法：线上「看一下服务器状态」
+      // 召回的第一名是 `#^服务器状态`（三角洲规则展开出的假写法），派发必然 not-found，
+      // 而真正的 `#状态` 就在候选里排第二。先按可达性筛，别把第一名交给执行不了的写法。
+      entry = null
+      for (const candidate of matches) {
+        if (!candidate.command) continue
+        if (!await isCallableCall(candidate.command, { e })) {
+          globalThis.logger?.mark?.(`[Chatgpt][commandMap] 候选「${candidate.command}」（${candidate.plugin}）本机匹配不到，跳过`)
+          continue
+        }
+        entry = candidate
+        break
+      }
+      if (!entry) {
+        return `Error: 本机没有和「${query}」对得上的插件指令。可以用 lookupPluginCapability 换个说法再确认，仍然没有就如实告诉用户暂时做不到，不要编。`
+      }
       command = entry.command
       if (!command) return `Error: 「${query}」匹配到的指令没有固定触发词，只能由用户自己操作。`
       globalThis.logger?.mark?.(`[Chatgpt][commandMap] 原话「${query}」匹配到 ${command}（${entry.plugin}）`)

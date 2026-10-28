@@ -350,3 +350,20 @@ export function findCommandEntry (entries, call) {
   const key = commandKey(call)
   return (entries || []).find(entry => commandKey(entry.command) === key) || null
 }
+
+/**
+ * 这条写法在本机能不能真的派发出去。
+ *
+ * 索引可能来自别人的 fork，也可能混着展开正则时留下的伪写法（`#^服务器状态`）：
+ * 它们在索引里排得上名次，却过不了存在性校验。选候选前先用同一把尺子筛一遍，
+ * 好过派发出去再报 not-found——那时用户已经收到「没匹配到」了。
+ *
+ * @param {string} call 完整指令写法
+ * @param {{ e?: object }} [options]
+ * @returns {Promise<boolean>}
+ */
+export async function isCallableCall (call, { e } = {}) {
+  if (!call) return false
+  const loader = await loadFrameworkLoader()
+  return Boolean(loader && findRuleByCall(call, { loader, e }))
+}

@@ -83,6 +83,14 @@ describe('commandsFromReg：一条规则里的每种写法都要留下', () => {
     assert.deepEqual(commandsFromReg(''), [])
     assert.deepEqual(commandsFromReg(undefined), [])
   })
+
+  test('线上实例：交替分支里的转义元字符不能变成伪写法', () => {
+    // 2026-10-28 线上：`#^服务器状态` 抢走召回第一名，代执行必然 not-found，
+    // 用户听到的是「没匹配到这个命令」。展开出的写法必须自己能被这条规则匹配上。
+    assert.deepEqual(commandsFromReg('^(#三角洲|\\^)服务器状态$'), ['#三角洲服务器状态'])
+    // 剔掉元字符后能被规则接受的，要留下来（`#点歌$` → `#点歌`），不能连真写法一起丢
+    assert.deepEqual(commandsFromReg('^#点歌$|^点歌'), ['#点歌'])
+  })
 })
 
 describe('双过滤：凭证进不了表单', () => {  test('凭证类字段名被识别', () => {

@@ -12,6 +12,13 @@ import { redactText } from './redact.js'
 const MAX_VARIANTS = 6
 
 /**
+ * 残留的正则元字符。出现它就说明这条「写法」不是用户能打出来的字：
+ * `^(#三角洲|\^)服务器状态$` 的第二支会展开出 `#^服务器状态`，
+ * `^#星铁[上期|...]$` 会展开出 `#星铁[上期`。
+ */
+const REG_META_RE = /[\^$|\\[\]]/
+
+/**
  * 把触发正则还原成用户可能打的**全部**写法。
  *
  * 为什么不止一种：`#(全部面板更新|更新面板|面板更新)` 里每一支都是真实可用的写法，
@@ -29,6 +36,12 @@ export function commandsFromReg (reg) {
   const slashed = body.match(/^\/([\s\S]+)\/[a-z]*$/)
   if (slashed) body = slashed[1]
 
+  /**
+   * 自校验用的正则，与执行侧判「本机有没有这条指令」是同一把尺子（findRuleByCall）。
+   * 必须在削掉首尾锚点之前编译——校验的是原始规则的语义。
+   */
+  const tester = compileReg(body)
+
   body = body.replace(/^\^/, '').replace(/\$$/, '')
   // 断言组整块删掉：`(?!1|glm|gpt)` 这类只影响匹配，不是用户要打的字
   body = body.replace(/\((\?[!=<][^()]*)\)/g, '')
@@ -37,12 +50,34 @@ export function commandsFromReg (reg) {
 
   const commands = []
   for (const variant of expandAlternations(body)) {
-    const command = cleanupCommand(variant)
-    if (!command || commands.includes(command)) continue
+    let command = cleanupCommand(variant)
+    if (!command) continue
+    // 残留元字符：先把它们剔掉再校验（`^#点歌$|^点歌` 的第二支会留下 `#点歌$` → `#点歌`）。
+    // 剔干净仍不被这条规则接受，就是伪写法，丢弃——执行侧测的是同一条 reg，
+    // 这种写法进了索引只会抢走召回第一名，然后在存在性校验那里必然失败。
+    if (REG_META_RE.test(command)) {
+      command = command.replace(REG_META_RE, '')
+      if (!command || !(tester && tester.test(command))) continue
+    }
+    if (commands.includes(command)) continue
     commands.push(command)
     if (commands.length >= MAX_VARIANTS) break
   }
   return commands
+}
+
+/**
+ * 编译校验用的正则。规则本身写坏了就返回 null——那种规则在框架里也匹配不到任何消息，
+ * 它派生的写法一律按伪写法处理。
+ * @param {string} pattern
+ * @returns {RegExp | null}
+ */
+function compileReg (pattern) {
+  try {
+    return new RegExp(pattern)
+  } catch {
+    return null
+  }
 }
 
 /**

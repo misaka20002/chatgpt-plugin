@@ -12,7 +12,10 @@ const ENTRIES = [
   { plugin: '三角洲', pluginKey: 'delta', command: '#三角洲战绩', description: '查战绩', permission: '', risk: 'q', keys: [] },
   { plugin: '三角洲', pluginKey: 'delta', command: '#三角洲开启推送', description: '开启推送', permission: '', risk: 'w', keys: [] },
   { plugin: '三角洲', pluginKey: 'delta', command: '#三角洲关闭推送', description: '关闭推送', permission: '', risk: 'w', keys: [] },
-  { plugin: '椰奶', pluginKey: 'yenai', command: '#点赞', description: '为发送者或指定目标的QQ个人资料卡点赞', permission: '', risk: 'q', keys: [] }
+  { plugin: '椰奶', pluginKey: 'yenai', command: '#点赞', description: '为发送者或指定目标的QQ个人资料卡点赞', permission: '', risk: 'q', keys: [] },
+  // 线上 2026-10-28：三角洲规则展开出的伪写法抢了「服务器状态」召回第一名
+  { plugin: '三角洲', pluginKey: 'delta', command: '#^服务器状态', description: '', permission: '', risk: 'q', keys: [] },
+  { plugin: '状态', pluginKey: 'system/status.js', command: '#状态', description: '机器人的运行状态与统计信息', permission: '', risk: 'q', keys: ['状态'] }
 ]
 
 const config = { enableCapabilityMap: true }
@@ -27,6 +30,8 @@ mock.module('../utils/commandMap/indexLoader.js', {
 mock.module('../utils/commandMap/execute.js', {
   namedExports: {
     findCommandEntry: (entries, command) => entries.find(entry => entry.command === command) || null,
+    // 存在性校验：本机规则匹配不到的写法一律判不可执行（`#^服务器状态` 就是这种伪写法）
+    isCallableCall: async call => call !== '#^服务器状态',
     executeCommand: async (e, command, options) => {
       executed.push(command)
       lastTarget = options?.target || null
@@ -209,6 +214,15 @@ test('原话匹配不到任何指令时如实说没有，不自作主张执行',
 
   assert.deepEqual(executed, [])
   assert.match(text, /没有和/)
+})
+
+test('召回第一名是本机执行不了的伪写法时，跳过它执行真正的候选', async () => {
+  // 线上原话「看一下服务器状态」：第一名 `#^服务器状态` 必然 not-found，`#状态` 排在后面
+  const e = makeEvent()
+  const text = await new RunPluginCommandTool().func({ query: '服务器状态' }, e)
+
+  assert.deepEqual(executed, ['#状态'])
+  assert.match(text, /已执行/)
 })
 
 test('模型把参数拼进写法时，回退到已知写法再执行', async () => {
