@@ -21,6 +21,14 @@
 - **带服务端凭证的工具要防 confused deputy**：全局 key/token 会让任意聊天用户借 Bot 身份读它有权访问的资源，必须划清边界（`GithubAPITool` 的 `custom` 在配置了 `githubAPIKey` 时仅限主人）。这类 token 应在配置说明里强制"最小权限专用 token"（见锅巴 `githubAPIKey` 的描述）。
 - **外部响应必须有资源边界，redirect 按协议处理而非一刀切**：只限制"进模型的字符数"挡不住网络与内存消耗。GitHub 的 zipball / tarball 是公库免认证的 302 下载端点，`fetch` 默认 `redirect: 'follow'` 会整包下载。做法分两半：对预期为小型 JSON/文本的接口设**响应体字节上限**（`Content-Length` 声明值与流式累计值两处都卡，超限 `cancel()`）；对 redirect **按业务协议处理，不能无条件跟随到任意域名**——工具不需要跨域 redirect 时可以拒绝，协议正常使用 redirect 时（GitHub REST 官方就要求客户端能跟随它自己的 301/302）应解析 `Location` 后校验目标 origin/路径，再决定是否跟随，并设跳数上限（`GithubAPITool` 就是 `redirect: 'manual'` + 只跟随同一 API base + 最多 3 跳）。**媒体/文件下载类工具要用业务大小上限、类型校验与流式读取，不要机械照抄 `redirect: 'error'`**。另外**body 读取要留在获取响应头的同一个 try 里**——超时也可能发生在"响应头已到、body 很慢"阶段，那时 `TimeoutError` 只在 `read()` 上抛出（实测 undici 行为）。
 
+## 绘画工具（`draw`）
+
+`draw` 的 `plugin` 参数背后是两类返回语义，动文案或加分支前先分清：**入队型**把请求丢进插件自己的队列就返回，`await` 拿回控制权时图还没生成，出图由插件自己发到会话——`paimonnai-plugin` 已核实（调用 `enqueueBatches(...)` 时不 `await`、随后直接 `return true`，所以 `true` 只表示受理，队列里的额度校验可能在返回之后才失败），`nai-plugin-1` / `nai-plugin-4` 本机未安装，按同源实现推断属此类；**同步型**（`ap-plugin`，已核实）要等到出图并发出之后才返回。所以工具返回给模型的文案必须跟着分支走：对入队型只能说「已受理、图会由插件自己发出」，对同步型才能说「已画好」。**两个方向都是误报**——对入队型说完成，模型会对用户宣称画好了而图还没来；对同步型说「正在画」，用户会去等一张已经在群里的图。
+
+插件的 `return false` 表示「这次没画」（额度不足、CD 未过、群未开启、参数错）。**不能假定它一定告诉了用户原因**——`ap-plugin` 的「SD绘图功能未开启」分支把 `e.reply` 写在了 `return false` 之后，那条回复是死代码，用户什么都收不到。所以拒绝文案只能说「没画」，不能让模型替插件复述原因。工具**只在这三处**判断返回值，且只在**严格等于 `false`** 时回 `Error: …`；`true` 与 `undefined` 都按已受理处理——`nai-plugin` 未在本机安装，无法确认它的方法有没有 `return` 语句，用 `!result` 判断会把正常请求打成失败。`siliconflow-plugin` 的五个分支仍然丢弃返回值、成功即报成功，别把这条口径当成全仓规则。
+
+Prompt Gallery 的推送挂在 `capturedImages` 上，入队型插件返回时该数组必然为空，因此这类插件的作品不进画廊。这是改动前就存在的既成事实，不是回归；要修得让工具等到绘制完成，属于插件契约变更。
+
 ## 贴表情（`emojiLike`）
 
 两种表达面：`emotion` 报情绪、工具在**情绪池**里随机挑一张（16 个键固定，不新增情绪）；`face` 点名**表情目录**里的具体表情（12 个物件/动作）时不随机。准入标准只有一条——语义和名字对得上；因此池里不收节日/生肖/活动/联动、皮肤包、Unicode emoji（码点会贴出空白），旧池里的错配已按同一标准归位。`face` 目录封顶 12 个是 token 决定（schema 全量进每次请求，107 → 213 tokens）。`utils/face.js` 的 `faceMap` 只追加 id、不改旧名字。理由与替代方案见 [ADR 0008](../adr/0008-emoji-like-catalog-and-pool-admission.md)。
