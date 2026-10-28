@@ -46,10 +46,9 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - **量化断言必须来自实测**：文档、锅巴说明、用户文案里的耗时 / 条数 / token 数字，要么写实测值并注明测量规模与环境，要么写成「视规模而定」；不写「一两分钟」「几分钟」这类估计。本仓已吃过一次：审核文案写「一两分钟」，实测 8 分 30 秒，四倍偏差一直活到上线才被日志抓住。机械部分由 `test/lint.check.mjs` 规则 7 与规则 9 拦住（用户文案里的时长断言、ADR/spec 里的近似条数或个数，都必须带「实测」）。
 - **需求多轮确认后先交方案、不动代码**：结论按「待批方案」列出，等用户明确说「开始 / 动手 / 执行」再实现；回答完问题、说「按推荐来」都不算开工许可。
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
-- **一切需要结果的子 agent（含评审两轴与调研）一律前台派生，不要用 `run_in_background`；两轴评审还要在同一条消息里并发派出**（两次调用一次发出）——等一轴回来再派另一轴等于白等一轮。后台派生会把它变成"自动团队"成员：出生即可能被停止（运行时日志原文 “spawned after team cancel and was paused”）；当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），被终止（终态）后又**跳过完成通知**，结果必然丢失——评审与调研共 3 次实测无一存活。真正的后台并行是**任务粒度**（侧边栏多任务 /「保存到工作空间」多 Agent 协作），不是会话内子 agent。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
-- **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。**含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——一律用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`（随 `npm run check` / CI）。
-- **长输出与退出码**：长输出先落日志再取尾部（超限存档读不回），日志落 `.gitignore` 里的 `temp/`——`Read` 能直接打开；Git Bash 的 `/tmp` 映射到别处，`Read` 打不开只能退回 `cat`。**判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不要接 `tail` / `grep` 管道**——退出码会变成后者的，`grep` 无匹配还会给出假的失败。
-- **本机 git 的坑**（`rev-parse --short` 只收单参数、`git grep` 无 `--branches`、`ref:path` 要加 `MSYS_NO_PATHCONV=1`、对比新生成文件用 `--ignore-cr-at-eol`、全仓搜索排除 `server/static`）见[宿主契约与本机环境](docs/agent-guides/host-environment.md) §三。
+- **子 agent 一律前台派生**（评审两轴、调研）：后台派生会被归入「自动团队」，出生即可被停止且**跳过完成通知**，结果必丢（实测 3 次无一存活）；两轴评审在同一条消息里一起发出。证据见[调查记录](.scratch/group-notice-todo/research.md)。
+- **本机是 Windows / Git Bash：文件一律走专用工具**——读用 `Read`（不知道行号时先 `Grep -n` 定位，再带 `offset`/`limit`），搜用 `Grep` / `Glob`；`sed` / `awk` / `tail` / `grep -r` / `find` 不用。长输出落 `temp/` 再读，判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不接 `tail` / `grep` 管道。git 的坑（`rev-parse --short` 只收单参数、`git grep` 无 `--branches`、`ref:path` 要加 `MSYS_NO_PATHCONV=1`、**历史取证别信 `-S` 的返回顺序**）见[宿主契约](docs/agent-guides/host-environment.md) §三。
+- **含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`。
 
 ## 运行环境与入口
 
@@ -86,18 +85,12 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 
 ## 最小充分验证
 
-1. 检查本次 diff；对修改过的 `.js/.mjs` 执行 `node --check <文件>`。
-2. 跑直接覆盖改动的测试。明确 bug 优先补一条能复现旧问题的行为测试；权限、安全、并发、持久化、数据丢失或协议兼容改动补关键失败/边界路径。
-3. 影响多个函数、公共 helper 或跨文件数据流时，扩大到对应子系统。全量语法、慢测试、真实 Yunzai 链路仅用于大范围/基础设施改动、发布检查、有具体回归证据或用户明确要求；不自动逐级全跑。
-4. 记录实际结果和未验证的限制。已确认无关的既有失败记录即可，不反复验证；未验证不得宣称完成。
+1. 看 diff；对改过的 `.js`/`.mjs` 跑 `node --check`。
+2. 跑直接覆盖改动的测试；明确 bug 先补一条能复现旧问题的行为测试。影响多个函数、公共 helper 或跨文件数据流时才扩大——全量语法、慢测试、真实 Yunzai 链路留给大范围改动、发布检查、有回归证据或用户明确要求。
+3. 汇报 **Changes / Validation / Risks**：改了什么、实际跑了什么、剩余限制。未验证不得宣称完成。
 
-- 不为覆盖率扩大任务，不测未触及的稳定路径，不重复语言/标准库保证。mock 只模拟依赖边界，被测逻辑必须执行生产代码。
-- **测试与检查一律后台跑**（Bash 的 `run_in_background: true`），结果从完成通知里取；前台等着只会白占一轮，长套件还容易撞超时。变异验证同理——先把改动备份到临时目录再改，还原用备份覆盖，**不要用 `git checkout --` 还原**：它会连未提交的真实改动一起冲掉（已踩过）。
-- 不默认增加变异测试、源码文本守卫、重复桩/真实链路测试、全组合矩阵或大规模端到端测试。源码守卫只用于必要静态约束，不能冒充行为测试；变异仅用于反复发生或难以判断覆盖有效性的高风险问题，或用户明确要求。
-- 测试脚本清单以 `package.json` 和磁盘实际文件为准，不保留缺失路径：与存在文件混跑时缺失路径可能被静默忽略。不要恢复历史 `chain*.test.mjs`，不用固定用例数证明覆盖。
-- 常用入口：`npm run check`（全仓语法预检 + 路径卫生 + 快套件，CI 同款）；其余专项套件与慢测试按 `package.json` 的 `scripts`（`test:*`）选用，清单不在文档里复述——新增脚本时不必回头改这里。
-- 临时脚本放系统临时目录，或用完删除并确认清理。真实模型/确认流程仅在相关改动无法由本地验证覆盖时验证；本地全绿不等于 CI 或真实运行保障。
-- 最终汇报包含 **Changes / Validation / Risks**：改了什么、实际跑了什么、与本次相关的剩余限制。
+- **测试与检查一律后台跑**，结果从完成通知取；变异验证先备份再改，还原用备份覆盖，**不用 `git checkout --`**（会连未提交的真实改动一起冲掉）。
+- 分级细则、mock 边界、套件选择与豁免规则见[测试指南](docs/agent-guides/testing.md)；`npm run check` 是 CI 同款入口。
 
 ## 指南维护
 

@@ -29,12 +29,19 @@
  * 9. `docs/adr/` 与 `.scratch/` 的 markdown 里「约 N 条/个/处/种」必须同行带「实测」。
  *    数字写进 ADR / spec 之后就没人管了：本仓吃过一次——ADR 写「21 个消息类、约 160 条 rule」，
  *    实测 19 与 151，四份文档连带返工。规则 7 只管用户文案里的时长，管不到这里。
+ * 10. 根指南 `AGENTS.md` 不得超过 14000 字节：它整篇进每次会话的上下文，一旦顶到注入上限，
+ *    尾部规则会被**静默截断**——不报错、不提示，只是不再生效（2026-10-28 实测在 15.4KB 附近
+ *    被截，丢了「指南维护」四行）。超限就把细则移到 `docs/agent-guides/`，根文件留指针。
  *
  * 已评估但**未实现**的候选（写在注释里是为了让后来者知道没有这道门禁，别误以为有）：
  * - 锅巴 schema 的每个 `field` 都要能在 `utils/config.js` 的默认配置里找到。
  *   价值明确（删配置项忘了删面板字段，用户会看到点了没反应的开关），但没法用正则判定：
  *   `defaultConfig` 里 `groupReply` / `avatarReply` 是函数调用，静态取不到叶子键。
  *   要做就得引 AST 或运行时求值，成本高于收益，暂缓。
+ * - 同一 `field` 在 `guoba.support.js` 里只能出现一次（合并两条分支时常留下两个同名开关，
+ *   面板上就是两份互相矛盾的说明）。这条**不需要**读默认配置，只解析本文件就能正则判定；
+ *   没实现是维护者在 2026-10-28 明确否决（判断为用处不大），不是做不到。要恢复先确认这个
+ *   判断还成立——那次否决之后，仓库里确实又出现过一次同名开关并存。
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -212,9 +219,21 @@ for (const [name, reason] of STRAY_ARTIFACTS) {
   if (existsSync(path.join(ROOT, name))) violations.push(`不应存在 ${name}——${reason}`)
 }
 
+// 规则 10：根指南留出注入余量。超限不会报错，只会让尾部规则悄悄消失——本仓踩过。
+// 阈值按字节量（同一文件的稳定代理）；上限本身是字符/上下文预算，别把它当成精确刻度。
+const AGENTS_MAX_BYTES = 14000
+try {
+  const size = statSync(path.join(ROOT, 'AGENTS.md')).size
+  if (size > AGENTS_MAX_BYTES) {
+    violations.push(`AGENTS.md 已有 ${size} 字节，超过 ${AGENTS_MAX_BYTES} 的注入余量：再长会顶到上限，尾部规则被静默截断。把细则移到 docs/agent-guides/，根文件留指针`)
+  }
+} catch {
+  // 文件缺失不在这里报：仓库结构由别的门禁管
+}
+
 if (violations.length) {
   console.error(`[ChatGPT] 风格检查未通过，共 ${violations.length} 处：`)
   for (const item of violations) console.error('  - ' + item)
   process.exit(1)
 }
-console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物、时长断言须实测、近似数量须实测')
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物、时长断言须实测、近似数量须实测、根指南体量')

@@ -15,3 +15,6 @@ output/avatar-validation/
 
 # 运行时产物（诊断日志等），本仓不该有
 data/
+
+# 临时脚本与长输出日志（AGENTS 要求落在这里，Read 能直接打开）
+temp/
