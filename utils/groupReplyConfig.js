@@ -27,12 +27,6 @@ export function normalizeGroupReplyConfig(value = {}) {
     provider: typeof value?.provider === 'string' && value.provider ? value.provider : 'current',
     historyCount: number(value?.historyCount, 50, 20, 500),
     extraSystemPrompt: typeof value?.extraSystemPrompt === 'string' ? value.extraSystemPrompt.trim() : '',
-    // 自主回复是否禁用智能模式工具。默认禁用。
-    // 自主回复是 Bot 冷不丁插一句，此时调工具（代执行、发图、发消息、写记忆）
-    // 副作用不可控：模型会为了「显得有用」而顺手调用，群里看着莫名其妙，
-    // 还会把无关闲聊写进记忆库。2026-10-28 线上实测它就调了 Memory_Tool。
-    // 只写 `!== false`：老配置里没这个键时按「禁用」处理，升级即安全。
-    disableTools: value?.disableTools !== false,
     groups: Array.isArray(value?.groups) ? value.groups.map(g => ({
       groupId: String(g?.groupId ?? '').trim(),
       switchOn: g?.switchOn === true,

@@ -41,7 +41,7 @@ import {
 } from '../utils/paimonFuction.js'
 import { INNER_OS_BEGIN, INNER_OS_END } from '../utils/innerOs.js'
 import ChatCooldown from '../utils/chatCooldown.js'
-import { groupReply, groupReplyToolsDisabled } from '../utils/groupReply.js'
+import { groupReply } from '../utils/groupReply.js'
 import { avatarReply } from '../utils/avatarReply.js'
 import { expandQuotedForwards } from '../utils/forwardMessage.js'
 import { isBotReplyAllowed } from '../utils/botReplyWhitelist.js'
@@ -1058,14 +1058,8 @@ export class chatgpt extends plugin {
       if (e.send_typing) e.send_typing();
 
       // 自主回复可能选中较早的消息：引用身份保留在 e，回答上下文另从群内最新记录读取。
-      // disableTools：自主回复是旁观者插话，默认不装配工具——否则模型会顺手代执行、
-      // 发图、写记忆，副作用在群里看着莫名其妙（见 utils/groupReply.js 的说明）。
       const options = automatic && e.isGroup
-        ? {
-            groupAutoReply: true,
-            disableTools: groupReplyToolsDisabled(),
-            settings: { enableGroupContext: true, groupContextFromLatest: true }
-          }
+        ? { groupAutoReply: true, settings: { enableGroupContext: true, groupContextFromLatest: true } }
         : {}
       let chatMessage = await Core.sendMessage.bind(this)(prompt, conversation, profile.id, e, { ...options, allowFallback: true, providerSource })
       if (chatMessage?.noMsg) {

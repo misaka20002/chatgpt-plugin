@@ -2035,12 +2035,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'groupReply.disableTools',
-          label: '自主回复禁用智能模式工具',
-          bottomHelpMessage: '默认开启（禁用）。自主回复是机器人旁观群聊后插一句话，此时调用工具的副作用不可控：可能替别人代执行、发图发消息、往记忆库写东西，群里看着莫名其妙。关闭此开关可让自主回复重新使用智能模式工具，但请自行承担这些副作用',
-          component: 'Switch'
-        },
-        {
           field: 'groupReply.groups',
           label: '自主回复群',
           bottomHelpMessage: '仅从开启后采集，最近记录暂存在内存，重启清空；关闭停止采集和待发回复，缓存最多一分钟内清理，不读取或修改记忆 V2 的授权与数据；可用指令： #群聊自主回复[开启|关闭]',

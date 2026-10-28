@@ -98,7 +98,7 @@ test('开启角色的正式回复先发一次完整正文再附图，辅助来�
   assert.deepEqual(output, [['text', ['完整回答。第二句话。']]])
 })
 
-test('自主回复复用正常聊天入口和全局提供商，默认禁用工具，仍受黑名单约束', async () => {
+test('自主回复复用正常聊天入口和全局提供商，仍受黑名单约束', async () => {
   const e = {
     isGroup: true, group_id: '100', group: { group_id: '100' }, self_id: '999', user_id: '123',
     sender: { user_id: '123', role: 'member' }, msg: '开放话题', raw_message: '开放话题', message: [],
@@ -117,39 +117,11 @@ test('自主回复复用正常聊天入口和全局提供商，默认禁用工�
   assert.deepEqual(options.settings, { enableGroupContext: true, groupContextFromLatest: true })
   assert.equal(options.groupAutoReply, true)
   assert.equal(Config.enableGroupContext, false)
-  assert.equal(options?.disableTools, true, '自主回复默认禁用工具')
   assert.equal(options?.enableSmart, undefined)
   assert.equal(Config.smartMode, true)
   Config.blacklist = ['^123']
   await chat.chatgpt_for_firstperson_call(e, { automatic: true })
   assert.equal(requests.length, 1)
-})
-
-test('自主回复的工具禁用可由 groupReply.disableTools 单独放开', async () => {
-  const e = {
-    isGroup: true, group_id: '100', group: { group_id: '100' }, self_id: '999', user_id: '123',
-    sender: { user_id: '123', role: 'member' }, msg: '开放话题', raw_message: '开放话题', message: [],
-    message_id: 'selected-message', seq: 101
-  }
-  const chat = Object.create(chatgpt.prototype)
-  chat.e = e
-  const previous = Config.groupReply
-  const previousBlacklist = Config.blacklist
-  try {
-    // 上一个用例把黑名单留在了配置里，这里先清掉，否则请求会被黑白名单拦掉、根本发不出去
-    Config.blacklist = []
-    Config.groupReply = { disableTools: false }
-    await chat.chatgpt_for_firstperson_call(e, { automatic: true })
-    assert.equal(requests.at(-1)[4]?.disableTools, false, '关掉开关后自主回复恢复工具')
-
-    Config.groupReply = { disableTools: true }
-    await chat.chatgpt_for_firstperson_call(e, { automatic: true })
-    assert.equal(requests.at(-1)[4]?.disableTools, true)
-  } finally {
-    if (previous === undefined) delete Config.groupReply
-    else Config.groupReply = previous
-    Config.blacklist = previousBlacklist
-  }
 })
 
 test('聊天记忆日志按实际注入条目计数，不能把非空召回显示为零条', async (t) => {
