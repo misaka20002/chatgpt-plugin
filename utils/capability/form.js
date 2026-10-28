@@ -1,4 +1,4 @@
-import { CAPABILITY_DIRECTORY_LIMIT, CAPABILITY_DIRECTORY_MAX } from './paths.js'
+import { CAPABILITY_DIRECTORY_LIMIT } from './paths.js'
 import { redactText } from './redact.js'
 
 /**
@@ -193,13 +193,14 @@ export function buildCapabilityEntries (snapshot, hints = {}) {
  * 条目 → 表单 markdown + 能力目录。
  *
  * @param {Array<object>} entries
- * @param {{ generatedAt?: string, degraded?: boolean, limit?: number }} [options]
+ * @param {{ generatedAt?: string, degraded?: boolean }} [options]
  */
-export function renderCapabilityForm (entries, { generatedAt, degraded = false, limit = CAPABILITY_DIRECTORY_LIMIT } = {}) {
+export function renderCapabilityForm (entries, { generatedAt, degraded = false } = {}) {
   const all = Array.isArray(entries) ? entries : []
   const groups = groupByPlugin(all)
-  // 上限口径 = 目录里展开的**插件类**个数（两级目录的第一级），不是指令条数
-  const maxGroups = clampLimit(limit)
+  // 上限口径 = 目录里展开的**插件类**个数（两级目录的第一级），不是指令条数。
+  // 固定值，不再走配置：要调就改 paths.js 里的常量。
+  const maxGroups = CAPABILITY_DIRECTORY_LIMIT
 
   // 目录按指令数降序，保证展开的都是信息量最大的那一批
   const ranked = [...groups].sort((a, b) => b.entries.length - a.entries.length)
@@ -262,12 +263,6 @@ function describeCapabilityEntry (entry) {
 export function previewList (items, max) {
   const list = Array.isArray(items) ? items : []
   return `${list.slice(0, max).join('、')}${list.length > max ? ' 等' : ''}`
-}
-
-function clampLimit (limit) {
-  const value = Number(limit)
-  if (!Number.isFinite(value) || value <= 0) return CAPABILITY_DIRECTORY_LIMIT
-  return Math.min(Math.floor(value), CAPABILITY_DIRECTORY_MAX)
 }
 
 function groupByPlugin (entries) {

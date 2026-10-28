@@ -2,7 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
- * 能力自省的路径与常量。
+ * 能力地图的路径与常量。
  *
  * 只有这里知道「允许读哪里」。其余模块一律从这里取常量，不接受外部传入的路径——
  * 这是「能力隔离」的落点：接口上没有路径参数，就没有"指定读哪里"的表达渠道。
@@ -17,9 +17,6 @@ export const CAPABILITY_FORMAT_VERSION = 1
  * 100 个类约 1000 token，且未展开的类仍能被工具按类名/关键词搜到。
  */
 export const CAPABILITY_DIRECTORY_LIMIT = 100
-
-/** 硬上限：配置面板最多也只能调到这里 */
-export const CAPABILITY_DIRECTORY_MAX = 200
 
 /** 只读白名单的根：插件自身目录 */
 const capabilityDir = path.dirname(fileURLToPath(import.meta.url))

@@ -30,11 +30,11 @@ export class capabilityMap extends plugin {
 
   async refresh (e) {
     if (Config.enableCapabilityMap === false) {
-      await e.reply('能力自省功能已关闭，请先在锅巴「智能模式 能力地图」里开启。', true)
+      await e.reply('能力地图功能已关闭，请先在锅巴「插件能力地图（AI 代执行）」里打开「启用插件能力地图」。', true)
       return true
     }
 
-    await e.reply('开始重建插件能力表：扫描本机第三方插件 → 脱敏 → 主模型分批审核。实测 1161 条指令（15 批）约 3 分钟；指令更多或模型较慢会更久，完成后会再发一条结果。', true)
+    await e.reply('开始重建插件能力表：扫描本机第三方插件 → 脱敏 → 主模型分批审核。指令越多或模型越慢，耗时越长，完成后会再发一条结果。', true)
 
     try {
       const before = readCapabilityState()?.meta?.generatedAt || ''

@@ -1,4 +1,3 @@
-import { Config } from '../config.js'
 import { FRAMEWORK_CONFIG_SPEC, CAPABILITY_FORMAT_VERSION } from './paths.js'
 import { loadPluginSnapshot } from './registry.js'
 import { collectConfigHints } from './configScan.js'
@@ -59,14 +58,13 @@ async function rebuild () {
   }
 
   const audited = await auditCapabilityEntries(baseEntries, {
-    concurrency: Config.capabilityAuditConcurrency,
     onProgress: (done, total) => {
       globalThis.logger?.mark?.(`${LOG_PREFIX} 审核进度 ${done}/${total} 批`)
     }
   })
   const auditMs = Date.now() - startedAt
   globalThis.logger?.mark?.(
-    `${LOG_PREFIX} ${baseEntries.length} 条指令分 ${audited.batches} 批审核，耗时 ${(auditMs / 1000).toFixed(1)}s，并发 ${Config.capabilityAuditConcurrency || 3}`
+    `${LOG_PREFIX} ${baseEntries.length} 条指令分 ${audited.batches} 批审核，耗时 ${(auditMs / 1000).toFixed(1)}s，并发 ${audited.parallelism}`
   )
 
   if (!audited.approved) {
@@ -84,8 +82,7 @@ async function rebuild () {
   const generatedAt = new Date().toISOString()
   const rendered = renderCapabilityForm(audited.entries, {
     generatedAt,
-    degraded: snapshot.degraded,
-    limit: Config.capabilityDirectoryLimit
+    degraded: snapshot.degraded
   })
 
   const meta = {

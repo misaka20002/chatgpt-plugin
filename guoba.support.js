@@ -1658,7 +1658,7 @@ export function supportGuoba() {
         {
           field: 'enableCapabilityMap',
           label: '启用插件能力地图',
-          bottomHelpMessage: '打开就能用，其他配置不用动。\n【怎么用】① 直接对机器人说人话：「帮我签到」「查下我的三角洲战绩」「给某某点个赞」。不用打 # 开头，也不用记写法；对象从你说的名字、@ 和引用里认。② 会改动数据或花钱的指令（签到、开关推送、更新之类），机器人会先回一句「这条指令可能改动数据：xxx，要执行就回复是」。你必须回「是」（或「好的」「确认」这类短句）它才真执行；回别的话就不执行。③ 主人可以 @ 某个人再下指令，会以对方身份执行，权限也按对方算，不是拿主人的权限硬跑。④ 说法叫不准也没关系，机器人会把本机所有插件的指令先过一遍；确实没有会直说做不到，不会瞎编。\n【相关指令（仅主人）】#chatgpt刷新功能表 —— 装了新插件或改了插件后重扫本机指令，手动触发，耗时约几分钟（实测 2 分 50 秒 / 3469 条，视插件数量而定）。#chatgpt更新指令地图 —— 从内置地址拉一次指令说明补丁（哪些指令是查询、哪些会改动数据）。\n【排障】机器人说「本机没有这条指令」→ 先发 #chatgpt刷新功能表。机器人说「派发了但没有插件回话」→ 是插件自己报错了，去 logs/error.log 看堆栈，这种情况确实没办成，不要当成成功。指令被别的插件抢走（某些词是它的关键词）→ 在群里换个说法。',
+          bottomHelpMessage: '打开就能用，其他配置不用动。\n【怎么用】① 直接对机器人说人话：「帮我签到」「查下我的三角洲战绩」「给某某点个赞」。不用打 # 开头，也不用记写法；对象从你说的名字、@ 和引用里认。② 会改动数据或花钱的指令（签到、开关推送、更新之类），机器人会先回一句「这条指令可能改动数据：xxx，要执行就回复是」。你必须回「是」（或「好的」「确认」这类短句）它才真执行；回别的话就不执行。③ 主人可以 @ 某个人再下指令，会以对方身份执行，权限也按对方算，不是拿主人的权限硬跑。④ 说法叫不准也没关系，机器人会把本机所有插件的指令先过一遍；确实没有会直说做不到，不会瞎编。\n【相关指令（仅主人）】#chatgpt刷新功能表 —— 装了新插件或改了插件后重扫本机指令，手动触发，耗时视插件数量与模型速度而定；期间机器人继续用上次生成的旧表。#chatgpt更新指令地图 —— 从内置地址拉一次指令说明补丁（哪些指令是查询、哪些会改动数据）。\n【排障】机器人说「本机没有这条指令」→ 先发 #chatgpt刷新功能表。机器人说「派发了但没有插件回话」→ 是插件自己报错了，去 logs/error.log 看堆栈，这种情况确实没办成，不要当成成功。指令被别的插件抢走（某些词是它的关键词）→ 在群里换个说法。',
           component: 'Switch'
         },
         {
@@ -1794,45 +1794,6 @@ export function supportGuoba() {
           label: '绘画添加作品名',
           bottomHelpMessage: '连接绘画插件时使作品角色添加*更多*作品名（只需要添加你的新角色即可），请严格按照JSON格式书写，必要时使用https://json-online.com/check/；例子：{"last(_|\\\\s)order|misaka":"last order (Toaru Majutsu no Index), toddler","nahida":"nahida (genshin impact), toddler"}',
           component: 'InputTextArea'
-        },
-        {
-          label: '智能模式 能力地图',
-          component: 'Divider'
-        },
-        {
-          field: 'enableCapabilityMap',
-          label: '启用插件能力地图',
-          bottomHelpMessage: '默认关闭。开启后，AI 才能知道整个 Bot 能干什么、并在用户打错指令时指出正确写法。⚠️ 本功能**不会自动扫描**：只有主人发送 #chatgpt刷新功能表 才会生成或更新能力表（1157 条指令规模实测约 3 分钟，并消耗审核 token）；不发就一直用上次生成的旧表。功能本身只读其他插件、不执行任何指令，只在本地写一份自己的缓存（data/chatgpt/capability）。',
-          component: 'Switch'
-        },
-        {
-          field: 'capabilityDirectoryLimit',
-          label: '目录展开的插件类数上限',
-          bottomHelpMessage: '两级目录只注入「插件类名 + 指令条数」，按指令数降序展开前 N 个类。实测 100 类约 1000 token/次请求（旧版注入 300 条指令约 8000 token）。未展开的类仍可用类名或关键词查询',
-          component: 'InputNumber',
-          componentProps: {
-            min: 20,
-            max: 200
-          }
-        },
-        {
-          field: 'capabilityAuditProvider',
-          label: '能力表审核用哪个供应商',
-          bottomHelpMessage: '⚠️ 刷新能力表时，脱敏后的指令清单会交给该供应商做「描述翻译 + 脱敏审核」，可能额外消耗 token。审核用哪个模型由该供应商自己的模型配置决定，这里不再单独填写；空值跟随当前使用的供应商。审核只在发送 #chatgpt刷新功能表 那一刻执行一次，不是每轮对话。',
-          component: 'Select',
-          componentProps: {
-            options: [{ label: '跟随当前供应商', value: '' }, ...providerOptions]
-          }
-        },
-        {
-          field: 'capabilityAuditConcurrency',
-          label: '审核并发批数',
-          bottomHelpMessage: '同时并行几批审核请求。实测 1161 条分成 15 批：串行约 8 分 30 秒，3 路并发约 3 分钟。调高可能撞供应商速率限制，上限 5；网络或供应商限流时调回 1',
-          component: 'InputNumber',
-          componentProps: {
-            min: 1,
-            max: 5
-          }
         },
         {
           label: '智能模式 记忆设置',

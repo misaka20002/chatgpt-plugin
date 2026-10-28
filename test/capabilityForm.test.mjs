@@ -220,25 +220,33 @@ describe('表单与目录渲染', () => {
     assert.match(form, /可能不完整/)
   })
 
-  test('目录是两级：只列插件类与条数，按指令数降序展开', () => {
-    const entries = buildCapabilityEntries(SNAPSHOT)
-    const { directory, unlistedPlugins, listedCount, listedEntryCount } = renderCapabilityForm(entries, { limit: 1 })
+  test('目录是两级：只列插件类与条数，最多展开 100 个类', () => {
+    // 按真实上限造数据：留一个小 limit 的入口只会让测试绕开生产路径
+    const crowded = Array.from({ length: 101 }, (_, index) => ({
+      plugin: `插件${String(index).padStart(3, '0')}`,
+      command: `#cmd${index}`,
+      description: `执行 #cmd${index}`,
+      permission: ''
+    }))
+    const { directory, unlistedPlugins, listedCount, listedEntryCount } = renderCapabilityForm(crowded)
 
-    assert.equal(listedCount, 1)
-    assert.equal(listedEntryCount, 3)
-    assert.deepEqual(unlistedPlugins, ['公告插件'])
+    assert.equal(listedCount, 100)
+    assert.equal(listedEntryCount, 100)
+    assert.deepEqual(unlistedPlugins, ['插件100'])
     // 目录里不该出现具体指令——细节靠查询工具按需取
-    assert.match(directory, /^- 【签到插件】3 条$/m)
-    assert.doesNotMatch(directory, /#签到/)
+    assert.match(directory, /^- 【插件000】1 条$/m)
+    assert.doesNotMatch(directory, /#cmd/)
     assert.match(directory, /另有 1 个插件类未展开/)
   })
 
-  test('上限够大时全部类都展开，没有未展开声明', () => {
-    const { directory, unlistedPlugins, listedCount } = renderCapabilityForm(buildCapabilityEntries(SNAPSHOT), { limit: 10 })
+  test('未超过上限时全部类都展开，按指令数降序且没有未展开声明', () => {
+    const { directory, unlistedPlugins, listedCount } = renderCapabilityForm(buildCapabilityEntries(SNAPSHOT))
     assert.equal(listedCount, 2)
     assert.deepEqual(unlistedPlugins, [])
     assert.equal(directory.split('\n').filter(Boolean).length, 2)
     assert.doesNotMatch(directory, /未展开/)
+    // 降序：指令多的签到插件排在只有一条的公告插件前面
+    assert.equal(directory.split('\n')[0], '- 【签到插件】3 条')
   })
 })
 

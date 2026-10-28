@@ -32,7 +32,7 @@ export class CapabilityLookupTool extends AbstractTool {
   description = '查询本机安装的其他插件有哪些指令、某条指令的正确写法、参数与示例。用户问「你能干什么」「某功能怎么用」，或用户输入的指令疑似打错时调用。只能查询注册信息，不能读取文件、不能执行任何指令。'
 
   func = async function (opts) {
-    if (Config.enableCapabilityMap === false) return 'Error: 能力自省功能已关闭，当前无法查询插件功能。'
+    if (Config.enableCapabilityMap === false) return 'Error: 能力地图功能已关闭，请先在锅巴「插件能力地图（AI 代执行）」里打开「启用插件能力地图」。'
 
     const query = typeof opts?.query === 'string' ? opts.query.trim() : ''
     if (!query) return 'Error: 请给出要查询的指令名或功能关键词。'

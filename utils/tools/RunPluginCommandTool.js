@@ -87,7 +87,7 @@ export class RunPluginCommandTool extends AbstractTool {
   description = '【代执行】替用户真正执行一条本机插件指令。凡用户说「帮我 / 给我 / 替我 + 某个动作」（帮我签到、给我点个赞、刷新面板），直接调用本工具，把用户原话放进 query 就行，不需要先查写法，也不要只告诉他怎么写。执行后插件的输出会自己发到群里，你不用复述。'
 
   func = async function (opts, e) {
-    if (Config.enableCapabilityMap === false) return 'Error: 插件能力功能已关闭，请在锅巴「可选工具」里打开「启用插件能力地图」。'
+    if (Config.enableCapabilityMap === false) return 'Error: 能力地图功能已关闭，请先在锅巴「插件能力地图（AI 代执行）」里打开「启用插件能力地图」。'
     if (!e) return 'Error: 缺少消息上下文，无法代执行。'
 
     const wanted = typeof opts?.command === 'string' ? opts.command.trim() : ''

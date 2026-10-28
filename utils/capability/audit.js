@@ -10,6 +10,7 @@ import { redactText } from './redact.js'
  * 实测口径（2026-10-27，本机 1161 条 / 15 批 / 串行）：单批约 30 秒，合计 8 分 30 秒。
  * 串行是耗时主因，故批量并发执行（默认 3 路，上限 5——再高易撞供应商速率限制），
  * 并逐批打进度日志：否则几分钟里从日志上完全看不出它是否还活着。
+ * 并发数只由调用方传入，不是用户配置；实际用了多少随结果返回（parallelism），日志以它为准。
  *
  * 模型输出一律视为不可信：形状校验不过 = 不通过，解析失败 = 不通过（fail-closed）。
  */
@@ -40,11 +41,11 @@ const AUDIT_SYSTEM = [
  *   concurrency?: number,
  *   onProgress?: (done: number, total: number) => void
  * }} [options]
- * @returns {Promise<{ approved: boolean, issues: string[], entries: Array<object>, batches: number }>}
+ * @returns {Promise<{ approved: boolean, issues: string[], entries: Array<object>, batches: number, parallelism: number }>}
  */
 export async function auditCapabilityEntries (entries, { chat, concurrency = 3, onProgress } = {}) {
   const list = Array.isArray(entries) ? entries : []
-  if (!list.length) return { approved: true, issues: [], entries: [], batches: 0 }
+  if (!list.length) return { approved: true, issues: [], entries: [], batches: 0, parallelism: 0 }
 
   const ask = chat || await createSubLLMChat()
 
@@ -90,7 +91,7 @@ export async function auditCapabilityEntries (entries, { chat, concurrency = 3, 
     return { ...entry, description: '', confidence: 'low' }
   })
 
-  return { approved: issues.length === 0, issues, entries: merged, batches: chunks.length }
+  return { approved: issues.length === 0, issues, entries: merged, batches: chunks.length, parallelism }
 }
 
 /**

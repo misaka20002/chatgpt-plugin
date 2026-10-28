@@ -356,15 +356,13 @@ const defaultConfig = {
   enableMemory: false, // 是否启用记忆系统（唯一总开关，同时开放 Memory_Tool 与 userProfile）
   enableAtGraph: true, // 是否开放 #at图谱 指令；仍需启用记忆系统并授权当前群
 
-  // 插件能力地图（只读扫描本机其他插件的指令，供对话 AI 检索）
+  // 插件能力地图（扫描本机其他插件的指令，供 AI 检索与代执行）
   // 默认关闭：开启后每次刷新都要调主模型审核上千条指令，属于真金白银的支出，
   // 不能因为"装了插件就自动生效"而替用户花钱。
+  // 同一个开关兼任「代执行」：AI 会以用户身份把指令发进别人的插件管道，风险面比只读查询
+  // 高得多，所以必须由主人显式打开。
   enableCapabilityMap: false, // 总开关：开启后同时具备「查得到」与「代执行」
-  // 指令代执行（AI 替用户把指令发进插件管道）。默认关闭：它会让 AI 以用户身份触发
-  // 别人的插件，属于比只读查询高得多的风险面，必须由主人显式打开。
   commandMapIndexUrl: 'https://raw.githubusercontent.com/Binbin-miao/command-maps/main/index.json',
-  capabilityDirectoryLimit: 100, // 注入提示词的插件类个数上限（两级目录第一级）；实测 100 类约 1000 token
-  capabilityAuditConcurrency: 3, // 审核并发批数：1=串行（实测 1157 条串行 8分30秒），3 路约 3 分钟；上限 5
   maxMemoriesPerUser: 100, // 每用户每作用域（跨群 user / 每群 user_group）各自独立，默认 100；Guoba 最低 50
   maxMemoriesPerGroup: 50, // 每群公共 group 记忆的独立整理容量目标，默认 50；Guoba 最低 20（>95% 夜间压缩可按 Token 预算分片）
   memoryContextLimit: 8, // 每次对话注入的最大记忆条数
