@@ -55,6 +55,14 @@ export class SendPictureTool extends AbstractTool {
           : groupList && groupList[target]
 
       if (isGroupExist) {
+        // 会话边界：群友只能发到当前会话，主人可以跨群。
+        // 参数名就叫 `targetGroupIdOrQQNumber`，填个群号就 `pickGroup(那个群).sendMsg`，
+        // 不设闸的话任何群友都能让 Bot 往它所在的**任意群**投放任意图片
+        // （2026-10-28 由 tool-calls.log 实证：某人要头像那次参数里就是群号）。
+        // 主人保留跨群能力：他自己知道自己在做什么，替别人转发也是他的日常操作。
+        if (!e.isMaster && Number(target) !== Number(defaultTarget)) {
+          return `Error: only the master can send pictures to another session. Non-master users can only send to the current session (${defaultTarget}).`
+        }
         let group = await e.bot.pickGroup(target)
         for (let pic of pictures) {
           try {
