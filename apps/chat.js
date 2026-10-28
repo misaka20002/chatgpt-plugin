@@ -44,6 +44,7 @@ import ChatCooldown from '../utils/chatCooldown.js'
 import { groupReply } from '../utils/groupReply.js'
 import { avatarReply } from '../utils/avatarReply.js'
 import { expandQuotedForwards } from '../utils/forwardMessage.js'
+import { isBotReplyAllowed } from '../utils/botReplyWhitelist.js'
 
 let version = Config.version
 let proxy = getProxy()
@@ -675,6 +676,9 @@ export class chatgpt extends plugin {
       // 命令呼叫也在限流前接管，避免拒绝后仍由待判断批次补答。
       if (!groupReply.markHandled(e)) return false
     }
+    // 放在「这条消息确实点到了我」之后：at 模式的全量正则 `^[^#][sS]*` 匹配每条群消息，
+    // 闸门提到前面会让白名单外账号的每条群消息都打一行日志。
+    if (!isBotReplyAllowed(e, { label: '对话' })) return false
     let groupId = e.isGroup ? e.group.group_id : ''
     if (await redis.get('CHATGPT:SHUT_UP:ALL') || await redis.get(`CHATGPT:SHUT_UP:${groupId}`)) {
       logger.info('[chatgpt] chatgpt闭嘴中，不予理会')
@@ -710,6 +714,8 @@ export class chatgpt extends plugin {
       logger.info('[chatgpt] 机器人自己发出来的消息，不予理会')
       return false
     }
+    // 自主回复与直接呼叫共用这条路，两者都受 Bot 响应白名单约束。
+    if (!isBotReplyAllowed(e, { label: automatic ? '自主回复' : '第一人称呼叫' })) return false
     if (!automatic && !groupReply.markHandled(e)) return false
     // let ats = e.message.filter(m => m.type === 'at')
     // if (!(e.atme || e.atBot) && ats.length > 0) {
@@ -1887,6 +1893,9 @@ export class chatgpt extends plugin {
       }
       return false
     }
+    // #chat1 / #chatglm / #claude / #gemini 的兼容入口。这几个方法目前没有 rule 接线，
+    // 闸门留在这里是为了它们哪天重新挂上规则时不必再补一次。
+    if (!isBotReplyAllowed(e, { label: `其他模式 ${mode}` })) return false
     let prompt = _.replace(e.msg.trimStart(), pattern, '').trim()
     if (prompt.length === 0) {
       return false
