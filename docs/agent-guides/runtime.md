@@ -45,3 +45,4 @@
 ## 废弃接口
 
 - **`utils/SydneyAIClient.js`（Bing / Sydney 接口）已废弃，以后都不要碰**：该接口已不可用，这个类在全仓库**没有任何实例化入口**（`apps/management.js:16` 里那行 `import SydneyAIClient from '../utils/SydneyAIClient.js'` 是未使用的，实际走 `client/CopilotAIClient.js` 的 `BingAIClient`）。它内部的 `Config.sydneyFirstMessageTimeout`（配置项已注释掉，值为 `undefined`）、`timeout` / `firstMessageTimeout` 等常量都属于历史遗留，**不要给它补超时、加功能、做重构，也不要因为审查它而改动**；那行未使用的 import 是有意留的，别顺手删。真要清理或删除这个类属于单独议题，先问用户。
+- **`apps/chat.js` 的 `otherMode()` 与它的四个包装方法（`chatgpt1` / `chatglm` / `claude` / `gemini`）没有 `rule` 接线，也没有按钮派发**：`#chat1` / `#chatglm` / `#claude` / `#gemini` 这些指令不会触发，锅巴里 `allowOtherMode` 的相关文案因此是过时的。写覆盖面（白名单、限流、账号闸这类「哪些入口受影响」）时不要把这条路径算进去；恢复它属于单独议题。

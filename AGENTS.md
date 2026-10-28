@@ -14,7 +14,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 | `apps/派蒙meme.js`、`utils/memeCategory.js`、`resources/memeList/` | [meme](docs/agent-guides/meme.md)；改模板另读渲染指南 |
 | `utils/config.js`、`guoba.support.js`、provider 输出上限、`model/SubLLM.js` 参数传递 | [配置](docs/agent-guides/configuration.md) |
 | 插件注册、动态规则、priority、定时任务、Redis 操作、遗留接口 | [运行时](docs/agent-guides/runtime.md) |
-| 与框架交互（事件的只读字段、accept 阶段、规则匹配语义、日志通道）、在这台机器上部署与排障 | [宿主契约与本机环境](docs/agent-guides/host-environment.md) |
+| 与框架交互（事件的只读字段、accept 阶段、规则匹配语义、日志通道）、多账号与适配器、在这台机器上部署与排障、本机 git 的坑 | [宿主契约与本机环境](docs/agent-guides/host-environment.md) |
 | 选择/编写测试、mock、临时探针、测试环境排障、CI workflow 改动与复跑、远端 PR 合并前验证 | [测试](docs/agent-guides/testing.md) |
 
 ## Agent skills
@@ -43,12 +43,13 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - 不硬编码或提交密钥，不信任外部输入，不关安全校验硬过测试。优先修复真实可利用的授权绕过、泄漏、代码执行与数据破坏；不把理论风险扩展成无关重构。记忆内容的记录策略遵循记忆指南。
 - 日志、注释与用户文案用中文，日志前缀沿用 `[Memory]` / `[MemoryV2]` / `[ChatGPT]` 等。注释解释原因、业务约束和权衡；缩进与分号跟随所在文件。
 - **写「N 处都…」「所有…」「一律…」这类跨位置的全称断言前，逐个打开被断言的位置核对**，不要只核对自己刚改的那一处。本仓已因此出现过三次失实且都活到了评审：四个 provider 分支的错误措辞（Gemini 实际不同）、测试注释宣称"天然免疫"误伤、锅巴说明文案前后半句矛盾。
-- **量化断言必须来自实测**：文档、锅巴说明、用户文案里的耗时 / 条数 / token 数字，要么写实测值并注明测量规模与环境，要么写成「视规模而定」；不写「一两分钟」「几分钟」这类估计。本仓已吃过一次：审核文案写「一两分钟」，实测 8 分 30 秒，四倍偏差一直活到上线才被日志抓住。机械部分由 `test/lint.check.mjs` 规则 7 拦住（用户文案里的时长断言必须带「实测」）。
+- **量化断言必须来自实测**：文档、锅巴说明、用户文案里的耗时 / 条数 / token 数字，要么写实测值并注明测量规模与环境，要么写成「视规模而定」；不写「一两分钟」「几分钟」这类估计。本仓已吃过一次：审核文案写「一两分钟」，实测 8 分 30 秒，四倍偏差一直活到上线才被日志抓住。机械部分由 `test/lint.check.mjs` 规则 7 与规则 9 拦住（用户文案里的时长断言、ADR/spec 里的近似条数或个数，都必须带「实测」）。
 - **需求多轮确认后先交方案、不动代码**：结论按「待批方案」列出，等用户明确说「开始 / 动手 / 执行」再实现；回答完问题、说「按推荐来」都不算开工许可。
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
 - **一切需要结果的子 agent（含评审两轴与调研）一律前台派生，不要用 `run_in_background`；两轴评审还要在同一条消息里并发派出**（两次调用一次发出）——等一轴回来再派另一轴等于白等一轮。后台派生会把它变成"自动团队"成员：出生即可能被停止（运行时日志原文 “spawned after team cancel and was paused”）；当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），被终止（终态）后又**跳过完成通知**，结果必然丢失——评审与调研共 3 次实测无一存活。真正的后台并行是**任务粒度**（侧边栏多任务 /「保存到工作空间」多 Agent 协作），不是会话内子 agent。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
 - **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。**含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——一律用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`（随 `npm run check` / CI）。
-- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回），**判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不要接 `tail` / `grep` 管道**——退出码会变成后者的，`grep` 无匹配还会给出假的失败；`ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`——不设时 Git Bash 的路径转换会改写参数，`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」；结论是否定或异常时先怀疑它。
+- **长输出与退出码**：长输出先落日志再取尾部（超限存档读不回），日志落 `.gitignore` 里的 `temp/`——`Read` 能直接打开；Git Bash 的 `/tmp` 映射到别处，`Read` 打不开只能退回 `cat`。**判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不要接 `tail` / `grep` 管道**——退出码会变成后者的，`grep` 无匹配还会给出假的失败。
+- **本机 git 的坑**（`rev-parse --short` 只收单参数、`git grep` 无 `--branches`、`ref:path` 要加 `MSYS_NO_PATHCONV=1`、对比新生成文件用 `--ignore-cr-at-eol`、全仓搜索排除 `server/static`）见[宿主契约与本机环境](docs/agent-guides/host-environment.md) §三。
 
 ## 运行环境与入口
 

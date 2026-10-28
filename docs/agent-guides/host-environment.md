@@ -45,6 +45,20 @@
 - 所以「工具调用/返回」这类 INFO 级日志**默认不落文件**。插件额外把工具调用写一份脱敏记录到 `data/chatgpt/diag/tool-calls.log`（见 `utils/toolCallLog.js`），排障看它，不必往生产代码里插临时探针。
 - `logs/command.<date>.log` 经常被直接发到群里排障，**明文参数不能进那里**（见 ADR-0002）。
 
+### 多账号与适配器：谁是谁
+
+TRSS 一个进程可以挂多个账号，下面几个字段容易混：
+
+| 字段 | 是什么 |
+| --- | --- |
+| `Bot.bots[self_id]` | 账号实例。`.adapter` 指向适配器实例（含 `id` / `name` / `path`），`.info.nickname` 是登录昵称 |
+| `Bot.uin` | TRSS 下是**数组**（所有已登录的 `self_id`），带自定义 `toString` / `toJSON`；非 TRSS 是单值 |
+| `Bot.adapter` | **适配器实例**数组（`OneBotv11` / `Milky` / `Satori` / `stdin` / `ComWeChat`），不是账号；各适配器用 `Bot.adapter.push(new …)` 注册 |
+| 事件上的 `adapter_id` / `adapter_name` | 宿主 `prepareEvent` 从 `data.bot.adapter` 抄到事件上；插件侧目前没有使用 |
+
+- `utils/bot.js` 的 `getBots()` 把 `Bot.adapter` 的元素当 uin 去 `Bot[uin]`，取到的是 `undefined`——既有缺陷，枚举账号别复用它。
+- 账号级判断一律用事件自带的 `e.self_id`；`Config.trssBotUin` 只影响 `getUin(e)` 的返回值，不是准入开关。
+
 ## 二、本机部署事实（家里云 HomeCLOUD）
 
 以下针对本机成立，换机器要重新核实。
@@ -60,8 +74,18 @@
 | 插件依赖 | TRSS-Yunzai 根目录已带 `sharp ^0.33.5`，插件目录里的 `import("sharp")` 会向上解析到它，不必单独装 |
 | 远端传文件 | 中文与引号经 ssh 容易被吃掉，**用 base64 传**：`base64 -w0 本地文件` → 远端 `echo <b64> | base64 -d > 目标` |
 
-## 三、这套事实怎么用
+## 三、本机开发机（Windows / Git Bash）
+
+以下只在开发机上跑 git 时成立，家里云容器里不适用。
+
+- `git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）。
+- `git grep` 没有 `--branches` / `--remotes`，要逐 ref 循环查。
+- `ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`：不设时 Git Bash 的路径转换会改写参数——`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」。结论是否定或异常时，先怀疑它。
+- 对比新生成文件用 `--ignore-cr-at-eol`；全仓搜索排除 `server/static`（打包产物）。
+
+## 四、这套事实怎么用
 
 - 改「插件与框架交互」的代码前，先读第一节；第一节的每条都能在宿主 `lib/` 里指到出处。
 - 在这台机器上部署或排障前，先读第二节；第二节的每条都实测过。
+- 在开发机上跑 git 前读第三节；容器里不适用。
 - 详细的诊断命令与故障对策表在 WorkBuddy 侧的 skill `homecloud-yunzai-diag`。
