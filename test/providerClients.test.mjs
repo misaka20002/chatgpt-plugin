@@ -26,9 +26,9 @@ const refusals = {
   gemini: { candidates: [{ finishReason: 'SAFETY', content: { role: 'model', parts: [{ text: '' }] } }] }
 }
 
-function createClient(type, fetch, onToolStart = () => {}) {
+function createClient(type, fetch, onToolStart = () => {}, history = createAttemptHistory(type)) {
   const options = { apiKey: 'fixture-key', key: 'fixture-key', fetch, onToolStart, config: Config,
-    model: 'fixture-model', ...createAttemptHistory(type), maxModelTokens: 8192, maxResponseTokens: 1024 }
+    model: 'fixture-model', ...history, maxModelTokens: 8192, maxResponseTokens: 1024 }
   if (type === 'api') return new ChatGPTAPI({ ...options, completionParams: { model: 'gpt-4o-mini' } })
   if (type === 'responses') return new ResponsesAPI(options)
   if (type === 'claude') return new ClaudeAPIClient(options)
@@ -119,7 +119,20 @@ test('Gemini 工具回填保持完整历史链，不截断之前的用户上下�
   assert.ok((await history.getMessageById(history.parentMessageId)).parentMessageId)
 })
 
-test('Gemini 工具轮回填不再重复携带引用图（invalid argument 回归）', async () => {
+/** 沿 parentMessageId 走完存储链，用于断言「落库内容里没有 base64」 */
+async function collectStoredChain(history, startId) {
+  const chain = []
+  let cursor = startId
+  while (cursor) {
+    const message = await history.getMessageById(cursor)
+    if (!message) break
+    chain.push(message)
+    cursor = message.parentMessageId
+  }
+  return chain
+}
+
+test('Gemini 工具轮回放本轮引用图：图片只在用户轮出现一次', async () => {
   const IMAGE_BYTES = 'iVBORw0KGgo='
   const history = createAttemptHistory('gemini')
   const requests = []
@@ -133,16 +146,68 @@ test('Gemini 工具轮回填不再重复携带引用图（invalid argument 回�
     }
   })
   client.addTools([{ name: 'lookup', function: () => ({ name: 'lookup', description: '查询', parameters: { type: 'object', properties: {} } }), func: async () => 'ok' }])
-  await client.sendMessage('这张图里是什么', {
+  const result = await client.sendMessage('这张图里是什么', {
     parentMessageId: history.parentMessageId,
     medias: [{ mimeType: 'image/png', data: IMAGE_BYTES }]
   })
   assert.equal(requests.length, 2)
-  // 用底图字节判断，避免 inline_data / inlineData 两种写法差异
   assert.ok(JSON.stringify(requests[0]).includes(IMAGE_BYTES), '用户轮必须带图')
-  assert.ok(!JSON.stringify(requests[1]).includes(IMAGE_BYTES), '工具回调轮不得再带图')
-  const lastParts = requests[1].contents.at(-1).parts
-  assert.ok(lastParts.every(part => !part.inlineData && !part.inline_data))
+  // 工具回调轮不能丢图，也不能把图挪到 functionResponse 那一轮：图回到最初那条用户消息，恰好一次
+  assert.equal(JSON.stringify(requests[1]).split(IMAGE_BYTES).length - 1, 1, '第二次请求里图片只出现一次')
+  const userTurn = requests[1].contents[0]
+  assert.equal(userTurn.role, 'user')
+  assert.equal(userTurn.parts[0].text, '这张图里是什么')
+  assert.deepEqual(userTurn.parts[1], { inline_data: { mime_type: 'image/png', data: IMAGE_BYTES } })
+  const callbackParts = requests[1].contents.at(-1).parts
+  assert.ok(callbackParts.every(part => !part.inlineData && !part.inline_data), '回调轮不得带图')
+  // 存储形态不变：落库内容仍然只有文本占位符
+  const stored = await collectStoredChain(history, result.parentMessageId)
+  assert.ok(stored.length > 0)
+  assert.ok(stored.every(message => !JSON.stringify(message).includes(IMAGE_BYTES)), '落库内容不得包含 base64')
+  assert.ok(stored.some(message => JSON.stringify(message).includes('[多媒体附件: image/png]')), '落库内容应保留媒体占位')
+})
+
+test('OpenAI Chat 工具轮回放本轮引用图：图片只在用户轮出现一次', async () => {
+  const IMAGE_BYTES = 'iVBORw0KGgo='
+  const history = createAttemptHistory('api')
+  const requests = []
+  const client = createClient('api', async (url, options) => {
+    requests.push(JSON.parse(options.body))
+    const message = requests.length === 1
+      ? { role: 'assistant', content: null, tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'lookup', arguments: '{}' } }] }
+      : { role: 'assistant', content: '看完了' }
+    return Response.json({ id: `resp-${requests.length}`, choices: [{ message, finish_reason: 'stop' }] })
+  }, () => {}, history)
+  const messageContent = [
+    { type: 'text', text: '这张图里是什么动物' },
+    { type: 'image_url', image_url: { url: `data:image/png;base64,${IMAGE_BYTES}` } }
+  ]
+  const first = await client.sendMessage(messageContent, { parentMessageId: history.parentMessageId })
+  // 复刻 model/core.js 的工具轮组装：用户消息 id 只在第一轮响应之后可取
+  await client.sendMessage(null, {
+    parentMessageId: first.id,
+    appendMessages: [{
+      id: first.id, role: 'assistant', text: first.text || '', originalContent: first.originalContent ?? (first.text || null),
+      parentMessageId: first.parentMessageId, conversationId: first.conversationId, functionCall: first.functionCall, toolCalls: first.toolCalls
+    }, {
+      id: 'tool-message-1', role: 'tool', text: '工具返回', originalContent: '工具返回',
+      parentMessageId: first.id, conversationId: first.conversationId, toolCallId: 'call_1'
+    }],
+    turnContent: { id: first.parentMessageId, content: messageContent },
+    // 全局提示会原地改请求消息的首个 text part；调用方持有的数组不得被写回
+    paimon_globalInnerOs: 'OS-BLOCK'
+  })
+  assert.equal(requests.length, 2)
+  assert.equal(messageContent[0].text, '这张图里是什么动物', '调用方的原始 content 不得被同步提示改写')
+  assert.match(JSON.stringify(requests[1]), /OS-BLOCK/, '全局提示应写进本次请求')
+  assert.equal(JSON.stringify(requests[1]).split(IMAGE_BYTES).length - 1, 1, '第二次请求里图片只出现一次')
+  const userMessage = requests[1].messages.find(message => message.role === 'user')
+  assert.ok(Array.isArray(userMessage.content), '工具轮的用户消息必须是多模态数组')
+  assert.deepEqual(userMessage.content.at(-1), { type: 'image_url', image_url: { url: `data:image/png;base64,${IMAGE_BYTES}` } })
+  const stored = await collectStoredChain(history, first.parentMessageId)
+  assert.ok(stored.length > 0)
+  assert.ok(stored.every(message => !JSON.stringify(message).includes(IMAGE_BYTES)), '落库内容不得包含 base64')
+  assert.ok(stored.some(message => JSON.stringify(message).includes('[图片]')), '落库内容应保留媒体占位')
 })
 
 // ===== 思维链识别（各 provider → thinking_text，由 forwardReasoning 开关决定是否转发）=====
