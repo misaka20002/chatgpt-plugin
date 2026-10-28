@@ -1,6 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import common from '../../../lib/common/common.js';
 import { Config } from '../utils/config.js'
+import { dailyMapSync } from '../utils/commandMap/dailySync.js'
 import {
     getUserReplySetting,
     parseSourceImg,
@@ -1234,6 +1235,15 @@ ${userSetting.useTTS === true ? '当前语音模式为' + Config.ttsMode : ''}`
         //     Config.defaultUseTTS = true
         //     logger.mark(`[chatgpt-tts-自动全局语音模式]全局语音模式已开启，将在fish.audio达到配额后自动关闭`)
         // }
+
+        // 指令地图每日检查。挂在这个任务里是为了不再注册第二个定时任务（少一个失败点，
+        // 也少一处要维护的 cron）。默认就跑，开关由「插件能力地图」总开关决定。
+        // 整段独立 try：它挂了不能影响上面的 TTS 重置。
+        try {
+            await dailyMapSync()
+        } catch (err) {
+            logger.warn(`[指令地图] 每日检查失败：${err?.stack || err?.message || err}`)
+        }
 
         return true
     }

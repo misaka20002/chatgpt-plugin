@@ -1,4 +1,5 @@
 import { fetchVerified, pullPatch } from './fetchMap.js'
+import { saveLocalRevision } from './mapStore.js'
 
 /**
  * 地图同步：拉索引 → 挑出本机已装的插件 → 逐份拉补丁。
@@ -12,17 +13,15 @@ import { fetchVerified, pullPatch } from './fetchMap.js'
  */
 
 /**
- * 拉索引并按需下载补丁。
+ * 只拉索引，不下载任何补丁。
  *
- * @param {{
- *   indexUrl: string,
- *   pluginKeys: string[],
- *   fetchImpl?: typeof fetch,
- *   pull?: typeof pullPatch
- * }} options
- * @returns {Promise<{ updated: number, skipped: number, failed: number, errors: string[], sources: Record<string, string> }>}
+ * 每日检查靠它：索引只有几十 KB，比 revision 就能判断云端有没有新版，
+ * 没必要每天把几十份补丁全下一遍。手动同步也复用它，避免一次操作拉两遍索引。
+ *
+ * @param {{ indexUrl: string, fetchImpl?: typeof fetch }} options
+ * @returns {Promise<{ index: object, base: string, source: string }>}
  */
-export async function syncPatches ({ indexUrl, pluginKeys, fetchImpl, pull = pullPatch }) {
+export async function readIndex ({ indexUrl, fetchImpl }) {
   const base = indexUrl.replace(/[^/]+$/, '')
   const { text, source } = await fetchVerified(indexUrl, { requireHash: false, fetchImpl })
 
@@ -35,9 +34,27 @@ export async function syncPatches ({ indexUrl, pluginKeys, fetchImpl, pull = pul
   if (!index || Number(index.schema) !== 1 || !index.plugins || typeof index.plugins !== 'object') {
     throw new Error(`索引结构不合法（来自 ${source}）`)
   }
+  return { index, base, source }
+}
+
+/**
+ * 拉索引并按需下载补丁。
+ *
+ * @param {{
+ *   indexUrl: string,
+ *   pluginKeys: string[],
+ *   fetchImpl?: typeof fetch,
+ *   pull?: typeof pullPatch,
+ *   preloaded?: { index: object, base: string }
+ * }} options
+ * @returns {Promise<{ updated: number, skipped: number, failed: number, errors: string[], sources: Record<string, string>, revision: number }>}
+ */
+export async function syncPatches ({ indexUrl, pluginKeys, fetchImpl, pull = pullPatch, preloaded }) {
+  const { index, base } = preloaded || await readIndex({ indexUrl, fetchImpl })
+  const revision = Number(index.revision) || 0
 
   const wanted = new Set(pluginKeys || [])
-  const result = { updated: 0, skipped: 0, failed: 0, errors: [], sources: {} }
+  const result = { updated: 0, skipped: 0, failed: 0, errors: [], sources: {}, revision }
 
   for (const [pluginKey, entry] of Object.entries(index.plugins)) {
     if (!wanted.has(pluginKey)) {
@@ -73,6 +90,10 @@ export async function syncPatches ({ indexUrl, pluginKeys, fetchImpl, pull = pul
       result.errors.push(`${pluginKey}: ${err.message}`)
     }
   }
+
+  // 有失败就不记版本号：明天的每日检查会再比一次，把这些漏掉的补回来。
+  // 记了的话，这些地图要等云端下一次发版才会重试。
+  if (!result.failed) saveLocalRevision(revision)
 
   return result
 }
