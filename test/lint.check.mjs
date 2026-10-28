@@ -23,6 +23,15 @@
  *    后者是本仓已无 Python 代码的证据（临时验证的 venv 该建在系统临时目录）。
  * 7. 用户可见文案（锅巴 `bottomHelpMessage`、`e.reply(...)`）里的**时长断言**必须带「实测」。
  *    本仓已吃过一次：审核文案写「一两分钟」，实测 8 分 30 秒，四倍偏差活到上线才被日志抓住。
+ * 8. 测试里不许手搓框架事件的身份字段（`isMaster` / `member`）——统一走共享夹具
+ *    `test/helpers/trssEvent.mjs`。框架对这两个字段的写法是契约（不可写、不可配置），
+ *    夹具一旦漂移，测试照样「通过」，线上却抛 TypeError（2026-10-28 线上真实故障）。
+ *
+ * 已评估但**未实现**的候选（写在注释里是为了让后来者知道没有这道门禁，别误以为有）：
+ * - 锅巴 schema 的每个 `field` 都要能在 `utils/config.js` 的默认配置里找到。
+ *   价值明确（删配置项忘了删面板字段，用户会看到点了没反应的开关），但没法用正则判定：
+ *   `defaultConfig` 里 `groupReply` / `avatarReply` 是函数调用，静态取不到叶子键。
+ *   要做就得引 AST 或运行时求值，成本高于收益，暂缓。
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -43,6 +52,10 @@ const CONSOLE_LOG_RE = /\bconsole\.log\(/
 const USER_COPY_RE = /bottomHelpMessage:|e\.reply\(/
 /** 时长断言：约 N 分钟 / N 分 M 秒 / 一两分钟 / 几分钟 —— 都是「没测就写」的典型措辞 */
 const DURATION_CLAIM_RE = /约\s*\d+(?:\.\d+)?\s*分(?:钟)?|\d+\s*分\s*\d+\s*秒|一两分钟|几分钟/
+/** 框架事件的只读身份字段：宿主用 defineProperty 定义，手搓就会与契约漂移 */
+const EVENT_IDENTITY_DEFINE_RE = /Object\.defineProperty\(\s*\w+\s*,\s*['"](?:isMaster|member)['"]/
+/** 共享夹具本身：它是契约的定义处，不受「不许手搓」约束 */
+const EVENT_FIXTURE_FILE = 'test/helpers/trssEvent.mjs'
 
 const violations = []
 
@@ -55,6 +68,10 @@ function scanFile(file) {
     if (line.includes('lint-ignore')) return
     if (JSDOC_SAME_LINE_RE.test(line)) {
       violations.push(`${relative}:${index + 1} JSDoc 结束与声明须换行`)
+    }
+    // 规则 8：测试里的框架事件身份字段必须来自共享夹具（生产代码自己定义影子事件是另一回事）
+    if (relative.startsWith('test/') && relative !== EVENT_FIXTURE_FILE && EVENT_IDENTITY_DEFINE_RE.test(line)) {
+      violations.push(`${relative}:${index + 1} 框架事件的 isMaster/member 只能由 ${EVENT_FIXTURE_FILE} 定义；手搓会让夹具与宿主契约漂移`)
     }
     const camelLog = CAMEL_LOG_PREFIX_RE.exec(line)
     if (camelLog && /[A-Z]/.test(camelLog[1])) {

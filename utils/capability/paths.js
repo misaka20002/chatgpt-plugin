@@ -21,9 +21,6 @@ export const CAPABILITY_DIRECTORY_LIMIT = 100
 /** 硬上限：配置面板最多也只能调到这里 */
 export const CAPABILITY_DIRECTORY_MAX = 200
 
-/** 详情查询最多返回的候选数 */
-export const CAPABILITY_MAX_CANDIDATES = 5
-
 /** 只读白名单的根：插件自身目录 */
 const capabilityDir = path.dirname(fileURLToPath(import.meta.url))
 export const SELF_PLUGIN_ROOT = path.resolve(capabilityDir, '..', '..')

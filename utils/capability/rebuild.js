@@ -59,7 +59,6 @@ async function rebuild () {
   }
 
   const audited = await auditCapabilityEntries(baseEntries, {
-    provider: Config.capabilityAuditProvider || undefined,
     concurrency: Config.capabilityAuditConcurrency,
     onProgress: (done, total) => {
       globalThis.logger?.mark?.(`${LOG_PREFIX} 审核进度 ${done}/${total} 批`)

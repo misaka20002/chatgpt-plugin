@@ -37,17 +37,16 @@ const AUDIT_SYSTEM = [
  * @param {Array<object>} entries
  * @param {{
  *   chat?: (prompt: string) => Promise<{ text: string }>,
- *   provider?: string,
  *   concurrency?: number,
  *   onProgress?: (done: number, total: number) => void
  * }} [options]
  * @returns {Promise<{ approved: boolean, issues: string[], entries: Array<object>, batches: number }>}
  */
-export async function auditCapabilityEntries (entries, { chat, provider, concurrency = 3, onProgress } = {}) {
+export async function auditCapabilityEntries (entries, { chat, concurrency = 3, onProgress } = {}) {
   const list = Array.isArray(entries) ? entries : []
   if (!list.length) return { approved: true, issues: [], entries: [], batches: 0 }
 
-  const ask = chat || await createSubLLMChat({ provider })
+  const ask = chat || await createSubLLMChat()
 
   const chunks = []
   for (let offset = 0; offset < list.length; offset += CHUNK_SIZE) {
@@ -156,13 +155,12 @@ export function parseAuditOutput (text) {
 }
 
 /**
- * 审核用哪个模型，由 provider 条目自己决定（模型名在「提供商」里配置）。
- * 这里只选供应商，不另设模型字段——否则同一个模型要维护两份配置，必然漂移。
+ * 审核沿用当前供应商与它自己的模型配置——不另设供应商/模型字段。
+ * 这条链路只在生成能力表时跑一次，独立配置带来的调参成本大于收益。
  */
-async function createSubLLMChat ({ provider }) {
+async function createSubLLMChat () {
   const { SubLLM } = await import('../../model/SubLLM.js')
   const client = new SubLLM({
-    provider: provider || undefined,
     systemPrompt: AUDIT_SYSTEM,
     temperature: 0.1,
     timeoutMs: 180000

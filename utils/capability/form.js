@@ -1,4 +1,4 @@
-import { CAPABILITY_DIRECTORY_LIMIT, CAPABILITY_DIRECTORY_MAX, CAPABILITY_MAX_CANDIDATES } from './paths.js'
+import { CAPABILITY_DIRECTORY_LIMIT, CAPABILITY_DIRECTORY_MAX } from './paths.js'
 import { redactText } from './redact.js'
 
 /**
@@ -8,17 +8,21 @@ import { redactText } from './redact.js'
  * 双过滤之外的所有加工（正则转写法、合并、目录截断）都在这里，便于单测。
  */
 
+/** 单条规则最多展开几种写法：再多就不是「用户可能这么打」，是噪音 */
+const MAX_VARIANTS = 6
+
 /**
- * 把触发正则还原成用户实际要打的写法。
+ * 把触发正则还原成用户可能打的**全部**写法。
  *
- * 这是个启发式函数，不做完备的正则解析——覆盖插件里最常见的几种写法即可：
- * 锚点、捕获组与多分支、可选组、负向断言、字符类与任意字符尾巴。
+ * 为什么不止一种：`#(全部面板更新|更新面板|面板更新)` 里每一支都是真实可用的写法，
+ * 只留第一支会让「帮我刷新面板」彻底查不到——2026-10-28 线上实例：
+ * 用户说「刷新一下面板」，候选里没有 `#更新面板`，模型只好改用自带的查面板工具。
  *
  * @param {string} reg
- * @returns {string} 形如 `#签到`；无法给出可读写法时返回空串（表示靠自然语言触发）
+ * @returns {string[]} 去重后的写法列表，最多 MAX_VARIANTS 条；无法给出可读写法时返回空数组
  */
-export function commandFromReg (reg) {
-  if (typeof reg !== 'string' || !reg.trim()) return ''
+export function commandsFromReg (reg) {
+  if (typeof reg !== 'string' || !reg.trim()) return []
   let body = reg.trim()
 
   // 防御：可能是 /.../flags 的字符串写法
@@ -31,19 +35,54 @@ export function commandFromReg (reg) {
   // 可选组整块删掉：`(图片)?chat` 的可选部分不该写进"正确用法"
   body = body.replace(/\(([^()]*)\)\?/g, '')
 
-  // 捕获组里有多分支时取第一支：`#(结束|新开|摧毁)对话` → `#结束对话`
-  let previous = ''
-  while (previous !== body) {
-    previous = body
-    body = body.replace(/\(([^()]*)\)/g, (_, inner) => inner.replace(/^\?:/, '').split('|')[0])
+  const commands = []
+  for (const variant of expandAlternations(body)) {
+    const command = cleanupCommand(variant)
+    if (!command || commands.includes(command)) continue
+    commands.push(command)
+    if (commands.length >= MAX_VARIANTS) break
   }
-  // 组外还剩多分支时同样取第一支
-  body = body.split('|')[0]
+  return commands
+}
 
+/**
+ * 把正则体拆成所有候选写法。多分支组逐层展开，组外的 `|` 也拆开。
+ * @param {string} text
+ * @returns {string[]}
+ */
+function expandAlternations (text) {
+  const results = []
+  const budget = MAX_VARIANTS * 8
+
+  const walk = current => {
+    if (results.length >= budget) return
+    const match = /\((?:\?:)?([^()]*)\)/.exec(current)
+    if (!match) {
+      results.push(...current.split('|'))
+      return
+    }
+    const head = current.slice(0, match.index)
+    const tail = current.slice(match.index + match[0].length)
+    for (const alt of match[1].split('|')) walk(head + alt + tail)
+  }
+
+  walk(text)
+  return results
+}
+
+/**
+ * 单支候选的收尾清理：去掉正则残留，补上 `#` 前缀。
+ * @param {string} body
+ * @returns {string}
+ */
+function cleanupCommand (body) {
   // 字符类连同其量词一起删：`[^#]`、`[\s\S]*`
   body = body.replace(/\[\^?[^\]]*\]\s*[*+?]?/g, '')
   // 空白类转义与其量词
   body = body.replace(/\\[sSdDwW]\s*[*+?]?/g, '')
+  // 量词区间：`\d{5}`、`\d{1,3}` 里的 `{5}` 不是用户打的字，留着会变成「#查询{5}」这种脏写法。
+  // 必须放在转义还原之前——此时字面量的 `\{` 还没还原，不会被误删。
+  body = body.replace(/\{\d*,?\d*\}/g, '')
   // 其余转义还原成字面量
   body = body.replace(/\\(.)/g, '$1')
   // 残留的元字符
@@ -57,6 +96,15 @@ export function commandFromReg (reg) {
   if (!body) return ''
   if (!body.startsWith('#')) body = `#${body}`
   return body
+}
+
+/**
+ * 单条规则的**主写法**（用户最可能打的那一个）。等价于 `commandsFromReg(reg)[0]`。
+ * @param {string} reg
+ * @returns {string}
+ */
+export function commandFromReg (reg) {
+  return commandsFromReg(reg)[0] || ''
 }
 
 /** 空壳正则（`(?:)`、`()`、`^$`）不构成任何用户可见指令，直接跳过 */
@@ -84,19 +132,22 @@ export function buildCapabilityEntries (snapshot, hints = {}) {
 
     for (const rule of plugin.rules || []) {
       if (isMeaninglessReg(rule.reg)) continue
-      const command = commandFromReg(rule.reg)
-      entries.push({
-        plugin: pluginName,
-        // 注册类名（可能同名多个包）不够定位，key 保留原始注册单位，供核对与按包聚合
-        pluginKey: plugin.key,
-        pluginDsc,
-        reg: rule.reg,
-        command,
-        permission: rule.permission || '',
-        hintFields: hintFields.slice(0, 5),
-        description: '',
-        confidence: 'none'
-      })
+      // 一条规则可能对应多种真实写法（`#(全部面板更新|更新面板|面板更新)`），
+      // 每种写法各占一条：只留第一支会让其余写法彻底搜不到
+      for (const command of commandsFromReg(rule.reg)) {
+        entries.push({
+          plugin: pluginName,
+          // 注册类名（可能同名多个包）不够定位，key 保留原始注册单位，供核对与按包聚合
+          pluginKey: plugin.key,
+          pluginDsc,
+          reg: rule.reg,
+          command,
+          permission: rule.permission || '',
+          hintFields: hintFields.slice(0, 5),
+          description: '',
+          confidence: 'none'
+        })
+      }
     }
   }
 
@@ -158,97 +209,12 @@ export function renderCapabilityForm (entries, { generatedAt, degraded = false, 
   }
 }
 
-/** 便捷入口：快照直接出表单（跳过审核，只在测试与降级预览里用） */
-export function buildCapabilityForm (snapshot, hints, options) {
-  return renderCapabilityForm(buildCapabilityEntries(snapshot, hints), options)
-}
-
-/**
- * 按关键词找指令。工具层唯一的检索逻辑，放这里是为了能纯函数测试。
- *
- * 打分从高到低：写法全等 > 写法包含 > 描述包含 > 插件名包含。
- *
- * @param {Array<object>} entries
- * @param {string} query
- * @param {{ limit?: number }} [options]
- * @returns {{ matches: Array<object>, total: number }}
- */
-export function matchCapabilities (entries, query, { limit = CAPABILITY_MAX_CANDIDATES } = {}) {
-  const raw = typeof query === 'string' ? query.trim() : ''
-  if (!raw) return { matches: [], total: 0 }
-
-  const normalized = normalizeQuery(raw)
-  const scored = []
-
-  for (const entry of Array.isArray(entries) ? entries : []) {
-    const command = normalizeQuery(entry.command || '')
-    const description = String(entry.description || entry.pluginDsc || '')
-    const plugin = normalizeQuery(entry.plugin || '')
-    let score = 0
-
-    if (command && command === normalized) score = 100
-    else if (command && (command.includes(normalized) || normalized.includes(command))) score = 70
-    else if (description && description.includes(raw)) score = 45
-    else if (plugin && plugin.includes(normalized)) score = 25
-
-    if (score > 0) scored.push({ entry, score })
-  }
-
-  scored.sort((a, b) => b.score - a.score || String(a.entry.command).localeCompare(String(b.entry.command)))
-  return { matches: scored.slice(0, limit).map(item => item.entry), total: scored.length }
-}
-
-function normalizeQuery (text) {
-  return String(text || '').replace(/[#＃\s]/g, '').toLowerCase()
-}
-
-/**
- * 两级目录下的检索：先看是不是在问某个插件类，再退回关键词。
- *
- * 命中的是插件类名时返回该类下的全部指令（截断到 pluginEntryLimit）——
- * 这是两级目录能省 token 的前提：目录里只有类名与条数，AI 想知道细节必须按类展开。
- *
- * @param {Array<object>} entries
- * @param {string} query
- * @param {{ entryLimit?: number, pluginEntryLimit?: number }} [options]
- * @returns {{ mode: 'plugin'|'entry'|'none', plugin?: string, matches: Array<object>, total: number }}
- */
-export function searchCapabilities (entries, query, { entryLimit = CAPABILITY_MAX_CANDIDATES, pluginEntryLimit = 30 } = {}) {
-  const raw = typeof query === 'string' ? query.trim() : ''
-  if (!raw) return { mode: 'none', matches: [], total: 0 }
-
-  const normalized = normalizeQuery(raw)
-  const groups = groupByPlugin(Array.isArray(entries) ? entries : [])
-  const hitGroups = groups.filter(group => {
-    const name = normalizeQuery(group.plugin)
-    return name && (name.includes(normalized) || normalized.includes(name))
-  })
-
-  if (hitGroups.length === 1) {
-    const group = hitGroups[0]
-    return {
-      mode: 'plugin',
-      plugin: group.plugin,
-      matches: group.entries.slice(0, pluginEntryLimit),
-      total: group.entries.length
-    }
-  }
-
-  if (hitGroups.length > 1) {
-    const merged = hitGroups.flatMap(group => group.entries).slice(0, entryLimit)
-    return { mode: 'entry', matches: merged, total: hitGroups.reduce((total, group) => total + group.entries.length, 0) }
-  }
-
-  const { matches, total } = matchCapabilities(entries, raw, { limit: entryLimit })
-  return { mode: 'entry', matches, total }
-}
-
 /**
  * 条目的一句话说明。工具与表单共用，避免同一条指令在两处显示不同的描述。
  * @param {object} entry
  * @returns {string}
  */
-export function describeCapabilityEntry (entry) {
+function describeCapabilityEntry (entry) {
   if (entry?.description) return entry.description
   if (entry?.pluginDsc) return `${entry.pluginDsc}（描述粗略）`
   if (Array.isArray(entry?.hintFields) && entry.hintFields.length) {

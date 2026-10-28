@@ -300,3 +300,16 @@ class GroupReplyManager {
 }
 
 export const groupReply = new GroupReplyManager()
+
+/**
+ * 自主回复要不要禁用智能模式工具。
+ *
+ * 判断步骤本来就不带工具（SubLLM 永远不附 tools）；这里管的是**正式回复**那一步——
+ * 它走的是普通聊天路径，智能模式一开就把全部工具装配上，模型能顺手代执行、发图、
+ * 写记忆。自主回复是旁观者插话，这些副作用在群里看着莫名其妙，所以默认禁用。
+ *
+ * @returns {boolean} true 表示禁用工具
+ */
+export function groupReplyToolsDisabled () {
+  return settings().disableTools
+}
