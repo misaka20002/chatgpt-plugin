@@ -9,7 +9,7 @@ import { capabilityDataDir, capabilityFormPath, capabilityMetaPath } from './pat
  * 不接受任何外部指定的目标路径。产物落在框架 data/ 下，天生不在插件仓库的版本控制里。
  *
  * 读路径是同步的：它要给每次请求的提示词拼装用，异步会让四个 provider 分支都要改签名。
- * 用进程内缓存挡住重复 IO，写入与外部刷新时失效。
+ * 用进程内缓存挡住重复 IO，写入时失效（进程重启也会自然重读）。
  */
 
 let cache = null

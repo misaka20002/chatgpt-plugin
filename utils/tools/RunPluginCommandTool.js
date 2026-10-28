@@ -52,11 +52,22 @@ async function resolveTarget (e) {
 
   try {
     const member = await globalThis.Bot?.pickMember?.(e.group_id, Number(userId))
-    if (!member) return { error: `查不到 ${userId} 在本群的成员信息，让他本人先发一条消息再试。` }
+    if (!member) return { error: `查不到 ${userId} 的群成员信息，让他本人先发一条消息再试。` }
     return { target: { userId, member } }
   } catch (err) {
     return { error: `查不到 ${userId} 的群身份（${err?.message || '未知原因'}），让他本人先发一条消息再试。` }
   }
+}
+
+/**
+ * 召回结果为空的统一回复：两处（初次匹配、候选全不可执行）用同一句话，
+ * 避免模型看到两种措辞时误以为是不同故障。
+ *
+ * @param {string} query
+ * @returns {string}
+ */
+function noMatch (query) {
+  return `Error: 本机没有和「${query}」对得上的指令。可换说法再试 lookupPluginCapability；仍没有就如实说暂时做不到，不要编。`
 }
 
 /**
@@ -74,17 +85,17 @@ export class RunPluginCommandTool extends AbstractTool {
     properties: {
       query: {
         type: 'string',
-        description: '用户的原话或功能关键词，例如「给宾宾点个赞」「帮我签到」「刷新一下面板」。不确定正确写法时用这个，工具会自己匹配到具体指令。'
+        description: '用户原话或功能关键词（如「帮我签到」「查看他的游戏面板」）。不确定写法时用它，工具会自动匹配。'
       },
       command: {
         type: 'string',
-        description: '可选。已经确认过的完整指令写法（如 #点赞）。只能写指令本身：不要拼 QQ 号、参数或被 @ 的人，目标由插件自己从 @ 段里取。一般不用填，填了就不再做匹配。'
+        description: '可选。已确认的完整指令写法（如 #点赞）。只写指令本身：不拼 QQ 号、参数或 @，目标由插件从 @ 段取。一般留空；填了就不再按 query 匹配。'
       }
     },
     required: []
   }
 
-  description = '【代执行】替用户真正执行一条本机插件指令。凡用户说「帮我 / 给我 / 替我 + 某个动作」（帮我签到、给我点个赞、刷新面板），直接调用本工具，把用户原话放进 query 就行，不需要先查写法，也不要只告诉他怎么写。执行后插件的输出会自己发到群里，你不用复述。'
+  description = '【代执行】直接执行本机插件指令。用户说「帮我／给我／替我 + 动作」时调用，把原话放进 query，不必先查写法，也不要只教用户怎么写。插件输出会自己发到群里，不用复述。'
 
   func = async function (opts, e) {
     if (Config.enableCapabilityMap === false) return 'Error: 能力地图功能已关闭，请先在锅巴「插件能力地图（AI 代执行）」里打开「启用插件能力地图」。'
@@ -92,12 +103,12 @@ export class RunPluginCommandTool extends AbstractTool {
 
     const wanted = typeof opts?.command === 'string' ? opts.command.trim() : ''
     const query = typeof opts?.query === 'string' ? opts.query.trim() : ''
-    if (!wanted && !query) return 'Error: 请把用户的原话放进 query，或给出完整指令写法。'
+    if (!wanted && !query) return 'Error: 缺少参数：请填 query（用户原话）或 command（指令写法）。'
 
     const { entries } = loadCommandIndex()
     if (!entries.length) {
-      // 工具只读不重建：重建要花钱，只能由主人发指令触发
-      return 'Error: 本机能力目录还没有生成。请主人发送 #chatgpt刷新功能表 生成后再试。'
+      // 工具只读不重建：重建要扫本机插件并调模型审核（花钱），只能由主人发 #chatgpt刷新功能表
+      return 'Error: 本机能力表还没生成，请主人先发 #chatgpt刷新功能表。'
     }
 
     let command = wanted
@@ -108,7 +119,7 @@ export class RunPluginCommandTool extends AbstractTool {
     if (!command) {
       const { matches } = recall(query, entries, { limit: 5 })
       if (!matches.length) {
-        return `Error: 本机没有和「${query}」对得上的插件指令。可以用 lookupPluginCapability 换个说法再确认，仍然没有就如实告诉用户暂时做不到，不要编。`
+        return noMatch(query)
       }
       // 候选里可能混着「索引里有、本机规则匹配不到」的伪写法：线上「看一下服务器状态」
       // 召回的第一名是 `#^服务器状态`（三角洲规则展开出的假写法），派发必然 not-found，
@@ -124,10 +135,10 @@ export class RunPluginCommandTool extends AbstractTool {
         break
       }
       if (!entry) {
-        return `Error: 本机没有和「${query}」对得上的插件指令。可以用 lookupPluginCapability 换个说法再确认，仍然没有就如实告诉用户暂时做不到，不要编。`
+        return noMatch(query)
       }
       command = entry.command
-      if (!command) return `Error: 「${query}」匹配到的指令没有固定触发词，只能由用户自己操作。`
+      if (!command) return `Error: 「${query}」匹配到的指令没有固定触发词，只能让用户自己操作。`
       globalThis.logger?.mark?.(`[Chatgpt][commandMap] 原话「${query}」匹配到 ${command}（${entry.plugin}）`)
     } else if (!entry) {
       // 模型常把参数拼进写法（「#点赞 3649682312」），而插件的正则多半要求精确匹配，
@@ -163,36 +174,36 @@ export class RunPluginCommandTool extends AbstractTool {
       if (!isAffirmative(e)) {
         // 还没答「是」：保证有待确认记录，把话术再问一遍。这里不消费，用户答完还要用
         if (!samePending(peekPending(e), command)) putPending(e, command)
-        return `这条指令可能改动数据：${command}\n要执行就回复「是」；两分钟内有效。`
+        return `这条指令可能改动数据：${command}\n回复「是」即执行，两分钟内有效。`
       }
       // 用户答了「是」，确认的必须是同一条；取过即删，避免一次确认执行两次
       if (!samePending(takePending(e), command)) {
-        return `Error: 没有等待确认的「${command}」。先按用户原话发起一次，等用户回复「是」再调本工具。`
+        return `Error: 没有待确认的「${command}」。先发起一次，等用户回「是」再调本工具。`
       }
     }
 
     const result = await executeCommand(e, command, { target })
     if (result.ok) {
       const who = target ? `以 ${target.userId} 的身份` : ''
-      return `已${who ? `${who}` : ''}执行：${command}（插件输出会直接发到群里）`
+      return `已${who}执行：${command}（插件输出会发到群里）`
     }
 
     switch (result.reason) {
       case 'not-found':
-        return `Error: 本机没有能匹配「${command}」的指令，可能你的插件版本不同。`
+        return `Error: 本机没有能匹配「${command}」的指令，可能是插件版本不同。`
       case 'no-permission':
-        return 'Error: 这条指令需要更高权限，已被框架拒绝。'
+        return 'Error: 权限不足，已被框架拒绝。'
       case 'no-handler':
-        return 'Error: 指令存在但处理函数不可用，可能是插件内部问题。'
+        return 'Error: 指令存在但处理函数不可用（插件内部问题）。'
       case 'not-handled':
         // 插件明确说了「这条我不处理」：这次没办成，不能报成功
-        return 'Error: 没有插件真正接手执行这条指令（插件拒绝了，或前置条件不满足）。如实告诉用户这次没办成，不要说已经完成。'
+        return 'Error: 没有插件接手执行（插件拒绝或前置条件不满足）。如实告诉用户没办成，不要说已完成。'
       case 'no-effect':
         // 指令派出去了，但没有任何插件回应：多半是插件的前置条件不满足
-        return 'Error: 指令已经派发给插件，但没有插件回话，多半是前置条件不满足（如没绑定、不是好友、没权限）。如实告诉用户这次没办成，不要说已经完成。'
+        return 'Error: 已派发但没有插件回话，多半是前置条件不满足（未绑定、非好友、无权限）。如实告诉用户没办成，不要说已完成。'
       case 'handler-error':
         // 原文交给模型，让它翻成人话；只截长度，避免把整篇堆栈塞进上下文
-        return `Error: 插件执行时报错，结果没有发出去。原文（供你解释原因，转述给用户前必须去掉路径/密钥/QQ号等敏感信息）：${String(result.message || '').slice(0, 500)}`
+        return `Error: 插件执行报错，结果没有发出去。原因原文（供你解释；转述前去掉路径、密钥、QQ 号等敏感信息）：${String(result.message || '').slice(0, 500)}`
       default:
         return 'Error: 执行失败，框架加载器不可用。'
     }

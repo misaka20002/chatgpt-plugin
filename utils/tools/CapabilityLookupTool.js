@@ -39,8 +39,8 @@ export class CapabilityLookupTool extends AbstractTool {
 
     const { entries } = loadCommandIndex()
     if (!entries.length) {
-      // 工具只读不重建：重建要花钱，只能由主人发指令触发
-      return 'Error: 本机能力目录还没有生成。请主人发送 #chatgpt刷新功能表 生成后再问。'
+      // 工具只读不重建：重建要扫本机插件并调模型审核（花钱），只能由主人发 #chatgpt刷新功能表
+      return 'Error: 本机能力表还没生成，请主人先发 #chatgpt刷新功能表。'
     }
 
     const group = findPluginGroup(entries, query)
