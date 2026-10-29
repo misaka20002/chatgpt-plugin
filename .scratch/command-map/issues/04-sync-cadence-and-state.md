@@ -27,8 +27,9 @@
 「这一轮算不算失败」的口径：有该下的却一份都没下成 → 失败；一份都没该下的、或下了哪怕一份 → 成功（计数归零）。
 只认「一份都没成」，是因为地图之间互相独立，部分成功时用户看到的数据确实变新了。
 
-**本机插件 = `plugins/` 下带 `package.json` 的目录名**，不是 package.json 里的 name：地图仓按仓库名发地图，
-Yunzai 也按目录名认插件。排除 Yunzai 自带的 `adapter/example/other/system`——它们不是插件包，
+**本机插件 = `plugins/` 下带 `package.json` 或 `index.js` 的目录名**，不是 package.json 里的 name：地图仓按仓库名发地图，
+Yunzai 也按目录名认插件。只看 `package.json` 会漏掉没写这个文件的插件（线上「bujidao」就是这样整份地图没同步）。
+排除 Yunzai 自带的 `adapter/example/other/system`——它们不是插件包，
 留在清单里会让「缺失」永远有噪音。
 
 `DEFAULT_INDEX_URL` 定义在地图核心并导出，`readIndex` 在配置为空时用它；测试断言这个真实值，

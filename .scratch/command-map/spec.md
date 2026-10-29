@@ -1,6 +1,6 @@
 # 指令地图与代执行
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Problem Statement
 

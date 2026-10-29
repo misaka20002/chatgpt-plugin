@@ -2607,7 +2607,7 @@ export function supportGuoba() {
         {
           field: 'enableCommandMapDelegate',
           label: '允许 AI 代执行指令',
-          bottomHelpMessage: '开启后 AI 可以以提问者本人的身份把指令交回框架执行（用户说「帮我签到」就真的签到），权限仍由框架判定。注意：这会让 AI 真的触发插件、改动数据，有副作用的指令虽然会先问一句，仍建议只在信任的人之间开启。默认关闭。',
+          bottomHelpMessage: '开启后 AI 可以以提问者本人的身份把指令交回框架执行（用户说「帮我签到」就真的签到），权限仍由框架判定。注意：这会让 AI 真的触发插件、改动数据，而且不会先问一遍，建议只在信任的人之间开启。默认关闭。',
           component: 'Switch'
         },
         {
