@@ -185,31 +185,32 @@ function countReplies (delegated) {
 
   if (typeof delegated.reply === 'function') {
     const original = delegated.reply
-    delegated.reply = guarded(original, delegated)
-    restores.push(() => {
-      delegated.reply = original
-    })
+    if (Reflect.set(delegated, 'reply', guarded(original, delegated))) {
+      restores.push(() => {
+        Reflect.set(delegated, 'reply', original)
+      })
+    }
   }
 
   for (const key of ['group', 'friend']) {
     const original = delegated[key]
     const view = shadow(original)
     if (!view) continue
-    // 宿主用 defineProperty 定义这两个字段（只有 value，等于不可写不可配置），
-    // 直接赋值会抛 TypeError。锁死时退回包实例：这段期间同群别人的发送也会被算进来，
+    // 宿主把 group / friend 定成只读：直接赋值在严格模式下抛 TypeError
+    // （线上原文：Cannot assign to read only property 'group'）。只读可能来自自有属性，
+    // 也可能来自原型链，查描述符查不全；Reflect.set 换不了只返回 false，不抛。
+    // 换不了字段就退回包实例：这段期间同群别人的发送也会被算进来，
     // 所以只包 sendMsg 一个方法，且用完立刻还原。
-    const desc = Object.getOwnPropertyDescriptor(delegated, key)
-    if (desc && desc.writable !== true) {
-      const own = original.sendMsg
-      original.sendMsg = view.sendMsg
+    if (Reflect.set(delegated, key, view)) {
       restores.push(() => {
-        original.sendMsg = own
+        Reflect.set(delegated, key, original)
       })
       continue
     }
-    delegated[key] = view
+    const own = original.sendMsg
+    original.sendMsg = view.sendMsg
     restores.push(() => {
-      delegated[key] = original
+      original.sendMsg = own
     })
   }
 
