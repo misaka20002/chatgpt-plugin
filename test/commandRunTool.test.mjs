@@ -302,6 +302,55 @@ describe('代执行', () => {
     assert.match(reply, /一个字都没回/)
   })
 
+  test('插件走 group.sendMsg 发图，同样算办成', async () => {
+    seed()
+    // 不少插件绕开 e.reply 直接往 group 上发，只数 reply 会把这种当成没回话
+    let sent = 0
+    setCommandDispatcher(async event => {
+      await event.group.sendMsg([{ type: 'image', file: 'sign.png' }])
+      return true
+    })
+
+    const reply = await tool.func({ command: '#签到' }, asker({
+      group: { sendMsg: async () => { sent += 1; return { message_id: 1 } } }
+    }))
+
+    assert.equal(sent, 1)
+    assert.match(reply, /执行成功/)
+  })
+
+  test('两个出口各发一条时如实数两条', async () => {
+    seed()
+    setCommandDispatcher(async event => {
+      await event.reply('签到成功')
+      await event.group.sendMsg('明日再来')
+      return true
+    })
+
+    const reply = await tool.func({ command: '#签到' }, asker({
+      group: { sendMsg: async () => ({ message_id: 2 }) }
+    }))
+
+    assert.match(reply, /2 条/)
+  })
+
+  test('发送里再套一层发送只数一条', async () => {
+    seed()
+    // 框架的 e.reply 本身就是 group.sendMsg 的副本：包两层的不能算成两条
+    const group = { sendMsg: async () => ({ message_id: 3 }) }
+    setCommandDispatcher(async event => {
+      await event.reply('很长的一条，内部会被框架分段发送')
+      return true
+    })
+
+    const reply = await tool.func({ command: '#签到' }, asker({
+      group,
+      reply: async msg => group.sendMsg(msg)
+    }))
+
+    assert.match(reply, /1 条/)
+  })
+
   test('框架没认领这条指令时如实说，不当成成功', async () => {
     seed()
     spyDispatcher(false)

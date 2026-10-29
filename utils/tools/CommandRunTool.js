@@ -126,6 +126,86 @@ function prepareMessage (e, text) {
   }
 }
 
+/** 取一条消息里的文字，用来认框架的拒绝话术 */
+function textOf (msg) {
+  if (typeof msg === 'string') return msg
+  if (!Array.isArray(msg)) return ''
+  return msg.filter(seg => seg?.type === 'text').map(seg => seg.text || '').join('')
+}
+
+/**
+ * 数这次派发真的发出了几条消息。
+ *
+ * 只看 `deal()` 的返回值会把「派发出去、插件没吭声」当成成功——线上就是这么翻车的：
+ * 工具回「已派发」，模型接着说「帮你签好啦」，而群里一张图都没有。插件真正办成事的
+ * 标志是它自己发了消息，所以这里必须数得到。
+ *
+ * 三个出口都要数，因为插件发字发图走的路不止一条：`e.reply`、`e.group.sendMsg`、
+ * `e.friend.sendMsg`。第一条是第二条的 bind 副本，包了互不影响。每条消息只数一次：
+ * 发送过程中再套一层发送（长消息分段）不算新消息。
+ *
+ * 数不到的：`e.bot.pickGroup(id).sendMsg` 这种自己再取一个会话对象的写法——那已经
+ * 脱离本事件了。宁可不数，也不去包全场共用的 Bot。
+ *
+ * @param {object} delegated 派发用的消息事件
+ * @returns {{ replies: number, denied: boolean, restore: () => void }}
+ */
+function countReplies (delegated) {
+  const state = { replies: 0, denied: false }
+  const restores = []
+  let depth = 0
+
+  const wrap = (owner, key) => {
+    const original = owner?.[key]
+    if (typeof original !== 'function') return
+    try {
+      owner[key] = async function (...args) {
+        // 已经在外层那次发送里：套着发的分段不算新消息，也不能重复计数
+        if (depth > 0) return original.apply(this, args)
+        // 框架的权限拒绝也走 reply，但它不是插件办成事的回话，不能算成功
+        if (textOf(args[0]).includes(FRAMEWORK_DENIED)) {
+          state.denied = true
+          return original.apply(this, args)
+        }
+        depth += 1
+        try {
+          const res = await original.apply(this, args)
+          // 框架把发送失败包成 { error: [...] }，空消息返回 false：这两种都不算办成
+          if (res === false) return res
+          if (res && typeof res === 'object' && res.error) return res
+          state.replies += 1
+          return res
+        } finally {
+          depth -= 1
+        }
+      }
+    } catch {
+      return
+    }
+    restores.push(() => {
+      try {
+        owner[key] = original
+      } catch {}
+    })
+  }
+
+  wrap(delegated, 'reply')
+  wrap(delegated.group, 'sendMsg')
+  wrap(delegated.friend, 'sendMsg')
+
+  return {
+    get replies () {
+      return state.replies
+    },
+    get denied () {
+      return state.denied
+    },
+    restore () {
+      for (const fn of restores) fn()
+    }
+  }
+}
+
 /** 一条候选压成一行，够模型念给用户听 */
 function describeCandidate (entry) {
   return `- [${entry.plugin}] ${entry.command}${entry.description ? `：${entry.description}` : ''}`
@@ -195,31 +275,7 @@ export class CommandRunTool extends AbstractTool {
     const delegated = e
     const restore = prepareMessage(delegated, target)
     delegated.__commandMapNested = true
-    /**
-     * 数插件回了几次话。
-     *
-     * 只看 `deal()` 的返回值会把「派发出去、插件没吭声」当成成功——线上就是这么翻车的：
-     * 工具回「已派发」，模型接着说「帮你签好啦」，而群里一张图都没有。插件真正办成事的
-     * 标志是它自己发了消息，所以这里必须数得到。
-     */
-    let replies = 0
-    let denied = false
-    const originalReply = delegated.reply
-    if (typeof originalReply === 'function') {
-      delegated.reply = async (...args) => {
-        // 框架的权限拒绝也走 reply，但它不是插件办成事的回话，不能算成功
-        if (typeof args[0] === 'string' && args[0].includes(FRAMEWORK_DENIED)) {
-          denied = true
-          return originalReply.apply(delegated, args)
-        }
-        const res = await originalReply.apply(delegated, args)
-        // 框架把发送失败包成 { error: [...] }，空消息返回 false：这两种都不算办成
-        if (res === false) return res
-        if (res && typeof res === 'object' && res.error) return res
-        replies += 1
-        return res
-      }
-    }
+    const counter = countReplies(delegated)
 
     const unguard = guardAccept(frameworkLoader)
     try {
@@ -228,21 +284,25 @@ export class CommandRunTool extends AbstractTool {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」派发后没有插件认领`)
         return `${FAILED}已经把「${target}」交给框架，但没有插件认领它——可能这条指令已经改过，或者 ${sender} 的权限不够。没有别的办法替你执行，如实告诉用户即可。`
       }
-      if (denied) {
+      if (counter.denied) {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」被框架拒绝（权限不足）`)
         return `${FAILED}「${target}」被框架拒绝（${sender} 没有这条指令的权限）。直接告诉用户权限不够，不要编造成果。`
       }
-      if (replies === 0) {
+      if (counter.replies === 0) {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」派发了但插件没有回话`)
         return `${FAILED}「${target}」没有执行成功：插件一个字都没回，多半是它自己拒绝了（没绑定账号、登录已过期、额度不够）。直接告诉用户这次没成功、为什么，绝对不要编造「已经帮你签好了」「给你赞过了」这类结果。`
       }
-      logger.info(`${LOG_PREFIX} 代执行「${target}」已完成（插件回了 ${replies} 条）`)
-      return `执行成功。插件已经把结果（${replies} 条消息，含图片/文字）直接发到聊天里了。你不要再说任何话——不复述、不总结、不追加「已经帮你签好了」这类话，保持沉默。`
+      logger.info(`${LOG_PREFIX} 代执行「${target}」已完成（插件回了 ${counter.replies} 条）`)
+      return `执行成功。插件已经把结果（${counter.replies} 条消息，含图片/文字）直接发到聊天里了。你不要再说任何话——不复述、不总结、不追加「已经帮你签好了」这类话，保持沉默。`
     } catch (err) {
       logger.error(`${LOG_PREFIX} 代执行「${target}」出错：${err?.message || err}`)
       return `${FAILED}「${target}」执行时出错了，已经停下来。多半是插件自身的问题，可以让主人看一下日志。`
     } finally {
       unguard()
+      // 数消息的包裹先拆，再还事件字段：顺序反了会把还回去的事件又数一遍
+      try {
+        counter.restore()
+      } catch {}
       // 借用的是真人那条消息的事件对象：改完不还原，外层框架后续处理（引用回复、日志、
       // 统计）会看到被改坏的 msg。三样都得还回去。
       try {
@@ -250,7 +310,6 @@ export class CommandRunTool extends AbstractTool {
       } catch {}
       try {
         delete delegated.__commandMapNested
-        if (typeof originalReply === 'function') delegated.reply = originalReply
       } catch {}
     }
   }
