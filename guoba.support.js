@@ -2591,6 +2591,35 @@ export function supportGuoba() {
           }
         },
         {
+          label: '指令地图',
+          component: 'SOFT_GROUP_BEGIN'
+        },
+        {
+          label: '同步与查询',
+          component: 'Divider'
+        },
+        {
+          field: 'enableCommandMapSync',
+          label: '启用指令地图',
+          bottomHelpMessage: '把外部维护的「每个插件有哪些指令」拉到本地，AI 才答得出「你能干什么」「签到怎么写」。启动时与每天凌晨各拉一次，只发一个索引请求、版本没变不下载。不花钱，只占几 MB 磁盘。关掉后不再联网、也不再让 AI 查询指令（缓存保留，重新打开即恢复）。',
+          component: 'Switch'
+        },
+        {
+          field: 'enableCommandMapDelegate',
+          label: '允许 AI 代执行指令',
+          bottomHelpMessage: '开启后 AI 可以以提问者本人的身份把指令交回框架执行（用户说「帮我签到」就真的签到），权限仍由框架判定。注意：这会让 AI 真的触发插件、改动数据，有副作用的指令虽然会先问一句，仍建议只在信任的人之间开启。默认关闭。',
+          component: 'Switch'
+        },
+        {
+          field: 'commandMapIndexUrl',
+          label: '指令地图源地址',
+          bottomHelpMessage: '地图索引的地址，留空即用内置默认源（Binbin-miao/command-maps）。想用自己维护的地图时填自己的 dist/index.json 地址；换源不需要改代码。',
+          component: 'Input',
+          componentProps: {
+            placeholder: '留空使用默认源'
+          }
+        },
+        {
           label: '杂项',
           component: 'SOFT_GROUP_BEGIN'
         },

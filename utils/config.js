@@ -335,6 +335,11 @@ const defaultConfig = {
   generateGraphCalculator_ToolSwitch: false,
   enableGroupMemberSkillTool: false,
   enableDefaultMessageTriggerTool: false,
+
+  // 指令地图：把外部维护的「每个插件有哪些指令」同步到本地，供 AI 查询与代执行
+  enableCommandMapSync: true, // 启动后与每日各同步一次；关掉后不再联网，只用手上已有的缓存
+  enableCommandMapDelegate: false, // 让 AI 替用户把指令发出去；默认关，执行的是真指令、会有副作用
+  commandMapIndexUrl: '', // 地图索引地址；留空即用内置默认源（见 utils/capability/map.js 的 DEFAULT_INDEX_URL）
   mediaRecognitionSource: "Orignal",
   mediaRecognitionGeminiTool: true,
   viewForwardMsgTool: false,
