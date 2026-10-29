@@ -85,6 +85,10 @@ import { ViewForwardMsgTool } from '../utils/tools/ViewForwardMsgTool.js'
 import { EmojiTool } from '../utils/tools/EmojiTool.js'
 import { MemoryTool } from '../utils/tools/MemoryTool.js'
 import { EmojiLikeTool } from '../utils/tools/EmojiLikeTool.js'
+import { CommandLookupTool } from '../utils/tools/CommandLookupTool.js'
+import { CommandRunTool } from '../utils/tools/CommandRunTool.js'
+import { syncEnabled, delegateEnabled } from '../utils/capability/switches.js'
+import { loadEntries, buildPromptAddon, readMapState } from '../utils/capability/map.js'
 import { AnythingLLMQueryTool } from '../utils/anythingllm/AnythingLLMQueryTool.js'
 import { AnythingLLMWorkspaceTool } from '../utils/anythingllm/AnythingLLMWorkspaceTool.js'
 import { ScheduleTaskTool } from '../utils/tools/ScheduleTaskTool.js'
@@ -419,12 +423,20 @@ class Core {
       applyQuotedMedias(option, quoted.medias)
       const quotedFailed = quoted.failed > 0
 
+      /**
+       * 工具收集顺带产出的 systemAddition（地图清单、群管要用的 message_id）此前在这一支被整块丢掉：
+       * 只解构了 funcMap。Gemini 用户因此既看不到插件清单，也拿不到「最近一条消息 id」。
+       * 先接住，等下面 system 拼完再追加——与 OpenAI / Claude 两支口径一致。
+       */
+      let geminiSystemAddition = ''
       if (opt.enableSmart) {
         const {
-          funcMap
+          funcMap,
+          systemAddition
         } = await collectTools(e)
         let tools = Object.keys(funcMap).map(k => funcMap[k].tool)
         client.addTools(tools)
+        geminiSystemAddition = systemAddition || ''
       }
       let system = opt.system.gemini
 
@@ -451,6 +463,7 @@ class Core {
             .join('\n')
         }
       }
+      system += geminiSystemAddition
       option.system = system
       option.replyPureTextCallback = opt.settings.replyPureTextCallback || (async (msg) => {
         if (msg) {
@@ -1135,6 +1148,17 @@ async function collectTools(e) {
     { condition: Config.generateGraphCalculator_ToolSwitch, ToolClass: GenerateGraphCalculatorTool },
     { condition: Config.anythingllm_enable, ToolClass: AnythingLLMQueryTool },
     { condition: Config.anythingllm_enable, ToolClass: AnythingLLMWorkspaceTool },
+    /**
+     * 指令地图：查询由地图开关控制，代执行是叠在它上面的第二道闸。
+     * 没有地图时查询只回一句「还没拉取」，有地图时是唯一准确写法的来源；不联网、不执行。
+     * 关掉地图开关就连查询一起收起来——半开着只会让模型拿到一份不再更新的清单。
+     */
+    { condition: syncEnabled(Config), ToolClass: CommandLookupTool },
+    /**
+     * 代执行：默认关，主人显式打开才给。`__commandMapNested` 是代执行派发出去的事件打上的标记，
+     * 带着它的回合不再注册本工具——否则「让 AI 执行一条会唤起 AI 的指令」会自己套自己。
+     */
+    { condition: syncEnabled(Config) && delegateEnabled(Config) && !e?.__commandMapNested, ToolClass: CommandRunTool },
   ];
 
   optionalTools.forEach(({ condition, ToolClass }) => {
@@ -1142,6 +1166,7 @@ async function collectTools(e) {
       tools.push(new ToolClass())
     }
   });
+
 
   if (Config.enableDefaultMessageTriggerTool) {
     const defaultMessageTool = new DefaultMessageTriggerTool(e)
@@ -1199,6 +1224,22 @@ async function collectTools(e) {
     const isImgUrlValid = Array.isArray(e?.img) && !e.img.some(item => typeof item === 'string' && item.length > 1000);
     if (isImgUrlValid) {
       promptAddition += `\nthe url of the picture(s) above: ${e.img.join(', ')}`;
+    }
+  }
+
+  /**
+   * 本机插件清单进系统提示词，只到「插件 + 一句话 + 条数」这一级——固定成本跟插件数量走，
+   * 不跟指令总数走。没有地图时 addon 是空串，静默降级，不是错误；此时也不必去读状态文件。
+   */
+  if (syncEnabled(Config)) {
+    const { entries } = loadEntries()
+    if (entries.length) {
+      systemAddition += buildPromptAddon({
+        entries,
+        // 嵌套回合没注册代执行工具，提示词就不能叫模型去用它
+        delegated: delegateEnabled(Config) && !e?.__commandMapNested,
+        missing: readMapState().missing
+      })
     }
   }
 

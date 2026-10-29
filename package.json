@@ -65,6 +65,8 @@
     "test:thinking": "node --test --test-force-exit test/thinking.test.mjs test/postprocessors.test.mjs && node --experimental-test-module-mocks --test --test-force-exit test/toolRoundTextForward.test.mjs",
     "test:help": "node --experimental-test-module-mocks --test --test-force-exit test/helpView.test.mjs",
     "test:emoji": "node --experimental-test-module-mocks --test --test-force-exit test/emojiUndo.test.mjs",
-    "check": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs && npm run test:config && npm run test:help && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:media && npm run test:group-reply"
+    "check": "npm run check:static && npm run test:config && npm run test:help && npm run test:providers && npm run test:thinking && npm run test:emoji && npm run test:media && npm run test:command-map && npm run test:group-reply",
+    "test:command-map": "node --test --test-force-exit test/commandMap.test.mjs test/commandLookupTool.test.mjs test/commandRunTool.test.mjs",
+    "check:static": "node test/checkSyntax.mjs && node test/pathLeak.check.mjs && node test/lint.check.mjs"
   }
 }
