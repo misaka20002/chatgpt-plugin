@@ -49,11 +49,10 @@ function writeMap(key, plugin, instructions) {
 
 function seed() {
   writeMap('sign', { display: '签到插件', summary: '每日签到' }, [
-    { command: '#签到', aliases: ['#打卡'], summary: '给当前群签到', risk: 'w', permission: 'master' },
+    { command: '#签到', aliases: ['#打卡'], keywords: ['签到', '打卡'], summary: '给当前群签到', risk: 'w', permission: 'master' },
     { command: '#签到排名', summary: '看本月签到榜', risk: 'q' },
     { command: '#查积分', aliases: ['#积分'], summary: '查自己的积分', risk: 'q' },
-    { command: '#签到设置', summary: '改签到设置', risk: 'w', permission: 'master' },
-
+    { command: '#签到设置', summary: '改签到设置', risk: 'w', permission: 'master' }
   ])
   writeMap('music', { display: '点歌插件', summary: '点歌' }, [
     { command: '#点歌', summary: '按关键词点歌', risk: 'q' },
@@ -100,9 +99,6 @@ const asker = (over = {}) => ({
   ...over
 })
 
-/** 用户又发了一条消息（确认发生在下一轮） */
-const nextTurn = over => asker({ message_id: 'm-2', msg: '好的', ...over })
-
 const tool = new CommandRunTool()
 
 describe('解析写法', () => {
@@ -137,16 +133,89 @@ describe('解析写法', () => {
     assert.equal(entry.command, '#查积分')
   })
 
-  test('两条指令同名时并成一条，档位取最严的', () => {
-    seed()
-    writeMap('other', { display: '另一个签到' }, [{ command: '#签到', summary: '别处的签到', risk: 'q' }])
+  test('带具体题材或反义动作方向的别名保留原别名写法，不退化成主写法', () => {
+    writeMap('cyxz', { display: '次元小镇' }, [
+      {
+        command: '#壁纸',
+        aliases: ['#手机壁纸', '#电脑壁纸'],
+        params: [{ name: '题材', required: false }],
+        summary: '按题材抓壁纸',
+        risk: 'q'
+      },
+      {
+        command: '#开启api流',
+        aliases: ['#关闭api流'],
+        summary: '开关流式输出',
+        risk: 'a'
+      }
+    ])
+    const entries = loadEntries().entries
 
-    const { entry } = resolveCommand(loadEntries().entries, '#签到')
+    const wp = resolveCommand(entries, '#手机壁纸')
+    assert.equal(wp.entry.command, '#壁纸')
+    assert.equal(wp.matchedCommand, '#手机壁纸')
+
+    const toggle = resolveCommand(entries, '#关闭api流')
+    assert.equal(toggle.entry.command, '#开启api流')
+    assert.equal(toggle.matchedCommand, '#关闭api流')
+  })
+
+  test('主写法带样例参数时，传入新参数能命中指令头并替换参数', () => {
+    writeMap('meme', { display: '表情搜索' }, [
+      {
+        command: '#meme搜索 摸头',
+        params: [{ name: '关键词', required: true }],
+        summary: '搜索表情包',
+        risk: 'q'
+      }
+    ])
+
+    const res = resolveCommand(loadEntries().entries, '#meme搜索 猫猫')
+    assert.equal(res.entry.command, '#meme搜索 摸头')
+    assert.equal(res.matchedCommand, '#meme搜索')
+    assert.equal(res.args, '猫猫')
+  })
+
+  test('口语意图（如「帮我签个到」「给我点个赞」）自适应收敛到对应通用指令', () => {
+    seed()
+    writeMap('yenai', { display: '椰奶' }, [
+      { command: '#点赞', aliases: ['#赞我'], keywords: ['点赞', '给我点赞', '赞我'], summary: '名片赞', risk: 'q' }
+    ])
+    const entries = loadEntries().entries
+
+    const sign = resolveCommand(entries, '帮我签个到')
+    assert.equal(sign.entry?.command, '#签到')
+
+    const like = resolveCommand(entries, '给我点个赞')
+    assert.equal(like.entry?.command, '#点赞')
+  })
+
+  test('非字面量占位指令（如「（任意消息）」「#<表情关键词> 文本」）不参与代执行解析', () => {
+    writeMap('wild', { display: '通配插件' }, [
+      { command: '（任意消息）', summary: '监听所有消息', risk: 'q' },
+      { command: '#<表情关键词> 文本', summary: '制作表情', risk: 'q' }
+    ])
+    const entries = loadEntries().entries
+
+    assert.equal(resolveCommand(entries, '（任意消息）').entry, null)
+    assert.equal(resolveCommand(entries, '#<表情关键词> 文本').entry, null)
+  })
+
+  test('两条指令同名时并成一条，档位取最严的且合并双方别名', () => {
+    seed()
+    writeMap('other', { display: '另一个签到' }, [
+      { command: '#签到', aliases: ['#原神签到'], summary: '别处的签到', risk: 'q' }
+    ])
+
+    const entries = loadEntries().entries
+    const { entry } = resolveCommand(entries, '#签到')
 
     // 本来的 #签到 是 master + 有副作用，另一个是只读；合并后必须按最严的算
     assert.equal(entry.command, '#签到')
     assert.equal(entry.risk, 'w')
     assert.equal(entry.permission, 'master')
+    // 第二个同名插件的别名也不能丢
+    assert.equal(resolveCommand(entries, '#原神签到').entry?.command, '#签到')
   })
 
   test('对不上就明说没找到', () => {
@@ -215,15 +284,18 @@ describe('代执行', () => {
     assert.match(reply, /#打打卡/)
   })
 
-  test('没命中时说明没找到，不执行也不编造', async () => {
+  test('没命中时说明没找到，不执行也不编造；相近写法顺带提示', async () => {
     seed()
     const calls = spyDispatcher()
 
     const reply = await tool.func({ command: '#造火箭' }, asker())
-
     assert.equal(calls.length, 0)
     assert.match(reply, /^Error: 没找到/)
     assert.match(reply, /什么都没执行/)
+
+    const typoReply = await tool.func({ command: '#签道' }, asker())
+    assert.equal(calls.length, 0)
+    assert.match(typoReply, /相近的可执行指令有.*#签到/)
   })
 
   test('非主人也照样派发，权限交给框架与插件', async () => {
@@ -294,14 +366,17 @@ describe('代执行', () => {
     assert.equal(calls[0].message.at(-1).text, '#签到')
   })
 
-  test('派发了但插件没回话，如实说没办成', async () => {
-    seed()
+  test('派发了但插件没回话，如实说没办成（若默认关闭则提示开关）', async () => {
+    writeMap('miao', { display: '喵喵' }, [
+      { command: '#练度统计', summary: '看练度', risk: 'q', enabled_by_default: false }
+    ])
     setCommandDispatcher(async () => true)
 
-    const reply = await tool.func({ command: '#签到' }, asker({ isMaster: true }))
+    const reply = await tool.func({ command: '#练度统计' }, asker({ isMaster: true }))
 
     assert.match(reply, /^Error: /)
     assert.match(reply, /一个字都没回/)
+    assert.match(reply, /默认关闭/)
   })
 
   test('插件走 group.sendMsg 发图，同样算办成', async () => {
@@ -318,6 +393,25 @@ describe('代执行', () => {
     }))
 
     assert.equal(sent, 1)
+    assert.match(reply, /执行成功/)
+  })
+
+  test('插件走 makeForwardMsg + 底层转发通道发送合并转发（如次元小镇 #p站/#图集），同样算办成', async () => {
+    writeMap('cyxz', { display: '次元小镇' }, [
+      { command: '#图集', summary: '随机一页图集', risk: 'q' }
+    ])
+    setCommandDispatcher(async event => {
+      // 模拟插件只调了 group.makeForwardMsg 组装转发并由底层发出，未走 e.reply
+      await event.group.makeForwardMsg([{ message: '标题' }, { message: '图片' }])
+      return true
+    })
+
+    const reply = await tool.func({ command: '#图集' }, asker({
+      group: {
+        makeForwardMsg: async nodes => ({ type: 'node', data: nodes })
+      }
+    }))
+
     assert.match(reply, /执行成功/)
   })
 
@@ -469,13 +563,24 @@ describe('代执行', () => {
     assert.equal(lastText(calls[0]), '#查积分 2')
   })
 
-  test('别名输入按正式写法派发', async () => {
+  test('别名输入按正式写法派发，带参别名保留原别名写法派发', async () => {
     seed()
+    writeMap('cyxz', { display: '次元小镇' }, [
+      {
+        command: '#壁纸',
+        aliases: ['#手机壁纸'],
+        params: [{ name: '题材', required: false }],
+        summary: '按题材抓壁纸',
+        risk: 'q'
+      }
+    ])
     const calls = spyDispatcher()
 
     await tool.func({ command: '#积分' }, asker())
-
     assert.equal(lastText(calls[0]), '#查积分')
+
+    await tool.func({ command: '#手机壁纸' }, asker())
+    assert.equal(lastText(calls[1]), '#手机壁纸')
   })
 
   test('schema 只有写法一个参数，没有确认这一步', () => {

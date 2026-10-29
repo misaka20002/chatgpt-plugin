@@ -58,12 +58,18 @@ function seed() {
       permission: 'master',
       example: '#签到',
       what: '把当前群这一天的签到记上',
+      returns: '签到卡片图片',
       timing: '同步，秒回',
       cost: '不花钱',
       preconditions: ['说话的人必须是主人', 'Bot 要在线'],
       pitfalls: ['每天只能签一次', '群里没开启签到时会静默失败'],
       failures: [{ symptom: '回「签到失败」', cause: '群未开启签到功能' }],
-      edgeCases: ['私聊里不能用']
+      edgeCases: ['私聊里不能用'],
+      scenarios: ['每天打卡领积分'],
+      vs: [{ command: '#签到排名', diff: '那个只看榜不签到' }],
+      related: ['#签到排名'],
+      enabled_by_default: false,
+      implemented_in: 'bujidao'
     },
     { command: '#签到排名', keywords: ['排名'], summary: '看本月签到榜', risk: 'q' }
   ])
@@ -106,11 +112,12 @@ describe('提示词清单', () => {
     assert.ok(!off.includes('commandRun'))
   })
 
-  test('代执行开着时改为引导执行，不再说不能替', () => {
+  test('代执行开着时改为引导执行，并区分名片点赞与贴表情', () => {
     seed()
     const on = buildPromptAddon({ entries: loadEntries().entries, delegated: true })
 
     assert.match(on, /commandRun/)
+    assert.match(on, /emojiLike/)
     assert.ok(!on.includes('不能替他执行'))
   })
 
@@ -130,6 +137,18 @@ describe('匹配', () => {
     assert.equal(mode, 'plugin')
     assert.equal(total, 2)
     assert.deepEqual(matches.map(entry => entry.command).sort(), ['#签到', '#签到排名'])
+  })
+
+  test('展示名不带「插件」二字时，用户加「插件」后缀也能查到整批', () => {
+    writeMap('yenai-plugin', { display: '椰奶', summary: '群管全家桶' }, [
+      { command: '#状态', summary: '看状态', risk: 'q' },
+      { command: '#点赞', summary: '名片赞', risk: 'q' }
+    ])
+
+    const { mode, total } = searchEntries(loadEntries().entries, '椰奶插件')
+
+    assert.equal(mode, 'plugin')
+    assert.equal(total, 2)
   })
 
   test('按插件 key 也能问到', () => {
@@ -153,6 +172,25 @@ describe('匹配', () => {
 
     assert.equal(searchEntries(entries, '#打卡').matches[0].command, '#签到')
     assert.equal(searchEntries(entries, '音乐').matches[0].command, '#点歌')
+  })
+
+  test('口语化表达（带填充词或跨字量词）也能自适应命中核心指令，且通用短写法排第一', () => {
+    seed()
+    writeMap('yenai', { display: '椰奶' }, [
+      { command: '#点赞', keywords: ['点赞', '赞我'], summary: '给名片点赞', risk: 'q' }
+    ])
+    writeMap('df', { display: '三角洲' }, [
+      { command: '#三角洲改枪方案点赞 12', keywords: ['点赞'], summary: '改枪点赞', risk: 'w' }
+    ])
+    const entries = loadEntries().entries
+
+    const signRes = searchEntries(entries, '帮我签个到')
+    assert.ok(signRes.matches.length >= 1)
+    assert.equal(signRes.matches[0].command, '#签到')
+
+    const likeRes = searchEntries(entries, '给我点个赞')
+    assert.ok(likeRes.matches.length >= 1)
+    assert.equal(likeRes.matches[0].command, '#点赞')
   })
 
   test('匹配不到时返回 none，不是报错', () => {
@@ -257,7 +295,7 @@ describe('查询工具', () => {
     assert.match(reply, /没查到和「42」/)
   })
 
-  test('问具体一条指令时带出前置、坑与失败表现', async () => {
+  test('问具体一条指令时带出前置、坑、失败表现、场景、易混区分与默认关闭状态', async () => {
     seed()
     const reply = await tool.func({ query: '#签到' })
 
@@ -266,6 +304,12 @@ describe('查询工具', () => {
     assert.match(reply, /失败长这样：回「签到失败」 → 群未开启签到功能/)
     assert.match(reply, /边界：私聊里不能用/)
     assert.match(reply, /做什么：把当前群这一天的签到记上/)
+    assert.match(reply, /返回：签到卡片图片/)
+    assert.match(reply, /场景：每天打卡领积分/)
+    assert.match(reply, /区分：#签到排名（那个只看榜不签到）/)
+    assert.match(reply, /关联：#签到排名/)
+    assert.match(reply, /默认关闭/)
+    assert.match(reply, /实际实现：bujidao/)
   })
 
   test('问一个插件时不展开细节，只给清单', async () => {

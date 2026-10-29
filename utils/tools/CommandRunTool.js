@@ -1,5 +1,5 @@
 import { AbstractTool } from './AbstractTool.js'
-import { loadEntries, resolveCommand, UPDATE_COMMAND } from '../capability/map.js'
+import { loadEntries, resolveCommand, suggestEntries, UPDATE_COMMAND } from '../capability/map.js'
 
 const LOG_PREFIX = '[ChatGPT][map]'
 
@@ -134,15 +134,13 @@ function textOf (msg) {
  * 工具回「已派发」，模型接着说「帮你签好啦」，而群里一张图都没有。插件真正办成事的
  * 标志是它自己发了消息，所以这里必须数得到。
  *
- * 三个出口都要数，因为插件发字发图走的路不止一条：`e.reply`、`e.group.sendMsg`、
- * `e.friend.sendMsg`。每条消息只数一次：发送过程中再套一层发送（长消息分段）不算新消息。
- *
- * 群与好友这两个会话对象由宿主按群缓存、跨事件共用，所以**不碰实例本身**：给本事件换
- * 一个挂在原型链上的视图，包裹装进视图自己的 `sendMsg`。直接改实例的后果是同一时刻
- * 本群别人发的消息也算进这一次（假成功），两次代执行重叠时还原还会互相踩。
- *
- * 数不到的：`e.bot.pickGroup(id).sendMsg` 这种自己再取一个会话对象的写法——那已经
- * 脱离本事件了。宁可不数，也不去包全场共用的 Bot。
+ * 出口覆盖：
+ *   - `e.reply`（常规回复）；
+ *   - `e.group.sendMsg` / `e.friend.sendMsg`（直接往会话对象发图/发合并转发）；
+ *   - `e.group.makeForwardMsg` / `e.friend.makeForwardMsg` / `e.bot.makeForwardMsg`（2026-10-30 01:52 线上实例：
+ *     次元小镇 `#p站`/`#图集` 组装完合并转发并发出，但未命中单一 `sendMsg` 口径，被误判为「没有回话」）；
+ *   - `e.bot.sendGroupMsg` / `e.bot.sendPrivateMsg` / `e.bot.sendForwardMsg`（部分插件直接调协议端发送方法）。
+ * 每条消息只数一次：发送过程中再套一层发送（长消息分段、先制转发再发消息）不算新消息。
  *
  * @param {object} delegated 派发用的消息事件
  * @returns {{ state: { replies: number, denied: boolean }, restore: () => void }}
@@ -175,6 +173,29 @@ function countReplies (delegated) {
     }
   }
 
+  /**
+   * 跟踪 makeForwardMsg：如果插件在派发期间成功构造了非空合并转发节点，且后续经由未包裹通道
+   * （如 `Bot.pickGroup(id).sendMsg` 或协议端底层接口）发了出去导致 `state.replies` 仍为 0，
+   * 在派发收尾时作为有效产出兜底计 1 条；若后续已走 `e.reply` / `group.sendMsg` 计过数，则不重复累加。
+   */
+  let forwardMade = 0
+  const wrapForwardMaker = (owner, key) => {
+    const original = owner?.[key]
+    if (!owner || typeof original !== 'function') return
+    const wrapped = async (...args) => {
+      const res = await original.apply(owner, args)
+      if (res && (typeof res === 'object' || Array.isArray(res)) && !res.error) {
+        forwardMade += 1
+      }
+      return res
+    }
+    if (Reflect.set(owner, key, wrapped)) {
+      restores.push(() => {
+        Reflect.set(owner, key, original)
+      })
+    }
+  }
+
   if (typeof delegated.reply === 'function') {
     const original = delegated.reply
     if (Reflect.set(delegated, 'reply', guarded(original, delegated))) {
@@ -193,16 +214,37 @@ function countReplies (delegated) {
   // 那就只数 e.reply，少一路口径。三种情况都用 Reflect.set，失败只返回 false 不抛。
   for (const key of ['group', 'friend']) {
     const contact = delegated[key]
-    if (!contact || typeof contact.sendMsg !== 'function') continue
-    const original = contact.sendMsg
-    if (!Reflect.set(contact, 'sendMsg', guarded(original, contact))) continue
-    restores.push(() => {
-      Reflect.set(contact, 'sendMsg', original)
-    })
+    if (!contact || typeof contact !== 'object') continue
+    for (const method of ['sendMsg', 'sendForwardMsg']) {
+      const original = contact[method]
+      if (typeof original !== 'function') continue
+      if (!Reflect.set(contact, method, guarded(original, contact))) continue
+      restores.push(() => {
+        Reflect.set(contact, method, original)
+      })
+    }
+    wrapForwardMaker(contact, 'makeForwardMsg')
+  }
+
+  if (delegated.bot && typeof delegated.bot === 'object') {
+    for (const method of ['sendGroupMsg', 'sendPrivateMsg', 'sendForwardMsg', 'sendGroupForwardMsg']) {
+      const original = delegated.bot[method]
+      if (typeof original !== 'function') continue
+      if (!Reflect.set(delegated.bot, method, guarded(original, delegated.bot))) continue
+      restores.push(() => {
+        Reflect.set(delegated.bot, method, original)
+      })
+    }
+    wrapForwardMaker(delegated.bot, 'makeForwardMsg')
   }
 
   return {
-    state,
+    get state () {
+      if (state.replies === 0 && !state.denied && forwardMade > 0) {
+        return { replies: 1, denied: false }
+      }
+      return state
+    },
     restore () {
       for (const fn of restores) fn()
     }
@@ -230,14 +272,14 @@ export class CommandRunTool extends AbstractTool {
     properties: {
       command: {
         type: 'string',
-        description: '要执行的完整指令，含参数，例如「#签到」。必须是 commandLookup 查到的写法，不要自己编。'
+        description: '要执行的完整指令（含参数，例如「#签到」「#点赞」）或用户明确要求代劳的意图（如「帮我签到」「给我点个赞」）。建议优先使用 commandLookup 查到的准确写法。'
       }
     },
     required: ['command']
   }
 
   func = async function (opts = {}, e) {
-    const input = String(opts?.command ?? '').trim()
+    const input = String(opts?.command ?? opts?.query ?? '').trim()
     if (!input) return `${FAILED}要给出完整写法（含参数），例如「#签到」。`
 
     const { entries } = loadEntries()
@@ -253,7 +295,11 @@ export class CommandRunTool extends AbstractTool {
       ].join('\n')
     }
     if (!resolved.entry) {
-      return `${FAILED}没找到「${input}」这条指令，所以什么都没执行。先用 commandLookup 查准确写法，不要自己编一个。`
+      const near = suggestEntries(entries, input)
+      const hint = near.length
+        ? `\n相近的可执行指令有：${near.map(item => `[${item.plugin}] ${item.command}`).join('、')}。`
+        : ''
+      return `${FAILED}没找到「${input}」这条指令，所以什么都没执行。先用 commandLookup 查准确写法，不要自己编一个。${hint}`
     }
 
     const entry = resolved.entry
@@ -262,7 +308,8 @@ export class CommandRunTool extends AbstractTool {
     // 权限与风险都不在这里判：用提问者本人身份派发，框架会按插件规则里的 permission 拦，
     // 插件自己也会校验绑定/额度。地图里的 risk 只用来写日志，不用来挡执行——
     // 挡在这里只会出现「插件本来能用，却被地图数据按住」。
-    const target = `${entry.command}${resolved.args ? ` ${resolved.args}` : ''}`
+    const baseCommand = resolved.matchedCommand || entry.command
+    const target = `${baseCommand}${resolved.args ? ` ${resolved.args}` : ''}`
     // 每次调用都留一行：线上「AI 说它执行了但没动静」时，唯一能分辨「没调用」与
     // 「调了没派发成功」的证据就是这行（v1 有类似日志，v2 一开始漏了）
     logger.info(`${LOG_PREFIX} 代执行：${target}（risk=${entry.risk}）`)
@@ -293,7 +340,8 @@ export class CommandRunTool extends AbstractTool {
       }
       if (counter.state.replies === 0) {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」派发了但插件没有回话`)
-        return `${FAILED}「${target}」没有执行成功：插件一个字都没回，多半是它自己拒绝了（没绑定账号、登录已过期、额度不够）。直接告诉用户这次没成功、为什么，绝对不要编造「已经帮你签好了」「给你赞过了」这类结果。`
+        const offHint = entry.enabledByDefault === false ? '该指令在插件中默认关闭（需先开启对应开关）、' : ''
+        return `${FAILED}「${target}」没有执行成功：插件一个字都没回，多半是${offHint}它自己拒绝了（没绑定账号、登录已过期、额度不够或外部站点不可达）。直接告诉用户这次没成功、为什么，绝对不要编造「已经帮你签好了」「给你赞过了」这类结果。`
       }
       logger.info(`${LOG_PREFIX} 代执行「${target}」已完成（插件回了 ${counter.state.replies} 条）`)
       return `执行成功。插件已经把结果（${counter.state.replies} 条消息，含图片/文字）直接发到聊天里了。你不要再说任何话——不复述、不总结、不追加「已经帮你签好了」这类话，保持沉默。`
@@ -321,5 +369,5 @@ export class CommandRunTool extends AbstractTool {
     }
   }
 
-  description = '替当前用户执行一条插件指令，以他本人的身份交回框架派发。用户明确要求了就直接调，不要问「要不要我帮你执行」，也不要自己预判权限——框架与插件会处理，没有权限时它们自己会回话。插件执行完会自己把结果（图片、文字）发到聊天里，你不需要复述。'
+  description = '替当前用户执行一条插件指令，以他本人的身份交回框架派发。用户明确要求代劳时（如「帮我签到」「给我点个赞」「刷新面板」）直接调，不要问「要不要我帮你执行」，也不要自己预判权限——框架与插件会处理，没有权限时它们自己会回话。注意：给名片点赞走本工具执行 `#点赞`，不要调 emojiLike。插件执行完会自己把结果（图片、文字）发到聊天里，你不需要复述。'
 }
