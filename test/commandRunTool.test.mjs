@@ -197,6 +197,8 @@ describe('代执行', () => {
     assert.equal(calls[0].isMaster, false)
     // 派发出去的事件必须带标记，避免嵌套回合再注册代执行
     assert.equal(calls[0].__commandMapNested, true)
+    // 只关注主动 at 的群策略会拦下代执行：这条标记是它不被拦的前提
+    assert.equal(calls[0].only_reply_at, true)
     assert.match(reply, /执行成功/)
   })
 
