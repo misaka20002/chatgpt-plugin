@@ -367,6 +367,24 @@ describe('代执行', () => {
     assert.equal(event.reply, beforeReply)
   })
 
+  test('宿主锁死 group 字段时退回包实例，用完还原', async () => {
+    seed()
+    // 框架用 Object.defineProperty 定义 e.group（不可写不可配置），直接赋值会抛
+    const group = { sendMsg: async () => ({ message_id: 6 }) }
+    const event = asker()
+    Object.defineProperty(event, 'group', { value: group })
+    const before = group.sendMsg
+    setCommandDispatcher(async ev => {
+      await ev.group.sendMsg('签到图')
+      return true
+    })
+
+    const reply = await tool.func({ command: '#签到' }, event)
+
+    assert.match(reply, /执行成功/)
+    assert.equal(group.sendMsg, before)
+  })
+
   test('发送里再套一层发送只数一条', async () => {
     seed()
     // 框架的 e.reply 本身就是 group.sendMsg 的副本：包两层的不能算成两条

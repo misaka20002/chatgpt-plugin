@@ -35,15 +35,6 @@ async function getDispatcher () {
 const MAX_CANDIDATES = 6
 
 /**
- * 造一个「用户自己发了这条指令」的事件。
- *
- * 只改消息内容，其余（群号、发送者、Bot 实例、权限位）原样继承——代执行必须以提问者本人
- * 的身份走框架的权限判定，否则会出现「我明明没权限却执行成功」。
- *
- * 打上 `__commandMapNested` 后，这次派发触发的 AI 回合不会再注册代执行工具，
- * 免得「让 AI 去执行一条会唤起 AI 的指令」自己套自己。
- */
-/**
  * 挡住 accept 阶段对指令的改写。
  *
  * 框架 `deal()` 的顺序是「先 accept，再按规则匹配」。accept 阶段的插件会把消息改成自己的
@@ -80,7 +71,10 @@ function guardAccept (loader) {
     for (const [proto, original] of patched) {
       try {
         proto.accept = original
-      } catch {}
+      } catch (err) {
+        // 还原失败会让 accept 守卫留下来：往后每条消息都会被多包一层，必须留痕
+        logger.error(`${LOG_PREFIX} accept 守卫还原失败：${err?.message || err}`)
+      }
     }
   }
 }
@@ -201,6 +195,18 @@ function countReplies (delegated) {
     const original = delegated[key]
     const view = shadow(original)
     if (!view) continue
+    // 宿主用 defineProperty 定义这两个字段（只有 value，等于不可写不可配置），
+    // 直接赋值会抛 TypeError。锁死时退回包实例：这段期间同群别人的发送也会被算进来，
+    // 所以只包 sendMsg 一个方法，且用完立刻还原。
+    const desc = Object.getOwnPropertyDescriptor(delegated, key)
+    if (desc && desc.writable !== true) {
+      const own = original.sendMsg
+      original.sendMsg = view.sendMsg
+      restores.push(() => {
+        original.sendMsg = own
+      })
+      continue
+    }
     delegated[key] = view
     restores.push(() => {
       delegated[key] = original
@@ -314,10 +320,16 @@ export class CommandRunTool extends AbstractTool {
       // 统计）会看到被改坏的 msg。三样都得还回去。
       try {
         restore()
-      } catch {}
+      } catch (err) {
+        // 还原失败意味着外层会拿着被改写的消息继续跑，必须留痕
+        logger.error(`${LOG_PREFIX} 事件还原失败：${err?.message || err}`)
+      }
       try {
         delete delegated.__commandMapNested
-      } catch {}
+      } catch (err) {
+        // 标记留在事件上只会让这一轮的后续回合少注册工具，降级不致命，记警告即可
+        logger.warn(`${LOG_PREFIX} 嵌套标记清除失败：${err?.message || err}`)
+      }
     }
   }
 
