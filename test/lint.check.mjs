@@ -19,8 +19,12 @@
  * 3. 测试文件必须被某个 `test:*` 脚本引用；只需本机环境才能跑的，文件头写 `manual test:` 豁免。
  * 4. `test:*` 脚本里引用的文件必须存在。
  * 5. 每个 `test:*` 必须被 `check` 调用，或在 CHECK_EXCLUDED 里写明豁免理由——否则 CI 永远不跑它。
- * 6. 仓库根不得出现 `package-lock.json` 或 `.venv`：前者是 npm 在 pnpm 工作区里跑出来的，
- *    后者是本仓已无 Python 代码的证据（临时验证的 venv 该建在系统临时目录）。
+ * 6. 仓库根不得出现 `package-lock.json`、`.venv` 或散落的 `*.log`：前者是 npm 在 pnpm 工作区里
+ *    跑出来的，中者是本仓已无 Python 代码的证据，后者是调试时重定向输出留下的（`git add -A` 会
+ *    把它一起收进提交，本轮就踩过一次）。
+ * 7. `model/core.js` 里不得出现 `tools.push(new XxxTool(...))`：工具注册统一走 `optionalTools`
+ *    的 `{ condition, ToolClass }`。AGENTS.md「工具注册由配置开关控制」原本只写在文档里，于是
+ *    「常驻注册」照样能写进代码、三道静态门禁全绿，只有人工评审才抓得到（本轮实证）。
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -138,8 +142,9 @@ for (const name of Object.keys(scripts).filter(key => key.startsWith('test:'))) 
   violations.push(`package.json 的 ${name} 没有接进 check；接进去，或加进 lint.check.mjs 的 CHECK_EXCLUDED 并写明原因`)
 }
 
-// 规则 6：跑错工具链或临时验证留下的产物。两条都是实际踩过的：npm 在 pnpm 工作区里生成了
-// package-lock.json；`python -m venv .venv` 在插件目录留下一个只有 pip 的空壳。
+// 规则 6：跑错工具链或临时验证留下的产物。三条都是实际踩过的：npm 在 pnpm 工作区里生成了
+// package-lock.json；`python -m venv .venv` 在插件目录留下一个只有 pip 的空壳；调试时把输出
+// 重定向成 temp_lint.log，`git add -A` 把它一起提交了。
 const STRAY_ARTIFACTS = [
   ['package-lock.json', '本仓是 pnpm 工作区，这是 npm install 的产物：删掉它，改用 pnpm'],
   ['.venv', '本仓没有 Python 代码：临时验证的 venv 建在系统临时目录，用完连目录删掉']
@@ -147,10 +152,37 @@ const STRAY_ARTIFACTS = [
 for (const [name, reason] of STRAY_ARTIFACTS) {
   if (existsSync(path.join(ROOT, name))) violations.push(`不应存在 ${name}——${reason}`)
 }
+for (const entry of readdirSync(ROOT, { withFileTypes: true })) {
+  if (entry.isFile() && entry.name.endsWith('.log')) {
+    violations.push(`${entry.name} 是调试残留：用完删掉，别让 git add -A 收进提交`)
+  }
+}
+
+// 规则 7：工具注册统一走 `optionalTools` 的 `{ condition, ToolClass }`，不另开临时通道。
+//
+// 只认一个可判定的形状：`tools.push(new XxxTool(...))`。`tools.push(new ToolClass())` 是
+// optionalTools 回调里的标准写法，放行。
+//
+// 这条**不**试图证明「push 外层有条件」——那要解析作用域，正则做不到。上一版按缩进往上找
+// 块头，实测既能被绕过（push 上方一行顶格注释就算「有条件」），又会误报（`if (` 折行时
+// `) {` 被当成函数头），一条会因格式化变红的门禁最后一定被关掉。把注册收敛到一张表、
+// 让「忘了写 condition」变成显式的 `{ condition: undefined }`，比让门禁猜语法可靠。
+const BARE_TOOL_PUSH_RE = /tools\.push\(\s*new\s+(?!ToolClass\b)\w+/
+const corePath = path.join(ROOT, 'model', 'core.js')
+if (existsSync(corePath)) {
+  readFileSync(corePath, 'utf8').split('\n').forEach((line, index) => {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('*') || trimmed.startsWith('//')) return
+    if (line.includes('lint-ignore')) return
+    if (BARE_TOOL_PUSH_RE.test(line)) {
+      violations.push(`model/core.js:${index + 1} 工具注册走 optionalTools 的 { condition, ToolClass }，不用 tools.push(new …) 另开通道`)
+    }
+  })
+}
 
 if (violations.length) {
   console.error(`[ChatGPT] 风格检查未通过，共 ${violations.length} 处：`)
   for (const item of violations) console.error('  - ' + item)
   process.exit(1)
 }
-console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、工具链产物')
+console.log('[ChatGPT] 风格检查通过：JSDoc 换行、日志前缀、console.log 边界、测试挂载、脚本路径、套件接线、调试残留、工具注册条件')

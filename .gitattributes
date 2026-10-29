@@ -1,0 +1,21 @@
+# 只钉住文本类型，不写 `* text=auto`：仓里有 server/static 下的 .moc3 二进制，
+# 被当成文本会在检出时改写行尾、直接损坏文件。
+# 目的是让 Windows 上不再每次提交都刷一屏 "LF will be replaced by CRLF"，
+# 也避免地图索引那种「按 CRLF 算的 sha256 与仓库文件对不上」的事故。
+*.js     text eol=lf
+*.mjs    text eol=lf
+*.cjs    text eol=lf
+*.ts     text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+*.css    text eol=lf
+*.html   text eol=lf
+*.txt    text eol=lf
+*.svg    text eol=lf
+*.sh     text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.npmrc          text eol=lf
