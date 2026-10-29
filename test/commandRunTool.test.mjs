@@ -404,6 +404,25 @@ describe('代执行', () => {
     assert.equal(group.sendMsg, before)
   })
 
+  test('群对象冻结时只少数一路，不抛错', async () => {
+    seed()
+    // 极端兜底：事件字段换不了、连实例也冻结。代执行必须照常跑完，只是数不到 group 这一路
+    const group = Object.freeze({ sendMsg: async () => ({ message_id: 8 }) })
+    const proto = {}
+    Object.defineProperty(proto, 'group', { value: group })
+    const event = Object.assign(Object.create(proto), asker())
+    setCommandDispatcher(async ev => {
+      await ev.group.sendMsg('签到图')
+      return true
+    })
+
+    const reply = await tool.func({ command: '#签到' }, event)
+
+    // 一路都没数到，如实报没回话——重点是没抛异常
+    assert.match(reply, /^Error: /)
+    assert.match(reply, /一个字都没回/)
+  })
+
   test('发送里再套一层发送只数一条', async () => {
     seed()
     // 框架的 e.reply 本身就是 group.sendMsg 的副本：包两层的不能算成两条

@@ -175,14 +175,6 @@ function countReplies (delegated) {
     }
   }
 
-  /** 本事件专用的会话视图：方法走原型链，只有 sendMsg 换成包过的 */
-  const shadow = contact => {
-    if (!contact || typeof contact.sendMsg !== 'function') return null
-    const view = Object.create(contact)
-    view.sendMsg = guarded(contact.sendMsg, contact)
-    return view
-  }
-
   if (typeof delegated.reply === 'function') {
     const original = delegated.reply
     if (Reflect.set(delegated, 'reply', guarded(original, delegated))) {
@@ -192,25 +184,20 @@ function countReplies (delegated) {
     }
   }
 
+  // 群与好友的会话对象由宿主按群缓存、跨事件共用。事件上这两个字段是只读的
+  // （线上实测：Cannot assign to read only property 'group'，只读来自原型链，
+  // 查描述符也查不全），换不了视图，只能包实例上的 sendMsg，派发一结束立刻还原。
+  //
+  // 代价：还原窗口内同群别人发的消息会被算进这一次。宁可这样，也不要整个代执行抛错——
+  // 少一次假成功，好过多一次「工具直接崩、指令根本没执行」。类被冻结时连实例也写不了，
+  // 那就只数 e.reply，少一路口径。三种情况都用 Reflect.set，失败只返回 false 不抛。
   for (const key of ['group', 'friend']) {
-    const original = delegated[key]
-    const view = shadow(original)
-    if (!view) continue
-    // 宿主把 group / friend 定成只读：直接赋值在严格模式下抛 TypeError
-    // （线上原文：Cannot assign to read only property 'group'）。只读可能来自自有属性，
-    // 也可能来自原型链，查描述符查不全；Reflect.set 换不了只返回 false，不抛。
-    // 换不了字段就退回包实例：这段期间同群别人的发送也会被算进来，
-    // 所以只包 sendMsg 一个方法，且用完立刻还原。
-    if (Reflect.set(delegated, key, view)) {
-      restores.push(() => {
-        Reflect.set(delegated, key, original)
-      })
-      continue
-    }
-    const own = original.sendMsg
-    original.sendMsg = view.sendMsg
+    const contact = delegated[key]
+    if (!contact || typeof contact.sendMsg !== 'function') continue
+    const original = contact.sendMsg
+    if (!Reflect.set(contact, 'sendMsg', guarded(original, contact))) continue
     restores.push(() => {
-      original.sendMsg = own
+      Reflect.set(contact, 'sendMsg', original)
     })
   }
 
