@@ -269,7 +269,7 @@ describe('代执行', () => {
     seed()
     setCommandDispatcher(async event => {
       // 框架 filtPermission 拒绝时的固定话术：这不是插件干活的回话
-      await event.reply('暂无权限')
+      await event.reply('暂无权限，只有群主才能操作')
       return true
     })
 
@@ -332,6 +332,37 @@ describe('代执行', () => {
     }))
 
     assert.match(reply, /2 条/)
+  })
+
+  test('包裹不落在宿主共用的群对象上', async () => {
+    seed()
+    // 宿主的 Group 实例按群缓存、跨事件共用：改它会串台
+    const group = { sendMsg: async () => ({ message_id: 4 }) }
+    const before = group.sendMsg
+    let seen = null
+    setCommandDispatcher(async event => {
+      seen = event.group
+      await event.group.sendMsg('签到图')
+      return true
+    })
+
+    await tool.func({ command: '#签到' }, asker({ group }))
+
+    assert.equal(group.sendMsg, before)
+    assert.equal(typeof seen?.sendMsg, 'function')
+  })
+
+  test('派发结束后事件与群对象都还原', async () => {
+    seed()
+    const group = { sendMsg: async () => ({ message_id: 5 }) }
+    const event = asker({ group, reply: async () => {} })
+    const beforeReply = event.reply
+    spyDispatcher()
+
+    await tool.func({ command: '#签到' }, event)
+
+    assert.equal(event.group, group)
+    assert.equal(event.reply, beforeReply)
   })
 
   test('发送里再套一层发送只数一条', async () => {

@@ -141,65 +141,74 @@ function textOf (msg) {
  * 标志是它自己发了消息，所以这里必须数得到。
  *
  * 三个出口都要数，因为插件发字发图走的路不止一条：`e.reply`、`e.group.sendMsg`、
- * `e.friend.sendMsg`。第一条是第二条的 bind 副本，包了互不影响。每条消息只数一次：
- * 发送过程中再套一层发送（长消息分段）不算新消息。
+ * `e.friend.sendMsg`。每条消息只数一次：发送过程中再套一层发送（长消息分段）不算新消息。
+ *
+ * 群与好友这两个会话对象由宿主按群缓存、跨事件共用，所以**不碰实例本身**：给本事件换
+ * 一个挂在原型链上的视图，包裹装进视图自己的 `sendMsg`。直接改实例的后果是同一时刻
+ * 本群别人发的消息也算进这一次（假成功），两次代执行重叠时还原还会互相踩。
  *
  * 数不到的：`e.bot.pickGroup(id).sendMsg` 这种自己再取一个会话对象的写法——那已经
  * 脱离本事件了。宁可不数，也不去包全场共用的 Bot。
  *
  * @param {object} delegated 派发用的消息事件
- * @returns {{ replies: number, denied: boolean, restore: () => void }}
+ * @returns {{ state: { replies: number, denied: boolean }, restore: () => void }}
  */
 function countReplies (delegated) {
   const state = { replies: 0, denied: false }
   const restores = []
-  let depth = 0
+  let busy = false
 
-  const wrap = (owner, key) => {
-    const original = owner?.[key]
-    if (typeof original !== 'function') return
-    try {
-      owner[key] = async function (...args) {
-        // 已经在外层那次发送里：套着发的分段不算新消息，也不能重复计数
-        if (depth > 0) return original.apply(this, args)
-        // 框架的权限拒绝也走 reply，但它不是插件办成事的回话，不能算成功
-        if (textOf(args[0]).includes(FRAMEWORK_DENIED)) {
-          state.denied = true
-          return original.apply(this, args)
-        }
-        depth += 1
-        try {
-          const res = await original.apply(this, args)
-          // 框架把发送失败包成 { error: [...] }，空消息返回 false：这两种都不算办成
-          if (res === false) return res
-          if (res && typeof res === 'object' && res.error) return res
-          state.replies += 1
-          return res
-        } finally {
-          depth -= 1
-        }
-      }
-    } catch {
-      return
+  /** 包一个发送函数：只数真发出去的那次，嵌套调用与发送失败都不算 */
+  const guarded = (original, self) => async (...args) => {
+    // 已经在外层那次发送里：套着发的分段不算新消息，也不能重复计数
+    if (busy) return original.apply(self, args)
+    // 框架 filtPermission 的拒绝（「暂无权限，只有…才能操作」）也走这里，
+    // 但它不是插件干活的回话——插件压根没被叫醒
+    if (textOf(args[0]).trim().startsWith(FRAMEWORK_DENIED)) {
+      state.denied = true
+      return original.apply(self, args)
     }
+    busy = true
+    try {
+      const res = await original.apply(self, args)
+      // 框架把发送失败包成 { error: [...] }，空消息返回 false：这两种都不算办成
+      if (res === false) return res
+      if (res && typeof res === 'object' && res.error) return res
+      state.replies += 1
+      return res
+    } finally {
+      busy = false
+    }
+  }
+
+  /** 本事件专用的会话视图：方法走原型链，只有 sendMsg 换成包过的 */
+  const shadow = contact => {
+    if (!contact || typeof contact.sendMsg !== 'function') return null
+    const view = Object.create(contact)
+    view.sendMsg = guarded(contact.sendMsg, contact)
+    return view
+  }
+
+  if (typeof delegated.reply === 'function') {
+    const original = delegated.reply
+    delegated.reply = guarded(original, delegated)
     restores.push(() => {
-      try {
-        owner[key] = original
-      } catch {}
+      delegated.reply = original
     })
   }
 
-  wrap(delegated, 'reply')
-  wrap(delegated.group, 'sendMsg')
-  wrap(delegated.friend, 'sendMsg')
+  for (const key of ['group', 'friend']) {
+    const original = delegated[key]
+    const view = shadow(original)
+    if (!view) continue
+    delegated[key] = view
+    restores.push(() => {
+      delegated[key] = original
+    })
+  }
 
   return {
-    get replies () {
-      return state.replies
-    },
-    get denied () {
-      return state.denied
-    },
+    state,
     restore () {
       for (const fn of restores) fn()
     }
@@ -284,25 +293,23 @@ export class CommandRunTool extends AbstractTool {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」派发后没有插件认领`)
         return `${FAILED}已经把「${target}」交给框架，但没有插件认领它——可能这条指令已经改过，或者 ${sender} 的权限不够。没有别的办法替你执行，如实告诉用户即可。`
       }
-      if (counter.denied) {
+      if (counter.state.denied) {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」被框架拒绝（权限不足）`)
         return `${FAILED}「${target}」被框架拒绝（${sender} 没有这条指令的权限）。直接告诉用户权限不够，不要编造成果。`
       }
-      if (counter.replies === 0) {
+      if (counter.state.replies === 0) {
         logger.warn(`${LOG_PREFIX} 代执行「${target}」派发了但插件没有回话`)
         return `${FAILED}「${target}」没有执行成功：插件一个字都没回，多半是它自己拒绝了（没绑定账号、登录已过期、额度不够）。直接告诉用户这次没成功、为什么，绝对不要编造「已经帮你签好了」「给你赞过了」这类结果。`
       }
-      logger.info(`${LOG_PREFIX} 代执行「${target}」已完成（插件回了 ${counter.replies} 条）`)
-      return `执行成功。插件已经把结果（${counter.replies} 条消息，含图片/文字）直接发到聊天里了。你不要再说任何话——不复述、不总结、不追加「已经帮你签好了」这类话，保持沉默。`
+      logger.info(`${LOG_PREFIX} 代执行「${target}」已完成（插件回了 ${counter.state.replies} 条）`)
+      return `执行成功。插件已经把结果（${counter.state.replies} 条消息，含图片/文字）直接发到聊天里了。你不要再说任何话——不复述、不总结、不追加「已经帮你签好了」这类话，保持沉默。`
     } catch (err) {
       logger.error(`${LOG_PREFIX} 代执行「${target}」出错：${err?.message || err}`)
       return `${FAILED}「${target}」执行时出错了，已经停下来。多半是插件自身的问题，可以让主人看一下日志。`
     } finally {
       unguard()
-      // 数消息的包裹先拆，再还事件字段：顺序反了会把还回去的事件又数一遍
-      try {
-        counter.restore()
-      } catch {}
+      // 换成本事件视图的三个字段（reply / group / friend）都得换回去
+      counter.restore()
       // 借用的是真人那条消息的事件对象：改完不还原，外层框架后续处理（引用回复、日志、
       // 统计）会看到被改坏的 msg。三样都得还回去。
       try {
