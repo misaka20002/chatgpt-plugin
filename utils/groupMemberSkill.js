@@ -1,15 +1,16 @@
 import { createHash } from 'node:crypto'
-import JSZip from 'jszip'
 import { estimateTokens } from './tokenEstimate.js'
 
 export const GROUP_MEMBER_SKILL_LIMITS = Object.freeze({
   minMessages: 30,
   fullConfidenceMessages: 100,
-  defaultMessages: 500, // 工具未指定条数时的默认目标消息数
-  maxMessages: 2000, // 工具参数允许请求的目标消息上限
-  maxScannedMessages: 20000, // 群扫描历史消息上限
-  maxInputTokens: 100000, // 脱敏样本总量预算
+  defaultMessages: 6000, // 指令不开放条数参数，6000 即目标条数上限
+  maxMessages: 6000, // 目标消息硬上限：约 15 万 token、3 块
+  maxScannedMessages: 20000, // 回退历史扫描时的群消息上限
+  maxLocalScannedMessages: 60000, // 本地原文分页扫描上限（按全群计）
+  maxInputTokens: 150000, // 脱敏样本总量预算：6000 条 30 字约 15 万 token
   chunkTokens: 50000, // 单块预算：对齐上游单次调研 agent 的输入量级
+  maxChunks: 3, // 块数硬上限：确认文案承诺「最多 3 块」
   maxMessageChars: 2000,
   maxFacts: 40,
   maxFactChars: 4000
@@ -55,16 +56,6 @@ export function createDefaultSkillName(groupId, targetId) {
 
 export function sanitizeDisplayName(value) {
   return oneLine(value || '群友', 50).replace(/[<>]/g, '') || '群友'
-}
-
-export function validateGroupMemberSkillAccess(e) {
-  if (!e?.isGroup || !e?.group_id || !e?.group) {
-    return 'Error: generateGroupMemberSkill can only be used in a group chat.'
-  }
-  if (!e?.isMaster) {
-    return 'Error: only the Bot master can generate group member skills.'
-  }
-  return null
 }
 
 export function redactDirectIdentifiers(value, directIdentifiers = []) {
@@ -120,6 +111,26 @@ function stratifiedSample(records, maxTokens) {
   return sampled
 }
 
+/**
+ * 按条数等距抽样：首尾必留，索引均匀铺开。
+ *
+ * 与 stratifiedSample 的区别只在上限口径——那个按 token 截、这个按条数截。
+ * 取「最近 N 条」会让 720 天的窗口塌成最近十天，等距抽样保住时间跨度。
+ */
+export function sampleRecordsByCount(records, count) {
+  const list = asArray(records)
+  const target = Math.max(0, Math.floor(Number(count) || 0))
+  if (target === 0) return []
+  if (list.length <= target) return list
+  if (target === 1) return [list[0]]
+
+  const indexes = new Set()
+  for (let i = 0; i < target; i++) {
+    indexes.add(Math.round(i * (list.length - 1) / (target - 1)))
+  }
+  return [...indexes].sort((a, b) => a - b).map(index => list[index])
+}
+
 export function prepareEvidenceRecords(records, directIdentifiers = [], limits = GROUP_MEMBER_SKILL_LIMITS) {
   const prepared = asArray(records).map(record => ({
     time: Number(record?.time) || 0,
@@ -139,14 +150,25 @@ export function countEvidenceTokens(records) {
   return asArray(records).reduce((sum, record) => sum + recordTokens(record), 0)
 }
 
-export function chunkEvidenceRecords(records, maxChunkTokens = GROUP_MEMBER_SKILL_LIMITS.chunkTokens) {
+/**
+ * 按单块预算切分证据。
+ *
+ * `maxChunks` 是硬上限：总量预算可能因「首条必留」略超（最多一条消息的量），
+ * 单块 50k 就仍可能切出第 4 块。给了上限就把单块预算抬到 ceil(总量/上限)，
+ * 宁可单块略高于 50k，也不让块数超出确认文案里承诺的数。
+ */
+export function chunkEvidenceRecords(records, maxChunkTokens = GROUP_MEMBER_SKILL_LIMITS.chunkTokens, maxChunks = Infinity) {
   const chunks = []
   let chunk = []
   let chunkTokens = 0
+  const totalTokens = countEvidenceTokens(records)
+  const budget = Number.isFinite(maxChunks) && maxChunks > 0
+    ? Math.max(maxChunkTokens, Math.ceil(totalTokens / maxChunks))
+    : maxChunkTokens
 
   for (const record of records) {
     const tokens = recordTokens(record)
-    if (chunk.length > 0 && chunkTokens + tokens > maxChunkTokens) {
+    if (chunk.length > 0 && chunkTokens + tokens > budget) {
       chunks.push(chunk)
       chunk = []
       chunkTokens = 0
@@ -312,9 +334,12 @@ export function selectMemoryFacts(memories, limits = GROUP_MEMBER_SKILL_LIMITS, 
  * 重复文本塌缩成几条却不触发回退。返回的 `remaining` 是还需要历史补多少条。
  */
 export function planSampleCollection(localRecords, requestedCount, limits = GROUP_MEMBER_SKILL_LIMITS) {
-  const records = mergeMessageRecords(localRecords, [], requestedCount)
+  // 先去重再抽样：去重前就截条数，重复短句会白占名额，剩下的真实样本反而更少。
+  const deduped = mergeMessageRecords(localRecords, [], Number.MAX_SAFE_INTEGER)
+  const records = sampleRecordsByCount(deduped, requestedCount)
   return {
     records,
+    candidateCount: deduped.length,
     useLocalOnly: records.length >= limits.minMessages,
     remaining: Math.max(0, requestedCount - records.length)
   }
@@ -960,6 +985,8 @@ export function getTimeRange(records) {
 
 export async function buildSkillZipBuffer(skillName, skillMarkdown, evidenceMarkdown, report, mediaIndex = [], mediaPatternsMarkdown = '', researchFiles = {}) {
   const validatedName = validateSkillName(skillName)
+  // jszip 在真正打包时才加载：本模块被指令文件顶层 import，而 #at图谱 每次启动都会经过它。
+  const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
   zip.file(`${validatedName}/SKILL.md`, String(skillMarkdown))
   zip.file(`${validatedName}/references/evidence.md`, String(evidenceMarkdown))
@@ -974,4 +1001,43 @@ export async function buildSkillZipBuffer(skillName, skillMarkdown, evidenceMark
     compression: 'DEFLATE',
     compressionOptions: { level: 6 }
   })
+}
+
+/* ================= 指令入口（#女娲蒸馏） ================= */
+
+const QQ_PATTERN = /^\d{5,20}$/
+const CONFIRM_PATTERN = /^(是|y|yes|确定|确认)$/i
+
+/**
+ * 解析 `#女娲蒸馏` 的目标成员。
+ *
+ * 三个来源：@ 成员、引用消息的发送者、消息里的纯数字。**任一两个来源指向不同的人就拒绝**
+ * ——确认之后要花十几万 token，静默择一比让主人重发一次贵得多。
+ * 全部拒绝情形都只返回原因，由命令层决定文案；这里不碰 e，也不读配置，才能直接单测。
+ */
+export function parseDistillTarget({ at = [], atAll = false, replyUserId = '', text = '', selfId = '' } = {}) {
+  const mentioned = asArray(at).map(id => String(id ?? '').trim()).filter(id => QQ_PATTERN.test(id))
+  const suffix = String(text ?? '').trim()
+  const manualId = QQ_PATTERN.test(suffix) ? suffix : ''
+  const quotedId = String(replyUserId ?? '').trim()
+  // 引用 Bot 自己的消息通常只是「带着上文说话」，不该被当成蒸馏目标，也不该和号码冲突。
+  const quoted = QQ_PATTERN.test(quotedId) && quotedId !== String(selfId ?? '') ? quotedId : ''
+
+  if (atAll) return { ok: false, reason: 'at-all' }
+  if (mentioned.length > 1) return { ok: false, reason: 'multi-at' }
+  // 带了参数却不是纯数字（例如 #女娲蒸馏 张三），按用法错误处理，不去猜。
+  if (suffix && !manualId) return { ok: false, reason: 'invalid' }
+
+  const candidates = new Set([...mentioned, manualId, quoted].filter(Boolean))
+  if (candidates.size > 1) return { ok: false, reason: 'conflict' }
+
+  const targetId = [...candidates][0] || ''
+  if (!targetId) return { ok: false, reason: 'missing' }
+  if (selfId && targetId === String(selfId)) return { ok: false, reason: 'self' }
+  return { ok: true, targetId }
+}
+
+/** 确认词与 `#群记忆开启` 等指令保持同一口径，避免同一个动作有两种说法。 */
+export function isConfirmWord(text) {
+  return CONFIRM_PATTERN.test(String(text ?? '').trim())
 }

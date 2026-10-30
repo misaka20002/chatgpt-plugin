@@ -1580,12 +1580,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'enableGroupMemberSkillTool',
-          label: '工具新增-群友Nuwa Skill',
-          bottomHelpMessage: '女娲skill，仅Bot主人可用。优先使用本群记忆采集的样本，不足或本群未授权时回退历史扫描；脱敏后按 100k token 总量、50k 单块预算蒸馏，生成符合 Agent Skills 规范的 ZIP 附件；默认关闭。',
-          component: 'Switch'
-        },
-        {
           field: 'enableDefaultMessageTriggerTool',
           label: '工具新增-云崽消息触发',
           bottomHelpMessage: '允许LLM触发当前群或全局的云崽 #添加 生成指令（LLM只能理解触发词，无法获取触发内容）；可用指令：#[全局][添加|删除|消息]',
@@ -1799,6 +1793,12 @@ export function supportGuoba() {
           field: 'enableAtGraph',
           label: '启用 AT 图谱',
           bottomHelpMessage: '生成 @ 互动图谱，在授权群内可用指令： #at图谱[At群友]',
+          component: 'Switch'
+        },
+        {
+          field: 'enableGroupMemberSkillTool',
+          label: 'nuwa-skill（#女娲蒸馏）',
+          bottomHelpMessage: 'Bot 主人专用。取样优先本群记忆采集的原文（保留期内最多 60000 条）与已存个人事实，不足 30 条则执行群历史消息扫描，返回 nuwa-skill ZIP；可用指令： #女娲蒸馏[at]',
           component: 'Switch'
         },
         {

@@ -15,10 +15,13 @@ import {
   countEvidenceTokens,
   createMediaTimelineFromRawRows,
   createRetryFeedback,
+  isConfirmWord,
   mergeMessageRecords,
+  parseDistillTarget,
   planSampleCollection,
   prepareEvidenceRecords,
   renderSkillMarkdown,
+  sampleRecordsByCount,
   selectMemoryFacts,
   checkSkillQuality,
   splitLocalRawRows,
@@ -93,6 +96,12 @@ describe('切块', () => {
     assert.equal(chunks.length, 2)
     assert.equal(chunks[0].length, 1)
     assert.equal(chunks[0][0].text.length, 2000)
+  })
+
+  test('块数上限生效时抬高单块预算，而不是多切一块', () => {
+    const many = Array.from({ length: 9 }, () => ({ text: 'abc' }))
+    assert.ok(chunkEvidenceRecords(many, 10).length > 3)
+    assert.equal(chunkEvidenceRecords(many, 10, 3).length, 3)
   })
 })
 
@@ -336,5 +345,87 @@ describe('生成物结构', () => {
       quality: { passed: false, failed: [{ item: '表达 DNA', detail: '仅 0 项' }] }
     })
     assert.match(markdown, /未通过以下自检项.*表达 DNA/)
+  })
+})
+
+/* ================= #女娲蒸馏 入口 ================= */
+
+describe('目标解析', () => {
+  const parse = extra => parseDistillTarget({ selfId: '10000', ...extra })
+
+  test('@ 一人、引用消息、纯数字都能取到目标', () => {
+    assert.deepEqual(parse({ at: ['20001'] }), { ok: true, targetId: '20001' })
+    assert.deepEqual(parse({ replyUserId: '20002' }), { ok: true, targetId: '20002' })
+    assert.deepEqual(parse({ text: '20003' }), { ok: true, targetId: '20003' })
+  })
+
+  test('多个来源指向同一个人时通过', () => {
+    assert.deepEqual(parse({ at: ['20001'], replyUserId: '20001', text: '20001' }), { ok: true, targetId: '20001' })
+  })
+
+  test('两个来源指向不同的人时拒绝，不静默择一', () => {
+    assert.deepEqual(parse({ at: ['20001'], replyUserId: '20002' }), { ok: false, reason: 'conflict' })
+    assert.deepEqual(parse({ replyUserId: '20002', text: '20003' }), { ok: false, reason: 'conflict' })
+  })
+
+  test('引用 Bot 自己的消息不算目标，也不与号码冲突', () => {
+    assert.deepEqual(parse({ replyUserId: '10000', text: '20003' }), { ok: true, targetId: '20003' })
+  })
+
+  test('无目标、@ 全体、多个 @ 各自给出原因', () => {
+    assert.deepEqual(parse({}), { ok: false, reason: 'missing' })
+    assert.deepEqual(parse({ atAll: true, at: ['20001'] }), { ok: false, reason: 'at-all' })
+    assert.deepEqual(parse({ at: ['20001', '20002'] }), { ok: false, reason: 'multi-at' })
+  })
+
+  test('@ 与数字冲突、参数不是数字、@ 到 Bot 自己都拒绝', () => {
+    assert.deepEqual(parse({ at: ['20001'], text: '20002' }), { ok: false, reason: 'conflict' })
+    assert.deepEqual(parse({ text: '张三' }), { ok: false, reason: 'invalid' })
+    assert.deepEqual(parse({ at: ['10000'] }), { ok: false, reason: 'self' })
+  })
+})
+
+describe('确认词', () => {
+  test('Y/是/确认/确定/yes 都算确认', () => {
+    for (const word of ['Y', 'y', 'yes', '是', '确认', '确定', ' 是 ']) {
+      assert.equal(isConfirmWord(word), true, word)
+    }
+  })
+
+  test('其它回复一律不算确认', () => {
+    for (const word of ['好', 'n', '', '开始', 'yess', '确认开始']) {
+      assert.equal(isConfirmWord(word), false, word)
+    }
+  })
+})
+
+describe('按条数等距抽样', () => {
+  const records = Array.from({ length: 100 }, (_, index) => ({ time: index, text: `第${index}条` }))
+
+  test('不足条数上限时原样返回', () => {
+    const short = records.slice(0, 10)
+    assert.equal(sampleRecordsByCount(short, 20), short)
+  })
+
+  test('超过上限时恰好取 N 条且首尾保留', () => {
+    const sampled = sampleRecordsByCount(records, 10)
+    assert.equal(sampled.length, 10)
+    assert.equal(sampled[0].time, 0)
+    assert.equal(sampled.at(-1).time, 99)
+  })
+
+  test('索引均匀铺开，不是只取最近一段', () => {
+    const sampled = sampleRecordsByCount(records, 5).map(item => item.time)
+    assert.deepEqual(sampled, [0, 25, 50, 74, 99])
+  })
+
+  test('本地候选去重后才抽样，重复文本不占名额', () => {
+    const duplicated = [
+      ...Array.from({ length: 5 }, () => ({ time: 1, text: '同一句' })),
+      ...Array.from({ length: 5 }, (_, index) => ({ time: index + 2, text: `独立${index}` }))
+    ]
+    const plan = planSampleCollection(duplicated, 2, { ...GROUP_MEMBER_SKILL_LIMITS, minMessages: 1 })
+    assert.equal(plan.records.length, 2)
+    assert.deepEqual(plan.records.map(item => item.text), ['同一句', '独立4'])
   })
 })

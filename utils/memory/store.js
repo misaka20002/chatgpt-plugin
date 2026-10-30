@@ -1141,18 +1141,16 @@ export class MemoryStore {
     return out
   }
 
-  /** 图谱只读最近的保留记录：限制扫描量并分批取值，避免大群一次出图拖住 Redis。 */
-  async getRecentRawMessages(groupId, endTime) {
+  /**
+   * 按 id 批量取原文：索引存在但原文已过 TTL 的 key 直接跳过。
+   *
+   * 单次 mGet 的键数控制在 200，避免大群一次取太多把 Redis 阻塞。
+   */
+  async fetchRawRows(groupId, ids) {
     const gid = String(groupId)
-    const limit = 20000
-    // ZRANGE BYSCORE REV 要求 Redis >= 6.2；宿主仍可能使用 6.0。
-    // node-redis v4 没有旧命令的快捷方法，用 sendCommand 保留同样的倒序、时间与条数边界。
-    const ids = await this.redis.sendCommand([
-      'ZREVRANGEBYSCORE', RAWIDX(gid), String(endTime), '-inf', 'LIMIT', '0', String(limit + 1)
-    ])
     const rows = []
-    for (let offset = 0; offset < Math.min(ids.length, limit); offset += 200) {
-      const batch = ids.slice(offset, Math.min(offset + 200, limit))
+    for (let offset = 0; offset < ids.length; offset += 200) {
+      const batch = ids.slice(offset, offset + 200)
       const values = await this.redis.mGet(batch.map(mid => RAW(gid, mid)))
       for (let i = 0; i < values.length; i++) {
         // 索引的清理与原文 TTL 独立，过期的原文不能变成互动记录。
@@ -1164,7 +1162,38 @@ export class MemoryStore {
         }
       }
     }
+    return rows
+  }
+
+  /** 图谱只读最近的保留记录：限制扫描量并分批取值，避免大群一次出图拖住 Redis。 */
+  async getRecentRawMessages(groupId, endTime) {
+    const gid = String(groupId)
+    const limit = 20000
+    // ZRANGE BYSCORE REV 要求 Redis >= 6.2；宿主仍可能使用 6.0。
+    // node-redis v4 没有旧命令的快捷方法，用 sendCommand 保留同样的倒序、时间与条数边界。
+    const ids = await this.redis.sendCommand([
+      'ZREVRANGEBYSCORE', RAWIDX(gid), String(endTime), '-inf', 'LIMIT', '0', String(limit + 1)
+    ])
+    const rows = await this.fetchRawRows(gid, ids.slice(0, limit))
     return { rows, limited: ids.length > limit, limit }
+  }
+
+  /**
+   * 按时间倒序分页读取原文（#女娲蒸馏 用它铺满整个保留期）。
+   *
+   * `endTime` 必须由调用方固定：区间内的偏移才稳定——扫描期间新到的消息时间戳更大，
+   * 不会挤进这个区间，翻页也就不会重复或跳过。
+   * 返回的 `count` 是本页 id 数（不是解析成功的行数），调用方据此判断是否最后一页。
+   */
+  async getRecentRawMessagesPage(groupId, endTime, offset, limit) {
+    const gid = String(groupId)
+    const start = Math.max(0, Math.floor(Number(offset) || 0))
+    const size = Math.max(1, Math.min(5000, Math.floor(Number(limit) || 0)))
+    const ids = await this.redis.sendCommand([
+      'ZREVRANGEBYSCORE', RAWIDX(gid), String(endTime), '-inf', 'LIMIT', String(start), String(size)
+    ])
+    if (ids.length === 0) return { rows: [], count: 0 }
+    return { rows: await this.fetchRawRows(gid, ids), count: ids.length }
   }
 
   /** 最近一条原文的时间（用于确定首日游标） */

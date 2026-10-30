@@ -96,7 +96,6 @@ import { ExaWebFetchTool } from '../utils/tools/ExaWebFetchTool.js'
 import { ParallelWebFetchTool } from '../utils/tools/ParallelWebFetchTool.js'
 import { GenerateMarkmapTool } from '../utils/tools/GenerateMarkmapTool.js'
 import { UserProfileTool } from '../utils/tools/UserProfileTool.js'
-import { GroupMemberSkillTool } from '../utils/tools/GroupMemberSkillTool.js'
 import { GenerateMathRenderTool } from '../utils/tools/GenerateMathRenderTool.js'
 import { GenerateGraphCalculatorTool } from '../utils/tools/GenerateGraphCalculatorTool.js'
 import { GenerateHtmlTool } from '../utils/tools/GenerateHtmlTool.js'
@@ -1127,7 +1126,6 @@ async function collectTools(e) {
     { condition: Config.viewForwardMsgTool, ToolClass: ViewForwardMsgTool },
     { condition: Config.ScheduleTask_Tool, ToolClass: ScheduleTaskTool },
     { condition: Config.TTSAudio_Tool, ToolClass: TTSAudioTool },
-    { condition: Config.enableGroupMemberSkillTool && e?.isGroup && e?.isMaster, ToolClass: GroupMemberSkillTool },
     /** 群公告是群内公开的只读信息：只要在群里就能用，与 Bot 是否管理员、提问者身份都无关，故不进 groupAdminToolMap */
     { condition: Config.toolGroupAdminArr.includes('GroupNotice') && e?.isGroup, ToolClass: GetGroupNoticeTool },
     { condition: Config.generateMathRender_ToolSwitch, ToolClass: GenerateMathRenderTool },

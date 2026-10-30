@@ -49,4 +49,5 @@
 - **旧 Hash 清理只限个人作用域**：`_purgeLegacyOnce(ownerId)` 对 `group` 作用域会误删 `CHATGPT:MEMORY:USER:<群号>`（群号可能与 QQ 碰撞），必须在 `scope !== 'group'` 时执行。
 - **CQ 码处理**：`stripCQCode` 清除 `[CQ:...]` 并压缩残留空白；历史消息可能是段数组 / message 字符串 / raw_message 三种形态。
 - 记忆指令 `#群记忆开启` / `#群记忆关闭` 需二次确认（`awaitContext`），确认文案说明将删除/保留的数据范围。
+- `#女娲蒸馏` 同样走二次确认（180 秒、回 Y 开始），但它是指令而不是工具：开关在「智能模式 记忆设置」，取样口径与产物形态见[工具与媒体](tools.md)。
 - **分片断点 `chunksDone` 的失效条件**：`runExtraction` 的断点续跑假设"同窗口 rows 不变 → 分区确定"，因此**原文变化的路径必须清断点**——`ensureTask` 的 needsReextract 分支重置 pending 时清 `chunksDone` 并把 `attemptCount` 归零；空窗/成功后也清空。`processWindow` 失败重试时不清断点（恰好用于续跑）。`chunksDone` 存于 task hash（字符串化 JSON，`store.setTask` 只写指定字段、其余保留），崩溃恢复（running>10min → pending）后断点依然有效。

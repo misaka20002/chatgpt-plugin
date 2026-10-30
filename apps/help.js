@@ -55,6 +55,11 @@ export let helpData = [
       },
       {
         icon: 'list',
+        title: '#女娲蒸馏 [@群友/QQ号]',
+        desc: '主人专用：从一名群成员的群聊记录蒸馏出 Agent Skill，先说明代价再确认'
+      },
+      {
+        icon: 'list',
         title: '#gpt删除前n条对话',
         desc: '对话聊天记录的微调'
       },

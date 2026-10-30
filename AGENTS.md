@@ -8,7 +8,7 @@ chatgpt-plugin 是挂载在 TRSS-Yunzai / Yunzai v3 下的 AI 对话插件，包
 
 | 修改范围 / 任务 | 先读 |
 | --- | --- |
-| `model/core.js`、`utils/tools/`、`client/` 的工具执行、鉴权、联网搜索；`utils/paimonFuction.js`、`utils/quotedImage.js`、`utils/visionPayload.js`、媒体识别、引用图多模态与下载 | [工具与媒体](docs/agent-guides/tools.md) |
+| `model/core.js`、`utils/tools/`、`client/` 的工具执行、鉴权、联网搜索；`apps/atGraph.js`（`#at图谱` / `#女娲蒸馏`）、`utils/groupMemberSkill*.js` 的女娲蒸馏指令；`utils/paimonFuction.js`、`utils/quotedImage.js`、`utils/visionPayload.js`、媒体识别、引用图多模态与下载 | [工具与媒体](docs/agent-guides/tools.md) |
 | `utils/memory/`、`apps/memory*.js`、MemoryTool / UserProfileTool、记忆提示词 | [记忆 V2](docs/agent-guides/memory.md) |
 | `resources/**/index.html`、HTML/Markdown/SVG 生成工具、`utils/htmlDesignSkill.js`、`utils/renderSanitize.js`、出图/字体问题 | [渲染与安全](docs/agent-guides/rendering.md) |
 | `apps/派蒙meme.js`、`utils/memeCategory.js`、`resources/memeList/` | [meme](docs/agent-guides/meme.md)；改模板另读渲染指南 |
@@ -46,7 +46,7 @@ single-context: one root `GLOSSARY.md` plus ADRs under `docs/adr/`. See `docs/ag
 - **不主动 `git add` / `commit` / `push`**；只有用户在当前请求中明确要求才执行。提交 message 用 `feat: 中文描述` / `fix: 中文描述`。
 - **一切需要结果的子 agent（含评审两轴与调研）一律前台派生，不要用 `run_in_background`；两轴评审还要在同一条消息里并发派出**（两次调用一次发出）——等一轴回来再派另一轴等于白等一轮。后台派生会把它变成"自动团队"成员：出生即可能被停止（运行时日志原文 “spawned after team cancel and was paused”）；当轮没有受支持的取回通道（`TaskOutput` 拒绝等团队成员），被终止（终态）后又**跳过完成通知**，结果必然丢失——评审与调研共 3 次实测无一存活。真正的后台并行是**任务粒度**（侧边栏多任务 /「保存到工作空间」多 Agent 协作），不是会话内子 agent。机制与一手证据见[本仓调查记录](.scratch/group-notice-todo/research.md)。
 - **本机是 Windows：文件读取、搜索、列目录一律走专用工具**（`Read` / `Grep` / `Glob` / `Edit` / `Write`），不用 Bash 的 `sed` / `awk` / `cat` / `head` / `tail` / `grep -r` / `find` 代劳；复杂内联 `node -e` / `python -c` 先落临时脚本再执行。Git Bash 下对大目录递归 `grep` 会超时——实测 `.workbuddy` 全盘搜索三次全被 SIGTERM，换 `Grep` 工具三次全一次命中。**含本机用户名的绝对路径不写进任何产出**（文档、注释、命令、回复都不出现）——一律用 `~` / `%LOCALAPPDATA%` / 相对路径代替；护栏为 `test/pathLeak.check.mjs`（随 `npm run check` / CI）。
-- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回），日志落 `.gitignore` 里的 `temp/`——`Read` 能直接打开，Git Bash 的 `/tmp` 映射到别处、`Read` 打不开只能退回 `cat`，**判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不要接 `tail` / `grep` 管道**——退出码会变成后者的，`grep` 无匹配还会给出假的失败；`ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`——不设时 Git Bash 的路径转换会改写参数，`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」；结论是否定或异常时先怀疑它。
+- **本机 git 与长输出**：`git rev-parse --short` 只接受单参数（多参数报 `Needed a single revision`）；`git grep` 无 `--branches` / `--remotes`（逐 ref 循环查）；全仓搜索排除 `server/static`（打包产物）；对比新生成文件用 `--ignore-cr-at-eol`；长输出先落日志再取尾部（超限存档读不回），日志落 `.gitignore` 里的 `temp/`（它被忽略，新克隆里不存在，先 `mkdir -p temp`）——`Read` 能直接打开，Git Bash 的 `/tmp` 映射到别处、`Read` 打不开只能退回 `cat`，**判成败用 `(cmd > log 2>&1; echo EXIT=$?)`，不要接 `tail` / `grep` 管道**——退出码会变成后者的，`grep` 无匹配还会给出假的失败；`ref:path` 形式的参数（`git show` / `cat-file` / `ls-tree` / `diff`）先加 `MSYS_NO_PATHCONV=1`——不设时 Git Bash 的路径转换会改写参数，`show` 报 ambiguous argument，`cat-file -e` 这类探测还会给出假的「不存在」；结论是否定或异常时先怀疑它。
 
 ## 运行环境与入口
 

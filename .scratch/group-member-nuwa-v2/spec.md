@@ -138,3 +138,4 @@ Bot 主人想让群友 Skill 用上「这个群已经采集过的、关于这个
   - Spec：新增 `planSampleCollection`（先去重再判 30 条——原来按去重前条数判定，重复文本会塌缩成几条却不回退历史）；失败发生在建目录之前也补建运行目录并写报告；心智模型上限 5 → 7，让「3-7」真正成立；`scanned_group_message_count` 字段名恢复；回退日志区分「本地读取失败」与「未授权」；锅巴回退条件补上「本地不足」。
   - 接受不改：历史管理器钳制放宽（工具参数上限生效的前提，已加同步注释）；ZIP 收录 `references/research/`（ZIP 与技能目录保持一致才自包含）；`collected_message_count` 取合并后条数（本地路径下历史计数没有意义）。
   - 验证：`npm run test:nuwa` 27/27（新增样本采集决策与 7 模型两条用例）。
+- 2026-10-30 形态变更（后续迭代）：`generateGroupMemberSkill` 工具删除，改为主人指令 `#女娲蒸馏` 并加确认门；本文的取样、token 预算、产物结构、质量自检、增量更新结论继续有效，入口与交互见 [../nuwa-distill-command/spec.md](../nuwa-distill-command/spec.md) 与 [ADR 0013](../../docs/adr/0013-nuwa-distill-as-command.md)。
