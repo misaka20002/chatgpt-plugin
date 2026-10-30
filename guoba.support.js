@@ -1582,7 +1582,7 @@ export function supportGuoba() {
         {
           field: 'enableGroupMemberSkillTool',
           label: '工具新增-群友Nuwa Skill',
-          bottomHelpMessage: '仅Bot主人可用。读取当前群指定群友的历史文本，脱敏后提交当前子LLM分阶段蒸馏，并生成符合Agent Skills规范的ZIP附件；默认关闭。',
+          bottomHelpMessage: '女娲skill，仅Bot主人可用。优先使用本群记忆采集的样本，不足或本群未授权时回退历史扫描；脱敏后按 100k token 总量、50k 单块预算蒸馏，生成符合 Agent Skills 规范的 ZIP 附件；默认关闭。',
           component: 'Switch'
         },
         {

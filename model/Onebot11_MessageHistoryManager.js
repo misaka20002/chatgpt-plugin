@@ -360,8 +360,10 @@ class MessageHistoryManager {
       throw new Error('getUserMessageRecords 只能在群聊中使用');
     }
 
-    const maxTargetMessages = Math.min(Math.max(Number(options.maxTargetMessages) || 500, 1), 500);
-    const maxScannedMessages = Math.min(Math.max(Number(options.maxScannedMessages) || 10000, 1), 10000);
+    // 与 GROUP_MEMBER_SKILL_LIMITS 的 maxMessages / maxScannedMessages 同步：这里再钳一次是防
+    // 调用方传超大值，两处字面量不一致会静默截断样本。
+    const maxTargetMessages = Math.min(Math.max(Number(options.maxTargetMessages) || 500, 1), 2000);
+    const maxScannedMessages = Math.min(Math.max(Number(options.maxScannedMessages) || 10000, 1), 20000);
     const targetId = String(target_id);
     const records = [];
     const mediaRecords = [];

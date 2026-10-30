@@ -81,6 +81,19 @@ Prompt Gallery 的推送挂在 `capturedImages` 上，入队型插件返回时�
 
 **`utils/tools/htmlMarkdown.js` 是 opencode `html-markdown.ts` 的逐行移植**（`htmlparser2` 解析，MIT，文件头写明来源与许可）：**风格随上游**（分号、引号、命名、`getter` 写法），**不要按本仓风格重排**——它与上游保持同形，是为了日后能逐行对照、直接取上游的修复；重排一次就等于把后续合并变成手工活。改它的理由只有两个：上游也改了，或这里有实测覆盖的 bug（见 `test/localWebTools.test.js` 与 [ADR 0005](../adr/0005-local-fetch-as-last-resort.md) 的 22 目标对比）。上游更新时照原命令重生成：`npx tsc <上游 html-markdown.ts> --target es2022 --module esnext --moduleResolution bundler`（只做类型擦除，产物落在源文件旁边，改名 `htmlMarkdown.js` 再补回文件头）。tsc 会报 `TS2688 Cannot find type definition file for 'uuid'`——那是隐式 type library 的噪音，`--skipLibCheck` 盖不住它，产物正常即可忽略。
 
+## 群友 Nuwa Skill（`generateGroupMemberSkill`）
+
+只对 Bot 主人、只在群聊、只处理当前群里的一名成员。产物是一份可移植的 Agent Skill（ZIP + `SKILL.md`），不是画像工具。
+
+- **数据源优先级**：`enableMemory` 打开且本群在授权采集列表（`switchOn`）时，先读本地——本群 `user_group` 事实 + 本地原文（「最近原文」接口，20000 条上限，按 `rawRetentionDays` 回推时间窗）。本地目标消息 **≥30 条就不再碰历史接口**；不足时只按差额请求历史扫描，合并时按消息 ID / 内容摘要 / 文本三级去重。两条来源合并成同一种记录格式，产物与报告**不标注来源**——它们是同一个插件采的。
+- **事实的边界**：`user_group` 事实是第三人称转述，只作合成阶段的背景（最多 40 条 / 4000 字），**不分配证据 ID、不进证据文件、不参与证据校验**。跨群 `user` 与群公共 `group` 一概不读，否则 `SKILL.md` 的「样本仅来自一个群聊」就不成立。理由与代价见 [ADR 0012](../adr/0012-group-skill-facts-as-background.md)。
+- **token 预算**：输入 100000、单块 50000（`estimateTokens`：中文 1.2 字/token、其他 4 字/token）。单块 50000 对齐上游单次调研 agent 的输入量级，不是模型上限。超预算时按时间跨度等距抽样；切块不重叠，避免同一 `evidence_id` 在两块重复计数。
+- **落盘即断点**：运行目录在分块分析之前创建，每块成功即写 `references/research/chunk-NN.json`；整轮失败写 `references/generation-report.json`（`status: failed` + 错误），错误文案带产物目录。没有 `SKILL.md` 的目录即为未完成，不要当成品分发。
+- **生成物**：角色扮演规则（首次一句免责 + 「未表态主题标推断」「关键引用可分辨」两条纪律 + 退出语）、身份卡、回答工作流（问题分类 → 按心智模型推导研究维度 → 回答）、心智模型/启发式/表达 DNA/属性/价值观/反模式/张力、诚实边界、数据构成、证据索引。不写时间线与智识谱系——群聊样本推不出来。
+- **质量自检**：心智模型 3-7 个、每个有失效条件、表达 DNA ≥3 项、诚实边界 ≥3 条、张力 ≥2 处。不通过带失败项重跑一次合成，失败项更少才替换；仍不通过照常交付，并在报告与诚实边界里标注未过项。
+- **增量更新**：同目标存在上一次产物时，读取其 `SKILL.md`（截断 12000 字）作为上下文，仍被本次证据支持的结论保留命名与结构。服务端校验只认本次证据 ID，旧结论不可能无证据存活。
+- **媒体画像**：执行过历史扫描时沿用扫描到的媒体事件；纯本地路径从原文占位符还原媒体类型，否则纯本地样本会被统计成「纯文字为主」，把画像算反。原始媒体、URL、段 data 一律不进提示词。
+
 ## 依赖环与延迟调用约定
 
 仓库存在若干**有意保留的模块循环引用**（ESM 允许；工具轮文本改动期间专门核验过，勿在未理解时"顺手打破"）：

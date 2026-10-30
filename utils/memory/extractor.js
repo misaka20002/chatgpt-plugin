@@ -1,4 +1,5 @@
 import { Config } from '../config.js'
+import { estimateTokens } from '../tokenEstimate.js'
 /**
  * 记忆提取器：模型调用 + 服务端校验
  *
@@ -24,14 +25,6 @@ import { resolveProvider } from '../providers.js'
  * retract 的可信度来自「本人明确否定 + 证据归属校验」，与 add 的置信度不是同一回事。
  */
 export const MEMORY_MIN_CONFIDENCE = 0.7
-
-/** 中文为主的近似 token 估算：字符数 / 1.7 */
-export function estimateTokens(text) {
-  if (!text) return 0
-  const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length
-  const other = text.length - cjk
-  return Math.ceil(cjk / 1.2 + other / 4)
-}
 
 /**
  * 记忆 LLM 调用的输入预算（token），**常量而非配置**：提炼分片与夜间压缩共用这一个值。
